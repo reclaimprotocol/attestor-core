@@ -1,0 +1,10 @@
+{
+    "name": "instagram-user",
+    "params": {
+      "url": "https://www.instagram.com/",
+      "method": "GET"
+    },
+    "secretParams": {
+      "cookie": "{{INSTA_COOKIE}}"
+    }
+  }

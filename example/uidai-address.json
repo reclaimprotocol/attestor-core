@@ -1,0 +1,10 @@
+{
+    "name": "uidai-address",
+    "params": {
+        "address": "{{UIDAI_ADDRESS}}"
+    },
+    "secretParams": {
+        "uid": "{{UIDAI_UID}}",
+        "token": "{{UIDAI_TOKEN}}"
+    }
+}

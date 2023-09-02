@@ -1,0 +1,10 @@
+{
+    "name": "uidai-aadhar",
+    "params": {
+        "name": "{{name}}"
+    },
+    "secretParams": {
+        "uid": "{{uid}}",
+        "token": "{{token}}"
+    }
+}

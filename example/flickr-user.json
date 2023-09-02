@@ -1,0 +1,11 @@
+{
+    "name": "flickr-user",
+    "params": {
+      "url": "https://www.flickr.com/account",
+      "method": "GET"
+    },
+    "secretParams": {
+      "cookie": "{{FLICKR_COOKIE}}"
+    }
+  }
+  

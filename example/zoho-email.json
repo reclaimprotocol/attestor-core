@@ -1,0 +1,9 @@
+{
+    "name": "zoho-email",
+    "params": {
+        "email": "{{ZOHO_EMAIL}}"
+    },
+    "secretParams": {
+        "token": "{{ZOHO_TOKEN}}"
+    }
+}

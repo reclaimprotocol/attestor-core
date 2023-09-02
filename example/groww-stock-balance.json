@@ -1,0 +1,10 @@
+{
+  "name": "groww-stock-balance",
+  "params": {
+    "stockIsin": "INE002A01018",
+    "stockQty": 2
+  },
+  "secretParams": {
+    "authToken": "{{GROWW_AUTH_TOKEN}}"
+  }
+}

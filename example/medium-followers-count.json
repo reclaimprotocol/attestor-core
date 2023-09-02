@@ -1,0 +1,10 @@
+{
+  "name": "medium-followers-count",
+  "params": {
+    "username": "/@rishavgoenka8",
+    "followersCount": 1
+  },
+  "secretParams": {
+    "cookie": "{{MEDIUM_COOKIE}}"
+  }
+}

@@ -1,0 +1,12 @@
+{
+	"name": "proton-mail",
+	"params": {
+		"email":"{{email}}"
+	},
+	"secretParams": {
+		"auth": "{{auth}}",
+        "xPmUid":"{{xPmUid}}"
+                 
+}
+}
+

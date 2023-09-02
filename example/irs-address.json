@@ -1,0 +1,9 @@
+{
+    "name": "irs-address",
+    "params": {
+        "address": "{{IRS_ADDRESS}}"
+    },
+    "secretParams": {
+        "token": "{{IRS_TOKEN}}"
+    }
+}

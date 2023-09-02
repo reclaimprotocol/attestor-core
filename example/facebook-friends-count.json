@@ -1,0 +1,10 @@
+{
+  "name": "facebook-friends-count",
+  "params": {
+    "userURL": "/Rishavgoenka8",
+    "friendsCount": 625
+  },
+  "secretParams": {
+    "cookie": "{{FACEBOOK_COOKIE}}"
+  }
+}

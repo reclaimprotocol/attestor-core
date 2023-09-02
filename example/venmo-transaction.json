@@ -1,0 +1,12 @@
+{
+    "name": "venmo-transaction",
+    "params": {
+        "userId": "{{VENMO_USER_ID}}",
+        "recipientId": "{{VENMO_RECEPIENT_ID}}",
+        "amount": "{{VENMO_AMOUNT}}"
+    },
+    "secretParams": {
+        "userId":"{{VENMO_USER}}",
+        "cookieStr": "{{VENMO_COOKIE}}"
+    }
+}

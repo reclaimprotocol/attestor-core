@@ -1,0 +1,11 @@
+{
+    "name": "tumblr-follower",
+    "params": {
+      "url": "https://www.tumblr.com/following",
+      "method": "GET"
+    },
+    "secretParams": {
+      "cookie": "{{TUMBLR_COOKIE}}"
+    }
+  }
+  

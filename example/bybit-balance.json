@@ -1,0 +1,11 @@
+{
+	"name": "bybit-balance",
+	"params": {
+		"balance":100
+	},
+	"secretParams": {
+		"userToken": "{{userToken}}"
+}
+}
+
+

@@ -1,0 +1,10 @@
+{
+    "name": "coinswitch-balance",
+    "params": {
+     "balance":4603.17
+    },
+    "secretParams": {
+      "cookieStr": "{{cookieStr}}"
+    }
+  }
+  

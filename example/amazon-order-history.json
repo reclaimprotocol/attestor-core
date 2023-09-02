@@ -1,0 +1,10 @@
+{
+	"name": "amazon-order-history",
+	"params": {
+		"productName": "Max Protein Muesli Munchies"
+	},
+	"secretParams": {
+		"qstring": "muesli",
+		"cookieStr": "{{AMAZON_COOKIE}}"
+	}
+}

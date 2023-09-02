@@ -1,0 +1,9 @@
+{
+    "name": "swiggy-total-count",
+    "params": {
+        "orderCount": 5
+    },
+    "secretParams": {
+        "cookieStr": "{{cookieStr}}"
+    }
+}

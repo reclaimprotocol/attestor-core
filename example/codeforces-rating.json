@@ -1,0 +1,9 @@
+{
+    "name": "codeforces-rating",
+    "params": {
+        "rating": "{{USER_CF_RATING}}"
+    },
+    "secretParams": {
+        "cookieStr": "{{CF_COOKIE}}"
+    }
+}

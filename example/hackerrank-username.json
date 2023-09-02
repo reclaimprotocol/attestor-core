@@ -1,0 +1,9 @@
+{
+	"name": "hackerrank-username",
+	"params": {
+        "userName": "{{HACKERRANK_USERNAME}}"
+      },
+      "secretParams": {
+        "token": "{{HACKERRANK_COOKIE}}"
+      }
+}

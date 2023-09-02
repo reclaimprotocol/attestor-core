@@ -1,0 +1,10 @@
+{
+    "name": "tinder-match-count",
+    "params": {
+        "matchCount": 1,
+        "userId": "{{TINDER_USER_ID}}"
+    },
+    "secretParams": {
+        "token": "{{TINDER_AUTH_TOKEN}}"
+    }
+}

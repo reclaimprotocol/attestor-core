@@ -1,0 +1,6 @@
+# Ignore artifacts:
+lib
+coverage
+*.lock
+.eslintrc.json
+jest.config.js

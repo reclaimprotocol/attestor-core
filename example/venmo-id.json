@@ -1,0 +1,9 @@
+{
+    "name": "venmo-id",
+    "params": {
+        "userId": "{{VENMO_USER_ID}}"
+    },
+    "secretParams": {
+        "cookieStr": "{{VENMO_COOKIE}}"
+    }
+}

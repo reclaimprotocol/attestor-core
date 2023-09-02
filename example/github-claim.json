@@ -1,0 +1,16 @@
+{
+	"name": "github-commits",
+	"params": {
+		"repository": "reclaimprotocol/reclaim-sdk",
+		"searchQuery": {
+			"keywords": [],
+			"qualifiers": {
+				"is": ["pr", "merged"]
+			}
+		},
+		"type": "github-pull-requests"
+	},
+	"secretParams": {
+		"token": ""
+	}
+}

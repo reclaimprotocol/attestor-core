@@ -1,0 +1,248 @@
+syntax = "proto3";
+package reclaim_witness;
+
+enum TranscriptMessageSenderType {
+	TRANSCRIPT_MESSAGE_SENDER_TYPE_UNKNOWN = 0;
+	TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT = 1;
+	TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER = 2;
+}
+
+enum TlsCipherSuiteType {
+	TLS_CIPHER_SUITE_TYPE_UNKNOWN = 0;
+	TLS_CIPHER_SUITE_TYPE_AES_128_GCM_SHA256 = 1;
+	TLS_CIPHER_SUITE_TYPE_AES_256_GCM_SHA384 = 2;
+	TLS_CIPHER_SUITE_TYPE_CHACHA20_POLY1305_SHA256 = 3;
+}
+
+enum ServiceSignatureType {
+	SERVICE_SIGNATURE_TYPE_UNKNOWN = 0;
+	/**
+	 * ETH keys & signature
+	 * keys: secp256k1
+	 * signature: ethereum flavor of ECDSA (https://goethereumbook.org/signature-generate/)
+	 */
+	SERVICE_SIGNATURE_TYPE_ETH = 1;
+}
+
+enum WitnessVersion {
+	WITNESS_VERSION_UNKNOWN = 0;
+	WITNESS_VERSION_1_0_0 = 1;
+	WITNESS_VERSION_1_1_0 = 2;
+}
+
+message TLSPacket {
+	bytes recordHeader = 1;
+	bytes content = 2;
+	bytes authenticationTag = 3;
+}
+
+message TranscriptMessage {
+	TranscriptMessageSenderType senderType = 1;
+	bool redacted = 2;
+	/** if redacted, message is empty */
+	bytes message = 3;
+}
+
+message ProviderClaimData {
+	string provider = 1;
+	string parameters = 2;
+	string owner = 3;
+	uint32 timestampS = 4;
+	string context = 6;
+	/**
+	 * identifier of the claim;
+	 * Hash of (provider, parameters, context)
+	 *
+	 * This is different from the claimId returned
+	 * from the smart contract
+	 */
+	string identifier = 8;
+	uint32 epoch = 9;
+}
+
+message ProviderClaimInfo {
+	string provider = 1;
+	string parameters = 2;
+	string context = 6;
+}
+
+message TLSReceipt {
+	/** 
+	 * host concatenated with port with a colon (:)
+	 * eg. localhost:443
+	 */
+	string hostPort = 1;
+	/**
+	 * unix timestamp in seconds of the receipt completion
+	 */
+	uint32 timestampS = 2;
+	/** 
+	 * the transcript between the server & client
+	 * in the order they were received
+	 */
+	repeated TranscriptMessage transcript = 3;
+	/** sign(proto(TLSReceipt w/o signature)) */
+	bytes signature = 4;
+}
+
+message GetVerifierPublicKeyRequest {
+
+}
+
+message GetVerifierPublicKeyResponse {
+	/** public key of the verifier */
+	bytes publicKey = 1;
+	/** type of signature being used by the service */
+	ServiceSignatureType signatureType = 2;
+}
+
+message InitialiseSessionRequest {
+	/** 
+	 * Use if you'd just like a signed receipt
+	 * for some custom purpose
+	 */
+	ReceiptGenerationRequest receiptGenerationRequest = 1;
+	/** beacon based version of ProviderClaimRequest */
+	BeaconBasedProviderClaimRequest beaconBasedProviderClaimRequest = 3;
+
+	message ReceiptGenerationRequest {
+		string host = 1;
+		uint32 port = 2;
+	}
+
+	message BeaconBasedProviderClaimRequest {
+		/** Epoch in which claim is being created */
+		uint32 epoch = 1;
+		/**
+		 * When the claim is being created.
+		 * Cannot be more than 10 minutes in the past
+		 * or in the future at all
+		 */
+		uint32 timestampS = 2;
+		/** private information to sign */
+		ProviderClaimInfo info = 3;
+		/** proof of who is making the claim */
+		ClaimOwner ownerProof = 4;
+	}
+
+	message ClaimOwner {
+		/** address of the owner */
+		string address = 1;
+		/**
+		 * signature of proto serialised epoch and info
+		 * with the private key
+		 */
+		bytes signature = 2;
+	}
+}
+
+message InitialiseSessionResponse {
+	/** opaque ID assigned to the client for this request */
+	string sessionId = 1;
+}
+
+message PushToSessionRequest {
+	/** opaque ID assigned to the client for this request */
+	string sessionId = 1;
+	/** messages to push */
+	repeated TLSPacket messages = 2;
+}
+
+message PushToSessionResponse {
+	// empty response
+}
+
+message PullFromSessionRequest {
+	/** opaque ID assigned to the client for this request */
+	string sessionId = 1;
+	/** indicate the version of the client */
+	WitnessVersion version = 2;
+
+}
+
+message PullFromSessionResponse {
+	/** messages pulled from the server */
+	TLSPacket message = 1;
+}
+
+message CancelSessionRequest {
+	string sessionId = 1;
+}
+
+message CancelSessionResponse {
+	// empty response
+}
+
+message FinaliseSessionRequest {
+	string sessionId = 1;
+	repeated Block revealBlocks = 2;
+	TlsCipherSuiteType cipherSuite = 3;
+
+	message Block {
+		/** auth tag of the block to reveal */
+		bytes authTag = 1;
+		/**
+		 * key & IV for direct reveal;
+		 * kept for backwards compatibility
+		 */
+		bytes key = 2;
+		bytes iv = 3;
+		BlockRevealDirect directReveal = 4;
+		BlockRevealZk zkReveal = 5;
+	}
+
+	// direct reveal of the block via the key & IV
+	// cipher (aes, chacha) for decryption
+	// selected based on `cipherSuite`
+	// in `FinaliseSessionRequest`
+	message BlockRevealDirect {
+		/** key for the block */
+		bytes key = 1;
+		/** IV for the block */
+		bytes iv = 2;
+	}
+
+	// partially or fully reveal the block via a zk proof
+	message BlockRevealZk {
+		repeated ZKProof proofs = 1;
+	}
+
+	message ZKProof {
+		/** JSON encoded snarkJS proof */
+		string proofJson = 1;
+		/** the decrypted ciphertext as output by the ZK proof */
+		bytes decryptedRedactedCiphertext = 2;
+		/** the plaintext that is fully or partially revealed */
+		bytes redactedPlaintext = 3;
+		/**
+		 * start of this specific ChaCha block
+		 * in the redactedPlaintext
+		 */
+		uint32 startIdx = 4;
+	}
+}
+
+message FinaliseSessionResponse {
+	TLSReceipt receipt = 1;
+	ProviderClaimData claimData = 2;
+	/** 
+	 * signature of `stringifyProviderClaimData(claimData)`
+	 */
+	bytes signature = 3;
+}
+
+service ReclaimWitness {
+	/** get the x25519 public key of the verifier that can be used to verify authenticity of receipts & credentials */
+	rpc GetVerifierPublicKey(GetVerifierPublicKeyRequest) returns (GetVerifierPublicKeyResponse) {}
+	
+	/** initialise a new TLS verification session with the verifier */
+	rpc initialiseSession(InitialiseSessionRequest) returns (InitialiseSessionResponse);
+	/** push blocks to the session */
+	rpc PushToSession(PushToSessionRequest) returns (PushToSessionResponse);
+	/** listen to blocks from the session */
+	rpc PullFromSession(PullFromSessionRequest) returns (stream PullFromSessionResponse);
+	/** cancel and destroy the session */
+	rpc CancelSession(CancelSessionRequest) returns (CancelSessionResponse);
+	/** finalise the session, and generate the receipt & provider signature */
+	rpc FinaliseSession(FinaliseSessionRequest) returns (FinaliseSessionResponse);
+}

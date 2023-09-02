@@ -1,0 +1,9 @@
+{
+    "name": "lichess-username",
+    "params": {
+        "username": "{{LICHESS_USERNAME}}"
+    },
+    "secretParams": {
+        "cookieStr": "{{LICHESS_COOKIE}}"
+    }
+}

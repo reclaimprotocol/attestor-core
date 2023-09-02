@@ -1,0 +1,11 @@
+{
+    "name": "chess-user",
+    "params": {
+      "url": "https://www.chess.com/settings",
+      "method": "GET"
+    },
+    "secretParams": {
+      "cookie": "{{CHESS_COOKIE}}"
+    }
+  }
+  

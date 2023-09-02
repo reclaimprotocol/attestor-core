@@ -1,0 +1,10 @@
+{
+  "name": "devfolio-hackathon-participated",
+  "params": {
+    "username": "prrthamm",
+    "hackathonCount": 34
+  },
+  "secretParams": {
+    "cookieStr": "{{DEVFOLIO_COOKIESTR}}"
+  }
+}

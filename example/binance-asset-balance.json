@@ -1,0 +1,11 @@
+{
+  "name": "binance-asset-balance",
+  "params": {
+    "assetName": "TRX",
+    "assetQty": "100"
+  },
+  "secretParams": {
+    "p20tToken": "{{BINANCE_P20T}}",
+    "csrfToken": "{{BINANCE_CSRF}}"
+  }
+}

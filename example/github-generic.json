@@ -1,0 +1,16 @@
+{
+	"name": "github-topics",
+	"params": {
+		"path": "repos/questbook/tls-receipt-verifier/topics",
+		"qs": {},
+		"type": "github-topics",
+		"response": {
+			"names": ["javascript"]
+		},
+		"keys": ["names"]
+	},
+
+	"secretParams": {
+		"token": ""
+	}
+}
