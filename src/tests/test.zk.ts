@@ -1,20 +1,23 @@
-import { makeSnarkJsZKOperator } from '@reclaimprotocol/circom-chacha20'
+import { ZKOperator } from '@reclaimprotocol/circom-chacha20'
 import { FinaliseSessionRequest_Block as BlockToReveal } from '../proto/api'
-import { AUTH_TAG_BYTE_LENGTH } from '../tls/constants'
-import { NODEJS_TLS_CRYPTO } from '../utils'
 import { getBlocksToReveal } from '../utils/redactions'
-import { prepareZkProofs, verifyZKBlock } from '../utils/zk'
+import { makeDefaultZkOperator, prepareZkProofs, verifyZKBlock } from '../utils/zk'
 
 type ServerBlock = BlockToReveal & {
 	plaintext: Buffer
 	ciphertext: Buffer
 }
 
-const OPERATOR = makeSnarkJsZKOperator()
+const AUTH_TAG_BYTE_LENGTH = 16
 
 jest.setTimeout(60_000) // 60s
 
 describe('ZK', () => {
+
+	let operator: ZKOperator
+	beforeAll(async() => {
+		operator = await makeDefaultZkOperator()
+	})
 
 	it('should correctly redact blocks', () => {
 		const vectors = [
@@ -147,7 +150,7 @@ describe('ZK', () => {
 
 			const proofs = await prepareZkProofs({
 				blocks,
-				operator: OPERATOR,
+				operator,
 				redact: () => redactions
 			})
 
@@ -160,7 +163,7 @@ describe('ZK', () => {
 					{
 						ciphertext: block.ciphertext,
 						zkReveal: block.zkReveal!,
-						operator: OPERATOR,
+						operator,
 					},
 				)
 

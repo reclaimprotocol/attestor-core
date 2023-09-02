@@ -1,15 +1,16 @@
 import {
 	generateProof,
+	makeLocalSnarkJsZkOperator,
+	makeRemoteSnarkJsZkOperator,
 	toUint8Array,
 	toUintArray,
 	verifyProof,
 	ZKOperator
 } from '@reclaimprotocol/circom-chacha20'
-import type { Logger } from 'pino'
 import { MAX_ZK_CHUNKS } from '../config'
 import { FinaliseSessionRequest_Block as BlockReveal, FinaliseSessionRequest_BlockRevealZk } from '../proto/api'
-import { ArraySlice } from '../types'
-import LOGGER from './logger'
+import { ArraySlice, Logger } from '../types'
+import { logger as LOGGER } from './logger'
 import { getBlocksToReveal, isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from './redactions'
 
 const CHACHA_BLOCK_SIZE = 64
@@ -48,6 +49,13 @@ type ZKVerifyOpts = {
 	logger?: Logger
 }
 
+export function makeDefaultZkOperator(logger?: Logger) {
+	if(typeof window !== 'undefined') {
+		return makeRemoteSnarkJsZkOperator(logger)
+	}
+
+	return makeLocalSnarkJsZkOperator(logger)
+}
 
 /**
  * Generate ZK proofs for the given blocks with a redaction function.

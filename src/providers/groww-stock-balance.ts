@@ -1,10 +1,9 @@
 /**
  * Number of a particular stock in their Groww account
  */
-
-import { gunzipSync } from 'zlib'
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
+import { uint8ArrayToStr } from '../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 type GrowwParams = {
@@ -41,6 +40,7 @@ const GrowwStocksCount: Provider<GrowwParams, GrowwSecretParams> = {
 			'Host: ' + HOST,
 			`authorization: Bearer ${secretParams.authToken}`,
 			'accept: application/json, text/plain, */*',
+			'accept-encoding: deflate, identity',
 			'Connection: close',
 			'\r\n'
 		].join('\r\n')
@@ -97,13 +97,7 @@ const GrowwStocksCount: Provider<GrowwParams, GrowwSecretParams> = {
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)
 		}
 
-		let html: string
-		if(res.headers['content-encoding'] === 'gzip') {
-			const buf = Buffer.from(res.body)
-			html = gunzipSync(buf).toString()
-		} else {
-			html = res.body.toString()
-		}
+		const html = uint8ArrayToStr(res.body)
 
 		const data = JSON.parse(html)
 		const holdings = data?.holdings

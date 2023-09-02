@@ -1,8 +1,8 @@
 import { CommonTransport } from '@reclaimprotocol/common-grpc-web-transport'
 import { areUint8ArraysEqual } from '@reclaimprotocol/tls'
 import { createChannel, createClient } from 'nice-grpc-web'
-import { Logger } from 'pino'
 import { ReclaimWitnessClient, ReclaimWitnessDefinition, TranscriptMessage, TranscriptMessageSenderType } from '../proto/api'
+import { Logger } from '../types'
 
 export function uint8ArrayToStr(arr: Uint8Array) {
 	return new TextDecoder().decode(arr)
@@ -73,4 +73,9 @@ export function uint8ArrayToBinaryStr(buf: Uint8Array) {
 	}
 
 	return ret
+}
+
+export function gunzipSync(buf: Uint8Array): Uint8Array {
+	const { gunzipSync } = require('zlib')
+	return gunzipSync(buf)
 }

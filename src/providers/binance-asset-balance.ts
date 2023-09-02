@@ -1,10 +1,9 @@
 /**
  * Proves whether a user has more than the specified balance of a token in their binance account
  */
-
-import { gunzipSync } from 'zlib'
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
+import { gunzipSync } from '../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 type BinanceAssetBalanceParams = {

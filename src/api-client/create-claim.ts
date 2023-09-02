@@ -1,15 +1,11 @@
 import { ZKOperator } from '@reclaimprotocol/circom-chacha20'
 import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
 import { ethers } from 'ethers'
-import { Logger } from 'pino'
 import { makeBeacon } from '../beacon'
 import { InitialiseSessionRequest_BeaconBasedProviderClaimRequest as ProviderClaimRequest, ProviderClaimData } from '../proto/api'
 import { ProviderName, ProviderParams, providers, ProviderSecretParams } from '../providers'
-import { Beacon, CreateStep } from '../types'
-import { createGrpcWebClient, unixTimestampSeconds } from '../utils'
-import { fetchWitnessListForClaim, makeOwnerProof } from '../utils/beacon'
-import { getIdentifierFromClaimInfo, stringifyClaimParameters } from '../utils/claims'
-import LOGGER from '../utils/logger'
+import { Beacon, CreateStep, Logger } from '../types'
+import { createGrpcWebClient, fetchWitnessListForClaim, getIdentifierFromClaimInfo, logger as LOGGER, makeOwnerProof, stringifyClaimParameters, unixTimestampSeconds } from '../utils'
 import { generateProviderReceipt } from './generate-provider-receipt'
 
 export interface CreateClaimOptions<N extends ProviderName> {

@@ -1,8 +1,8 @@
 // The zomato order count provider aims to prove the number of times you have ordered on zomato.
 
-import { gunzipSync } from 'zlib'
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
+import { gunzipSync } from '../../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
 
 

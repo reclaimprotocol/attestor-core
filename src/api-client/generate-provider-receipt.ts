@@ -1,11 +1,10 @@
 import { ZKOperator } from '@reclaimprotocol/circom-chacha20'
 import { TLSConnectionOptions } from '@reclaimprotocol/tls'
-import { Logger } from 'pino'
 import { DEFAULT_PORT } from '../config'
 import { InitialiseSessionRequest, ReclaimWitnessClient } from '../proto/api'
 import { ProviderName, ProviderParams, providers, ProviderSecretParams } from '../providers'
-import { makeHttpResponseParser } from '../utils/http-parser'
-import MAIN_LOGGER from '../utils/logger'
+import { Logger } from '../types'
+import { logger as MAIN_LOGGER, makeHttpResponseParser } from '../utils'
 import { makeAPITLSClient } from './make-api-tls-client'
 
 export interface GenerateProviderReceiptOptions<N extends ProviderName> {
@@ -53,6 +52,7 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 		]
 	}
 
+	const resParser = makeHttpResponseParser()
 	const apiClient = makeAPITLSClient({
 		host,
 		port: port ? +port : DEFAULT_PORT,
@@ -61,6 +61,22 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 		logger,
 		additionalConnectOpts,
 		zkOperator,
+		handleDataFromServer(data) {
+			resParser.onChunk(data)
+			if(resParser.res.complete) {
+				process.nextTick(() => {
+					endedHttpRequest?.()
+				})
+			}
+		},
+		onTlsEnd(err) {
+			const level = err ? 'error' : 'debug'
+			logger?.[level]({ err }, 'tls session ended')
+			endedHttpRequest?.(err)
+			try {
+				resParser.streamEnded()
+			} catch{ }
+		},
 		redactResponse:
 			provider.getResponseRedactions
 				? res => {
@@ -69,28 +85,8 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 				}
 				: undefined
 	})
-	const resParser = makeHttpResponseParser()
 
 	let endedHttpRequest: ((err?: Error) => void) | undefined
-
-	apiClient.handleDataFromServer(data => {
-		resParser.onChunk(data)
-		if(resParser.res.complete) {
-			process.nextTick(() => {
-				endedHttpRequest?.()
-			})
-		}
-	})
-
-	apiClient.onTlsSessionEnd((err) => {
-		const level = err ? 'error' : 'debug'
-		logger?.[level]({ err }, 'tls session ended')
-		endedHttpRequest?.(err)
-		try {
-			resParser.streamEnded()
-		} catch{ }
-	})
-
 	const request = provider.createRequest(
 		// @ts-ignore
 		secretParams,

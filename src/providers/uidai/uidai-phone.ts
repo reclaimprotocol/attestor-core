@@ -1,9 +1,9 @@
 /**
  * Verify the Mobile number from aadhar card
  */
-import { gunzipSync } from 'zlib'
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
+import { gunzipSync } from '../../utils'
 import {
 	getCompleteHttpResponseFromTranscript,
 	getHttpRequestHeadersFromTranscript,

@@ -3,9 +3,9 @@
  * https://api.devfolio.co/api/users/${username}/primary_stats
  *
  */
-import { gunzipSync } from 'zlib'
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
+import { gunzipSync } from '../../utils'
 import {
 	getCompleteHttpResponseFromTranscript,
 	getHttpRequestHeadersFromTranscript,

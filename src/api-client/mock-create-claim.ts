@@ -1,6 +1,6 @@
-import { Logger } from 'pino'
 import { ReclaimWitnessClient } from '../proto/api'
 import { ProviderName, ProviderParams, providers, ProviderSecretParams } from '../providers'
+import { Logger } from '../types'
 import { generateProviderReceipt } from './generate-provider-receipt'
 
 export interface MockCreateClaimOptions<N extends ProviderName> {

@@ -103,7 +103,7 @@ const coindcxBalance: Provider<CoindcxBalanceParams, CoindcxBalanceSecretParams>
 
 		// Convert Response to string and check the balance of the user
 		const bodyStr = JSON.parse(res.body.toString())
-		const assetWallet = bodyStr.wallets.find((wallet) => {
+		const assetWallet = bodyStr.wallets.find((wallet: any) => {
 			return wallet.currency_short_name === assetName
 		})
 		if(assetWallet === undefined) {

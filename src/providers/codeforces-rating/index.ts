@@ -1,9 +1,9 @@
 // The codeforces provider aims to prove that your rating is greater than some threshold rating anonymously,
 // i.e., without revealing your handle or the exact rating.
 
-import { gunzipSync } from 'zlib'
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
+import { gunzipSync } from '../../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
 import { parseResponse } from './utils'
 

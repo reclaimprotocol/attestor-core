@@ -7,7 +7,6 @@ import {
 	Property,
 	Syntax,
 } from 'esprima-next'
-import { JSONPath } from 'jsonpath-plus'
 import { parse } from 'parse5'
 import { DOMParser } from 'xmldom'
 import { serializeToString } from 'xmlserializer'
@@ -51,6 +50,7 @@ export function extractHTMLElement(
 }
 
 export function extractJSONValueIndex(json: string, jsonPath: string) {
+	const { JSONPath } = require('jsonpath-plus')
 	const pointers = JSONPath({
 		path: jsonPath,
 		json: JSON.parse(json),

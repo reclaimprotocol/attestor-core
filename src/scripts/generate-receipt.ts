@@ -4,8 +4,7 @@ const env = process.env.NODE_ENV || 'development'
 config({ path: `.env.${env}` })
 
 import { readFile } from 'fs/promises'
-import logger from '../utils/logger'
-import { createGrpcWebClient, generateProviderReceipt, getTranscriptString, ProviderName, ProviderParams, providers, ProviderSecretParams } from '..'
+import { createGrpcWebClient, generateProviderReceipt, getTranscriptString, logger, ProviderName, ProviderParams, providers, ProviderSecretParams } from '..'
 
 export type ProviderReceiptGenerationParams<P extends ProviderName> = {
 	name: P

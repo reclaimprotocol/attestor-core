@@ -1,4 +1,3 @@
-import { parse } from 'url'
 import { DEFAULT_PORT } from '../../config'
 import { TranscriptMessageSenderType } from '../../proto/api'
 import { Provider } from '../../types'
@@ -49,7 +48,7 @@ const OK_HTTP_HEADER = 'HTTP/1.1 200 OK'
 
 const index: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	hostPort(params) {
-		const { hostname, port } = parse(params.url)
+		const { hostname, port } = new URL(params.url)
 		if(!hostname) {
 			throw new Error('url is incorrect')
 		}
@@ -91,9 +90,9 @@ const index: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		const hostPort =
 			this.hostPort instanceof Function ? this.hostPort(params) : this.hostPort
-		const { path } = parse(params.url)
+		const { pathname } = new URL(params.url)
 		const strRequest = [
-			`${params.method} ${path} HTTP/1.1`,
+			`${params.method} ${pathname} HTTP/1.1`,
 			`Host: ${hostPort}`,
 			...headers,
 			...authStr,
@@ -124,12 +123,12 @@ const index: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
 
-		const { hostname, path, port } = parse(params.url)
-		if(!hostname || !path) {
+		const { hostname, pathname, port } = new URL(params.url)
+		if(!hostname || !pathname) {
 			throw new Error('url is incorrect')
 		}
 
-		if(req.url !== path) {
+		if(req.url !== pathname) {
 			throw new Error(`Invalid URL: ${req.url}`)
 		}
 

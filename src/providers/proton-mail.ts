@@ -2,9 +2,9 @@
  * Prove whether a user has a proton mail account
  */
 
-import { gunzipSync } from 'zlib'
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
+import { gunzipSync } from '../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 type ProtonMailParams = {

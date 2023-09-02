@@ -1,15 +1,15 @@
-import { makeSnarkJsZKOperator, ZKOperator } from '@reclaimprotocol/circom-chacha20'
-import { crypto, generateIV, makeTLSClient, SUPPORTED_CIPHER_SUITE_MAP, TLSConnectionOptions, TLSEventMap, TLSPresharedKey } from '@reclaimprotocol/tls'
-import { Logger } from 'pino'
+import { ZKOperator } from '@reclaimprotocol/circom-chacha20'
+import { crypto, generateIV, makeTLSClient, SUPPORTED_CIPHER_SUITE_MAP, TLSConnectionOptions, TLSPresharedKey, TLSSessionTicket } from '@reclaimprotocol/tls'
 import { FinaliseSessionRequest_Block, InitialiseSessionRequest, PullFromSessionResponse, PushToSessionRequest, ReclaimWitnessClient, TlsCipherSuiteType, WitnessVersion } from '../proto/api'
-import { ArraySlice } from '../types'
-import MAIN_LOGGER from '../utils/logger'
-import { prepareZkProofs } from '../utils/zk'
+import { ArraySlice, Logger } from '../types'
+import { logger as MAIN_LOGGER, makeDefaultZkOperator, prepareZkProofs } from '../utils'
 
 export type APITLSClientOptions = {
 	host: string
 	port: number
 	client: ReclaimWitnessClient
+	handleDataFromServer(data: Uint8Array): void
+	onTlsEnd?(error?: Error): void
 	/** return the sections of the response to redact */
 	redactResponse?(data: Uint8Array): ArraySlice[]
 	request?: Partial<InitialiseSessionRequest>
@@ -45,6 +45,8 @@ export const makeAPITLSClient = ({
 	port,
 	client,
 	redactResponse,
+	handleDataFromServer,
+	onTlsEnd,
 	request,
 	logger: _logger,
 	additionalConnectOpts,
@@ -68,11 +70,30 @@ export const makeAPITLSClient = ({
 		logger.info('disabled ZK proofs')
 	}
 
+	let onHandshake: (() => void) | undefined
 	const tls = makeTLSClient({
 		host,
 		logger,
 		cipherSuites,
 		...additionalConnectOpts || {},
+		onHandshake() {
+			onHandshake?.()
+		},
+		async onRecvData(plaintext, { authTag, ciphertext }) {
+			await handleDataFromServer(plaintext)
+
+			const keys = tls.getKeys()!
+			const key = await crypto.exportKey(keys.serverEncKey)
+			const iv = generateIV(keys.serverIv, keys.recordRecvCount - 1)
+
+			allServerBlocks.push({
+				authTag,
+				directReveal: { key, iv },
+				plaintext,
+				ciphertext,
+			})
+		},
+		onTlsEnd,
 		async write({ header, content, authTag }) {
 			if(!sessionId) {
 				throw new Error('Too early to write')
@@ -85,10 +106,7 @@ export const makeAPITLSClient = ({
 
 				blocksToReveal.push({
 					authTag,
-					directReveal: {
-						key,
-						iv
-					}
+					directReveal: { key, iv }
 				})
 				pendingReveal = false
 			}
@@ -114,40 +132,6 @@ export const makeAPITLSClient = ({
 
 	return {
 		generatePSK,
-		/**
-		 * handle data received from the server
-		 * @param clb handle data, return if the block should be revealed or not
-		 */
-		async handleDataFromServer(clb: (data: Uint8Array) => void) {
-			tls.ev.on('data', handlePlaintext)
-
-			return () => {
-				tls.ev.off('data', handlePlaintext)
-			}
-
-			async function handlePlaintext(
-				{
-					plaintext,
-					ciphertext,
-					authTag
-				}: TLSEventMap['data']
-			) {
-				const keys = tls.getKeys()!
-				const key = await crypto.exportKey(keys.serverEncKey)
-				const iv = generateIV(keys.serverIv, keys.recordRecvCount - 1)
-
-				allServerBlocks.push({
-					authTag,
-					directReveal: { key, iv },
-					plaintext,
-					ciphertext,
-				})
-				clb(plaintext)
-			}
-		},
-		async onTlsSessionEnd(clb: (error?: Error) => void) {
-			tls.ev.once('end', ({ error }) => clb(error))
-		},
 		async connect() {
 			if(!psk && generateOutOfBandSession) {
 				await generatePSK()
@@ -195,8 +179,8 @@ export const makeAPITLSClient = ({
 
 			await Promise.race([
 				evPromise,
-				new Promise(resolve => {
-					tls.ev.on('handshake', resolve)
+				new Promise<void>(resolve => {
+					onHandshake = resolve
 				})
 			])
 
@@ -229,7 +213,8 @@ export const makeAPITLSClient = ({
 				const zkBlocks = await prepareZkProofs(
 					{
 						blocks: allServerBlocks,
-						operator: zkOperator || makeSnarkJsZKOperator(logger),
+						operator: zkOperator
+							|| await makeDefaultZkOperator(logger),
 						redact: redactResponse,
 						logger,
 					}
@@ -329,6 +314,7 @@ export const makeAPITLSClient = ({
 	async function generatePSK() {
 		const { Socket } = await import('net')
 		const socket = new Socket()
+		let onTicket: undefined | ((ticket: TLSSessionTicket) => void)
 		const tls = makeTLSClient({
 			host,
 			logger,
@@ -340,7 +326,10 @@ export const makeAPITLSClient = ({
 				if(authTag) {
 					socket.write(authTag)
 				}
-			}
+			},
+			onSessionTicket(ticket) {
+				onTicket?.(ticket)
+			},
 		})
 
 		socket.once('connect', () => tls.startHandshake())
@@ -348,20 +337,13 @@ export const makeAPITLSClient = ({
 
 		socket.connect({ host, port })
 
-		const newPsk = new Promise<TLSPresharedKey>(resolve => {
-			tls.ev.once('session-ticket', ticket => {
-				resolve(tls.getPskFromTicket(ticket))
-			})
-		})
-
-		await new Promise((resolve, reject) => {
-			socket.once('error', reject)
-			tls.ev.once('handshake', resolve)
+		const ticket = new Promise<TLSSessionTicket>(resolve => {
+			onTicket = resolve
 		})
 
 		logger.info('waiting for TLS ticket')
 
-		psk = await newPsk
+		psk = await tls.getPskFromTicket(await ticket)
 
 		logger.info('got TLS ticket, ending session...')
 		socket.end()
