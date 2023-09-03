@@ -5,5 +5,5 @@ lib
 .DS_Store
 *.LICENSE.txt
 browser/circuit.wasm
-browser/circuit.js
+browser/circuit.zkey
 browser/reclaim-witness.min.js
