@@ -1,6 +1,5 @@
 import { areUint8ArraysEqual, concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
 import type { IncomingHttpHeaders } from 'http'
-import { HTTPParser } from 'http-parser-js'
 import { TLSReceipt, TranscriptMessageSenderType } from '../proto/api'
 import { findIndexInUint8Array, uint8ArrayToStr } from './generics'
 import { REDACTION_CHAR_CODE } from './redactions'
@@ -43,38 +42,9 @@ export function makeHttpResponseParser() {
 		headersComplete: false
 	}
 
-	const parser = new HTTPParser(HTTPParser.RESPONSE)
-	parser.onHeadersComplete = (info) => {
-		for(let i = 0;i < info.headers.length;i += 2) {
-			res.headers[info.headers[i].toLowerCase()] =
-				info.headers[i + 1]
-		}
-
-		res.statusCode = info.statusCode
-		res.statusMessage = info.statusMessage
-		res.headersComplete = true
-	}
-
-	parser.onBody = (chunk, offset, length) => {
-		chunk = chunk.subarray(offset, offset + length)
-		res.body = concatenateUint8Arrays([res.body, chunk])
-
-		// hacky way to determine if the request is complete
-		// this is essential, as some servers aren't sending the
-		// content-length header nor chunked encoding
-		if(
-			res.headers['content-type']?.includes('text/html')
-			&& uint8ArrayToStr(res.body.slice(-20))
-				.trim()
-				.endsWith('</html>')
-		) {
-			res.complete = true
-		}
-	}
-
-	parser.onMessageComplete = () => {
-		res.complete = true
-	}
+	let remainingBodyBytes = 0
+	let isChunked = false
+	let remaining = new Uint8Array()
 
 	return {
 		res,
@@ -83,21 +53,120 @@ export function makeHttpResponseParser() {
 		 * @param data the data to parse
 		 */
 		onChunk(data: Uint8Array) {
-			// @ts-expect-error
-			parser.execute(data)
+			// concatenate the remaining data from the last chunk
+			remaining = concatenateUint8Arrays([remaining, data])
+			// if we don't have the headers yet, keep reading lines
+			// as each header is in a line
+			if(!res.headersComplete) {
+				for(let line = getLine(); typeof line !== 'undefined';line = getLine()) {
+					// first line is the HTTP version, status code & message
+					if(!res.statusCode) {
+						const [, statusCode, statusMessage] = line.match(/HTTP\/\d\.\d (\d+) (.*)/) || []
+						res.statusCode = Number(statusCode)
+						res.statusMessage = statusMessage
+					} else if(line === '') { // empty line signifies end of headers
+						res.headersComplete = true
+						// if the response is chunked, we need to process the body differently
+						if(res.headers['transfer-encoding']?.includes('chunked')) {
+							isChunked = true
+							break
+						// if the response has a content-length, we know how many bytes to read
+						} else if(res.headers['content-length']) {
+							remainingBodyBytes = Number(res.headers['content-length'])
+							break
+						} else {
+							// otherwise, no more data to read
+							res.complete = true
+						}
+					} else if(!res.complete) { // parse the header
+						const [key, value] = line.split(': ')
+						res.headers[key.toLowerCase()] = value
+					} else {
+						throw new Error('got more data after response was complete')
+					}
+				}
+			}
+
+			if(res.headersComplete) {
+				if(remainingBodyBytes) {
+					readBody()
+					// if no more body bytes to read,
+					// and the response was not chunked we're done
+					if(!remainingBodyBytes && !isChunked) {
+						res.complete = true
+					}
+				}
+
+				if(isChunked) {
+					for(let line = getLine(); typeof line !== 'undefined'; line = getLine()) {
+						if(line === '') {
+							continue
+						}
+
+						const chunkSize = Number.parseInt(line, 16)
+						// if chunk size is 0, we're done
+						if(!chunkSize) {
+							res.complete = true
+							break
+						}
+
+						// otherwise read the chunk
+						remainingBodyBytes = chunkSize
+						readBody()
+
+						// if we read all the data we had,
+						// but there's still data left,
+						// break the loop and wait for the next chunk
+						if(remainingBodyBytes) {
+							break
+						}
+					}
+				}
+			}
 		},
 		/**
 		 * Call to prevent further parsing; indicating the end of the request
 		 * Checks that the response is valid & complete, otherwise throws an error
 		 */
 		streamEnded() {
-			parser.close()
 			if(!res.headersComplete) {
 				throw new Error('stream ended before headers were complete')
 			}
 
+			if(remaining.length) {
+				throw new Error('stream ended with remaining data')
+			}
+
+			if(remainingBodyBytes) {
+				throw new Error('stream ended before all body bytes were received')
+			}
+
 			res.complete = true
 		}
+	}
+
+	function readBody() {
+		// take the number of bytes we need to read, or the number of bytes remaining
+		// and append to the bytes of the body
+		const bytesToCopy = Math.min(remainingBodyBytes, remaining.length)
+		res.body = concatenateUint8Arrays([res.body, remaining.slice(0, bytesToCopy)])
+		remainingBodyBytes -= bytesToCopy
+
+		remaining = remaining.slice(bytesToCopy)
+	}
+
+	function getLine() {
+		// find end of line, if it exists
+		// otherwise return undefined
+		const idx = findIndexInUint8Array(remaining, HTTP_HEADER_LINE_END)
+		if(idx === -1) {
+			return undefined
+		}
+
+		const line = remaining.slice(0, idx).toString()
+		remaining = remaining.slice(idx + 2)
+
+		return line
 	}
 }
 

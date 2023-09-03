@@ -7,7 +7,7 @@ function jsonLog(level: keyof typeof logger, opts: { [_: string]: any } | undefi
 		data.unshift(opts)
 	}
 
-	return logger[level](data)
+	return console[level](...data)
 }
 
 function makeLogger(opts?: { [_: string]: any }): Logger {
@@ -20,7 +20,8 @@ function makeLogger(opts?: { [_: string]: any }): Logger {
 		info: (...data) => jsonLog('info', opts, ...data),
 		warn: (...data) => jsonLog('warn', opts, ...data),
 		error: (...data) => jsonLog('error', opts, ...data),
-		trace: (...data) => jsonLog('trace', opts, ...data),
+		// trace logging off by default
+		trace: () => {},
 		child: opts2 => makeLogger({ ...opts, ...opts2 }),
 	}
 }

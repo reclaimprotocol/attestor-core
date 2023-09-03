@@ -1,4 +1,4 @@
-import { uint8ArrayToDataView } from '@reclaimprotocol/tls'
+import { strToUint8Array, uint8ArrayToDataView } from '@reclaimprotocol/tls'
 import { ethers } from 'ethers'
 import {
 	InitialiseSessionRequest_BeaconBasedProviderClaimRequest as ClaimRequest,
@@ -34,8 +34,12 @@ export function fetchWitnessListForClaim(
 		timestampS.toString(),
 	]
 		.join('\n')
-	const completeHashStr = ethers.utils.keccak256(completeInput)
-	const completeHash = ethers.utils.arrayify(completeHashStr)
+	const completeHashStr = ethers.utils.keccak256(
+		strToUint8Array(completeInput)
+	)
+	const completeHash = ethers.utils.arrayify(
+		strToUint8Array(completeHashStr)
+	)
 	const completeHashView = uint8ArrayToDataView(completeHash)
 	const witnessesLeft = [...witnesses]
 	const selectedWitnesses: WitnessData[] = []

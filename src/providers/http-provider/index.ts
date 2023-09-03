@@ -1,3 +1,4 @@
+import { strToUint8Array } from '@reclaimprotocol/tls'
 import { DEFAULT_PORT } from '../../config'
 import { TranscriptMessageSenderType } from '../../proto/api'
 import { Provider } from '../../types'
@@ -48,12 +49,12 @@ const OK_HTTP_HEADER = 'HTTP/1.1 200 OK'
 
 const index: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	hostPort(params) {
-		const { hostname, port } = new URL(params.url)
-		if(!hostname) {
+		const { host } = new URL(params.url)
+		if(!host) {
 			throw new Error('url is incorrect')
 		}
 
-		return `${hostname}:${port ?? DEFAULT_PORT}`
+		return host
 	},
 	areValidParams(params): params is HTTPProviderParams {
 		return (
@@ -104,8 +105,8 @@ const index: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			'\r\n',
 		].join('\r\n')
 
-		const data = Buffer.from(strRequest)
-		const tokenStartIndex = data.indexOf(authStr[0])
+		const data = strToUint8Array(strRequest)
+		const tokenStartIndex = strRequest.indexOf(authStr[0])
 
 		return {
 			data,
@@ -228,7 +229,7 @@ const index: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			redactions.push({ fromIndex: currentIndex, toIndex: response.length })
 		}
 
-		return redactions //no redactions
+		return redactions
 	},
 }
 

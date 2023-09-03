@@ -1,11 +1,12 @@
 import { ZKOperator } from '@reclaimprotocol/circom-chacha20'
+import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
+import { createCipheriv } from 'crypto'
 import { FinaliseSessionRequest_Block as BlockToReveal } from '../proto/api'
-import { getBlocksToReveal } from '../utils/redactions'
-import { makeDefaultZkOperator, prepareZkProofs, verifyZKBlock } from '../utils/zk'
+import { getBlocksToReveal, makeDefaultZkOperator, prepareZkProofs, uint8ArrayToStr, verifyZKBlock } from '../utils'
 
 type ServerBlock = BlockToReveal & {
-	plaintext: Buffer
-	ciphertext: Buffer
+	plaintext: Uint8Array
+	ciphertext: Uint8Array
 }
 
 const AUTH_TAG_BYTE_LENGTH = 16
@@ -84,7 +85,7 @@ describe('ZK', () => {
 			expect(realOutput).toHaveLength(output.length)
 			for(let i = 0; i < output.length; i++) {
 				expect(
-					realOutput[i].redactedPlaintext.toString()
+					uint8ArrayToStr(realOutput[i].redactedPlaintext)
 				).toEqual(output[i])
 			}
 		}
@@ -124,24 +125,20 @@ describe('ZK', () => {
 		for(const { plaintextStrs, redactions } of vectors) {
 			const plaintexts = plaintextStrs.map(str => Buffer.from(str))
 			const blocks = plaintexts.map((plaintext): ServerBlock => {
-				const { ciphertext, authTag } = NODEJS_TLS_CRYPTO.encrypt(
-					'TLS_CHACHA20_POLY1305_SHA256',
-					{
-						data: Buffer.from(plaintext),
-						iv,
-						key,
-						aead: Buffer.alloc(AUTH_TAG_BYTE_LENGTH, 1)
-					}
+				const cipher = createCipheriv('chacha20-poly1305', key, iv, { authTagLength: 16 })
+				cipher.setAAD(Buffer.alloc(AUTH_TAG_BYTE_LENGTH, 1), { plaintextLength: plaintext.length })
+				const ciphertext = concatenateUint8Arrays(
+					[
+						cipher.update(plaintext),
+						cipher.final()
+					]
 				)
 
 				return {
-					authTag,
+					authTag: cipher.getAuthTag(),
 					key: new Uint8Array(),
 					iv: new Uint8Array(),
-					directReveal: {
-						key,
-						iv,
-					},
+					directReveal: {	key, iv },
 					zkReveal: undefined,
 					plaintext,
 					ciphertext

@@ -1,10 +1,11 @@
 {
-	"name": "@reclaimprotocol/reclaim-node",
+	"name": "@reclaimprotocol/witness-sdk",
 	"version": "1.0.1",
 	"description": "",
 	"main": "lib/index",
 	"scripts": {
 		"build": "npm exec tsc",
+		"build:browser": "webpack",
 		"prepare": "npm run build",
 		"test": "NODE_ENV=test TZ=utc jest --forceExit --detectOpenHandles",
 		"lint": "eslint ./ --ext .js,.ts,.jsx,.tsx",
@@ -28,7 +29,6 @@
 		"dotenv": "^16.3.1",
 		"esprima-next": "^5.8.4",
 		"ethers": "^5.7.2",
-		"http-parser-js": "^0.5.8",
 		"jsonpath-plus": "^7.2.0",
 		"nice-grpc-common": "^2.0.0",
 		"nice-grpc-web": "^2.0.0",

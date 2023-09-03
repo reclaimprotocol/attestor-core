@@ -2,3 +2,4 @@ extra-contracts-config.json
 .env.development
 node_modules
 lib
+.DS_Store

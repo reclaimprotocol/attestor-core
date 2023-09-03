@@ -7,6 +7,7 @@ import {
 	verifyProof,
 	ZKOperator
 } from '@reclaimprotocol/circom-chacha20'
+import { detectEnvironment } from '@reclaimprotocol/common-grpc-web-transport'
 import { MAX_ZK_CHUNKS } from '../config'
 import { FinaliseSessionRequest_Block as BlockReveal, FinaliseSessionRequest_BlockRevealZk } from '../proto/api'
 import { ArraySlice, Logger } from '../types'
@@ -35,7 +36,7 @@ type PrepareZKProofsOpts = {
 	/** blocks to prepare ZK proof for */
 	blocks: BlockWithPlaintext[]
 	/** params for ZK proof gen */
-	operator: ZKOperator
+	operator?: ZKOperator
 	/** redact selected portions of the plaintext */
 	redact: (plaintext: Uint8Array) => ArraySlice[]
 	logger?: Logger
@@ -49,12 +50,21 @@ type ZKVerifyOpts = {
 	logger?: Logger
 }
 
+let zkOperator: Promise<ZKOperator> | undefined
 export function makeDefaultZkOperator(logger?: Logger) {
-	if(typeof window !== 'undefined') {
-		return makeRemoteSnarkJsZkOperator(logger)
+	if(!zkOperator) {
+		const isNode = detectEnvironment() === 'node'
+		logger?.debug(
+			{ type: isNode ? 'local' : 'remote' },
+			'using zk operator'
+		)
+
+		zkOperator = isNode
+			? makeLocalSnarkJsZkOperator(logger)
+			: makeRemoteSnarkJsZkOperator(logger)
 	}
 
-	return makeLocalSnarkJsZkOperator(logger)
+	return zkOperator
 }
 
 /**
@@ -68,17 +78,13 @@ export async function prepareZkProofs(
 		logger
 	}: PrepareZKProofsOpts
 ) {
-	logger = logger || LOGGER.child({ module: 'zk' })
-	const blocksToReveal = getBlocksToReveal(
-		blocks,
-		redact
-	)
-
+	const blocksToReveal = getBlocksToReveal(blocks, redact)
 	if(blocksToReveal === 'all') {
 		return 'all'
 	}
 
-
+	logger = logger || LOGGER.child({ module: 'zk' })
+	operator = operator || await makeDefaultZkOperator(logger)
 	logger.info(
 		{ len: blocksToReveal.length },
 		'preparing proofs for blocks'
@@ -101,10 +107,7 @@ export async function prepareZkProofs(
 		)
 	}
 
-	logger.info(
-		{ totalChunks },
-		'extracted chunks'
-	)
+	logger.info({ totalChunks }, 'extracted chunks')
 
 	await Promise.all(
 		zkBlocks.map(async({ block, zkChunks }) => {
@@ -127,7 +130,7 @@ export async function prepareZkProofs(
 							{
 								ciphertext: ciphertextChunk
 							},
-							operator,
+							operator!,
 						)
 
 						logger?.debug(
@@ -186,11 +189,11 @@ export async function verifyZKBlock(
 
 	await Promise.all(
 		proofs.map(async({
-											 proofJson,
-											 decryptedRedactedCiphertext,
-											 redactedPlaintext,
-											 startIdx,
-										 }, i) => {
+			proofJson,
+			decryptedRedactedCiphertext,
+			redactedPlaintext,
+			startIdx,
+		}, i) => {
 			// get the ciphertext chunk we received from the server
 			// the ZK library, will verify that the decrypted redacted
 			// ciphertext matches the ciphertext received from the server
@@ -211,7 +214,7 @@ export async function verifyZKBlock(
 				{
 					proofJson,
 					plaintext:
-							toUintArray(decryptedRedactedCiphertext),
+						toUintArray(decryptedRedactedCiphertext),
 				}
 				,
 				{

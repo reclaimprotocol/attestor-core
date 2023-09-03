@@ -1,8 +1,9 @@
 import { ZKOperator } from '@reclaimprotocol/circom-chacha20'
-import { crypto, generateIV, makeTLSClient, SUPPORTED_CIPHER_SUITE_MAP, TLSConnectionOptions, TLSPresharedKey, TLSSessionTicket } from '@reclaimprotocol/tls'
+import { detectEnvironment } from '@reclaimprotocol/common-grpc-web-transport'
+import { crypto, generateIV, makeTLSClient, SUPPORTED_CIPHER_SUITE_MAP, SUPPORTED_NAMED_CURVES, TLSConnectionOptions, TLSPresharedKey, TLSSessionTicket } from '@reclaimprotocol/tls'
 import { FinaliseSessionRequest_Block, InitialiseSessionRequest, PullFromSessionResponse, PushToSessionRequest, ReclaimWitnessClient, TlsCipherSuiteType, WitnessVersion } from '../proto/api'
 import { ArraySlice, Logger } from '../types'
-import { logger as MAIN_LOGGER, makeDefaultZkOperator, prepareZkProofs } from '../utils'
+import { logger as MAIN_LOGGER, prepareZkProofs } from '../utils'
 
 export type APITLSClientOptions = {
 	host: string
@@ -40,6 +41,11 @@ const CIPHER_SUITE_MAP: { [K in keyof typeof SUPPORTED_CIPHER_SUITE_MAP]: TlsCip
 	'TLS_AES_128_GCM_SHA256': TlsCipherSuiteType.TLS_CIPHER_SUITE_TYPE_AES_128_GCM_SHA256,
 }
 
+const NAMED_CURVE_LIST = detectEnvironment() === 'node'
+	? SUPPORTED_NAMED_CURVES
+	// X25519 is not supported in the browser
+	: SUPPORTED_NAMED_CURVES.filter(c => c !== 'X25519')
+
 export const makeAPITLSClient = ({
 	host,
 	port,
@@ -75,6 +81,7 @@ export const makeAPITLSClient = ({
 		host,
 		logger,
 		cipherSuites,
+		namedCurves: NAMED_CURVE_LIST,
 		...additionalConnectOpts || {},
 		onHandshake() {
 			onHandshake?.()
@@ -213,8 +220,7 @@ export const makeAPITLSClient = ({
 				const zkBlocks = await prepareZkProofs(
 					{
 						blocks: allServerBlocks,
-						operator: zkOperator
-							|| await makeDefaultZkOperator(logger),
+						operator: zkOperator,
 						redact: redactResponse,
 						logger,
 					}
