@@ -1,4 +1,3 @@
-import { DOMParser as XMLDOMParser } from '@xmldom/xmldom'
 import {
 	ArrayExpression,
 	Expression,
@@ -8,9 +7,9 @@ import {
 	Property,
 	Syntax,
 } from 'esprima-next'
+import * as jsdom from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
 import { serializeToString } from 'xmlserializer'
-import * as xpath from 'xpath'
 
 export type JSONIndex = {
 	start: number
@@ -47,16 +46,13 @@ export function extractHTMLElement(
 	}
 
 	function findElementNode() {
-		const domParser = new XMLDOMParser()
-		const dom = domParser.parseFromString(html, 'text/html')
-		const namespaces = { xhtml: 'http://www.w3.org/1999/xhtml' }
-		// Create a namespace-aware select function
-		const select = xpath.useNamespaces(namespaces)
-
-		// Update the XPath expression to include the namespace prefix
-		xpathExpression = xpathExpression.replace(/(^|\/)(\w+)/g, '$1xhtml:$2')
-		const node = select(xpathExpression, dom, true)
-		return node as Node
+		const jsdomInstance = new jsdom.JSDOM()
+		const dom = new jsdomInstance.window.DOMParser()
+			.parseFromString(html, 'text/html')
+		const node = dom
+			.evaluate(xpathExpression, dom, null, jsdomInstance.window.XPathResult.FIRST_ORDERED_NODE_TYPE, null)
+			?.singleNodeValue
+		return node
 	}
 }
 
