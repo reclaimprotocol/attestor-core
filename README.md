@@ -1,13 +1,29 @@
 # Reclaim Witness SDK
 
-The node acts as an oracle for the on-chain smart contract. Users must interact with this node to generate signed credentials which they can then pass to the smart contract to mint credentials
+SDK for creating claims & verifying them using a Reclaim Witness server.
 
-The oracle & client communicate via gRPC. The protobuf file laying out the service can be found in `proto/api.proto`
+## Install
 
-## Usage
+The SDK is compatible with the browser & NodeJS.
+To run the SDK on React Native/Mobile, keep reading.
 
-1. Install in your project using `npm install @reclaimprotocol/reclaim-node` (TODO)
-2. Example of minting a credential:
+### Installing in a project
+
+`npm install git+https://github.com/reclaimprotocol/witness-sdk`
+
+**Note:** this approach is only advised for NodeJS projects or projects meant to run directly in a modern browser. For React Native or any solution running in a mobile app, see the section below.
+
+### React Native & Mobile Apps
+
+In order to run on React Native, you'll need to run the witness SDK in a WebView & communicate with it via postMessage.
+
+Generally, this is a painful process -- but we've tried our best to make this easy for ya'll. We host the SDK with preconfigured code for you to RPC with. This is available on `https://sdk-rpc.reclaimprotocol.org`
+
+
+
+### Usage
+
+2. Example of creating a claim:
 
    ```ts
    import { Wallet } from 'ethers'
@@ -83,9 +99,9 @@ The oracle & client communicate via gRPC. The protobuf file laying out the servi
    - The command can take in variables from your environment as well. By default the `.env` file. These variables must be mustache encoded, for eg. `{{GH_TOKEN}}`
 2. We've provided such an example for github, which you can run via `npm run example:github-claim`
 
-## Applications
+## Provider
 
-An "application" in reclaim's context is simply a provider for some reputation or credential.
+An "provider" in reclaim's context is simply a provider for some reputation or credential.
 
 For example, you could have an application termed "google-login" that is configured to verify claims of ownership of google accounts. (PS: this has actually been implemented here)
 
@@ -93,44 +109,54 @@ The library makes it fairly simple to add new applications for particular use ca
 
 1. Any new application must conform to the `Application` interface
    ```ts
-   interface Application<
-   	Params extends { [_: string]: unknown },
-   	SecretParams
-   > {
-   	/**
-   	 * host:port pairs considered valid for this application;
-   	 * the protocol establishes a connection to the first one
-   	 * when a request is received from a user
-   	 * Eg. ["www.google.com:443"]
-   	 * */
-   	hostPorts: string[]
-   	/** extra options to pass to the client like root CA certificates */
-   	additonalClientOptions?: TLSConnectionOptions
-   	/** check the parameters are valid */
-   	areValidParams(params: { [_: string]: unknown }): params is Params
-   	/** generate the raw request to be sent to through the TLS receipt */
-   	createRequest(params: SecretParams): {
-   		data: Uint8Array
-   		redactions: ArraySlice[]
-   	}
-   	/**
-   	 * verify a generated TLS receipt against given parameters
-   	 * to ensure the receipt does contain the credentials the
-   	 * user is claiming to have
-   	 * @param receipt the TLS receipt to verify
-   	 * @param params the parameters to verify the receipt against. Eg. `{"email": "abcd@gmail.com"}`
-   	 * */
-   	assertValidApplicationReceipt(
-   		receipt: TLSReceipt,
-   		params: Params
-   	): void | Promise<void>
-   }
-   ```
-2. Should default export the newly constructed application
-3. Should kebab case the file name & store it in `src/applications/{app-name}.ts`
-4. Finally, export this new application from `src/applications/index.ts`
+	/**
+	* Generic interface for a provider that can be used to verify
+	* claims on a TLS receipt
+	* @notice "Params" are the parameters you want to claim against.
+	* These would typically be found in the response body
+	* @notice "SecretParams" are the parameters that are used to make the API request.
+	* These must be redacted in the request construction in "createRequest" & cannot be viewed by anyone
+	*/
+	export interface Provider<Params extends { [_: string]: unknown }, SecretParams> {
+		/**
+		* host:port pairs considered valid for this provider;
+		* the protocol establishes a connection to the first one
+		* when a request is received from a user
+		* Eg. ["www.google.com:443"]
+		* */
+		hostPort: string | ((params: Params) => string)
 
-See [google-login.ts](/node/src/providers/google-login.ts) as an example of a working implementation.
+		/** extra options to pass to the client like root CA certificates */
+		additionalClientOptions?: TLSConnectionOptions
+		/** check the parameters are valid */
+		areValidParams(params: { [_: string]: unknown }): params is Params
+		/** generate the raw request to be sent to through the TLS receipt */
+		createRequest(secretParams: SecretParams, params: Params): CreateRequestResult
+		/**
+		* Return the slices of the response to redact
+		* Eg. if the response is "hello my secret is xyz",
+		* and you want to redact "xyz", you would return
+		* [{start: 17, end: 20}]
+		* */
+		getResponseRedactions?(response: Uint8Array, params: Params): ArraySlice[]
+		/**
+		* verify a generated TLS receipt against given parameters
+		* to ensure the receipt does contain the claims the
+		* user is claiming to have
+		* @param receipt the TLS receipt to verify
+		* @param params the parameters to verify the receipt against. Eg. `{"email": "abcd@gmail.com"}`
+		* */
+		assertValidProviderReceipt(receipt: TLSReceipt, params: Params): void | Promise<void>
+	}
+   ```
+2. Should default export the newly constructed provider
+3. Should kebab case the file name & store it in `src/providers/{app-name}.ts`
+4. Finally, export this new application from `src/providers/index.ts`
+
+Example providers:
+- [HTTP](/src/providers/http-provider/index.ts)
+	- This is a generic provider that can be used to verify any HTTP request
+- [Google Login](/src/providers/google-login.ts)
 
 ## Considerations & tests
 
@@ -145,7 +171,7 @@ Each application should have test in `tests` folder. `redactions` and `assertVal
 
 #### "Root CA not found. Could not verify certificate"
 
-This means that the root CA for the domain you're trying to connect to has not been added to the reclaim node. We have the Mozilla root CA list by default, but if this error occurs, you'll need to add the root CA for the domain you're trying to connect to.
+This means that the root CA for the domain you're trying to connect to has not been added to the reclaim witness. We have the Mozilla root CA list by default, but if this error occurs, you'll need to add the root CA for the domain you're trying to connect to.
 
 To add a root CA, follow these steps:
 
@@ -160,7 +186,10 @@ To add a root CA, follow these steps:
 3. Find the root CA certificate online using the name you copied
 	- http://www.certificate.fyicenter.com/ is a good resource
 4. Copy the certificate in PEM format
-5. Paste in the `src/tls/root-ca.ts` file, in the `ROOT_CA_LIST` array
+5. Add the certificate to your provider:
+	``` ts
+
+	```
 6. Run `npm run verify-root-ca {host}`. This time, it should succeed & you won't see an error at the bottom of the log
 		
 
