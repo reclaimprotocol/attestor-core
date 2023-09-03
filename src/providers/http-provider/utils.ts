@@ -1,3 +1,4 @@
+import { DOMParser as XMLDOMParser } from '@xmldom/xmldom'
 import {
 	ArrayExpression,
 	Expression,
@@ -21,25 +22,41 @@ export function extractHTMLElement(
 	xpathExpression: string,
 	contentsOnly: boolean
 ): string {
-	const parser = makeDomParser()
-	const dom = parser.parseFromString(html, 'text/html')
-	const namespaces = { xhtml: 'http://www.w3.org/1999/xhtml' }
-
-	// Create a namespace-aware select function
-	const select = xpath.useNamespaces(namespaces)
-
-	// Update the XPath expression to include the namespace prefix
-	xpathExpression = xpathExpression.replace(/(^|\/)(\w+)/g, '$1xhtml:$2')
-	const node = select(xpathExpression, dom, true)
+	const node = typeof window === 'undefined'
+		? findElementNode()
+		: findElementBrowser()
 
 	if(node) {
 		if(contentsOnly) {
-			return (node as Node).textContent!
+			return node.textContent!
 		}
 
 		return serializeToString(node).replace(/ xmlns="[^"]+"/, '')
 	} else {
 		return 'Element not found'
+	}
+
+	// uses native browser xpath
+	function findElementBrowser() {
+		const domParser = new DOMParser()
+		const dom = domParser.parseFromString(html, 'text/html')
+		const node = dom
+			.evaluate(xpathExpression, dom, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null)
+			?.singleNodeValue
+		return node
+	}
+
+	function findElementNode() {
+		const domParser = new XMLDOMParser()
+		const dom = domParser.parseFromString(html, 'text/html')
+		const namespaces = { xhtml: 'http://www.w3.org/1999/xhtml' }
+		// Create a namespace-aware select function
+		const select = xpath.useNamespaces(namespaces)
+
+		// Update the XPath expression to include the namespace prefix
+		xpathExpression = xpathExpression.replace(/(^|\/)(\w+)/g, '$1xhtml:$2')
+		const node = select(xpathExpression, dom, true)
+		return node as Node
 	}
 }
 
@@ -162,13 +179,4 @@ export function buildHeaders(input: Record<string, string>) {
 	}
 
 	return headers
-}
-
-function makeDomParser() {
-	if(typeof window !== 'undefined') {
-		return new window.DOMParser()
-	}
-
-	const { DOMParser } = require('@xmldom/xmldom')
-	return new DOMParser()
 }
