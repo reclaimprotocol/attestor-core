@@ -3,3 +3,4 @@ extra-contracts-config.json
 node_modules
 lib
 .DS_Store
+*.LICENSE.txt

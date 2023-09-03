@@ -1,10 +1,8 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
-import { DEFAULT_PORT } from '../../config'
+import { DEFAULT_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { TranscriptMessageSenderType } from '../../proto/api'
-import { Provider } from '../../types'
-import { ArraySlice } from '../../types'
-import { uint8ArrayToBinaryStr } from '../../utils'
-import { getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
+import { ArraySlice, Provider } from '../../types'
+import { getHttpRequestHeadersFromTranscript, uint8ArrayToBinaryStr } from '../../utils'
 import {
 	buildHeaders,
 	extractHTMLElement,
@@ -12,6 +10,11 @@ import {
 } from './utils'
 
 export type HTTPProviderParams = {
+	/**
+	 * Any additional headers to be sent with the request
+	 * Note: these will be revealed to the witness & won't be
+	 * redacted from the transcript
+	 */
 	headers?: Record<string, string>
 	/**
 	 * which URL does the request have to be made to
@@ -47,7 +50,7 @@ export type HTTPProviderSecretParams = {
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200 OK'
 
-const index: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
+const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	hostPort(params) {
 		const { host } = new URL(params.url)
 		if(!host) {
@@ -99,13 +102,15 @@ const index: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			...authStr,
 			'Content-Length: 0',
 			'Connection: close',
-			'User-Agent: reclaim/1.0.0',
+			'User-Agent: ' + RECLAIM_USER_AGENT,
 			//no compression
 			'accept-encoding: identity',
 			'\r\n',
 		].join('\r\n')
 
 		const data = strToUint8Array(strRequest)
+		// the string index will work here as long as
+		// the string is ascii
 		const tokenStartIndex = strRequest.indexOf(authStr[0])
 
 		return {
@@ -233,4 +238,4 @@ const index: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	},
 }
 
-export default index
+export default HTTP_PROVIDER

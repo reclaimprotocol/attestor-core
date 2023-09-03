@@ -1,4 +1,4 @@
-# Reclaim Node
+# Reclaim Witness SDK
 
 The node acts as an oracle for the on-chain smart contract. Users must interact with this node to generate signed credentials which they can then pass to the smart contract to mint credentials
 
