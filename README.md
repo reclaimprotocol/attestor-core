@@ -13,30 +13,73 @@ To run the SDK on React Native/Mobile, keep reading.
 
 **Note:** this approach is only advised for NodeJS projects or projects meant to run directly in a modern browser. For React Native or any solution running in a mobile app, see the section below.
 
-### React Native & Mobile Apps
+### React Native
 
 In order to run on React Native, you'll need to run the witness SDK in a WebView & communicate with it via postMessage.
 
 Generally, this is a painful process -- but we've tried our best to make this easy for ya'll. We host the SDK with preconfigured code for you to RPC with. This is available on `https://sdk-rpc.reclaimprotocol.org`
 
-
+To use this, you'll need to:
+1. Install the `react-native-webview` package in your project
+2. Create a WebView in your app:
+	``` tsx
+	function RenderWebView() {
+		return (
+			<WebView
+				ref={(r) => (webviewRef.current = r)}
+				originWhitelist={['*']}
+				javaScriptEnabled={true}
+				source='https://sdk-rpc.reclaimprotocol.org'
+				onMessage={(data) => {
+					const rpcRes = data.nativeEvent.data
+					// will be a JSON string
+					console.log('got res', rpcRes)
+				}}
+			/>
+		)
+	}
+	```
+3. postMessage to createClaim:
+	```ts
+	const req = {
+		// lets the window know this is a request
+		// intended for it
+		module: 'witness-sdk',
+		// this is a random ID you generate,
+		// use to match the response to the request
+		id: '123',
+		// the type of request you want to make
+		type: 'createClaim',
+		request: {
+			name: 'http',
+			params: {
+				"url": "https://bookface.ycombinator.com/home",
+				"method": "GET",
+				"responseSelections": [
+					{
+						"jsonPath": "$.currentUser",
+						"xPath": "//*[@id='js-react-on-rails-context']",
+						"responseMatch": "{\"id\":111111,.*?waas_admin.*?:{.*?}.*?:{.*?}.*?(?:full_name|first_name).*?}"
+					}
+				]
+			},
+			secretParams: {
+				cookieStr: '<cookie-str>'
+			},
+			ownerPrivateKey: '0x1234...',
+		}
+	}
+	webviewRef.current?.postMessage(
+		JSON.stringify(req),
+	)
+	```
 
 ### Usage
 
 2. Example of creating a claim:
 
    ```ts
-   import { Wallet } from 'ethers'
-   import {
-   	createClaim,
-   	getContract,
-   	makeSmartContractMint,
-   } from '@reclaimprotocol/reclaim-node'
-   // your wallet address,
-   // ensure it has enough balance to pay the mint fees
-   const meWallet = new Wallet('0x1234...')
-   // chain ID for the goerli testnet
-   const goerliChainId = 0x5
+   import {	createClaim } from '@reclaimprotocol/reclaim-node'
 
    const {
    	// data describing the minted credential
@@ -44,31 +87,24 @@ Generally, this is a painful process -- but we've tried our best to make this ea
    	// signatures returned by oracles
    	signatures,
    } = await createClaim({
-   	name: 'google-login',
-   	params: { emailAddress: 'abcd@creatoros.co' },
-   	secretParams: { googleToken: 'api-token' },
-   	requestMint: makeSmartContractMint({
-   		chainId: goerliChainId,
-   		signer: meWallet,
-   	}),
-   })
+		name: 'http',
+		params: {
+			"url": "https://bookface.ycombinator.com/home",
+			"method": "GET",
+			"responseSelections": [
+				{
+					"jsonPath": "$.currentUser",
+					"xPath": "//*[@id='js-react-on-rails-context']",
+					"responseMatch": "{\"id\":111111,.*?waas_admin.*?:{.*?}.*?:{.*?}.*?(?:full_name|first_name).*?}"
+				}
+			]
+		},
+		secretParams: {
+			cookieStr: '<cookie-str>'
+		},
+		ownerPrivateKey: '0x1234...',
+	})
    ```
-
-## Setup Node
-
-1. Clone the repository
-2. CD into this folder (`node`)
-3. Run `npm run install:deps` to install dependencies
-4. Install `protoc`. See [here](https://grpc.io/docs/protoc-installation/)
-5. Run the following scripts:
-   - `npm run generate:proto` to generate the protobuf typings
-   - `npm run generate:contracts-data` to copy in the ABI & types for the contracts
-6. You can now run this node
-   - Run `npm run test` to run the test suite
-   - Run `npm run start:tsc` to start the oracle's gRPC server
-     - Run with `NODE_ENV=test npm run start:tsc` to run in a test/dev environment
-
-**Note:** To be an oracle -- all nodes must expose a gRPC web endpoint. This endpoint shall be pushed to the smart contract as the "oracle hostname:port". The gRPC Web endpoint is mandatory, as it permits browsers to interact with the service directly
 
 ## Testing Providers Locally
 

@@ -27,7 +27,9 @@ type WindowRPCData = {
 	}
 }
 
-export type WindowRPCResponse = WindowRPCData & IdentifiedMessage
+export type WindowRPCResponse = WindowRPCData
+	& IdentifiedMessage
+	& { isResponse: true }
 
 /**
  * Sets up the current window to listen for RPC requests
@@ -48,7 +50,13 @@ export function setupWindowRpc() {
 			const req: WindowRPCRequest = typeof event.data === 'string'
 				? JSON.parse(event.data)
 				: event.data
+			// ignore any messages not for us
 			if(req.module !== 'witness-sdk') {
+				return
+			}
+
+			// ignore response messages
+			if('isResponse' in req && req.isResponse) {
 				return
 			}
 
@@ -57,11 +65,6 @@ export function setupWindowRpc() {
 					{ req },
 					'Window RPC request missing ID'
 				)
-				return
-			}
-
-			// @ts-ignore
-			if(req.type === 'error') {
 				return
 			}
 
@@ -109,7 +112,8 @@ export function setupWindowRpc() {
 			const res: WindowRPCResponse = {
 				...data,
 				id,
-				module: 'witness-sdk'
+				module: 'witness-sdk',
+				isResponse: true
 			}
 			event.source!.postMessage(JSON.stringify(res))
 		}
