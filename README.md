@@ -139,11 +139,11 @@ To use this, you'll need to:
 
 An "provider" in reclaim's context is simply a provider for some reputation or credential.
 
-For example, you could have an application termed "google-login" that is configured to verify claims of ownership of google accounts. (PS: this has actually been implemented here)
+For example, you could have a provider termed "google-login" that is configured to verify claims of ownership of google accounts. (PS: this has actually been implemented here)
 
-The library makes it fairly simple to add new applications for particular use cases. Here is how you can add your own:
+The library makes it fairly simple to add new providers for particular use cases. Here is how you can add your own:
 
-1. Any new application must conform to the `Application` interface
+1. Any new provider must conform to the `Provider` interface
    ```ts
 	/**
 	* Generic interface for a provider that can be used to verify

@@ -164,7 +164,7 @@ export function makeHttpResponseParser() {
 		}
 
 		const line = remaining.slice(0, idx).toString()
-		remaining = remaining.slice(idx + 2)
+		remaining = remaining.slice(idx + HTTP_HEADER_LINE_END.length)
 
 		return line
 	}

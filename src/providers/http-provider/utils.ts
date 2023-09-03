@@ -1,3 +1,4 @@
+import { DOMParser } from '@xmldom/xmldom'
 import {
 	ArrayExpression,
 	Expression,
@@ -8,8 +9,6 @@ import {
 	Syntax,
 } from 'esprima-next'
 import { JSONPath } from 'jsonpath-plus'
-import { parse } from 'parse5'
-import { DOMParser } from 'xmldom'
 import { serializeToString } from 'xmlserializer'
 import * as xpath from 'xpath'
 
@@ -24,13 +23,8 @@ export function extractHTMLElement(
 	contentsOnly: boolean
 ): string {
 	const parser = new DOMParser()
-	const document = parse(html.toString())
-	const xhtml = serializeToString(document)
-	const dom = parser.parseFromString(xhtml)
-
-	const namespaces = {
-		xhtml: 'http://www.w3.org/1999/xhtml',
-	}
+	const dom = parser.parseFromString(html)
+	const namespaces = { xhtml: 'http://www.w3.org/1999/xhtml' }
 
 	// Create a namespace-aware select function
 	const select = xpath.useNamespaces(namespaces)
