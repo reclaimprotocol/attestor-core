@@ -8,7 +8,7 @@ import {
 	ZKOperator
 } from '@reclaimprotocol/circom-chacha20'
 import { detectEnvironment } from '@reclaimprotocol/common-grpc-web-transport'
-import { MAX_ZK_CHUNKS } from '../config'
+import { DEFAULT_REMOTE_ZK_PARAMS, MAX_ZK_CHUNKS } from '../config'
 import { FinaliseSessionRequest_Block as BlockReveal, FinaliseSessionRequest_BlockRevealZk } from '../proto/api'
 import { ArraySlice, Logger } from '../types'
 import { logger as LOGGER } from './logger'
@@ -61,7 +61,10 @@ export function makeDefaultZkOperator(logger?: Logger) {
 
 		zkOperator = isNode
 			? makeLocalSnarkJsZkOperator(logger)
-			: makeRemoteSnarkJsZkOperator(logger)
+			: makeRemoteSnarkJsZkOperator(
+				DEFAULT_REMOTE_ZK_PARAMS,
+				logger
+			)
 	}
 
 	return zkOperator

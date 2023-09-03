@@ -4,3 +4,6 @@ node_modules
 lib
 .DS_Store
 *.LICENSE.txt
+browser/ciruit.wasm
+browser/ciruit.js
+browser/reclaim-witness.min.js
