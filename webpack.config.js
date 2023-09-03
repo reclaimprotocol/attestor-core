@@ -28,6 +28,7 @@ module.exports = {
 			readline: false,
 			constants: false,
 			process: false,
+			assert: false
 		}
 	},
 	module: {
