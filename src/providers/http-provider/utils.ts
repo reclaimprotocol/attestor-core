@@ -1,4 +1,3 @@
-import { DOMParser } from '@xmldom/xmldom'
 import {
 	ArrayExpression,
 	Expression,
@@ -22,8 +21,8 @@ export function extractHTMLElement(
 	xpathExpression: string,
 	contentsOnly: boolean
 ): string {
-	const parser = new DOMParser()
-	const dom = parser.parseFromString(html)
+	const parser = makeDomParser()
+	const dom = parser.parseFromString(html, 'text/html')
 	const namespaces = { xhtml: 'http://www.w3.org/1999/xhtml' }
 
 	// Create a namespace-aware select function
@@ -163,4 +162,13 @@ export function buildHeaders(input: Record<string, string>) {
 	}
 
 	return headers
+}
+
+function makeDomParser() {
+	if(typeof window !== 'undefined') {
+		return new window.DOMParser()
+	}
+
+	const { DOMParser } = require('@xmldom/xmldom')
+	return new DOMParser()
 }

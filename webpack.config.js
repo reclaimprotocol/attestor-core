@@ -13,6 +13,9 @@ module.exports = {
 		|| 'development',
 	resolve: {
 		extensions: ['.webpack.js', '.web.js', '.ts', '.js', '.json'],
+		alias: {
+			'@xmldom/xmldom': false,
+		},
 		fallback: {
 			"fs": false,
 			"path": false,
