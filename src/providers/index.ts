@@ -41,7 +41,6 @@ import instagramUser from './instagram-user'
 import letterboxdUser from './letterboxd-user'
 import loomUser from './loom-user-id'
 import { mastodonUser } from './mastodon'
-import mockLogin from './mock-login'
 import notionUsername from './notion-username'
 import outlookLogin from './outlook-login'
 import ProtonMail from './proton-mail'
@@ -57,7 +56,6 @@ import zohoEmail from './zoho-email'
 
 export const providers = {
 	'google-login': googleLogin,
-	'mock-login': mockLogin,
 	'yc-login': YCombinatorLogin,
 	'outlook-login': outlookLogin,
 	'codeforces-rating': CodeforcesRating,
