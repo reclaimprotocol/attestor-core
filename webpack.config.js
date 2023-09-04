@@ -14,8 +14,8 @@ module.exports = {
 	resolve: {
 		extensions: ['.webpack.js', '.web.js', '.ts', '.js', '.json'],
 		alias: {
-			'@xmldom/xmldom': false,
-			'jsdom': false
+			'jsdom': false,
+			'dotenv': false
 		},
 		fallback: {
 			"fs": false,

@@ -9,51 +9,40 @@ import {
 } from 'esprima-next'
 import * as jsdom from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
-import { serializeToString } from 'xmlserializer'
 
 export type JSONIndex = {
 	start: number
 	end: number
 }
 
+// utilise JSDom on NodeJS, otherwise
+// use the browser's window object
+const Window = typeof window !== 'undefined'
+	? window
+	: new jsdom.JSDOM().window
+
 export function extractHTMLElement(
 	html: string,
 	xpathExpression: string,
 	contentsOnly: boolean
 ): string {
-	const node = typeof window === 'undefined'
-		? findElementNode()
-		: findElementBrowser()
-
-	if(node) {
-		if(contentsOnly) {
-			return node.textContent!
-		}
-
-		return serializeToString(node).replace(/ xmlns="[^"]+"/, '')
-	} else {
+	const domParser = new Window.DOMParser()
+	const dom = domParser.parseFromString(html, 'text/html')
+	const node = dom
+		.evaluate(xpathExpression, dom, null, Window.XPathResult.FIRST_ORDERED_NODE_TYPE, null)
+		?.singleNodeValue
+	if(!node) {
 		return 'Element not found'
 	}
 
-	// uses native browser xpath
-	function findElementBrowser() {
-		const domParser = new DOMParser()
-		const dom = domParser.parseFromString(html, 'text/html')
-		const node = dom
-			.evaluate(xpathExpression, dom, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null)
-			?.singleNodeValue
-		return node
+	if(contentsOnly) {
+		return node.textContent!
 	}
 
-	function findElementNode() {
-		const jsdomInstance = new jsdom.JSDOM()
-		const dom = new jsdomInstance.window.DOMParser()
-			.parseFromString(html, 'text/html')
-		const node = dom
-			.evaluate(xpathExpression, dom, null, jsdomInstance.window.XPathResult.FIRST_ORDERED_NODE_TYPE, null)
-			?.singleNodeValue
-		return node
-	}
+	const xmlSerializer = new Window.XMLSerializer()
+	return xmlSerializer
+		.serializeToString(node)
+		.replace(/ xmlns="[^"]+"/, '')
 }
 
 export function extractJSONValueIndex(json: string, jsonPath: string) {
