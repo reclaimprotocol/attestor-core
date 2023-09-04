@@ -6,6 +6,11 @@ describe.each(['complete', 'byte-by-byte'] as const)('HTTP Parser tests (mode=%s
 
 	it('should parse a response', () => {
 		const res = parseHttpResponse(RES1, parseMode)
+		expect(
+			RES1
+				.subarray(0, res.statusLineEndIndex)
+				.toString()
+		).toEqual('HTTP/1.1 401 Unauthorized')
 
 		expect(res.complete).toEqual(true)
 		expect(res.statusCode).toEqual(401)
@@ -33,6 +38,20 @@ describe.each(['complete', 'byte-by-byte'] as const)('HTTP Parser tests (mode=%s
 		expect(res.complete).toEqual(true)
 		expect(res.statusCode).toEqual(200)
 		expect(res.body.length).toEqual(0)
+	})
+
+	it('should read a set content-length', () => {
+		const buff = strToUint8Array(RES_BODY)
+		const res = parseHttpResponse(buff, parseMode)
+		expect(res.complete).toEqual(true)
+
+		expect(res.bodyStartIndex).toBeTruthy()
+		expect(
+			buff.slice(res.bodyStartIndex)
+		).toEqual(res.body)
+
+		const json = JSON.parse(uint8ArrayToStr(res.body))
+		expect(json.name).toBeTruthy()
 	})
 
 	it('should correctly set chunk indices', () => {
@@ -78,6 +97,16 @@ const RES_EMPTY = [
 	'Content-Length: 0',
 	'', //empty line
 	'',
+].join('\r\n')
+
+
+const BODY_JSON = '{"name":"John","age":30,"car":null}'
+const RES_BODY = [
+	'HTTP/1.1 200 OK',
+	'Content-Type: application/json',
+	'Content-Length: ' + BODY_JSON.length,
+	'',
+	BODY_JSON
 ].join('\r\n')
 
 const RES_EMPTY_CHUNKED = [
