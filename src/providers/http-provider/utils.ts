@@ -9,6 +9,8 @@ import {
 } from 'esprima-next'
 import * as jsdom from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
+import {makeHttpResponseParser} from "../../utils";
+import {ArraySlice} from "../../types";
 
 export type JSONIndex = {
 	start: number
@@ -166,64 +168,41 @@ export function buildHeaders(input: Record<string, string>) {
 	return headers
 }
 
-type ChunkedBody = {
-	body: string
-	chunks: Chunk[]
-}
-
-type Chunk = {
-	body: string
-	len: number
-	start: number
-	end: number
-	bodyStart: number
-	bodyEnd: number
-}
-
-export function processChunkedResponse(resStr: string): ChunkedBody {
-	const realBodyStart = resStr.indexOf('\r\n\r\n') + 4
-	function readChunk(body: string, start: number, bodyStart: number): Chunk {
-		const chunkStart = body.indexOf('\r\n', start) + 2
-		const len = parseInt(body.slice(start, chunkStart - 2), 16)
-		return {
-			body:body.slice(chunkStart, chunkStart + len),
-			len:len,
-			start:chunkStart,
-			end:chunkStart + len + 2, // \r\n at the end
-			bodyStart:bodyStart,
-			bodyEnd:bodyStart + len
-		}
-	}
-
-	const chunks: Chunk[] = []
-	let chunk = readChunk(resStr, realBodyStart, 0)
-	while(chunk.len > 0) {
-		chunks.push(chunk)
-		chunk = readChunk(resStr, chunk.end, chunk.bodyEnd)
-	}
-
-	return {
-		body:chunks.map(c => c.body).join(''),
-		chunks:chunks
-	}
-}
-
 /**
  * Converts position in HTTP response body to an absolute position in TLS transcript considering chunked encoding
  * @param pos
  * @param bodyStartIdx
  * @param chunks
  */
-export function convertResponsePosToAbsolutePos(pos: number, bodyStartIdx: number, chunks?: Chunk[]): number {
+export function convertResponsePosToAbsolutePos(pos: number, bodyStartIdx: number, chunks?: ArraySlice[]): number {
 	if(chunks?.length) {
+		let chunkBodyStart = 0
 		for(let i = 0; i < chunks.length; i++) {
-			if(pos >= chunks[i].bodyStart && pos < chunks[i].bodyEnd) {
-				return pos - chunks[i].bodyStart + chunks[i].start
+
+			const chunkSize = chunks[i].toIndex-chunks[i].fromIndex
+
+			if(pos >= chunkBodyStart && pos < (chunkBodyStart+chunkSize)) {
+				return pos - chunkBodyStart + chunks[i].fromIndex
 			}
+			chunkBodyStart += chunkSize
 		}
 
 		throw new Error('position out of range')
 	}
 
 	return bodyStartIdx + pos
+}
+
+export function parseHttpResponse(buff: Uint8Array, mode: 'complete' | 'byte-by-byte') {
+	const parser = makeHttpResponseParser()
+	if(mode === 'complete') {
+		parser.onChunk(buff)
+	} else {
+		for(const byte of buff) {
+			parser.onChunk(new Uint8Array([byte]))
+		}
+	}
+
+	parser.streamEnded()
+	return parser.res
 }

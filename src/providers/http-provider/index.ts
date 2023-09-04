@@ -6,7 +6,7 @@ import { getHttpRequestHeadersFromTranscript, uint8ArrayToBinaryStr } from '../.
 import {
 	buildHeaders, convertResponsePosToAbsolutePos,
 	extractHTMLElement,
-	extractJSONValueIndex, processChunkedResponse,
+	extractJSONValueIndex, parseHttpResponse,
 } from './utils'
 
 
@@ -174,17 +174,15 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			return []
 		}
 
-		const resStr = uint8ArrayToBinaryStr(response)
+		const res = parseHttpResponse(response,'complete')
 
-		const headerEndIndex = resStr.indexOf('OK') + 2
-		const bodyStartIdx = resStr.indexOf('\r\n\r\n') + 4
+		const headerEndIndex = res.statusLineEndIndex!
+		const bodyStartIdx = res.bodyStartIndex!
 		if(bodyStartIdx < 4) {
 			throw new Error('Failed to find body')
 		}
 
-		const chunked = resStr.indexOf('Transfer-Encoding: chunked') > 0
-		const chunkedResponse = chunked ? processChunkedResponse(resStr) : undefined
-		const body = chunked ? chunkedResponse!.body : resStr.slice(bodyStartIdx)
+		const body = uint8ArrayToBinaryStr(res.body)
 
 
 		const reveals: ArraySlice[] = [{ fromIndex: 0, toIndex: headerEndIndex }]
@@ -225,8 +223,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			}
 
 			if(elementIdx > 0 && elementLength > 0) {
-				const from = convertResponsePosToAbsolutePos(elementIdx, bodyStartIdx, chunkedResponse?.chunks)
-				const to = convertResponsePosToAbsolutePos(elementIdx + elementLength, bodyStartIdx, chunkedResponse?.chunks)
+				const from = convertResponsePosToAbsolutePos(elementIdx, bodyStartIdx, res.chunks)
+				const to = convertResponsePosToAbsolutePos(elementIdx + elementLength, bodyStartIdx, res.chunks)
 				reveals.push({ fromIndex: from, toIndex: to })
 			}
 		}
