@@ -33,7 +33,7 @@ const goDaddyLogin: Provider<GoDaddyLoginParams, GoDaddyLoginSecretParams> = {
 	createRequest({ cookieStr, encQueryParams }, { region }) {
 		// serialise the HTTP request
 		const endpoint = URL + '?' + encQueryParams
-		const strRequest = [
+		const data = [
 			`${METHOD} ${endpoint} HTTP/1.1`,
 			'Host: ' + HOST(region),
 			'cookie: ' + cookieStr,
@@ -43,7 +43,6 @@ const goDaddyLogin: Provider<GoDaddyLoginParams, GoDaddyLoginSecretParams> = {
 		].join('\r\n')
 
 		// find the token and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(cookieStr)
 		const encParamsStartIndex = data.indexOf(encQueryParams)
 

@@ -57,7 +57,7 @@ const makeGithubProvider = <T extends GithubClaimType>() => <Provider<GithubPara
 		)
 		const PATH = `${URL}/${endpoint}${qs}`
 
-		const strRequest = [
+		const data = [
 			`${METHOD} ${PATH} HTTP/1.1`,
 			'Host: ' + HOST,
 			'Connection: close',
@@ -70,7 +70,6 @@ const makeGithubProvider = <T extends GithubClaimType>() => <Provider<GithubPara
 		].join('\r\n')
 
 		// find the token and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(token)
 
 		return {

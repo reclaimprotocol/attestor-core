@@ -34,7 +34,7 @@ const coinswitchBalance: Provider<CoinswitchBalanceParams, CoinswitchBalanceSecr
 		// serialise the HTTP request
 		const uriEncodedToken = encodeURIComponent(cookieStr)
 		const url = URL
-		const strRequest = [
+		const data = [
 			`${METHOD} ${url} HTTP/1.1`,
 			'Host: ' + HOST,
 			`cookie: st=${cookieStr};`,
@@ -46,7 +46,6 @@ const coinswitchBalance: Provider<CoinswitchBalanceParams, CoinswitchBalanceSecr
 		].join('\r\n')
 
 		// find the token and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(uriEncodedToken)
 
 		return {

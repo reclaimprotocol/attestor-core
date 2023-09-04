@@ -34,7 +34,7 @@ const SwiggyTotalOrder: Provider<
 		return typeof params.orderCount === 'number' && params.orderCount >= 0
 	},
 	createRequest({ cookieStr }) {
-		const strRequest = [
+		const data = [
 			`GET ${PATH} HTTP/1.1`,
 			'Host: ' + HOST,
 			'Connection: close',
@@ -43,7 +43,6 @@ const SwiggyTotalOrder: Provider<
 			'Accept-Encoding: gzip, deflate',
 			'\r\n',
 		].join('\r\n')
-		const data = Buffer.from(strRequest)
 		const cookieStartIndex = data.indexOf(cookieStr)
 		return {
 			data,

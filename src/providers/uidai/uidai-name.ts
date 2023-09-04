@@ -35,8 +35,7 @@ const UidaiAadhaar: Provider<UidaiParams, UidaiSecretParams> = {
 		// see https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages
 
 		const payload = JSON.stringify({ uidNumber: uid })
-
-		const strRequest = [
+		const data = [
 			`POST ${PATH} HTTP/1.1`,
 			`Host: ${HOST}`,
 			'Accept: application/json, text/plain',
@@ -51,7 +50,6 @@ const UidaiAadhaar: Provider<UidaiParams, UidaiSecretParams> = {
 		].join('\r\n')
 
 		// find the Token string and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(`${token}`)
 
 		return {

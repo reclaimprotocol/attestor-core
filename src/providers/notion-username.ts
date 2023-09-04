@@ -33,7 +33,7 @@ const notionUsername: Provider<NotionUsernameParams, NotionUsernameSecretParams>
 	createRequest({ token }) {
 		// serialise the HTTP request
 		const url = URL
-		const strRequest = [
+		const data = [
 			`${METHOD} ${url} HTTP/1.1`,
 			'Host: ' + HOST,
 			`cookie: token_v2=${token};`,
@@ -45,7 +45,6 @@ const notionUsername: Provider<NotionUsernameParams, NotionUsernameSecretParams>
 		].join('\r\n')
 
 		// find the token and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(token)
 
 		return {

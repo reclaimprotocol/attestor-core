@@ -42,8 +42,7 @@ const venmoUser: Provider<VenmoUserIdParams, VenmoLoginSecretParams> = {
 	createRequest({ cookieStr }) {
 		// this is a simple http request construction.
 		// see https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages
-
-		const strRequest = [
+		const data = [
 			`${METHOD} ${PATH} HTTP/1.1`,
 			'Host: ' + HOST,
 			'accept: */*',
@@ -54,7 +53,6 @@ const venmoUser: Provider<VenmoUserIdParams, VenmoLoginSecretParams> = {
 		].join('\r\n')
 
 		// find the cookie string and redact it
-		const data = Buffer.from(strRequest)
 		const cookieStartIndex = data.indexOf(cookieStr)
 
 		return {

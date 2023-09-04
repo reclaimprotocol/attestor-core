@@ -36,7 +36,7 @@ const bybitSpotPnl: Provider<BybitSpotPnlParams, BybitSpotPnlSecretParams> = {
 		// serialise the HTTP request
 		const uriEncodedToken = encodeURIComponent(userToken)
 		const url = URL
-		const strRequest = [
+		const data = [
 			`${METHOD} ${url} HTTP/1.1`,
 			'Host: ' + HOST,
 			'accept: */*',
@@ -47,8 +47,6 @@ const bybitSpotPnl: Provider<BybitSpotPnlParams, BybitSpotPnlSecretParams> = {
 			'\r\n'
 		].join('\r\n')
 
-		// find the token and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(uriEncodedToken)
 
 		return {

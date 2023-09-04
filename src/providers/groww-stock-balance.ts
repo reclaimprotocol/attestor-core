@@ -35,7 +35,7 @@ const GrowwStocksCount: Provider<GrowwParams, GrowwSecretParams> = {
 	},
 	createRequest(secretParams) {
 		// serialise the HTTP request
-		const strRequest = [
+		const data = [
 			`GET ${URL} HTTP/1.1`,
 			'Host: ' + HOST,
 			`authorization: Bearer ${secretParams.authToken}`,
@@ -46,7 +46,6 @@ const GrowwStocksCount: Provider<GrowwParams, GrowwSecretParams> = {
 		].join('\r\n')
 
 		// find the token and redact it
-		const data = Buffer.from(strRequest)
 		const authTokenStartIndex = data.indexOf(secretParams.authToken)
 		// const accessTokenStartIndex = data.indexOf(accessToken)
 

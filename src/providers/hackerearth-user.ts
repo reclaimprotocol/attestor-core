@@ -31,7 +31,7 @@ const hackerEarthUser: Provider<HackerEarthUserParams, HackerEarthUserSecretPara
 		return typeof params.username === 'string'
 	},
 	createRequest({ cookie }) {
-		const strRequest = [
+		const data = [
 			`GET ${URL} HTTP/1.1`,
 			`Host: ${HOST}`,
 			'Connection: close',
@@ -42,7 +42,6 @@ const hackerEarthUser: Provider<HackerEarthUserParams, HackerEarthUserSecretPara
 
 
 		// Find the cookie and redact it
-		const data = Buffer.from(strRequest)
 		const cookieStartIndex = data.indexOf(cookie)
 
 		return {

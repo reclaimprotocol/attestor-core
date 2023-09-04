@@ -1,5 +1,5 @@
 import { ZKOperator } from '@reclaimprotocol/circom-chacha20'
-import { TLSConnectionOptions } from '@reclaimprotocol/tls'
+import { strToUint8Array, TLSConnectionOptions } from '@reclaimprotocol/tls'
 import { DEFAULT_PORT } from '../config'
 import { InitialiseSessionRequest, ReclaimWitnessClient } from '../proto/api'
 import { ProviderName, ProviderParams, providers, ProviderSecretParams } from '../providers'
@@ -107,7 +107,11 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 	)
 
 	await apiClient.connect()
-	await apiClient.write(request.data, request.redactions)
+
+	const reqData = typeof request.data === 'string'
+		? strToUint8Array(request.data)
+		: request.data
+	await apiClient.write(reqData, request.redactions)
 
 	logger.info('wrote request to server')
 

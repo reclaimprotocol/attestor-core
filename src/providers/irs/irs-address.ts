@@ -66,7 +66,7 @@ const irsAddress: Provider<IrsParams, IrsSecretParams> = {
 			'http_method': 'get'
 		})
 
-		const strRequest = [
+		const data = [
 			`${METHOD} ${PATH} HTTP/1.1`,
 			`Host: ${HOST}`,
 			'accept: application/json',
@@ -79,7 +79,6 @@ const irsAddress: Provider<IrsParams, IrsSecretParams> = {
 		].join('\r\n')
 
 		// find the Token string and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(`${payload}`)
 
 		return {

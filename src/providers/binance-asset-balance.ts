@@ -5,6 +5,7 @@ import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
 import { gunzipSync } from '../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
+import HTTP_PROVIDER from './http-provider'
 
 type BinanceAssetBalanceParams = {
   assetName: string
@@ -30,33 +31,19 @@ const binanceAssetBalance: Provider<BinanceAssetBalanceParams, BinanceAssetBalan
 		)
 	},
 	createRequest(secretParams) {
-
-		const strRequest = [
-			'GET /bapi/asset/v2/private/asset-service/wallet/asset HTTP/1.1',
-			'Host: www.binance.com',
-			'Connection: close',
-			'authority: www.binance.com',
-			'accept: */*',
-			'clienttype: web',
-			`cookie: p20t=${secretParams.p20tToken};`,
-			`csrftoken: ${secretParams.csrfToken}`,
-			'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36',
-			'\r\n',
-		].join('\r\n')
-
-		// Find the cookie and redact it
-		const data = Buffer.from(strRequest)
-		const csrfTokenStartIndex = data.indexOf(secretParams.csrfToken)
-
-		return {
-			data,
-			redactions: [
-				{
-					fromIndex: csrfTokenStartIndex,
-					toIndex: csrfTokenStartIndex + secretParams.csrfToken.length,
+		return HTTP_PROVIDER.createRequest(
+			{
+				cookieStr: `p20t=${secretParams.p20tToken};`,
+			},
+			{
+				url: 'https://www.binance.com/bapi/asset/v2/private/asset-service/wallet/asset',
+				method: 'GET',
+				headers: {
+					csrftoken: secretParams.csrfToken,
 				},
-			],
-		}
+				responseSelections: []
+			}
+		)
 	},
 	assertValidProviderReceipt(receipt, params) {
 		if(receipt.hostPort !== HOSTPORT) {

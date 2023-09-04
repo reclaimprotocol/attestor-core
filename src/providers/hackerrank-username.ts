@@ -33,7 +33,7 @@ const hackerRankUsername: Provider<HackerRankUserParams, HackerRankUserSecretPar
 	createRequest({ token }) {
 		// serialise the HTTP request
 		const url = URL
-		const strRequest = [
+		const data = [
 			`${METHOD} ${url} HTTP/1.1`,
 			'Host: ' + HOST,
 			`cookie: _hrank_session=${token};`,
@@ -45,7 +45,6 @@ const hackerRankUsername: Provider<HackerRankUserParams, HackerRankUserSecretPar
 		].join('\r\n')
 
 		// find the token and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(token)
 
 		return {

@@ -39,7 +39,7 @@ const CodeforcesRating: Provider<CodeforcesRatingParams, CodeforcesLoginSecretPa
 	createRequest({ cookieStr }) {
 		// this is a simple http request construction.
 		// see https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages
-		const strRequest = [
+		const data = [
 			`GET ${PATH} HTTP/1.1`,
 			'Host: ' + HOST,
 			// "connection: close" ensures the server terminates
@@ -53,8 +53,6 @@ const CodeforcesRating: Provider<CodeforcesRatingParams, CodeforcesLoginSecretPa
 			'\r\n'
 		].join('\r\n')
 
-		// find the cookie string and redact it
-		const data = Buffer.from(strRequest)
 		const cookieStartIndex = data.indexOf(cookieStr)
 
 		return {

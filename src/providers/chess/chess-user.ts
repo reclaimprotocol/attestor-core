@@ -28,8 +28,7 @@ const chessUser: Provider<ChessUserParams, ChessUserSecretParams> = { hostPort: 
 	return typeof params.userName === 'string'
 },
 createRequest({ cookie }) {
-
-	const strRequest = [
+	const data = [
 		'GET /settings HTTP/1.1',
 		'Host: www.chess.com',
 		'Connection: close',
@@ -38,10 +37,6 @@ createRequest({ cookie }) {
 		'user-agent:reclaim/0.0.1',
 		'\r\n',
 	].join('\r\n')
-
-
-	// Find the cookie and redact it
-	const data = Buffer.from(strRequest)
 	const cookieStartIndex = data.indexOf(cookie)
 
 	return {

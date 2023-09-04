@@ -34,7 +34,7 @@ const ProtonMail: Provider<ProtonMailParams, ProtonMailSecretParams> = {
 	createRequest(secretParams) {
 
 		const url = URL
-		const strRequest = [
+		const data = [
 			`${METHOD} ${url} HTTP/1.1`,
 			'Host: ' + HOST,
 			'accept: */*',
@@ -48,7 +48,6 @@ const ProtonMail: Provider<ProtonMailParams, ProtonMailSecretParams> = {
 
 
 		// Find the cookie and redact it
-		const data = Buffer.from(strRequest)
 		const AuthStartIndex = data.indexOf(secretParams.auth)
 		const xPmUidStartIndex = data.indexOf(secretParams.xPmUid)
 

@@ -3,7 +3,14 @@ import type { ProviderClaimData, TLSReceipt } from '../proto/api'
 import type { ArraySlice } from './general'
 
 type CreateRequestResult = {
-	data: Uint8Array
+	/**
+	 * Raw request to be sent
+	 * If a string, it is assumed to be an
+	 * ASCII encoded string. If it contains
+	 * non-ASCII characters, the redactions
+	 * may not work as expected
+	 */
+	data: Uint8Array | string
 	redactions: ArraySlice[]
 }
 

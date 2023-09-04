@@ -37,7 +37,7 @@ const zohoEmail: Provider<ZohoParams, ZohoSecretParams> = {
 		// this is a simple http request construction.
 		// see https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages
 
-		const strRequest = [
+		const data = [
 			`${METHOD} ${PATH} HTTP/1.1`,
 			`Host: ${HOST}`,
 			'accept: application/json, */*',
@@ -48,7 +48,6 @@ const zohoEmail: Provider<ZohoParams, ZohoSecretParams> = {
 		].join('\r\n')
 
 		// find the Token string and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(`${token}`)
 
 		return {

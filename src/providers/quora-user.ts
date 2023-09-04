@@ -34,7 +34,7 @@ const quoraUser: Provider<QuoraUserIdParams, QuoraLoginSecretParams> = {
 	createRequest({ cookieStr }) {
 		// this is a simple http request construction.
 		// see https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages
-		const strRequest = [
+		const data = [
 			`GET ${PATH} HTTP/1.1`,
 			'Host: ' + HOST,
 			'Connection: keep-alive',
@@ -45,7 +45,6 @@ const quoraUser: Provider<QuoraUserIdParams, QuoraLoginSecretParams> = {
 		].join('\r\n')
 
 		// find the cookie string and redact it
-		const data = Buffer.from(strRequest)
 		const cookieStartIndex = data.indexOf(cookieStr)
 
 		return {

@@ -26,8 +26,7 @@ const SoundcloudUsername: Provider<SoundcloudUsernameParams, SoundcloudUsernameS
 		)
 	},
 	createRequest(secretParams) {
-
-		const strRequest = [
+		const data = [
 			'GET /discover HTTP/1.1',
 			'Host: ' + HOST,
 			'Connection: close',
@@ -36,11 +35,6 @@ const SoundcloudUsername: Provider<SoundcloudUsernameParams, SoundcloudUsernameS
 			'cookie: ' + secretParams.cookie,
 			'\r\n',
 		].join('\r\n')
-
-		console.log(strRequest)
-
-		// Find the cookie and redact it
-		const data = Buffer.from(strRequest)
 		const cookieStartIndex = data.indexOf(secretParams.cookie)
 
 		return {
