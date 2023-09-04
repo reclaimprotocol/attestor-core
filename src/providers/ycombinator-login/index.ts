@@ -32,9 +32,10 @@ const YCombinatorLogin = wrapInHttpProvider({
 		cookieStr
 	}),
 	areValidParams: (params): params is YCombinatorLoginParams => {
+		const userId = +(params.userId || '')
 		return (
-			typeof params.userId === 'number'
-            && params.userId !== 0
+			!Number.isNaN(userId)
+			&& userId > 0
 		)
 	}
 })
