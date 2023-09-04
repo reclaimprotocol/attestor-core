@@ -5,6 +5,7 @@ import { logger } from './logger'
 
 type IdentifiedMessage = {
 	module: 'witness-sdk'
+	channel?: string
 	id: string
 }
 
@@ -42,6 +43,7 @@ export function setupWindowRpc() {
 
 	async function handleMessage(event: MessageEvent<any>) {
 		let id = ''
+		let channel = ''
 		try {
 			if(!event.data) {
 				return
@@ -74,6 +76,7 @@ export function setupWindowRpc() {
 			)
 
 			id = req.id
+			channel = req.channel || ''
 
 			switch (req.type) {
 			case 'createClaim':
@@ -115,7 +118,12 @@ export function setupWindowRpc() {
 				module: 'witness-sdk',
 				isResponse: true
 			}
-			event.source!.postMessage(JSON.stringify(res))
+			const resStr = JSON.stringify(res)
+			if(channel) {
+				window[channel]?.postMessage(resStr)
+			} else {
+				event.source!.postMessage(resStr)
+			}
 		}
 	}
 }
