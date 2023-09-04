@@ -5,6 +5,11 @@ import { logger } from './logger'
 
 type IdentifiedMessage = {
 	module: 'witness-sdk'
+	/**
+	 * Optionally, name of the channel to respond to
+	 * Useful for specifying 'flutter_webview'
+	 * channel
+	 */
 	channel?: string
 	id: string
 }
