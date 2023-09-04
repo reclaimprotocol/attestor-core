@@ -115,7 +115,7 @@ const RES_EMPTY_CHUNKED = [
 	'Transfer-Encoding: chunked',
 	'',
 	'0',
-	''
+	'',
 ].join('\r\n')
 
 const CHUNKS = [
@@ -135,5 +135,6 @@ const RES_CHUNKED_PARTIAL_BODY = [
 		return [chunkSize, chunk]
 	}),
 	'0',
+	'',
 	''
 ].join('\r\n')
