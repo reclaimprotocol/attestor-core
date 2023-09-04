@@ -1,6 +1,7 @@
 import { areUint8ArraysEqual, concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
 import type { IncomingHttpHeaders } from 'http'
 import { TLSReceipt, TranscriptMessageSenderType } from '../proto/api'
+import { ArraySlice } from '../types'
 import { findIndexInUint8Array, uint8ArrayToStr } from './generics'
 import { REDACTION_CHAR_CODE } from './redactions'
 
@@ -18,6 +19,12 @@ type HttpResponse = {
 	body: Uint8Array
 	headersComplete: boolean
 	complete: boolean
+	/**
+	 * If using chunked transfer encoding,
+	 * this will be set & contain indices of each
+	 * chunk in the complete response
+	 */
+	chunks?: ArraySlice[]
 }
 
 export const CLIENT_CERTIFICATE_RESPONSE_CIPHERTEXT_SIZE = 37
@@ -39,12 +46,13 @@ export function makeHttpResponseParser() {
 		headers: {},
 		body: new Uint8Array(),
 		complete: false,
-		headersComplete: false
+		headersComplete: false,
 	}
 
 	let remainingBodyBytes = 0
 	let isChunked = false
 	let remaining = new Uint8Array()
+	let currentByteIdx = 0
 
 	return {
 		res,
@@ -69,6 +77,7 @@ export function makeHttpResponseParser() {
 						// if the response is chunked, we need to process the body differently
 						if(res.headers['transfer-encoding']?.includes('chunked')) {
 							isChunked = true
+							res.chunks = []
 							break
 						// if the response has a content-length, we know how many bytes to read
 						} else if(res.headers['content-length']) {
@@ -109,6 +118,11 @@ export function makeHttpResponseParser() {
 							res.complete = true
 							break
 						}
+
+						res.chunks?.push({
+							fromIndex: currentByteIdx,
+							toIndex: currentByteIdx + chunkSize,
+						})
 
 						// otherwise read the chunk
 						remainingBodyBytes = chunkSize
@@ -153,6 +167,7 @@ export function makeHttpResponseParser() {
 		remainingBodyBytes -= bytesToCopy
 
 		remaining = remaining.slice(bytesToCopy)
+		currentByteIdx += bytesToCopy
 	}
 
 	function getLine() {
@@ -163,8 +178,10 @@ export function makeHttpResponseParser() {
 			return undefined
 		}
 
-		const line = remaining.slice(0, idx).toString()
+		const line = uint8ArrayToStr(remaining.slice(0, idx))
 		remaining = remaining.slice(idx + HTTP_HEADER_LINE_END.length)
+
+		currentByteIdx += idx + HTTP_HEADER_LINE_END.length
 
 		return line
 	}
