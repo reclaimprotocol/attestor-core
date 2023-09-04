@@ -138,8 +138,9 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error(`Invalid URL: ${req.url}`)
 		}
 
-		if(receipt.hostPort !== `${hostname}:${port ?? DEFAULT_PORT}`) {
-			throw new Error(`Invalid hostPort: ${receipt.hostPort}`)
+		const expHostPort = `${hostname}:${port || DEFAULT_PORT}`
+		if(receipt.hostPort !== expHostPort) {
+			throw new Error(`Expected hostPort: ${expHostPort}, found: ${receipt.hostPort}`)
 		}
 
 		const res = Buffer.concat(
