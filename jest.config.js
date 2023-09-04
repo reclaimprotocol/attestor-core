@@ -12,6 +12,5 @@ module.exports = {
 		'^.+\\.(ts|tsx)$': 'ts-jest'
 	},
 	setupFiles: [
-		'<rootDir>/src/tests/mocks.ts'
 	]
 }
