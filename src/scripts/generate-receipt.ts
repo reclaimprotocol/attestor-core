@@ -1,7 +1,5 @@
 import { config } from 'dotenv'
-
-const env = process.env.NODE_ENV || 'development'
-config({ path: `.env.${env}` })
+config()
 
 import { readFile } from 'fs/promises'
 import { createGrpcWebClient, generateProviderReceipt, getTranscriptString, logger, ProviderName, ProviderParams, providers, ProviderSecretParams } from '..'
@@ -12,6 +10,8 @@ export type ProviderReceiptGenerationParams<P extends ProviderName> = {
 	secretParams: ProviderSecretParams<P>
 }
 
+const DEFAULT_WITNESS_HOST_PORT = 'https://reclaim-node.questbook.app'
+
 export async function main<T extends ProviderName>(
 	receiptParams?: ProviderReceiptGenerationParams<T>
 ) {
@@ -20,10 +20,14 @@ export async function main<T extends ProviderName>(
 		throw new Error(`Unknown provider "${paramsJson.name}"`)
 	}
 
-	const witnessHostPort = getCliArgument('witness')
-	if(!witnessHostPort) {
-		throw new Error('Must provide --witness argument')
+	if(
+		!providers[paramsJson.name].areValidParams(paramsJson.params)
+	) {
+		throw new Error(`Invalid parameters for provider "${paramsJson.name}"`)
 	}
+
+	const witnessHostPort = getCliArgument('witness')
+		|| DEFAULT_WITNESS_HOST_PORT
 
 	const client = await createGrpcWebClient(
 		witnessHostPort,

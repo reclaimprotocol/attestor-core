@@ -1,20 +1,7 @@
 {
   "name": "yc-login",
   "params": {
-    "url": "https://bookface.ycombinator.com/home",
-    "method": "GET",
-    "responseSelection": [
-      {
-        "xPath": "//script[@id='js-react-on-rails-context']",
-        "jsonPath": "$.currentUser",
-        "responseMatch": "\\{\"id\":{{YC_USER_ID}},.*?waas_admin.*?:{.*?}.*?:\\{.*?}.*?(?:full_name|first_name).*?}"
-      },
-      {
-        "xPath": "//script[@data-component-name='Navbar']",
-        "jsonPath": "$.hasBookface",
-        "responseMatch": "\"hasBookface\":true"
-      }
-    ]
+    "userId": "{{YC_USER_ID}}"
   },
   "secretParams": {
     "cookieStr": "{{YC_COOKIE}}"

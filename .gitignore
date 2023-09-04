@@ -7,3 +7,4 @@ lib
 browser/circuit.wasm
 browser/circuit.zkey
 browser/reclaim-witness.min.js
+.env
