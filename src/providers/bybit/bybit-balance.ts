@@ -39,7 +39,7 @@ const bybitBalance: Provider<BybitBalanceParams, BybitBalanceSecretParams> = {
 		// serialise the HTTP request
 		const uriEncodedToken = encodeURIComponent(userToken)
 		const url = URL
-		const strRequest = [
+		const data = [
 			`${METHOD} ${url} HTTP/1.1`,
 			'Host: ' + HOST,
 			'accept: */*',
@@ -49,9 +49,6 @@ const bybitBalance: Provider<BybitBalanceParams, BybitBalanceSecretParams> = {
 			'Connection: close',
 			'\r\n'
 		].join('\r\n')
-
-		// find the token and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(uriEncodedToken)
 
 		return {

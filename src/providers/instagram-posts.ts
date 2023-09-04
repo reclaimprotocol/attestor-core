@@ -52,7 +52,7 @@ const instagramUserWeekPost: Provider<InstagramPostsTypeParams, InstagramPostsTy
 	createRequest({ cookieStr, csrfToken, username }) {
 		// serialise the HTTP request
 		const url = URL(username)
-		const strRequest = [
+		const data = [
 			`${METHOD} ${url} HTTP/1.1`,
 			'Host: ' + HOST,
 			`cookie: ${cookieStr}`,
@@ -66,7 +66,6 @@ const instagramUserWeekPost: Provider<InstagramPostsTypeParams, InstagramPostsTy
 		].join('\r\n')
 
 		// find the token and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(csrfToken)
 		const cookieStartIndex = data.indexOf(cookieStr)
 

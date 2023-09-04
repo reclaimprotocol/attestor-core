@@ -30,7 +30,7 @@ const facebookFriendsCount: Provider<FacebookFreindsCountParams, FacebookFreinds
 	},
 	createRequest(secretParams, params) {
 
-		const strRequest = [
+		const data = [
 			`GET ${params.userURL} HTTP/1.1`,
 			'Host: www.facebook.com',
 			'authority: www.facebook.com',
@@ -43,7 +43,6 @@ const facebookFriendsCount: Provider<FacebookFreindsCountParams, FacebookFreinds
 		].join('\r\n')
 
 		// Find the cookie and redact it
-		const data = Buffer.from(strRequest)
 		const cookieStartIndex = data.indexOf(secretParams.cookie)
 
 		return {

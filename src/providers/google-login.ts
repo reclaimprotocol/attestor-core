@@ -33,7 +33,7 @@ const googleLogin: Provider<GoogleLoginParams, GoogleLoginSecretParams> = {
 		// serialise the HTTP request
 		const uriEncodedToken = encodeURIComponent(token)
 		const url = URL + uriEncodedToken
-		const strRequest = [
+		const data = [
 			`${METHOD} ${url} HTTP/1.1`,
 			'Host: ' + HOST,
 			'Connection: close',
@@ -42,7 +42,6 @@ const googleLogin: Provider<GoogleLoginParams, GoogleLoginSecretParams> = {
 		].join('\r\n')
 
 		// find the token and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(uriEncodedToken)
 
 		return {

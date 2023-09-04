@@ -36,7 +36,7 @@ const UidaiAadhaarDOB: Provider<UidaiParams, UidaiSecretParams> = {
 
 		const payload = JSON.stringify({ uidNumber: uid })
 
-		const strRequest = [
+		const data = [
 			`POST ${PATH} HTTP/1.1`,
 			`Host: ${HOST}`,
 			'Accept: application/json, text/plain',
@@ -51,7 +51,6 @@ const UidaiAadhaarDOB: Provider<UidaiParams, UidaiSecretParams> = {
 		].join('\r\n')
 
 		// find the Token string and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(`${token}`)
 
 		return {

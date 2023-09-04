@@ -31,7 +31,7 @@ const wikipediaUser: Provider<WikipediaUserParams, WikipediaUserSecretParams> = 
 	createRequest({ cookieStr }) {
 		// serialise the HTTP request
 		const url = URL
-		const strRequest = [
+		const data = [
 			`${METHOD} ${url} HTTP/1.1`,
 			'Host: ' + HOST,
 			`cookie: ${cookieStr}`,
@@ -43,7 +43,6 @@ const wikipediaUser: Provider<WikipediaUserParams, WikipediaUserSecretParams> = 
 		].join('\r\n')
 
 		// find the token and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(cookieStr)
 
 		return {

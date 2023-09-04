@@ -28,8 +28,7 @@ const blindUser: Provider<BlindUserParams, BlindUserSecretParams> = { hostPort: 
 	return typeof params.userName === 'string'
 },
 createRequest({ cookie }) {
-
-	const strRequest = [
+	const data = [
 		'GET /user/profile HTTP/1.1',
 		'Connection: close',
 		'Host: www.teamblind.com',
@@ -39,9 +38,7 @@ createRequest({ cookie }) {
 		'\r\n',
 	].join('\r\n')
 
-
 	// Find the cookie and redact it
-	const data = Buffer.from(strRequest)
 	const cookieStartIndex = data.indexOf(cookie)
 
 	return {

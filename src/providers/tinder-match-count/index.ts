@@ -41,7 +41,7 @@ const TinderMatchCount: Provider<
 		)
 	},
 	createRequest({ token }) {
-		const strRequest = [
+		const data = [
 			`GET ${PATH} HTTP/1.1`,
 			'Host: ' + HOST,
 			`X-Auth-Token: ${token}`,
@@ -51,7 +51,6 @@ const TinderMatchCount: Provider<
 			'\r\n',
 		].join('\r\n')
 
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(token)
 
 		return {

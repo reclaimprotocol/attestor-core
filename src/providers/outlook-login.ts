@@ -32,7 +32,7 @@ const outlookLogin: Provider<OutlookLoginParams, OutlookLoginSecretParams> = {
 		// serialise the HTTP request
 		// const uriEncodedToken = encodeURIComponent(token)
 		const uriEncodedToken = token
-		const strRequest = [
+		const data = [
 			`${METHOD} ${URL} HTTP/1.1`,
 			'Host: ' + HOST,
 			`Authorization: Bearer ${uriEncodedToken}`,
@@ -42,7 +42,6 @@ const outlookLogin: Provider<OutlookLoginParams, OutlookLoginSecretParams> = {
 		].join('\r\n')
 
 		// find the token and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(uriEncodedToken)
 
 		return {

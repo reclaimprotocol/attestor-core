@@ -29,8 +29,7 @@ const flickrUser: Provider<FlickrUserParams, FlickrUserSecretParams> = { hostPor
 	return typeof params.userEmail === 'string'
 },
 createRequest({ cookie }) {
-
-	const strRequest = [
+	const data = [
 		'GET /account HTTP/1.1',
 		'Host: www.flickr.com',
 		'authority: www.flickr.com',
@@ -41,9 +40,7 @@ createRequest({ cookie }) {
 		'\r\n',
 	].join('\r\n')
 
-
 	// Find the cookie and redact it
-	const data = Buffer.from(strRequest)
 	const cookieStartIndex = data.indexOf(cookie)
 
 	return {

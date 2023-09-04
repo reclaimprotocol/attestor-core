@@ -29,9 +29,7 @@ const instagramUser: Provider<InstagramUserParams, InstagramUserSecretParams> = 
 	return typeof params.userName === 'string'
 },
 createRequest({ cookie }) {
-
-
-	const strRequest = [
+	const data = [
 		'GET / HTTP/1.1',
 		'Host: www.instagram.com',
 		'Connection: close',
@@ -44,7 +42,6 @@ createRequest({ cookie }) {
 
 
 	// Find the cookie and redact it
-	const data = Buffer.from(strRequest)
 	const cookieStartIndex = data.indexOf(cookie)
 
 	return {

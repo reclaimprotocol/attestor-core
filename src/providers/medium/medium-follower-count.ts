@@ -30,7 +30,7 @@ const mediumFollowersCount: Provider<MediumFollowersCountParams, MediumFollowers
 	},
 	createRequest(secretParams, params) {
 
-		const strRequest = [
+		const data = [
 			`GET ${params.username} HTTP/1.1`,
 			'Host: ' + HOST,
 			'Connection: close',
@@ -41,7 +41,6 @@ const mediumFollowersCount: Provider<MediumFollowersCountParams, MediumFollowers
 		].join('\r\n')
 
 		// Find the cookie and redact it
-		const data = Buffer.from(strRequest)
 		const cookieStartIndex = data.indexOf(secretParams.cookie)
 
 		return {

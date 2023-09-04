@@ -32,7 +32,7 @@ const chessRating: Provider<ChessRatingParams, ChessRatingSecretParams> = { host
 },
 createRequest({ cookie }, params) {
 
-	const strRequest = [
+	const data = [
 		`GET /stats/overview/${params.userName} HTTP/1.1`,
 		'Host: www.chess.com',
 		'Connection: close',
@@ -42,9 +42,7 @@ createRequest({ cookie }, params) {
 		'\r\n',
 	].join('\r\n')
 
-
 	// Find the cookie and redact it
-	const data = Buffer.from(strRequest)
 	const cookieStartIndex = data.indexOf(cookie)
 
 	return {

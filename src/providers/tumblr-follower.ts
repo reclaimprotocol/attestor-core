@@ -28,8 +28,7 @@ const tumblrFollowing: Provider<TumblrFollowingParams, TumblrFollowingSecretPara
 	return typeof params.followingAccount === 'string'
 },
 createRequest({ cookie }) {
-
-	const strRequest = [
+	const data = [
 		'GET /following HTTP/1.1',
 		'Host: www.tumblr.com',
 		'Connection: close',
@@ -41,7 +40,6 @@ createRequest({ cookie }) {
 	].join('\r\n')
 
 	// Find the cookie and redact it
-	const data = Buffer.from(strRequest)
 	const cookieStartIndex = data.indexOf(cookie)
 
 	return {

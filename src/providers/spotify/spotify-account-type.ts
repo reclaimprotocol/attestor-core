@@ -34,7 +34,7 @@ const spotifyAccountType: Provider<SpotifyAccountTypeParams, SpotifyAccountTypeS
 	createRequest({ token }) {
 		// serialise the HTTP request
 		const url = URL
-		const strRequest = [
+		const data = [
 			`${METHOD} ${url} HTTP/1.1`,
 			'Host: ' + HOST,
 			`cookie: sp_dc=${token};`,
@@ -46,7 +46,6 @@ const spotifyAccountType: Provider<SpotifyAccountTypeParams, SpotifyAccountTypeS
 		].join('\r\n')
 
 		// find the token and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(token)
 
 		return {

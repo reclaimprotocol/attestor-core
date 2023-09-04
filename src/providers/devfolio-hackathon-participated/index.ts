@@ -42,7 +42,7 @@ const DevfolioHackathonsCount: Provider<
 		)
 	},
 	createRequest({ cookieStr }, { username }) {
-		const strRequest = [
+		const data = [
 			`GET /api/users/${username}/primary_stats HTTP/1.1`,
 			'Host: ' + HOST,
 			'Connection: close',
@@ -52,7 +52,6 @@ const DevfolioHackathonsCount: Provider<
 			'\r\n',
 		].join('\r\n')
 
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(cookieStr)
 
 		return {

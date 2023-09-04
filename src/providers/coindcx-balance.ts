@@ -41,17 +41,16 @@ const coindcxBalance: Provider<CoindcxBalanceParams, CoindcxBalanceSecretParams>
 		// serialise the HTTP request
 		const uriEncodedToken = encodeURIComponent(AuthToken)
 		const url = URL
-		const strRequest = [
+		const data = [
 			`${METHOD} ${url} HTTP/1.1`,
 			'Host: ' + HOST,
-			`authorization: Bearer ${AuthToken};`,
+			`authorization: Bearer ${uriEncodedToken};`,
 			'user-agent: reclaim/1.0.0',
 			'Connection: close',
 			'\r\n'
 		].join('\r\n')
 
 		// find the token and redact it
-		const data = Buffer.from(strRequest)
 		const tokenStartIndex = data.indexOf(uriEncodedToken)
 
 		return {

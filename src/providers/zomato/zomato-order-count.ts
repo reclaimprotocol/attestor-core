@@ -35,7 +35,7 @@ const zomatoOrders: Provider<ZomatoOrderParams, ZomatoLoginSecretParams> = {
 		)
 	},
 	createRequest({ cookieStr }, params) {
-		const strRequest = [
+		const data = [
 			`GET /users/${params.userId}/ordering HTTP/1.1`,
 			'Host: ' + HOST,
 			'Connection: closed',
@@ -46,7 +46,6 @@ const zomatoOrders: Provider<ZomatoOrderParams, ZomatoLoginSecretParams> = {
 		].join('\r\n')
 
 		// find the cookie string and redact it
-		const data = Buffer.from(strRequest)
 		const cookieStartIndex = data.indexOf(cookieStr)
 
 		return {
