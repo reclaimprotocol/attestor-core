@@ -19,6 +19,16 @@ type HttpResponse = {
 	body: Uint8Array
 	headersComplete: boolean
 	complete: boolean
+
+	/**
+	 * Index of the first byte of the status line
+	 */
+	statusLineEndIndex?: number
+	/**
+	 * Index of the first byte of the body
+	 * in the complete response
+	 */
+	bodyStartIndex?: number
 	/**
 	 * If using chunked transfer encoding,
 	 * this will be set & contain indices of each
@@ -72,6 +82,7 @@ export function makeHttpResponseParser() {
 						const [, statusCode, statusMessage] = line.match(/HTTP\/\d\.\d (\d+) (.*)/) || []
 						res.statusCode = Number(statusCode)
 						res.statusMessage = statusMessage
+						res.statusLineEndIndex = currentByteIdx - HTTP_HEADER_LINE_END.length
 					} else if(line === '') { // empty line signifies end of headers
 						res.headersComplete = true
 						// if the response is chunked, we need to process the body differently
@@ -160,6 +171,10 @@ export function makeHttpResponseParser() {
 	}
 
 	function readBody() {
+		if(!res.bodyStartIndex) {
+			res.bodyStartIndex = currentByteIdx
+		}
+
 		// take the number of bytes we need to read, or the number of bytes remaining
 		// and append to the bytes of the body
 		const bytesToCopy = Math.min(remainingBodyBytes, remaining.length)
