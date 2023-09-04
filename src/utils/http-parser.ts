@@ -123,11 +123,15 @@ export function makeHttpResponseParser() {
 							continue
 						}
 
+						if(res.complete) {
+							throw new Error('got more data after response was complete')
+						}
+
 						const chunkSize = Number.parseInt(line, 16)
 						// if chunk size is 0, we're done
 						if(!chunkSize) {
 							res.complete = true
-							break
+							continue
 						}
 
 						res.chunks?.push({
