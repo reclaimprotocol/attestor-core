@@ -4,10 +4,11 @@ import { TranscriptMessageSenderType } from '../../proto/api'
 import { ArraySlice, Provider } from '../../types'
 import { getHttpRequestHeadersFromTranscript, uint8ArrayToBinaryStr } from '../../utils'
 import {
-	buildHeaders,
+	buildHeaders, convertResponsePosToAbsolutePos,
 	extractHTMLElement,
-	extractJSONValueIndex,
+	extractJSONValueIndex, parseHttpResponse,
 } from './utils'
+
 
 export type HTTPProviderParams = {
 	/**
@@ -157,6 +158,10 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error('Invalid response')
 		}
 
+		if(req.headers['connection'] !== 'close') {
+			throw new Error('Invalid connection header')
+		}
+
 		for(const rs of params.responseSelections) {
 			if(!new RegExp(rs.responseMatch, 'sgi').test(res)) {
 				throw new Error(
@@ -170,15 +175,16 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			return []
 		}
 
-		const resStr = uint8ArrayToBinaryStr(response)
+		const res = parseHttpResponse(response)
 
-		const headerEndIndex = resStr.indexOf('OK') + 2
-		const bodyStartIdx = resStr.indexOf('\r\n\r\n')
-		if(bodyStartIdx < 0) {
+		const headerEndIndex = res.statusLineEndIndex!
+		const bodyStartIdx = res.bodyStartIndex!
+		if(bodyStartIdx < 4) {
 			throw new Error('Failed to find body')
 		}
 
-		const body = resStr.slice(bodyStartIdx)
+		const body = uint8ArrayToBinaryStr(res.body)
+
 
 		const reveals: ArraySlice[] = [{ fromIndex: 0, toIndex: headerEndIndex }]
 		for(const rs of params.responseSelections) {
@@ -188,8 +194,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 			if(rs.xPath) {
 				element = extractHTMLElement(body, rs.xPath, !!rs.jsonPath)
-				elementIdx = resStr.indexOf(element)
-				if(elementIdx < headerEndIndex) {
+				elementIdx = body.indexOf(element)
+				if(elementIdx < 0) {
 					throw new Error(`Failed to find element: "${rs.xPath}"`)
 				}
 
@@ -198,11 +204,16 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 			if(rs.jsonPath) {
 				const { start, end } = extractJSONValueIndex(element, rs.jsonPath)
-				if(start < headerEndIndex) {
+				// if there's only json path used
+				if(elementIdx < 0) {
+					elementIdx = 0
+				}
+
+				if(start < 0) {
 					throw new Error('Failed to find element')
 				}
 
-				element = resStr.slice(elementIdx + start, elementIdx + end)
+				element = body.slice(elementIdx + start, elementIdx + end)
 				elementIdx += start
 				elementLength = end - start
 			}
@@ -213,7 +224,9 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			}
 
 			if(elementIdx > 0 && elementLength > 0) {
-				reveals.push({ fromIndex: elementIdx, toIndex: elementIdx + elementLength })
+				const from = convertResponsePosToAbsolutePos(elementIdx, bodyStartIdx, res.chunks)
+				const to = convertResponsePosToAbsolutePos(elementIdx + elementLength, bodyStartIdx, res.chunks)
+				reveals.push({ fromIndex: from, toIndex: to })
 			}
 		}
 

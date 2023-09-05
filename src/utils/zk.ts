@@ -113,7 +113,7 @@ export async function prepareZkProofs(
 	logger.info({ totalChunks }, 'extracted chunks')
 
 	await Promise.all(
-		zkBlocks.map(async({ block, zkChunks }) => {
+		zkBlocks.map(async({ block, zkChunks, redactedPlaintext }) => {
 			block.zkReveal = {
 				proofs: await Promise.all(
 					zkChunks.map(async({ chunk, counter }) => {
@@ -123,6 +123,21 @@ export async function prepareZkProofs(
 							startIdx,
 							endIdx
 						)
+
+						const redactedPlaintextChunk = redactedPlaintext.slice(
+							startIdx,
+							endIdx
+						)
+
+						// redact ciphertext if plaintext is redacted
+						// to prepare for decryption in ZK circuit
+						// the ZK circuit will take in the redacted ciphertext,
+						// which shall produce the redacted plaintext
+						for(let i = 0;i < ciphertextChunk.length;i++) {
+							if(redactedPlaintextChunk[i] === REDACTION_CHAR_CODE) {
+								ciphertextChunk[i] = REDACTION_CHAR_CODE
+							}
+						}
 
 						const proof = await generateProof(
 							{
@@ -204,6 +219,16 @@ export async function verifyZKBlock(
 				startIdx,
 				startIdx + redactedPlaintext.length
 			)
+
+			// redact ciphertext if plaintext is redacted
+			// to prepare for decryption in ZK circuit
+			// the ZK circuit will take in the redacted ciphertext,
+			// which shall produce the redacted plaintext
+			for(let i = 0;i < ciphertextChunk.length;i++) {
+				if(redactedPlaintext[i] === REDACTION_CHAR_CODE) {
+					ciphertextChunk[i] = REDACTION_CHAR_CODE
+				}
+			}
 
 			if(!isRedactionCongruent(
 				redactedPlaintext,
