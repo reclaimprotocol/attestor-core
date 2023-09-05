@@ -193,16 +193,9 @@ export function convertResponsePosToAbsolutePos(pos: number, bodyStartIdx: numbe
 	return bodyStartIdx + pos
 }
 
-export function parseHttpResponse(buff: Uint8Array, mode: 'complete' | 'byte-by-byte') {
+export function parseHttpResponse(buff: Uint8Array) {
 	const parser = makeHttpResponseParser()
-	if(mode === 'complete') {
-		parser.onChunk(buff)
-	} else {
-		for(const byte of buff) {
-			parser.onChunk(new Uint8Array([byte]))
-		}
-	}
-
+	parser.onChunk(buff)
 	parser.streamEnded()
 	return parser.res
 }

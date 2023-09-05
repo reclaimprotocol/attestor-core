@@ -175,7 +175,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			return []
 		}
 
-		const res = parseHttpResponse(response,'complete')
+		const res = parseHttpResponse(response)
 
 		const headerEndIndex = res.statusLineEndIndex!
 		const bodyStartIdx = res.bodyStartIndex!
