@@ -37,9 +37,7 @@ export function fetchWitnessListForClaim(
 	const completeHashStr = ethers.utils.keccak256(
 		strToUint8Array(completeInput)
 	)
-	const completeHash = ethers.utils.arrayify(
-		strToUint8Array(completeHashStr)
-	)
+	const completeHash = ethers.utils.arrayify(completeHashStr)
 	const completeHashView = uint8ArrayToDataView(completeHash)
 	const witnessesLeft = [...witnesses]
 	const selectedWitnesses: WitnessData[] = []
