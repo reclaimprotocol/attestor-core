@@ -76,7 +76,12 @@ const goibibo: Provider<GoibiboParams, GoibiboSecretParams> = {
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)
 		}
 
-		const data = Buffer.from(res.body).toString('utf8')
+		// const data = Buffer.from(res.body).toString('utf8')
+		// Create a TextDecoder
+		const textDecoder = new TextDecoder('utf-8') // Assuming UTF-8 encoding
+
+		// Convert Uint8Array to string
+		const data = textDecoder.decode(res.body)
 
 		if(!data) {
 			throw new Error(`Invalid data: ${data}`)
