@@ -5,7 +5,7 @@
  *
 */
 
-
+import buffer from 'buffer'
 import { gunzipSync } from 'zlib'
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
@@ -41,7 +41,7 @@ createRequest({ cookieStr }) {
 		'Accept-Encoding: gzip, deflate',
 		'\r\n',
 	].join('\r\n')
-	const data = Buffer.from(strRequest)
+	const data = buffer.Buffer.from(strRequest)
 
 	// Find the cookie and redact it
 	const cookieStartIndex = data.indexOf(cookieStr)
@@ -84,7 +84,7 @@ assertValidProviderReceipt(receipt, { userData }) {
 
 	let html: string
 	if(res.headers['content-encoding'] === 'gzip') {
-		const buf = Buffer.from(res.body)
+		const buf = buffer.Buffer.from(res.body)
 		html = gunzipSync(buf).toString()
 	} else {
 		html = res.body.toString()
@@ -94,8 +94,7 @@ assertValidProviderReceipt(receipt, { userData }) {
 	delete data.csrfToken
 
 	// Check if the following account is in the response
-
-	if(JSON.stringify(data) === userData) {
+	if(JSON.stringify(data) !== userData) {
 		throw new Error('User data did not match at witness')
 	}
 
