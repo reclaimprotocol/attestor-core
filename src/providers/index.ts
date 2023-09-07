@@ -31,6 +31,7 @@ import facebookFriendsCount from './facebook-friends-count'
 import flickrUser from './flickr-user'
 import makeGithubProvider from './github-claim'
 import goDaddyLogin from './godaddy-user'
+import goibibo from './goibibo'
 import googleLogin from './google-login'
 import GrowwStocksCount from './groww-stock-balance'
 import hackerEarthUser from './hackerearth-user'
@@ -113,6 +114,7 @@ export const providers = {
 	'zoho-email': zohoEmail,
 	'venmo-id': venmoUser,
 	'venmo-transaction': venmoTransaction,
+	'goibibo': goibibo
 	'swiggy-equal': swiggyUser,
 }
 
