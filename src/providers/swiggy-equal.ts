@@ -5,7 +5,7 @@
  *
 */
 
-import buffer from 'buffer'
+
 import { gunzipSync } from 'zlib'
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
@@ -32,7 +32,7 @@ const swiggyUser: Provider<SwiggyUserParams, SwiggyUserSecretParams> = { hostPor
 	return typeof params.userData === 'string'
 },
 createRequest({ cookieStr }) {
-	const strRequest = [
+	const data = [
 		'GET /dapi/order/all?order_id= HTTP/1.1',
 		'Host: www.swiggy.com',
 		'Connection: close',
@@ -41,9 +41,8 @@ createRequest({ cookieStr }) {
 		'Accept-Encoding: gzip, deflate',
 		'\r\n',
 	].join('\r\n')
-	const data = buffer.Buffer.from(strRequest)
 
-	// Find the cookie and redact it
+
 	const cookieStartIndex = data.indexOf(cookieStr)
 
 	return {
@@ -84,7 +83,8 @@ assertValidProviderReceipt(receipt, { userData }) {
 
 	let html: string
 	if(res.headers['content-encoding'] === 'gzip') {
-		const buf = buffer.Buffer.from(res.body)
+		const newData = new Uint8Array(res.body)
+		const buf = new TextDecoder().decode(newData)
 		html = gunzipSync(buf).toString()
 	} else {
 		html = res.body.toString()
