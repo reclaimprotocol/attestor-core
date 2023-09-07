@@ -1,0 +1,12 @@
+{
+    "name": "goibibo",
+    "params": {
+      "goTribeDetails": "",
+      "method": "GET"
+    },
+    "secretParams": {
+      "bm_sz": "{{BM_SZ}}",
+      "Auth": "{{AUTH}}"
+    }
+  }
+  

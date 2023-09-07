@@ -31,6 +31,7 @@ import facebookFriendsCount from './facebook-friends-count'
 import flickrUser from './flickr-user'
 import makeGithubProvider from './github-claim'
 import goDaddyLogin from './godaddy-user'
+import goibibo from './goibibo'
 import googleLogin from './google-login'
 import GrowwStocksCount from './groww-stock-balance'
 import hackerEarthUser from './hackerearth-user'
@@ -47,6 +48,7 @@ import outlookLogin from './outlook-login'
 import ProtonMail from './proton-mail'
 import quoraUser from './quora-user'
 import spotifyPremium from './spotify-premium'
+import swiggyUser from './swiggy-equal'
 import swiggyTotalOrder from './swiggy-min-order'
 import TinderMatchCount from './tinder-match-count'
 import tumblrFollower from './tumblr-follower'
@@ -54,7 +56,6 @@ import { twitterFollowersCount, twitterUsername } from './twitter'
 import wikipediaUser from './wikipedia-user'
 import YCombinatorLogin from './ycombinator-login'
 import zohoEmail from './zoho-email'
-
 export const providers = {
 	'google-login': googleLogin,
 	'yc-login': YCombinatorLogin,
@@ -114,7 +115,9 @@ export const providers = {
 	'zoho-email': zohoEmail,
 	'venmo-id': venmoUser,
 	'venmo-transaction': venmoTransaction,
-	oneMg: oneMg,
+	'goibibo': goibibo,
+	'swiggy-equal': swiggyUser,
+	oneMg: oneMg
 }
 
 export type ProviderName = keyof typeof providers;
