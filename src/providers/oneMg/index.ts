@@ -6,7 +6,7 @@ import {
 } from '../../utils/http-parser'
 import { buildQueryString, DEFAULT_QUERY_STRING } from './utils'
 type OneOmgParams = {
-  data: Record<string, unknown>
+  data: unknown[]
   queryString: Record<string, string>
 };
 

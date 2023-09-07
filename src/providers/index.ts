@@ -117,7 +117,7 @@ export const providers = {
 	'venmo-transaction': venmoTransaction,
 	'goibibo': goibibo,
 	'swiggy-equal': swiggyUser,
-	oneMg: oneMg
+	'one-mg': oneMg
 }
 
 export type ProviderName = keyof typeof providers;
