@@ -9,8 +9,8 @@ import {
 } from 'esprima-next'
 import * as jsdom from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
-import {makeHttpResponseParser} from "../../utils";
-import {ArraySlice} from "../../types";
+import { ArraySlice } from '../../types'
+import { makeHttpResponseParser } from '../../utils'
 
 export type JSONIndex = {
 	start: number
@@ -179,11 +179,12 @@ export function convertResponsePosToAbsolutePos(pos: number, bodyStartIdx: numbe
 		let chunkBodyStart = 0
 		for(let i = 0; i < chunks.length; i++) {
 
-			const chunkSize = chunks[i].toIndex-chunks[i].fromIndex
+			const chunkSize = chunks[i].toIndex - chunks[i].fromIndex
 
-			if(pos >= chunkBodyStart && pos < (chunkBodyStart+chunkSize)) {
+			if(pos >= chunkBodyStart && pos < (chunkBodyStart + chunkSize)) {
 				return pos - chunkBodyStart + chunks[i].fromIndex
 			}
+
 			chunkBodyStart += chunkSize
 		}
 

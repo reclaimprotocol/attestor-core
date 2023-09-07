@@ -43,6 +43,7 @@ import letterboxdUser from './letterboxd-user'
 import loomUser from './loom-user-id'
 import { mastodonUser } from './mastodon'
 import notionUsername from './notion-username'
+import oneMg from './oneMg'
 import outlookLogin from './outlook-login'
 import ProtonMail from './proton-mail'
 import quoraUser from './quora-user'
@@ -116,6 +117,7 @@ export const providers = {
 	'venmo-transaction': venmoTransaction,
 	'goibibo': goibibo,
 	'swiggy-equal': swiggyUser,
+	oneMg: oneMg
 }
 
 export type ProviderName = keyof typeof providers;
