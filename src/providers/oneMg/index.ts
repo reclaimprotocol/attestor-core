@@ -1,5 +1,3 @@
-import canonicalize from 'canonicalize'
-import { isEqual } from 'lodash'
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
 import {
@@ -83,12 +81,7 @@ const oneMg: Provider<OneOmgParams, OneMgSecretParams> = {
 
 			data = JSON.parse(body) as { orders: unknown }
 
-			if(
-				!isEqual(
-					canonicalize(JSON.parse(JSON.stringify(dataParam))),
-					canonicalize(data.orders)
-				)
-			) {
+			if(JSON.stringify(data.orders) !== JSON.stringify(dataParam)) {
 				throw new Error('Invalid data')
 			}
 		} catch(error) {
