@@ -114,7 +114,7 @@ export const providers = {
 	'zoho-email': zohoEmail,
 	'venmo-id': venmoUser,
 	'venmo-transaction': venmoTransaction,
-	'goibibo': goibibo
+	'goibibo': goibibo,
 	'swiggy-equal': swiggyUser,
 }
 
