@@ -1,4 +1,3 @@
-import buffer from 'buffer'
 import canonicalize from 'canonicalize'
 import { isEqual } from 'lodash'
 import { DEFAULT_PORT } from '../../config'
@@ -79,7 +78,8 @@ const oneMg: Provider<OneOmgParams, OneMgSecretParams> = {
 		let data: { orders: unknown }
 
 		try {
-			const body = buffer.Buffer.from(res.body).toString()
+			const newData = new Uint8Array(res.body)
+			const body = new TextDecoder().decode(newData)
 
 			data = JSON.parse(body) as { orders: unknown }
 
