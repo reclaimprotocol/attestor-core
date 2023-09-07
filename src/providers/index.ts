@@ -40,6 +40,7 @@ import instagramUserWeekPost from './instagram-posts'
 import instagramUser from './instagram-user'
 import letterboxdUser from './letterboxd-user'
 import loomUser from './loom-user-id'
+import makeMyTrip from './makeMyTrip'
 import { mastodonUser } from './mastodon'
 import notionUsername from './notion-username'
 import outlookLogin from './outlook-login'
@@ -113,6 +114,7 @@ export const providers = {
 	'zoho-email': zohoEmail,
 	'venmo-id': venmoUser,
 	'venmo-transaction': venmoTransaction,
+	'makeMyTrip': makeMyTrip
 }
 
 export type ProviderName = keyof typeof providers;
