@@ -14,8 +14,6 @@ import {
 	getHttpRequestHeadersFromTranscript,
 } from '../utils/http-parser'
 
-import { logger } from '/Users/akshay/reclaim/witness-sdk/src/utils/logger'
-
 type SwiggyUserParams = {
     userData: string
 };
@@ -94,7 +92,6 @@ assertValidProviderReceipt(receipt, { userData }) {
 
 	const data = JSON.parse(html)
 	delete data.csrfToken
-	logger.info(JSON.stringify(data))
 
 	// Check if the following account is in the response
 
