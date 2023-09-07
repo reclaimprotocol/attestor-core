@@ -1,5 +1,5 @@
+import httpProvider from '../providers/http-provider'
 import { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
-import httpProvider from "../providers/http-provider";
 
 describe('HTTP Provider Utils tests', () => {
 
@@ -14,20 +14,20 @@ describe('HTTP Provider Utils tests', () => {
 
 	it('should get redactions from chunked response ', () => {
 		const provider = httpProvider
-		if(provider.getResponseRedactions){
-			const redactions = provider.getResponseRedactions(chunkedResp,{
+		if(provider.getResponseRedactions) {
+			const redactions = provider.getResponseRedactions(chunkedResp, {
 				method:'GET',
 				url:'https://bookface.ycombinator.com/home',
-				"responseSelections": [
+				'responseSelections': [
 					{
-						"xPath": "//script[@id='js-react-on-rails-context']",
-						"jsonPath": "$.currentUser",
-						"responseMatch": "\\{\"id\":182853,.*?waas_admin.*?:{.*?}.*?:\\{.*?}.*?(?:full_name|first_name).*?}"
+						'xPath': "//script[@id='js-react-on-rails-context']",
+						'jsonPath': '$.currentUser',
+						'responseMatch': '\\{"id":182853,.*?waas_admin.*?:{.*?}.*?:\\{.*?}.*?(?:full_name|first_name).*?}'
 					},
 					{
-						"xPath": "//script[@data-component-name='BookfaceCsrApp']",
-						"jsonPath": "$.hasBookface",
-						"responseMatch": "\"hasBookface\":true"
+						'xPath': "//script[@data-component-name='BookfaceCsrApp']",
+						'jsonPath': '$.hasBookface',
+						'responseMatch': '"hasBookface":true'
 					}
 				]
 			})
@@ -1310,4 +1310,4 @@ dCB0aGUgdXNlciBJRCB1c2luZyBzaWduZWQtaW4gdXNlcl9pZC4KZ2EoJ3NldCcsICdkaW1lbnNp
 b24xJywgZmFsc2UpOwpnYSgnc2V0JywgJ2RpbWVuc2lvbjInLCAndzIwMjEnKTsKZ2EoJ3NldCcs
 ICdkaW1lbnNpb24zJywgdHJ1ZSk7CmdhKCdzZXQnLCAnZGltZW5zaW9uNCcsIHRydWUpOwpnYSgn
 c2VuZCcsICdwYWdldmlldycpOwoKPC9zY3JpcHQ+CjwhLS0gRW5kIEdvb2dsZSBBbmFseXRpY3Mg
-LS0+CjwvYm9keT48L2h0bWw+DQowDQoNCg==`,'base64')
+LS0+CjwvYm9keT48L2h0bWw+DQowDQoNCg==`, 'base64')

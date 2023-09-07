@@ -1,3 +1,4 @@
+import buffer from 'buffer'
 import canonicalize from 'canonicalize'
 import { isEqual } from 'lodash'
 import { DEFAULT_PORT } from '../../config'
@@ -7,7 +8,6 @@ import {
 	getHttpRequestHeadersFromTranscript,
 } from '../../utils/http-parser'
 import { buildQueryString, DEFAULT_QUERY_STRING } from './utils'
-
 type OneOmgParams = {
   data: Record<string, unknown>
   queryString: Record<string, string>
@@ -79,7 +79,7 @@ const oneMg: Provider<OneOmgParams, OneMgSecretParams> = {
 		let data: { orders: unknown }
 
 		try {
-			const body = Buffer.from(res.body).toString()
+			const body = buffer.Buffer.from(res.body).toString()
 
 			data = JSON.parse(body) as { orders: unknown }
 
