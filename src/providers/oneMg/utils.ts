@@ -1,7 +1,5 @@
 export const buildQueryString = (url: string, obj: Record<string, string>) => {
-	// for(const [k, v] of Object.entries(obj)) {
-	// 	obj[k] = encodeURIComponent(JSON.stringify(v))
-	// }
+
 
 	const query = new URLSearchParams(obj).toString()
 	if(Object.keys(obj).length === 0) {
@@ -12,5 +10,6 @@ export const buildQueryString = (url: string, obj: Record<string, string>) => {
 }
 
 export const DEFAULT_QUERY_STRING = {
-
+	'page_number': '0',
+	'page_size': '6',
 }
