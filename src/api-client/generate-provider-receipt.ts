@@ -64,7 +64,9 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 		handleDataFromServer(data) {
 			resParser.onChunk(data)
 			if(resParser.res.complete) {
-				process.nextTick(() => {
+				// wait 1 tick to make sure the client has
+				// finished writing the response
+				setTimeout(() => {
 					endedHttpRequest?.()
 				})
 			}
