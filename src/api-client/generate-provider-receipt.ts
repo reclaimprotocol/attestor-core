@@ -68,7 +68,7 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 				// finished writing the response
 				setTimeout(() => {
 					endedHttpRequest?.()
-				})
+				}, 100)
 			}
 		},
 		onTlsEnd(err) {
