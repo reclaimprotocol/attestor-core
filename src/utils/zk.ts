@@ -195,6 +195,7 @@ export async function prepareZkProofs(
 			{ startIdx, endIdx },
 			'generated proof for chunk'
 		)
+
 		return {
 			proofJson: proof.proofJson,
 			decryptedRedactedCiphertext: toUint8Array(
@@ -268,16 +269,12 @@ export async function verifyZKBlock(
 			}
 
 			await verifyProof(
-
 				{
 					proofJson,
 					plaintext:
 						toUintArray(decryptedRedactedCiphertext),
-				}
-				,
-				{
-					ciphertext: ciphertextChunk,
 				},
+				{ ciphertext: ciphertextChunk },
 				operator
 			)
 
