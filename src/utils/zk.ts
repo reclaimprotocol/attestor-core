@@ -8,6 +8,7 @@ import {
 	ZKOperator
 } from '@reclaimprotocol/circom-chacha20'
 import { detectEnvironment } from '@reclaimprotocol/common-grpc-web-transport'
+import PQueue from 'p-queue'
 import { DEFAULT_REMOTE_ZK_PARAMS, MAX_ZK_CHUNKS } from '../config'
 import { FinaliseSessionRequest_Block as BlockReveal, FinaliseSessionRequest_BlockRevealZk } from '../proto/api'
 import { ArraySlice, Logger } from '../types'
@@ -32,15 +33,23 @@ type ZKBlock = {
 	zkChunks: ZKChunk[]
 }
 
+export type PrepareZKProofsBaseOpts = {
+	/** params for ZK proof gen */
+	zkOperator?: ZKOperator
+	/**
+	 * max number of ZK proofs to generate concurrently
+	 * @default 1
+	 */
+	zkProofConcurrency?: number
+}
+
 type PrepareZKProofsOpts = {
 	/** blocks to prepare ZK proof for */
 	blocks: BlockWithPlaintext[]
-	/** params for ZK proof gen */
-	operator?: ZKOperator
 	/** redact selected portions of the plaintext */
 	redact: (plaintext: Uint8Array) => ArraySlice[]
 	logger?: Logger
-}
+} & PrepareZKProofsBaseOpts
 
 type ZKVerifyOpts = {
 	ciphertext: Uint8Array
@@ -76,9 +85,10 @@ export function makeDefaultZkOperator(logger?: Logger) {
 export async function prepareZkProofs(
 	{
 		blocks,
-		operator,
+		zkOperator,
 		redact,
-		logger
+		logger,
+		zkProofConcurrency = 10,
 	}: PrepareZKProofsOpts
 ) {
 	const blocksToReveal = getBlocksToReveal(blocks, redact)
@@ -86,8 +96,14 @@ export async function prepareZkProofs(
 		return 'all'
 	}
 
+	const zkQueue = new PQueue({
+		concurrency: zkProofConcurrency,
+		autoStart: true,
+	})
+
 	logger = logger || LOGGER.child({ module: 'zk' })
-	operator = operator || await makeDefaultZkOperator(logger)
+	zkOperator = zkOperator || await makeDefaultZkOperator(logger)
+
 	logger.info(
 		{ len: blocksToReveal.length },
 		'preparing proofs for blocks'
@@ -113,67 +129,81 @@ export async function prepareZkProofs(
 	logger.info({ totalChunks }, 'extracted chunks')
 
 	await Promise.all(
-		zkBlocks.map(async({ block, zkChunks, redactedPlaintext }) => {
-			block.zkReveal = {
+		zkBlocks.map(async(block) => {
+			const { block: b, zkChunks } = block
+			b.zkReveal = {
 				proofs: await Promise.all(
-					zkChunks.map(async({ chunk, counter }) => {
-						const startIdx = (counter - 1) * CHACHA_BLOCK_SIZE
-						const endIdx = counter * CHACHA_BLOCK_SIZE
-						const ciphertextChunk = block.ciphertext.slice(
-							startIdx,
-							endIdx
-						)
-
-						const redactedPlaintextChunk = redactedPlaintext.slice(
-							startIdx,
-							endIdx
-						)
-
-						// redact ciphertext if plaintext is redacted
-						// to prepare for decryption in ZK circuit
-						// the ZK circuit will take in the redacted ciphertext,
-						// which shall produce the redacted plaintext
-						for(let i = 0;i < ciphertextChunk.length;i++) {
-							if(redactedPlaintextChunk[i] === REDACTION_CHAR_CODE) {
-								ciphertextChunk[i] = REDACTION_CHAR_CODE
-							}
-						}
-
-						const proof = await generateProof(
-							{
-								key: block.directReveal!.key,
-								iv: block.directReveal!.iv,
-								startCounter: counter,
-							},
-							{
-								ciphertext: ciphertextChunk
-							},
-							operator!,
-						)
-
-						logger?.debug(
-							{ startIdx, endIdx },
-							'generated proof for chunk'
-						)
-						return {
-							proofJson: proof.proofJson,
-							decryptedRedactedCiphertext: toUint8Array(
-								proof.plaintext
+					zkChunks.map(chunk => {
+						return zkQueue.add(
+							() => generateProofForChunk(
+								block,
+								chunk
 							),
-							redactedPlaintext: chunk,
-							startIdx,
-						}
+							{ throwOnTimeout: true }
+						)
 					})
 				)
 			}
 
-			delete block.directReveal
+			delete b.directReveal
 
 			return block
 		})
 	)
 
 	return zkBlocks
+
+	async function generateProofForChunk(
+		{ block, redactedPlaintext }: Omit<ZKBlock, 'chunks'>,
+		{ chunk, counter }: ZKChunk,
+	) {
+		const startIdx = (counter - 1) * CHACHA_BLOCK_SIZE
+		const endIdx = counter * CHACHA_BLOCK_SIZE
+		const ciphertextChunk = block.ciphertext.slice(
+			startIdx,
+			endIdx
+		)
+
+		const redactedPlaintextChunk = redactedPlaintext.slice(
+			startIdx,
+			endIdx
+		)
+
+		// redact ciphertext if plaintext is redacted
+		// to prepare for decryption in ZK circuit
+		// the ZK circuit will take in the redacted ciphertext,
+		// which shall produce the redacted plaintext
+		for(let i = 0;i < ciphertextChunk.length;i++) {
+			if(redactedPlaintextChunk[i] === REDACTION_CHAR_CODE) {
+				ciphertextChunk[i] = REDACTION_CHAR_CODE
+			}
+		}
+
+		const proof = await generateProof(
+			{
+				key: block.directReveal!.key,
+				iv: block.directReveal!.iv,
+				startCounter: counter,
+			},
+			{
+				ciphertext: ciphertextChunk
+			},
+			zkOperator!,
+		)
+
+		logger?.debug(
+			{ startIdx, endIdx },
+			'generated proof for chunk'
+		)
+		return {
+			proofJson: proof.proofJson,
+			decryptedRedactedCiphertext: toUint8Array(
+				proof.plaintext
+			),
+			redactedPlaintext: chunk,
+			startIdx,
+		}
+	}
 }
 
 

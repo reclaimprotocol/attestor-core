@@ -1,13 +1,12 @@
-import { ZKOperator } from '@reclaimprotocol/circom-chacha20'
 import { strToUint8Array, TLSConnectionOptions } from '@reclaimprotocol/tls'
 import { DEFAULT_PORT } from '../config'
 import { InitialiseSessionRequest, ReclaimWitnessClient } from '../proto/api'
 import { ProviderName, ProviderParams, providers, ProviderSecretParams } from '../providers'
 import { Logger } from '../types'
-import { logger as MAIN_LOGGER, makeHttpResponseParser } from '../utils'
+import { logger as MAIN_LOGGER, makeHttpResponseParser, PrepareZKProofsBaseOpts } from '../utils'
 import { makeAPITLSClient } from './make-api-tls-client'
 
-export interface GenerateProviderReceiptOptions<N extends ProviderName> {
+export type GenerateProviderReceiptOptions<N extends ProviderName> = {
 	/** name of the provider to generate signed receipt for */
 	name: N
 	/**
@@ -21,8 +20,7 @@ export interface GenerateProviderReceiptOptions<N extends ProviderName> {
 	client: ReclaimWitnessClient
 	additionalConnectOpts?: TLSConnectionOptions
 	logger?: Logger
-	zkOperator?: ZKOperator
-}
+} & PrepareZKProofsBaseOpts
 
 export async function generateProviderReceipt<Name extends ProviderName>({
 	name,
@@ -33,6 +31,7 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 	additionalConnectOpts,
 	logger,
 	zkOperator,
+	zkProofConcurrency
 }: GenerateProviderReceiptOptions<Name>) {
 	logger = logger || MAIN_LOGGER
 	const provider = providers[name]
@@ -61,6 +60,7 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 		logger,
 		additionalConnectOpts,
 		zkOperator,
+		zkProofConcurrency,
 		handleDataFromServer(data) {
 			resParser.onChunk(data)
 			if(resParser.res.complete) {

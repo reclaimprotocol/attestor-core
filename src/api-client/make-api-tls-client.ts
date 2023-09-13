@@ -1,9 +1,8 @@
-import { ZKOperator } from '@reclaimprotocol/circom-chacha20'
 import { detectEnvironment } from '@reclaimprotocol/common-grpc-web-transport'
 import { crypto, generateIV, makeTLSClient, SUPPORTED_CIPHER_SUITE_MAP, SUPPORTED_NAMED_CURVES, TLSConnectionOptions, TLSPresharedKey, TLSSessionTicket } from '@reclaimprotocol/tls'
 import { FinaliseSessionRequest_Block, InitialiseSessionRequest, PullFromSessionResponse, PushToSessionRequest, ReclaimWitnessClient, TlsCipherSuiteType, WitnessVersion } from '../proto/api'
 import { ArraySlice, Logger } from '../types'
-import { logger as MAIN_LOGGER, prepareZkProofs } from '../utils'
+import { logger as MAIN_LOGGER, prepareZkProofs, PrepareZKProofsBaseOpts } from '../utils'
 
 export type APITLSClientOptions = {
 	host: string
@@ -16,8 +15,7 @@ export type APITLSClientOptions = {
 	request?: Partial<InitialiseSessionRequest>
 	logger?: Logger
 	additionalConnectOpts?: TLSConnectionOptions
-	zkOperator?: ZKOperator
-}
+} & PrepareZKProofsBaseOpts
 
 // eslint-disable-next-line camelcase
 type BlockToReveal = Partial<FinaliseSessionRequest_Block>
@@ -56,7 +54,8 @@ export const makeAPITLSClient = ({
 	request,
 	logger: _logger,
 	additionalConnectOpts,
-	zkOperator
+	zkOperator,
+	zkProofConcurrency
 }: APITLSClientOptions) => {
 	let sessionId: string | undefined
 	let abort: AbortController | undefined
@@ -220,9 +219,10 @@ export const makeAPITLSClient = ({
 				const zkBlocks = await prepareZkProofs(
 					{
 						blocks: allServerBlocks,
-						operator: zkOperator,
 						redact: redactResponse,
 						logger,
+						zkOperator,
+						zkProofConcurrency,
 					}
 				)
 

@@ -99,6 +99,10 @@ To use this, you'll need to:
 				cookieStr: '<cookie-str>'
 			},
 			ownerPrivateKey: '0x1234...',
+			// limit ZK proof concurrency
+			// to limit memory consumption
+			// as webview has max 500mb memory
+			zkProofConcurrency: 1,
 		}
 	}
 	webviewRef.current?.postMessage(

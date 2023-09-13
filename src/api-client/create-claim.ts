@@ -1,14 +1,13 @@
-import { ZKOperator } from '@reclaimprotocol/circom-chacha20'
 import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
 import { ethers } from 'ethers'
 import { makeBeacon } from '../beacon'
 import { InitialiseSessionRequest_BeaconBasedProviderClaimRequest as ProviderClaimRequest, ProviderClaimData } from '../proto/api'
 import { ProviderName, ProviderParams, providers, ProviderSecretParams } from '../providers'
 import { Beacon, CreateStep, Logger } from '../types'
-import { createGrpcWebClient, fetchWitnessListForClaim, getIdentifierFromClaimInfo, logger as LOGGER, makeOwnerProof, stringifyClaimParameters, unixTimestampSeconds } from '../utils'
+import { createGrpcWebClient, fetchWitnessListForClaim, getIdentifierFromClaimInfo, logger as LOGGER, makeOwnerProof, PrepareZKProofsBaseOpts, stringifyClaimParameters, unixTimestampSeconds } from '../utils'
 import { generateProviderReceipt } from './generate-provider-receipt'
 
-export interface CreateClaimOptions<N extends ProviderName> {
+export type CreateClaimOptions<N extends ProviderName> = {
 	/** name of the provider to generate signed receipt for */
 	name: N
 	/**
@@ -36,9 +35,8 @@ export interface CreateClaimOptions<N extends ProviderName> {
 	makeGrpcClient?: typeof createGrpcWebClient
 
 	logger?: Logger
-	zkOperator?: ZKOperator
 	beacon?: Beacon
-}
+} & PrepareZKProofsBaseOpts
 
 /**
  * Create a claim on chain
@@ -57,6 +55,7 @@ export async function createClaim<Name extends ProviderName>({
 	beacon = makeBeacon(),
 	logger = LOGGER,
 	makeGrpcClient = createGrpcWebClient,
+	zkProofConcurrency
 }: CreateClaimOptions<Name>) {
 	if(!providers[name].areValidParams(params)) {
 		throw new Error(`Invalid params for provider "${name}"`)
@@ -180,6 +179,7 @@ export async function createClaim<Name extends ProviderName>({
 			additionalConnectOpts,
 			logger,
 			zkOperator,
+			zkProofConcurrency,
 		})
 
 		return {
