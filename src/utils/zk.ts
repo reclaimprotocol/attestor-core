@@ -105,7 +105,7 @@ export async function prepareZkProofs(
 	zkOperator = zkOperator || await makeDefaultZkOperator(logger)
 
 	logger.info(
-		{ len: blocksToReveal.length },
+		{ len: blocksToReveal.length, zkProofConcurrency },
 		'preparing proofs for blocks'
 	)
 
