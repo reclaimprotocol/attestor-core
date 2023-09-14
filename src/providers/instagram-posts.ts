@@ -7,6 +7,7 @@
 
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
+import { uint8ArrayToStr } from '../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 type InstagramPostsTypeParams = {
@@ -120,7 +121,7 @@ const instagramUserWeekPost: Provider<InstagramPostsTypeParams, InstagramPostsTy
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)
 		}
 
-		const json = JSON.parse(res.body.toString())
+		const json = JSON.parse(uint8ArrayToStr(res.body))
 		if(!json?.hasOwnProperty('items')) {
 			throw new Error('json body incorrect')
 		}

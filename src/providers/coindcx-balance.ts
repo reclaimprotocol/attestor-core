@@ -7,6 +7,7 @@
 
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
+import { uint8ArrayToStr } from '../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 type CoindcxBalanceParams = {
@@ -101,7 +102,7 @@ const coindcxBalance: Provider<CoindcxBalanceParams, CoindcxBalanceSecretParams>
 		}
 
 		// Convert Response to string and check the balance of the user
-		const bodyStr = JSON.parse(res.body.toString())
+		const bodyStr = JSON.parse(uint8ArrayToStr(res.body))
 		const assetWallet = bodyStr.wallets.find((wallet: any) => {
 			return wallet.currency_short_name === assetName
 		})

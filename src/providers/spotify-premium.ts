@@ -7,6 +7,7 @@
 
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
+import { uint8ArrayToStr } from '../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 type SpotifyPremiumParams = {}
@@ -94,7 +95,7 @@ const spotifyPremium: Provider<SpotifyPremiumParams, SpotifyPremiumSecretParams>
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)
 		}
 
-		const json = JSON.parse(res.body.toString())
+		const json = JSON.parse(uint8ArrayToStr(res.body))
 		const productType = json.currentPlan
 		if(productType !== 'premium') {
 			throw new Error('User is not a premium member')

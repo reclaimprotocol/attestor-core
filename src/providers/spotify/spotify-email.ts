@@ -6,6 +6,7 @@
 
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
+import { uint8ArrayToStr } from '../../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
 
 type SpotifyEmailParams = {
@@ -89,7 +90,7 @@ const spotifyEmail: Provider<SpotifyEmailParams, SpotifyEmailSecretParams> = {
 			throw new Error(`Invalid status code: ${res.statusCode}`)
 		}
 
-		const json = JSON.parse(res.body.toString())
+		const json = JSON.parse(uint8ArrayToStr(res.body))
 		const resEmail = json.profile?.email
 		if(resEmail !== userEmail) {
 			throw new Error('Email does not match')

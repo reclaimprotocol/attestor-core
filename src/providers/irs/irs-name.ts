@@ -5,6 +5,7 @@
  */
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
+import { uint8ArrayToStr } from '../../utils';
 import {
 	getCompleteHttpResponseFromTranscript,
 	getHttpRequestHeadersFromTranscript,
@@ -127,7 +128,7 @@ const irsName: Provider<IrsParams, IrsSecretParams> = {
 			throw new Error(`Invalid status code: ${res.statusCode}`)
 		}
 
-		const resBody = JSON.parse(res.body.toString())
+		const resBody = JSON.parse(uint8ArrayToStr(res.body))
 		const response = resBody.results[0].content
 		try {
 			const json = JSON.parse(response)

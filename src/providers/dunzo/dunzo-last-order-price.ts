@@ -6,6 +6,7 @@
 
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
+import { uint8ArrayToStr } from '../../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
 import getTopOrderValues, { deliveredCondition } from './utils'
 
@@ -94,7 +95,7 @@ const dunzoLastOrder: Provider<DunzoLastOrderParams, DunzoLastOrderSecretParams>
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)
 		}
 
-		const json = JSON.parse(res.body.toString())
+		const json = JSON.parse(uint8ArrayToStr(res.body))
 		let totalValue: number
 		const k = 1
 

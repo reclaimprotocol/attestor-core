@@ -5,6 +5,7 @@
  */
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
+import { uint8ArrayToStr } from '../utils';
 import {
 	getCompleteHttpResponseFromTranscript,
 	getHttpRequestHeadersFromTranscript,
@@ -95,7 +96,7 @@ const zohoEmail: Provider<ZohoParams, ZohoSecretParams> = {
 			throw new Error(`Invalid status code: ${res.statusCode}`)
 		}
 
-		const resBody = JSON.parse(res.body.toString())
+		const resBody = JSON.parse(uint8ArrayToStr(res.body))
 		if(resBody?.user?.User?.primary_email !== email) {
 			throw new Error(`Invalid email: ${resBody?.user?.User?.primary_email} could not be matched with ${email}`)
 		}

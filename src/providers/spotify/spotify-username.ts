@@ -6,6 +6,7 @@
 
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
+import { uint8ArrayToStr } from '../../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
 
 type SpotifyUserameParams = {
@@ -89,7 +90,7 @@ const spotifyUserName: Provider<SpotifyUserameParams, SpotifyUserNameSecretParam
 			throw new Error(`Invalid status code: ${res.statusCode}`)
 		}
 
-		const json = JSON.parse(res.body.toString())
+		const json = JSON.parse(uint8ArrayToStr(res.body))
 		const resUserName = json.profile?.username
 		if(resUserName !== userName) {
 			throw new Error('Username does not match')

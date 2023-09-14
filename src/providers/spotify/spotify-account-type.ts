@@ -6,6 +6,7 @@
 
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
+import { uint8ArrayToStr } from '../../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
 
 type SpotifyAccountTypeParams = {
@@ -95,7 +96,7 @@ const spotifyAccountType: Provider<SpotifyAccountTypeParams, SpotifyAccountTypeS
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)
 		}
 
-		const json = JSON.parse(res.body.toString())
+		const json = JSON.parse(uint8ArrayToStr(res.body))
 		const productType = json.currentPlan
 		if(productType !== accountType) {
 			throw new Error('Account plan does not match')

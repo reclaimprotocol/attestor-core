@@ -6,6 +6,7 @@
  */
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
+import { uint8ArrayToStr } from '../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 type GoogleLoginParams = {
@@ -95,7 +96,7 @@ const googleLogin: Provider<GoogleLoginParams, GoogleLoginSecretParams> = {
 
 		// parse the body & try to find the email add
 		// that the user provided in the parameters
-		const json = JSON.parse(res.body.toString())
+		const json = JSON.parse(uint8ArrayToStr(res.body))
 		if(json.email !== emailAddress) {
 			throw new Error(`Email "${json.email}" does not match expected "${emailAddress}"`)
 		}

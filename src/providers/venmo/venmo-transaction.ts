@@ -3,6 +3,7 @@
 
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
+import { uint8ArrayToStr } from '../../utils'
 import {
 	getCompleteHttpResponseFromTranscript,
 	getHttpRequestHeadersFromTranscript,
@@ -127,7 +128,7 @@ const venmoTransaction: Provider<VenmoTransactionParams, VenmoLoginSecretParams>
 		}
 
 		try {
-			const resBody = JSON.parse(res.body.toString())
+			const resBody = JSON.parse(uint8ArrayToStr(res.body))
 			if(!findMatchingStory(recipientId, userId, amount, resBody?.stories)) {
 				throw new Error('No matching transaction found')
 			}

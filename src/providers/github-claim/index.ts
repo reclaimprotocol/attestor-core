@@ -1,5 +1,6 @@
 import { DEFAULT_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { Provider } from '../../types'
+import { uint8ArrayToStr } from '../../utils'
 import {
 	getCompleteHttpResponseFromTranscript,
 	getHttpRequestHeadersFromTranscript,
@@ -118,7 +119,7 @@ const makeGithubProvider = <T extends GithubClaimType>() => <Provider<GithubPara
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)
 		}
 
-		const responseBody = JSON.parse(res.body.toString())
+		const responseBody = JSON.parse(uint8ArrayToStr(res.body))
 
 		if(res.statusCode !== 200) {
 			if(isGithubError(responseBody)) {

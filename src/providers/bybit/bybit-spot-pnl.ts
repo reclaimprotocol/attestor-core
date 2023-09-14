@@ -6,6 +6,7 @@
 
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
+import { uint8ArrayToStr } from '../../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
 
 type BybitSpotPnlParams = {
@@ -98,7 +99,7 @@ const bybitSpotPnl: Provider<BybitSpotPnlParams, BybitSpotPnlSecretParams> = {
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)
 		}
 
-		const bodyStr = JSON.parse(res.body.toString())
+		const bodyStr = JSON.parse(uint8ArrayToStr(res.body))
 		const resProfitPercentage = (parseFloat(bodyStr.result.cumulationprofitRate))
 
 		//  check if the userBalance is undefined

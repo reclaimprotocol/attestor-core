@@ -7,6 +7,7 @@
 
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
+import { uint8ArrayToStr } from '../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 type CoinswitchBalanceParams = {
@@ -96,7 +97,7 @@ const coinswitchBalance: Provider<CoinswitchBalanceParams, CoinswitchBalanceSecr
 		}
 
 		// Convert Response to string and check the balance of the user
-		const bodyStr = JSON.parse(res.body.toString())
+		const bodyStr = JSON.parse(uint8ArrayToStr(res.body))
 		const userData = bodyStr['data']
 		const userBalance = parseFloat(parseFloat(userData[userData.length - 1].current_value).toFixed(2))
 

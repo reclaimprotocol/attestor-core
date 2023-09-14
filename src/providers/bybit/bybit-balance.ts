@@ -7,6 +7,7 @@
 
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
+import { uint8ArrayToStr } from '../../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
 
 type BybitBalanceParams = {
@@ -101,7 +102,7 @@ const bybitBalance: Provider<BybitBalanceParams, BybitBalanceSecretParams> = {
 		}
 
 		// Convert Response to string and then to Int
-		const bodyStr = JSON.parse(res.body.toString())
+		const bodyStr = JSON.parse(uint8ArrayToStr(res.body))
 		const userBalance = (bodyStr.result.originTotalBalance)
 		console.log('userBalance:', parseFloat(userBalance).toFixed(2))
 

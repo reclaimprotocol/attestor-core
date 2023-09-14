@@ -6,6 +6,7 @@
  */
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
+import { uint8ArrayToStr } from '../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 type NotionUsernameParams = {
@@ -98,7 +99,7 @@ const notionUsername: Provider<NotionUsernameParams, NotionUsernameSecretParams>
 
 		// parse the body & try to find the username
 		// inside the JSON response from the API
-		const json = JSON.parse(res.body.toString())
+		const json = JSON.parse(uint8ArrayToStr(res.body))
 		const keys = Object.keys(json)
 		if(!keys.length) {
 			throw new Error('No user details found')
