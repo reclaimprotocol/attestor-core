@@ -83,9 +83,7 @@ assertValidProviderReceipt(receipt, { userData }) {
 
 	let html: string
 	if(res.headers['content-encoding'] === 'gzip') {
-		const newData = new Uint8Array(res.body)
-		const buf = new TextDecoder().decode(newData)
-		html = gunzipSync(buf).toString()
+		html = gunzipSync(res.body).toString()
 	} else {
 		html = res.body.toString()
 	}

@@ -52,7 +52,7 @@ export async function main<T extends ProviderName>(
 		)
 		console.log(`receipt is valid for ${paramsJson.name} provider`)
 	} catch(err) {
-		console.error(`receipt is invalid for ${paramsJson.name} provider: "${err.message}"`)
+		console.error(`receipt is invalid for ${paramsJson.name} provider:`, err)
 	}
 }
 
