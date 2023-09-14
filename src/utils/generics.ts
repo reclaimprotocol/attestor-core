@@ -68,9 +68,9 @@ export function findIndexInUint8Array(
  */
 export function uint8ArrayToBinaryStr(buf: Uint8Array) {
 	let ret = ''
-	for(let i = 0; i < buf.length; ++i) {
-	  ret += String.fromCharCode(buf.at(i) || 0)
-	}
+	buf.forEach(v => (
+		ret += String.fromCharCode(v)
+	))
 
 	return ret
 }
