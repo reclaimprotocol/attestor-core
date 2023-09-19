@@ -1,6 +1,6 @@
 {
 	"name": "@reclaimprotocol/witness-sdk",
-	"version": "1.0.1",
+	"version": "0.0.1",
 	"description": "",
 	"main": "lib/index",
 	"scripts": {
@@ -23,9 +23,9 @@
 	"author": "Adhiraj Singh",
 	"license": "ISC",
 	"dependencies": {
-		"@reclaimprotocol/circom-chacha20": "github:reclaimprotocol/circom-chacha20",
+		"@reclaimprotocol/circom-chacha20": "^0.0.1",
 		"@reclaimprotocol/common-grpc-web-transport": "github:questbook/common-grpc-web-transport",
-		"@reclaimprotocol/tls": "github:reclaimprotocol/tls",
+		"@reclaimprotocol/tls": "^0.0.1",
 		"canonicalize": "^2.0.0",
 		"dotenv": "^16.3.1",
 		"esprima-next": "^5.8.4",
