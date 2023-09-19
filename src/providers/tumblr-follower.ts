@@ -7,6 +7,7 @@
 
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
+import { uint8ArrayToStr } from '../utils';
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 
@@ -77,7 +78,7 @@ assertValidProviderReceipt(receipt, { followingAccount }) {
 	}
 
 	// Convert Response to string and check if the following account is in the response
-	const bodyStr = res.body.toString()
+	const bodyStr = uint8ArrayToStr(res.body)
 
 	// Check if the following account is in the response
 	if(!bodyStr.includes(followingAccount)) {

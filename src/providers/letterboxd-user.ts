@@ -4,7 +4,7 @@
 
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
-import { gunzipSync } from '../utils'
+import { gunzipSync, uint8ArrayToStr } from '../utils'
 import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 type LetterboxdUserParams = {
@@ -93,7 +93,7 @@ const letterboxdUser: Provider<LetterboxdUserParams, LetterboxdUserSecretParams>
 			const buf = Buffer.from(res.body)
 			html = gunzipSync(buf).toString()
 		} else {
-			html = res.body.toString()
+			html = uint8ArrayToStr(res.body)
 		}
 
 		const reqMatch = `person.username = "${userName}"`
