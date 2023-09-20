@@ -3,7 +3,7 @@
  */
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
-import { gunzipSync, uint8ArrayToBinaryStr } from '../../utils'
+import { gunzipSync, uint8ArrayToStr } from '../../utils'
 import {
 	getCompleteHttpResponseFromTranscript,
 	getHttpRequestHeadersFromTranscript,
@@ -94,7 +94,7 @@ const UidaiAadhaarState: Provider<UidaiParams, UidaiSecretParams> = {
 			const buf = Buffer.from(res.body)
 			html = gunzipSync(buf).toString()
 		} else {
-			html = uint8ArrayToBinaryStr(res.body)
+			html = uint8ArrayToStr(res.body)
 		}
 
 		if(req.headers['connection'] !== 'close') {
