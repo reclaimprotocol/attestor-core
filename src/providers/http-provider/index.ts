@@ -1,14 +1,13 @@
-import { strToUint8Array } from '@reclaimprotocol/tls'
+import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
 import { DEFAULT_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { TranscriptMessageSenderType } from '../../proto/api'
 import { ArraySlice, Provider } from '../../types'
-import { getHttpRequestHeadersFromTranscript, uint8ArrayToBinaryStr } from '../../utils'
+import { findIndexInUint8Array, getHttpRequestHeadersFromTranscript, uint8ArrayToBinaryStr } from '../../utils'
 import {
 	buildHeaders, convertResponsePosToAbsolutePos,
 	extractHTMLElement,
 	extractJSONValueIndex, parseHttpResponse,
 } from './utils'
-
 
 export type HTTPProviderParams = {
 	/**
@@ -24,7 +23,8 @@ export type HTTPProviderParams = {
 	url: string
 	/** HTTP method */
 	method: 'GET' | 'POST'
-	/** which portions to select from a response. If both are set, then JSON path is taken after xPath is found */
+	/** which portions to select from a response.
+	 * If both are set, then JSON path is taken after xPath is found */
 	responseSelections: {
 		/**
 		 * expect an HTML response, and to contain a certain xpath
@@ -40,6 +40,11 @@ export type HTTPProviderParams = {
 		/** A regexp to match the "responseSelection" to */
 		responseMatch: string
 	}[]
+	/**
+	 * The body of the request.
+	 * Only used if method is POST
+	 */
+	body?: string | Uint8Array
 }
 
 export type HTTPProviderSecretParams = {
@@ -73,55 +78,57 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error('auth parameters are not set')
 		}
 
-		let headers: string[] = []
-
-		if(params.headers) {
-			headers = buildHeaders(params.headers)
-		}
-
-		const authStr: string[] = []
+		const headers: string[] = []
+		const authHeaderValues: string[] = []
 		if(secretParams.cookieStr) {
-			authStr.push(`Cookie: ${secretParams.cookieStr}`)
+			headers.push(`Cookie: ${secretParams.cookieStr}`)
+			authHeaderValues.push(secretParams.cookieStr)
 		}
 
 		if(secretParams.authorisationHeader) {
-			authStr.push(`Authorization: ${secretParams.authorisationHeader}`)
+			headers.push(`Authorization: ${secretParams.authorisationHeader}`)
+			authHeaderValues.push(secretParams.authorisationHeader)
 		}
 
-		let authLen = authStr.reduce((sum, current) => sum + current.length, 0)
-		if(authStr.length > 1) {
-			authLen += 2 //add \r\n
+		if(params.headers) {
+			headers.push(...buildHeaders(params.headers))
 		}
 
 		const hostPort =
 			this.hostPort instanceof Function ? this.hostPort(params) : this.hostPort
 		const { pathname } = new URL(params.url)
-		const strRequest = [
+		const body = params.body instanceof Uint8Array
+			? params.body
+			: strToUint8Array(params.body || '')
+		const contentLength = body.length
+		const httpReqHeaderStr = [
 			`${params.method} ${pathname} HTTP/1.1`,
 			`Host: ${hostPort}`,
-			...headers,
-			...authStr,
-			'Content-Length: 0',
+			`Content-Length: ${contentLength}`,
 			'Connection: close',
 			'User-Agent: ' + RECLAIM_USER_AGENT,
 			//no compression
 			'accept-encoding: identity',
-			'\r\n',
+			...headers,
+			'\r\n'
 		].join('\r\n')
-
-		const data = strToUint8Array(strRequest)
-		// the string index will work here as long as
-		// the string is ascii
-		const tokenStartIndex = strRequest.indexOf(authStr[0])
+		const data = concatenateUint8Arrays([
+			strToUint8Array(httpReqHeaderStr),
+			body,
+		])
 
 		return {
 			data,
-			redactions: [
-				{
+			redactions: authHeaderValues.map(value => {
+				const authStrArr = strToUint8Array(value)
+				// the string index will work here as long as
+				// the string is ascii
+				const tokenStartIndex = findIndexInUint8Array(data, authStrArr)
+				return {
 					fromIndex: tokenStartIndex,
-					toIndex: tokenStartIndex + authLen,
-				},
-			],
+					toIndex: tokenStartIndex + authStrArr.length,
+				}
+			})
 		}
 	},
 	assertValidProviderReceipt(receipt, params) {
