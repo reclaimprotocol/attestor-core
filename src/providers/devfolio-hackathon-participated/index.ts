@@ -5,7 +5,7 @@
  */
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
-import { gunzipSync } from '../../utils'
+import { gunzipSync, uint8ArrayToStr } from '../../utils'
 import {
 	getCompleteHttpResponseFromTranscript,
 	getHttpRequestHeadersFromTranscript,
@@ -91,7 +91,7 @@ const DevfolioHackathonsCount: Provider<
 			const buf = Buffer.from(res.body)
 			html = gunzipSync(buf).toString()
 		} else {
-			html = res.body.toString()
+			html = uint8ArrayToStr(res.body)
 		}
 
 		const data = JSON.parse(html)

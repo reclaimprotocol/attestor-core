@@ -79,7 +79,7 @@ assertValidProviderReceipt(receipt, { userName }) {
 	const bodyStr = uint8ArrayToStr(res.body)
 
 	// Check if the following account is in the response
-	if(!bodyStr.includes(`<a href="https://www.chess.com/member/${userName}">${userName}</a>`)) {
+	if(!bodyStr.includes(`<a href="https://www.chess.com/member/${userName.toLowerCase()}">${userName}</a>`)) {
 		throw new Error(`User is not a owner of ${userName}`)
 	}
 
