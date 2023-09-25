@@ -126,7 +126,7 @@ export function setupWindowRpc() {
 				})
 				break
 			default:
-				throw new Error(`Unknown request type: ${req.type}`)
+				throw new Error(`Unknown request type: ${JSON.stringify(req)}`)
 			}
 		} catch(err) {
 			logger.error(
