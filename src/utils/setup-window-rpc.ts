@@ -1,5 +1,6 @@
 import { createClaim, CreateClaimOptions } from '../api-client'
 import { ProviderName } from '../providers'
+import { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
 import { CreateStep } from '../types'
 import { logger } from './logger'
 
@@ -17,7 +18,14 @@ type IdentifiedMessage = {
 export type WindowRPCRequest<N extends ProviderName = any> = ({
 	type: 'createClaim'
 	request: CreateClaimOptions<N>
-}) & IdentifiedMessage
+} | {
+	type: 'extractHtmlElement'
+	request: Parameters<typeof extractHTMLElement>
+} | {
+	type: 'extractJSONValueIndex'
+	request: Parameters<typeof extractJSONValueIndex>
+}
+) & IdentifiedMessage
 
 type WindowRPCData = {
 	type: 'createClaimDone'
@@ -25,6 +33,12 @@ type WindowRPCData = {
 } | {
 	type: 'createClaimStep'
 	step: CreateStep
+} | {
+	type: 'extractHtmlElementDone'
+	response: ReturnType<typeof extractHTMLElement>
+} | {
+	type: 'extractJSONValueIndexDone'
+	response: ReturnType<typeof extractJSONValueIndex>
 } | {
 	type: 'error'
 	data: {
@@ -97,6 +111,18 @@ export function setupWindowRpc() {
 				respond({
 					type: 'createClaimDone',
 					response,
+				})
+				break
+			case 'extractHtmlElement':
+				respond({
+					type: 'extractHtmlElementDone',
+					response: extractHTMLElement(...req.request),
+				})
+				break
+			case 'extractJSONValueIndex':
+				respond({
+					type: 'extractJSONValueIndexDone',
+					response: extractJSONValueIndex(...req.request),
 				})
 				break
 			default:
