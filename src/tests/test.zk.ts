@@ -2,7 +2,13 @@ import { ZKOperator } from '@reclaimprotocol/circom-chacha20'
 import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
 import { createCipheriv } from 'crypto'
 import { FinaliseSessionRequest_Block as BlockToReveal } from '../proto/api'
-import { getBlocksToReveal, makeDefaultZkOperator, prepareZkProofs, uint8ArrayToStr, verifyZKBlock } from '../utils'
+import {
+	getBlocksToReveal,
+	makeDefaultZkOperator,
+	prepareZkProofs,
+	uint8ArrayToStr,
+	verifyZKBlock
+} from '../utils'
 
 type ServerBlock = BlockToReveal & {
 	plaintext: Uint8Array
@@ -147,8 +153,8 @@ describe('ZK', () => {
 
 			const proofs = await prepareZkProofs({
 				blocks,
-				operator,
-				redact: () => redactions
+				zkOperator:operator,
+				redact: () => redactions,
 			})
 
 			if(proofs === 'all') {
@@ -160,7 +166,7 @@ describe('ZK', () => {
 					{
 						ciphertext: block.ciphertext,
 						zkReveal: block.zkReveal!,
-						operator,
+						operator
 					},
 				)
 
