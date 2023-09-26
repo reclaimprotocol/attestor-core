@@ -5,6 +5,7 @@ import chessUser from './chess/chess-user'
 import ebayUser from './ebay/ebay-user'
 import irsAddress from './irs/irs-address'
 import irsName from './irs/irs-name'
+import kaggleUsername from './kaggle/kaggle-username'
 import lichessUsername from './lichess/lichess-username'
 import mediumFollowersCount from './medium/medium-follower-count'
 import SoundcloudUsername from './soundcloud/soundcloud-username'
@@ -117,7 +118,8 @@ export const providers = {
 	'venmo-transaction': venmoTransaction,
 	'goibibo': goibibo,
 	'swiggy-equal': swiggyUser,
-	'one-mg': oneMg
+	'one-mg': oneMg,
+	'kaggle-username': kaggleUsername,
 }
 
 export type ProviderName = keyof typeof providers;

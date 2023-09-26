@@ -1,0 +1,10 @@
+{
+    "name": "kaggle-username",
+    "params": {
+        "username": "{{KAGGLE_USERNAME}}",
+        "csrfToken": "{{KAGGLE_CSRF_TOKEN}}"
+    },
+    "secretParams": {
+        "cookieStr": "{{KAGGLE_COOKIE_STR}}"
+    }
+}
