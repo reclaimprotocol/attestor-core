@@ -45,6 +45,8 @@ export type HTTPProviderParams = {
 	 * Only used if method is POST
 	 */
 	body?: string | Uint8Array
+	/** Whether to use ZK*/
+	useZK?: boolean
 }
 
 export type HTTPProviderSecretParams = {
@@ -182,6 +184,10 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			return []
 		}
 
+		if (!params.useZK){
+			return []
+		}
+
 		const res = parseHttpResponse(response)
 
 		const headerEndIndex = res.statusLineEndIndex!
@@ -192,12 +198,12 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		const body = uint8ArrayToBinaryStr(res.body)
 
-
 		const reveals: ArraySlice[] = [{ fromIndex: 0, toIndex: headerEndIndex }]
 		for(const rs of params.responseSelections) {
 			let element = body
 			let elementIdx = -1
 			let elementLength = -1
+
 
 			if(rs.xPath) {
 				element = extractHTMLElement(body, rs.xPath, !!rs.jsonPath)
@@ -226,8 +232,27 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			}
 
 			const regexp = new RegExp(rs.responseMatch, 'gim')
+
+			// if only responseMatch is provided then extract its position
+			if(!rs.xPath && !rs.jsonPath) {
+				let match = regexp.exec(body)
+				do {
+					if(elementLength > 0 || elementIdx > 0) {
+						throw new Error(`Only one regex ${rs.responseMatch} match allowed per body`)
+					}
+
+					if(match) {
+						elementIdx = bodyStartIdx + match.index
+						elementLength = regexp.lastIndex - match.index
+					}
+
+				}
+				while((match = regexp.exec(body)) !== null)
+			}
+
+
 			if(!regexp.test(element)) {
-				throw new Error('regexp does not match found element')
+				throw new Error(`regexp ${rs.responseMatch} does not match found element ${element}`)
 			}
 
 			if(elementIdx > 0 && elementLength > 0) {

@@ -28,13 +28,30 @@ describe('HTTP Provider Utils tests', () => {
 						'xPath': "//script[@data-component-name='BookfaceCsrApp']",
 						'jsonPath': '$.hasBookface',
 						'responseMatch': '"hasBookface":true'
+					},
+					{
+						'responseMatch': 'code_version:\\s"[0-9a-f]{40}\\sruby'
 					}
-				]
+				],
+				useZK:true
 			})
 			expect(redactions).toEqual([
-				{ fromIndex: 15, toIndex: 53268 },
-				{ fromIndex: 53507, toIndex: 58705 },
-				{ fromIndex: 58723, toIndex: 64093 }
+				{
+					"fromIndex": 15,
+					"toIndex": 9060
+				},
+				{
+					"fromIndex": 9120,
+					"toIndex": 53268
+				},
+				{
+					"fromIndex": 53507,
+					"toIndex": 58705
+				},
+				{
+					"fromIndex": 58723,
+					"toIndex": 64093
+				}
 			])
 		}
 
