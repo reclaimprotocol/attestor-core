@@ -16,8 +16,8 @@ describe('HTTP Provider Utils tests', () => {
 		const provider = httpProvider
 		if(provider.getResponseRedactions) {
 			const redactions = provider.getResponseRedactions(chunkedResp, {
-				method:'GET',
-				url:'https://bookface.ycombinator.com/home',
+				method: 'GET',
+				url: 'https://bookface.ycombinator.com/home',
 				'responseSelections': [
 					{
 						'xPath': "//script[@id='js-react-on-rails-context']",
@@ -28,13 +28,30 @@ describe('HTTP Provider Utils tests', () => {
 						'xPath': "//script[@data-component-name='BookfaceCsrApp']",
 						'jsonPath': '$.hasBookface',
 						'responseMatch': '"hasBookface":true'
+					},
+					{
+						'responseMatch': 'code_version:\\s"[0-9a-f]{40}\\sruby'
 					}
-				]
+				],
+				useZK: true
 			})
 			expect(redactions).toEqual([
-				{ fromIndex: 15, toIndex: 53268 },
-				{ fromIndex: 53507, toIndex: 58705 },
-				{ fromIndex: 58723, toIndex: 64093 }
+				{
+					'fromIndex': 15,
+					'toIndex': 9060
+				},
+				{
+					'fromIndex': 9120,
+					'toIndex': 53268
+				},
+				{
+					'fromIndex': 53507,
+					'toIndex': 58705
+				},
+				{
+					'fromIndex': 58723,
+					'toIndex': 64093
+				}
 			])
 		}
 
@@ -62,7 +79,7 @@ const html = `
 	},
 	transform: function(payload) {
 	  var trace = payload.body.trace;
-	  var locRegex = /^(https?):\/\/[^\/]+\/(.*)/;
+	  var locRegex = /^(https?):\/\/[^\/]+\/(.*)/
 	  if (trace && trace.frames) {
 		for (var i = 0; i < trace.frames.length; i++) {
 		  var filename = trace.frames[i].filename;

@@ -5,46 +5,37 @@ import {
 	ObjectExpression,
 	parseScript,
 	Property,
-	Syntax,
+	Syntax
 } from 'esprima-next'
-import * as jsdom from 'jsdom'
+import { JSDOM } from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
 import { ArraySlice } from '../../types'
 import { makeHttpResponseParser } from '../../utils'
 
 export type JSONIndex = {
-	start: number
-	end: number
+    start: number
+    end: number
 }
 
-// utilise JSDom on NodeJS, otherwise
-// use the browser's window object
-const Window = typeof window !== 'undefined'
-	? window
-	: new jsdom.JSDOM().window
-
-export function extractHTMLElement(
-	html: string,
-	xpathExpression: string,
-	contentsOnly: boolean
-): string {
-	const domParser = new Window.DOMParser()
-	const dom = domParser.parseFromString(html, 'text/html')
-	const node = dom
-		.evaluate(xpathExpression, dom, null, Window.XPathResult.FIRST_ORDERED_NODE_TYPE, null)
-		?.singleNodeValue
-	if(!node) {
-		return 'Element not found'
+export function extractHTMLElement(html: string, xPath: string, contentsOnly: boolean): string {
+	try {
+		const dom = new JSDOM(html, { includeNodeLocations: true }), doc = dom?.window?.document
+		if(contentsOnly) {
+			return doc.evaluate(xPath, doc, null, 2/*XPathResult.STRING_TYPE*/).stringValue
+		} else {
+			const node = doc.evaluate(xPath, doc, null, 9/*XPathResult.FIRST_ORDERED_NODE_TYPE */)
+			if(node.singleNodeValue) {
+				const location = dom.nodeLocation(node.singleNodeValue)
+				if(location) {
+					return html.slice(location.startOffset, location.endOffset)
+				}
+			}
+		}
+	} catch(e) {
+		throw new Error(`error while evaluating xPath: ${e}`)
 	}
 
-	if(contentsOnly) {
-		return node.textContent!
-	}
-
-	const xmlSerializer = new Window.XMLSerializer()
-	return xmlSerializer
-		.serializeToString(node)
-		.replace(/ xmlns="[^"]+"/, '')
+	return ''
 }
 
 export function extractJSONValueIndex(json: string, jsonPath: string) {
@@ -130,8 +121,8 @@ function traverse(
 
 			if(
 				localPath === pointer &&
-				'range' in element &&
-				Array.isArray(element.range)
+                'range' in element &&
+                Array.isArray(element.range)
 			) {
 				return {
 					start: element.range[0],

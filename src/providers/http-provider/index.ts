@@ -4,54 +4,58 @@ import { TranscriptMessageSenderType } from '../../proto/api'
 import { ArraySlice, Provider } from '../../types'
 import { findIndexInUint8Array, getHttpRequestHeadersFromTranscript, uint8ArrayToBinaryStr } from '../../utils'
 import {
-	buildHeaders, convertResponsePosToAbsolutePos,
+	buildHeaders,
+	convertResponsePosToAbsolutePos,
 	extractHTMLElement,
-	extractJSONValueIndex, parseHttpResponse,
+	extractJSONValueIndex,
+	parseHttpResponse,
 } from './utils'
 
 export type HTTPProviderParams = {
-	/**
-	 * Any additional headers to be sent with the request
-	 * Note: these will be revealed to the witness & won't be
-	 * redacted from the transcript
-	 */
-	headers?: Record<string, string>
-	/**
-	 * which URL does the request have to be made to
-	 * for eg. https://amazon.in/orders?q=abcd
-	 */
-	url: string
-	/** HTTP method */
-	method: 'GET' | 'POST'
-	/** which portions to select from a response.
-	 * If both are set, then JSON path is taken after xPath is found */
-	responseSelections: {
-		/**
-		 * expect an HTML response, and to contain a certain xpath
-		 * for eg. "/html/body/div.a1/div.a2/span.a5"
-		 */
-		xPath?: string
-		/**
-		 * expect a JSON response, retrieve the item at this path
-		 * using dot notation
-		 * for e.g. 'email.addresses.0'
-		 */
-		jsonPath?: string
-		/** A regexp to match the "responseSelection" to */
-		responseMatch: string
-	}[]
-	/**
-	 * The body of the request.
-	 * Only used if method is POST
-	 */
-	body?: string | Uint8Array
+    /**
+     * Any additional headers to be sent with the request
+     * Note: these will be revealed to the witness & won't be
+     * redacted from the transcript
+     */
+    headers?: Record<string, string>
+    /**
+     * which URL does the request have to be made to
+     * for eg. https://amazon.in/orders?q=abcd
+     */
+    url: string
+    /** HTTP method */
+    method: 'GET' | 'POST'
+    /** which portions to select from a response.
+     * If both are set, then JSON path is taken after xPath is found */
+    responseSelections: {
+        /**
+         * expect an HTML response, and to contain a certain xpath
+         * for eg. "/html/body/div.a1/div.a2/span.a5"
+         */
+        xPath?: string
+        /**
+         * expect a JSON response, retrieve the item at this path
+         * using dot notation
+         * for e.g. 'email.addresses.0'
+         */
+        jsonPath?: string
+        /** A regexp to match the "responseSelection" to */
+        responseMatch: string
+    }[]
+    /**
+     * The body of the request.
+     * Only used if method is POST
+     */
+    body?: string | Uint8Array
+    /** Whether to use ZK*/
+    useZK?: boolean
 }
 
 export type HTTPProviderSecretParams = {
-	/** cookie string for authorisation. Will be redacted from witness */
-	cookieStr?: string
-	/** authorisation header value. Will be redacted from witness */
-	authorisationHeader?: string
+    /** cookie string for authorisation. Will be redacted from witness */
+    cookieStr?: string
+    /** authorisation header value. Will be redacted from witness */
+    authorisationHeader?: string
 }
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200 OK'
@@ -68,9 +72,9 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	areValidParams(params): params is HTTPProviderParams {
 		return (
 			typeof params.url === 'string' &&
-			(params.method === 'GET' || params.method === 'POST') &&
-			Array.isArray(params.responseSelections) &&
-			params.responseSelections.length > 0
+            (params.method === 'GET' || params.method === 'POST') &&
+            Array.isArray(params.responseSelections) &&
+            params.responseSelections.length > 0
 		)
 	},
 	createRequest(secretParams, params) {
@@ -95,7 +99,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 
 		const hostPort =
-			this.hostPort instanceof Function ? this.hostPort(params) : this.hostPort
+            this.hostPort instanceof Function ? this.hostPort(params) : this.hostPort
 		const { pathname } = new URL(params.url)
 		const body = params.body instanceof Uint8Array
 			? params.body
@@ -155,8 +159,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			receipt.transcript
 				.filter(
 					(r) => r.senderType ===
-							TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER &&
-						!r.redacted
+                        TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER &&
+                        !r.redacted
 				)
 				.map((r) => r.message)
 		).toString()
@@ -182,6 +186,10 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			return []
 		}
 
+		if(!params.useZK) {
+			return []
+		}
+
 		const res = parseHttpResponse(response)
 
 		const headerEndIndex = res.statusLineEndIndex!
@@ -192,12 +200,12 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		const body = uint8ArrayToBinaryStr(res.body)
 
-
 		const reveals: ArraySlice[] = [{ fromIndex: 0, toIndex: headerEndIndex }]
 		for(const rs of params.responseSelections) {
 			let element = body
 			let elementIdx = -1
 			let elementLength = -1
+
 
 			if(rs.xPath) {
 				element = extractHTMLElement(body, rs.xPath, !!rs.jsonPath)
@@ -226,8 +234,27 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			}
 
 			const regexp = new RegExp(rs.responseMatch, 'gim')
+
+			// if only responseMatch is provided then extract its position
+			if(!rs.xPath && !rs.jsonPath) {
+				let match = regexp.exec(body)
+				do {
+					if(elementLength > 0 || elementIdx > 0) {
+						throw new Error(`Only one regex ${rs.responseMatch} match allowed per body`)
+					}
+
+					if(match) {
+						elementIdx = bodyStartIdx + match.index
+						elementLength = regexp.lastIndex - match.index
+					}
+
+				}
+				while((match = regexp.exec(body)) !== null)
+			}
+
+
 			if(!regexp.test(element)) {
-				throw new Error('regexp does not match found element')
+				throw new Error(`regexp ${rs.responseMatch} does not match found element ${element}`)
 			}
 
 			if(elementIdx > 0 && elementLength > 0) {
