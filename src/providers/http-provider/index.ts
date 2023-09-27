@@ -4,56 +4,58 @@ import { TranscriptMessageSenderType } from '../../proto/api'
 import { ArraySlice, Provider } from '../../types'
 import { findIndexInUint8Array, getHttpRequestHeadersFromTranscript, uint8ArrayToBinaryStr } from '../../utils'
 import {
-	buildHeaders, convertResponsePosToAbsolutePos,
+	buildHeaders,
+	convertResponsePosToAbsolutePos,
 	extractHTMLElement,
-	extractJSONValueIndex, parseHttpResponse,
+	extractJSONValueIndex,
+	parseHttpResponse,
 } from './utils'
 
 export type HTTPProviderParams = {
-	/**
-	 * Any additional headers to be sent with the request
-	 * Note: these will be revealed to the witness & won't be
-	 * redacted from the transcript
-	 */
-	headers?: Record<string, string>
-	/**
-	 * which URL does the request have to be made to
-	 * for eg. https://amazon.in/orders?q=abcd
-	 */
-	url: string
-	/** HTTP method */
-	method: 'GET' | 'POST'
-	/** which portions to select from a response.
-	 * If both are set, then JSON path is taken after xPath is found */
-	responseSelections: {
-		/**
-		 * expect an HTML response, and to contain a certain xpath
-		 * for eg. "/html/body/div.a1/div.a2/span.a5"
-		 */
-		xPath?: string
-		/**
-		 * expect a JSON response, retrieve the item at this path
-		 * using dot notation
-		 * for e.g. 'email.addresses.0'
-		 */
-		jsonPath?: string
-		/** A regexp to match the "responseSelection" to */
-		responseMatch: string
-	}[]
-	/**
-	 * The body of the request.
-	 * Only used if method is POST
-	 */
-	body?: string | Uint8Array
-	/** Whether to use ZK*/
-	useZK?: boolean
+    /**
+     * Any additional headers to be sent with the request
+     * Note: these will be revealed to the witness & won't be
+     * redacted from the transcript
+     */
+    headers?: Record<string, string>
+    /**
+     * which URL does the request have to be made to
+     * for eg. https://amazon.in/orders?q=abcd
+     */
+    url: string
+    /** HTTP method */
+    method: 'GET' | 'POST'
+    /** which portions to select from a response.
+     * If both are set, then JSON path is taken after xPath is found */
+    responseSelections: {
+        /**
+         * expect an HTML response, and to contain a certain xpath
+         * for eg. "/html/body/div.a1/div.a2/span.a5"
+         */
+        xPath?: string
+        /**
+         * expect a JSON response, retrieve the item at this path
+         * using dot notation
+         * for e.g. 'email.addresses.0'
+         */
+        jsonPath?: string
+        /** A regexp to match the "responseSelection" to */
+        responseMatch: string
+    }[]
+    /**
+     * The body of the request.
+     * Only used if method is POST
+     */
+    body?: string | Uint8Array
+    /** Whether to use ZK*/
+    useZK?: boolean
 }
 
 export type HTTPProviderSecretParams = {
-	/** cookie string for authorisation. Will be redacted from witness */
-	cookieStr?: string
-	/** authorisation header value. Will be redacted from witness */
-	authorisationHeader?: string
+    /** cookie string for authorisation. Will be redacted from witness */
+    cookieStr?: string
+    /** authorisation header value. Will be redacted from witness */
+    authorisationHeader?: string
 }
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200 OK'
@@ -70,9 +72,9 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	areValidParams(params): params is HTTPProviderParams {
 		return (
 			typeof params.url === 'string' &&
-			(params.method === 'GET' || params.method === 'POST') &&
-			Array.isArray(params.responseSelections) &&
-			params.responseSelections.length > 0
+            (params.method === 'GET' || params.method === 'POST') &&
+            Array.isArray(params.responseSelections) &&
+            params.responseSelections.length > 0
 		)
 	},
 	createRequest(secretParams, params) {
@@ -97,7 +99,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 
 		const hostPort =
-			this.hostPort instanceof Function ? this.hostPort(params) : this.hostPort
+            this.hostPort instanceof Function ? this.hostPort(params) : this.hostPort
 		const { pathname } = new URL(params.url)
 		const body = params.body instanceof Uint8Array
 			? params.body
@@ -157,8 +159,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			receipt.transcript
 				.filter(
 					(r) => r.senderType ===
-							TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER &&
-						!r.redacted
+                        TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER &&
+                        !r.redacted
 				)
 				.map((r) => r.message)
 		).toString()
@@ -184,7 +186,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			return []
 		}
 
-		if (!params.useZK){
+		if(!params.useZK) {
 			return []
 		}
 

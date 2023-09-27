@@ -9,17 +9,17 @@ import {
 } from 'esprima-next'
 import { JSDOM } from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
-import {ArraySlice} from "../../types";
-import {makeHttpResponseParser} from "../../utils";
+import { ArraySlice } from '../../types'
+import { makeHttpResponseParser } from '../../utils'
 
 export type JSONIndex = {
-	start: number
-	end: number
+    start: number
+    end: number
 }
 
 export function extractHTMLElement(html: string, xPath: string, contentsOnly: boolean): string {
 	try {
-		const dom = new JSDOM(html, { includeNodeLocations:true }), doc = dom?.window?.document
+		const dom = new JSDOM(html, { includeNodeLocations: true }), doc = dom?.window?.document
 		if(contentsOnly) {
 			return doc.evaluate(xPath, doc, null, 2/*XPathResult.STRING_TYPE*/).stringValue
 		} else {
@@ -121,8 +121,8 @@ function traverse(
 
 			if(
 				localPath === pointer &&
-				'range' in element &&
-				Array.isArray(element.range)
+                'range' in element &&
+                Array.isArray(element.range)
 			) {
 				return {
 					start: element.range[0],
