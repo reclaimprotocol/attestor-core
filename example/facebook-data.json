@@ -1,0 +1,9 @@
+{
+	"name": "facebook-account-creation-date",
+	"params": {
+		"joinedAt":"september 2014"
+	},
+	"secretParams": {
+		"cookie": "c_user=; xs=;"
+}
+}
