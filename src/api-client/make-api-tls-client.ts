@@ -86,8 +86,6 @@ export const makeAPITLSClient = ({
 			onHandshake?.()
 		},
 		async onRecvData(plaintext, { authTag, ciphertext }) {
-			await handleDataFromServer(plaintext)
-
 			const keys = tls.getKeys()!
 			const key = await crypto.exportKey(keys.serverEncKey)
 			const iv = generateIV(keys.serverIv, keys.recordRecvCount - 1)
@@ -98,6 +96,8 @@ export const makeAPITLSClient = ({
 				plaintext,
 				ciphertext,
 			})
+
+			await handleDataFromServer(plaintext)
 		},
 		onTlsEnd,
 		async write({ header, content, authTag }) {
