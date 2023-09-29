@@ -28,6 +28,7 @@ import coinswitchBalance from './coinswitch-balance'
 import DevfolioHackathonsCount from './devfolio-hackathon-participated'
 import { dunzoLastOrder } from './dunzo'
 import facebookFriendsCount from './facebook-friends-count'
+import facebookAccountCreationDate from './facebook-account-creation-date'
 import flickrUser from './flickr-user'
 import makeGithubProvider from './github-claim'
 import goDaddyLogin from './godaddy-user'
@@ -76,6 +77,7 @@ export const providers = {
 	'swiggy-total-count': swiggyTotalOrder,
 	'wikipedia-user': wikipediaUser,
 	'facebook-friends-count': facebookFriendsCount,
+	'facebook-account-creation-date': facebookAccountCreationDate,
 	'binance-asset-balance': binanceAssetBalance,
 	'ebay-user': ebayUser,
 	'flickr-user': flickrUser,
