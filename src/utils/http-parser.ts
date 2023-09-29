@@ -95,8 +95,11 @@ export function makeHttpResponseParser() {
 							remainingBodyBytes = Number(res.headers['content-length'])
 							break
 						} else {
-							// otherwise, no more data to read
-							res.complete = true
+							remainingBodyBytes = -1
+							// otherwise,
+							// no content-length, no chunked transfer encoding
+							// means wait till the stream ends
+							// https://stackoverflow.com/a/11376887
 						}
 					} else if(!res.complete) { // parse the header
 						const [key, value] = line.split(': ')
@@ -166,7 +169,7 @@ export function makeHttpResponseParser() {
 				throw new Error('stream ended with remaining data')
 			}
 
-			if(remainingBodyBytes) {
+			if(remainingBodyBytes > 0) {
 				throw new Error('stream ended before all body bytes were received')
 			}
 
@@ -179,12 +182,21 @@ export function makeHttpResponseParser() {
 			res.bodyStartIndex = currentByteIdx
 		}
 
-		// take the number of bytes we need to read, or the number of bytes remaining
-		// and append to the bytes of the body
-		const bytesToCopy = Math.min(remainingBodyBytes, remaining.length)
-		res.body = concatenateUint8Arrays([res.body, remaining.slice(0, bytesToCopy)])
-		remainingBodyBytes -= bytesToCopy
+		let bytesToCopy: number
+		if(remainingBodyBytes === -1) {
+			// all bytes are body bytes
+			bytesToCopy = remaining.length
+		} else {
+			// take the number of bytes we need to read, or the number of bytes remaining
+			// and append to the bytes of the body
+			bytesToCopy = Math.min(remainingBodyBytes, remaining.length)
+			remainingBodyBytes -= bytesToCopy
+		}
 
+		res.body = concatenateUint8Arrays([
+			res.body,
+			remaining.slice(0, bytesToCopy)
+		])
 		remaining = remaining.slice(bytesToCopy)
 		currentByteIdx += bytesToCopy
 	}

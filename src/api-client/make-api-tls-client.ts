@@ -296,9 +296,13 @@ export const makeAPITLSClient = ({
 			}
 		} catch(error) {
 			if(!error.message.includes('aborted')) {
+				await tls.end(error)
 				throw error
 			}
 		}
+
+		logger.info('live stream ended')
+		await tls.end()
 	}
 
 	async function writeWithReveal(data: Uint8Array, reveal: boolean) {
