@@ -8,7 +8,7 @@
 
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
-import { uint8ArrayToStr } from '../utils';
+import { uint8ArrayToStr } from '../utils'
 import { getCompleteHttpResponseFromReceipt, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 
