@@ -217,13 +217,6 @@ export async function verifyZkPacket(
 				}
 			}
 
-			// logger?.info(
-			// 	{
-			// 		rp: uint8ArrayToBinaryStr(redactedPlaintext),
-			// 		drc: uint8ArrayToBinaryStr(decryptedRedactedCiphertext),
-			// 	}
-			// )
-
 			if(!isRedactionCongruent(
 				redactedPlaintext,
 				decryptedRedactedCiphertext

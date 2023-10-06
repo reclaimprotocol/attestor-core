@@ -1,19 +1,17 @@
 import { ZKOperator } from '@reclaimprotocol/circom-chacha20'
-import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
+import { concatenateUint8Arrays, crypto } from '@reclaimprotocol/tls'
 import { createCipheriv } from 'crypto'
-import { FinaliseSessionRequest_Block as BlockToReveal } from '../proto/api'
+import { CompleteTLSPacket } from '../types'
 import {
 	getBlocksToReveal,
+	getPureCiphertext,
+	logger,
 	makeDefaultZkOperator,
-	prepareZkProofs,
+	makeZkProofGenerator,
+	redactSlices,
 	uint8ArrayToStr,
 	verifyZkPacket
 } from '../utils'
-
-type ServerBlock = BlockToReveal & {
-	plaintext: Uint8Array
-	ciphertext: Uint8Array
-}
 
 const AUTH_TAG_BYTE_LENGTH = 16
 
@@ -97,83 +95,91 @@ describe('ZK', () => {
 		}
 	})
 
-	it('should generate ZK proof for some ciphertext', async() => {
+	it('should generate chacha ZK proof for some ciphertext', async() => {
 		const key = Buffer.alloc(32, 0)
 		const iv = Buffer.alloc(12, 0)
+		const encKey = await crypto.importKey(
+			'CHACHA20-POLY1305',
+			key,
+		)
+		const cipherSuite = 'TLS_CHACHA20_POLY1305_SHA256'
 		const vectors = [
 			{
-				plaintextStrs: [
-					'My cool API secret is "',
-					'my name jeff',
-					'". Please don\'t reveal it'
-				],
+				plaintext: 'My cool API secret is "my name jeff". Please don\'t reveal it',
 				redactions: [
 					{ fromIndex: 23, toIndex: 35 }
 				]
 			},
 			{
-				plaintextStrs: [
-					`lorem ipsum dolor sit amet, consectetur adipiscing elit,
+				plaintext: `lorem ipsum dolor sit amet, consectetur adipiscing elit,
 				sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
 				Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris
-				nisi ut aliquip ex ea commodo consequat.`,
-					`Duis aute irure dolor in reprehenderit in voluptate velit esse
-					cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
-					cupidatat non proident, sunt in culpa qui officia deserunt mollit anim
-					id est laborum`,
-				],
+				nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+				cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+				cupidatat non proident, sunt in culpa qui officia deserunt mollit anim
+				id est laborum`,
 				redactions: [
 					{ fromIndex: 5, toIndex: 15 },
 				]
 			}
 		]
 
-		for(const { plaintextStrs, redactions } of vectors) {
-			const plaintexts = plaintextStrs.map(str => Buffer.from(str))
-			const blocks = plaintexts.map((plaintext): ServerBlock => {
-				const cipher = createCipheriv('chacha20-poly1305', key, iv, { authTagLength: 16 })
-				cipher.setAAD(Buffer.alloc(AUTH_TAG_BYTE_LENGTH, 1), { plaintextLength: plaintext.length })
-				const ciphertext = concatenateUint8Arrays(
-					[
-						cipher.update(plaintext),
-						cipher.final()
-					]
-				)
+		const proofGenerator = makeZkProofGenerator({ logger })
+		for(const { plaintext, redactions } of vectors) {
+			const plaintextArr = Buffer.from(plaintext)
+			const redactedPlaintext = redactSlices(plaintextArr, redactions)
+			// ensure redaction fn kinda works at least
+			expect(redactedPlaintext).not.toEqual(plaintextArr)
 
-				return {
-					authTag: cipher.getAuthTag(),
-					key: new Uint8Array(),
-					iv: new Uint8Array(),
-					directReveal: {	key, iv },
-					zkReveal: undefined,
-					plaintext,
-					ciphertext
-				}
-			})
+			const cipher = createCipheriv('chacha20-poly1305', key, iv, { authTagLength: 16 })
+			cipher.setAAD(Buffer.alloc(AUTH_TAG_BYTE_LENGTH, 1), { plaintextLength: plaintext.length })
+			const ciphertext = concatenateUint8Arrays(
+				[
+					cipher.update(plaintext),
+					cipher.final(),
+					cipher.getAuthTag()
+				]
+			)
 
-			const proofs = await prepareZkProofs({
-				blocks,
-				zkOperator:operator,
-				redact: () => redactions,
-			})
-
-			if(proofs === 'all') {
-				fail('should not return "all"')
+			const packet: CompleteTLSPacket = {
+				packet: {
+					header: Buffer.alloc(0),
+					content: ciphertext,
+				},
+				ctx: {
+					type: 'ciphertext',
+					encKey,
+					iv,
+					recordNumber: 0,
+					plaintext: plaintextArr,
+					ciphertext,
+					fixedIv: new Uint8Array(0),
+				},
+				reveal: {
+					type: 'zk',
+					redactedPlaintext,
+				},
+				sender: 1,
+				index: 0,
 			}
 
-			for(const { block, redactedPlaintext } of proofs) {
-				const x = await verifyZkPacket(
-					{
-						ciphertext: block.ciphertext,
-						zkReveal: block.zkReveal!,
-						operator
-					},
-				)
+			const zkReveal = await proofGenerator.generateProof(
+				packet,
+				cipherSuite
+			)
 
-				expect(redactedPlaintext).toEqual(
-					x.redactedPlaintext
-				)
-			}
+			const x = await verifyZkPacket(
+				{
+					ciphertext: getPureCiphertext(ciphertext, cipherSuite),
+					zkReveal,
+					operator,
+					logger
+				},
+			)
+
+			expect(redactedPlaintext).toEqual(
+				x.redactedPlaintext
+			)
 		}
 	})
 })
