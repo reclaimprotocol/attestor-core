@@ -31,7 +31,7 @@ export type APITLSClientOptions = BaseAPIClientOptions & {
 	redactResponse?(data: Uint8Array): ArraySlice[]
 }
 
-type ServerBlock = { plaintext: Uint8Array, index: number }
+type ServerAppDataPacket = { plaintext: Uint8Array, index: number }
 
 // we only support chacha20-poly1305 for API sessions
 // that need ZK proofs
@@ -70,7 +70,7 @@ export const makeAPITLSClient = ({
 	const enableResponseRedaction = !!redactResponse
 	const { generateOutOfBandSession } = additionalConnectOpts || {}
 
-	const allBlocks: CompleteTLSPacket[] = []
+	const allPackets: CompleteTLSPacket[] = []
 	const cipherSuites = enableResponseRedaction
 		? ZK_CIPHER_SUITES
 		: undefined
@@ -89,9 +89,14 @@ export const makeAPITLSClient = ({
 		onHandshake() {
 			metadata = tls.getMetadata()
 			onHandshake?.()
+
+			if(metadata?.version === 'TLS1_2') {
+				// TLS1.2 does not support key update
+				defaultWriteRedactionMode = 'zk'
+			}
 		},
 		onRead(packet, ctx) {
-			allBlocks.push({
+			allPackets.push({
 				packet,
 				ctx,
 				sender: TranscriptMessageSenderType
@@ -124,20 +129,7 @@ export const makeAPITLSClient = ({
 					.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT,
 				index: res.index,
 			}
-			allBlocks.push(completePkt)
-
-			if(
-				// reveal all handshake msgs
-				// from the client -- so witness knows
-				// there was no sneaky business
-				ctx.type === 'ciphertext'
-				&& (
-					ctx.contentType === 'HANDSHAKE'
-					|| packet.header[0] !== PACKET_TYPE.WRAPPED_RECORD
-				)
-			) {
-				completePkt.reveal = { type: 'complete' }
-			}
+			allPackets.push(completePkt)
 
 			logger.debug(
 				{
@@ -150,6 +142,7 @@ export const makeAPITLSClient = ({
 	})
 
 	return {
+		allPackets,
 		generatePSK,
 		async connect() {
 			if(!psk && generateOutOfBandSession) {
@@ -225,47 +218,78 @@ export const makeAPITLSClient = ({
 				throw new Error('Nothing to cancel')
 			}
 
-			let serverBlocksToReveal: ReturnType<typeof getBlocksToReveal<ServerBlock>> = 'all'
+			let serverPacketsToReveal: ReturnType<typeof getBlocksToReveal<ServerAppDataPacket>> = 'all'
 			if(redactResponse && enableResponseRedaction) {
-				const serverBlocks: ServerBlock[] = []
-				for(let i = 0;i < allBlocks.length;i++) {
-					const b = allBlocks[i]
+				const serverBlocks: ServerAppDataPacket[] = []
+				for(let i = 0;i < allPackets.length;i++) {
+					const b = allPackets[i]
 					if(
-						b.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER
+						b.sender === TranscriptMessageSenderType
+							.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER
 						&& b.ctx.type === 'ciphertext'
-						&& b.ctx.contentType === 'APPLICATION_DATA'
+						&& isApplicationData(b)
 					) {
 						serverBlocks.push({
-							plaintext: b.ctx.plaintext,
+							plaintext: metadata.version === 'TLS1_3'
+								? b.ctx.plaintext.slice(0, -1)
+								: b.ctx.plaintext,
 							index: i,
 						})
 					}
 				}
 
-				serverBlocksToReveal = getBlocksToReveal(
+				serverPacketsToReveal = getBlocksToReveal(
 					serverBlocks,
 					redactResponse
 				)
 			}
 
-			if(serverBlocksToReveal === 'all') {
+			if(serverPacketsToReveal === 'all') {
 				// reveal all server side blocks
-				for(const block of allBlocks) {
-					if(block.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER) {
-						block.reveal = { type: 'complete' }
+				for(const packet of allPackets) {
+					if(packet.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER) {
+						packet.reveal = { type: 'complete' }
 					}
 				}
 			} else {
-				for(const block of serverBlocksToReveal) {
-					allBlocks[block.block.index].reveal = {
-						type: 'partial',
-						redactedPlaintext: block.redactedPlaintext
+				for(const packet of serverPacketsToReveal) {
+					allPackets[packet.block.index].reveal = {
+						type: 'zk',
+						redactedPlaintext: packet.redactedPlaintext
 					}
 				}
 			}
 
+			// reveal all client side handshake blocks
+			// so the witness can verify there was no
+			// hanky-panky
+			for(const p of allPackets) {
+				if(p.sender !== TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT) {
+					continue
+				}
+
+				if(p.ctx.type !== 'ciphertext') {
+					continue
+				}
+
+				// break the moment we hit the first
+				// application data packet
+				if(isApplicationData(p)) {
+					break
+				}
+
+				if(defaultWriteRedactionMode === 'zk') {
+					p.reveal = {
+						type: 'zk',
+						redactedPlaintext: p.ctx.plaintext
+					}
+				} else {
+					p.reveal = { type: 'complete' }
+				}
+			}
+
 			const revealBlocks = await preparePacketsForReveal(
-				allBlocks,
+				allPackets,
 				{
 					logger,
 					zkOperator,
@@ -285,10 +309,7 @@ export const makeAPITLSClient = ({
 			return result
 		},
 		async write(data: Uint8Array, redactedSections: ArraySlice[]) {
-			const writeRedactMode = metadata?.version === 'TLS1_2'
-				? 'zk'
-				: defaultWriteRedactionMode
-			if(writeRedactMode === 'key-update') {
+			if(defaultWriteRedactionMode === 'key-update') {
 				await writeRedactedWithKeyUpdate()
 			} else {
 				await writeRedactedZk()
@@ -323,7 +344,7 @@ export const makeAPITLSClient = ({
 						.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
 				)
 				lastBlock!.reveal = {
-					type: 'partial',
+					type: 'zk',
 					redactedPlaintext: redactSlices(
 						data,
 						redactedSections
@@ -423,11 +444,22 @@ export const makeAPITLSClient = ({
 
 	function getLastBlock(sender: TranscriptMessageSenderType) {
 		// set the correct index for the server blocks
-		for(let i = allBlocks.length - 1;i >= 0;i--) {
-			const block = allBlocks[i]
+		for(let i = allPackets.length - 1;i >= 0;i--) {
+			const block = allPackets[i]
 			if(block.sender === sender) {
 				return block
 			}
 		}
+	}
+
+	function isApplicationData(packet: CompleteTLSPacket) {
+		return packet.ctx.type === 'ciphertext'
+			&& (
+				packet.ctx.contentType === 'APPLICATION_DATA'
+				|| (
+					packet.packet.header[0] === PACKET_TYPE.WRAPPED_RECORD
+					&& metadata.version === 'TLS1_2'
+				)
+			)
 	}
 }

@@ -72,6 +72,7 @@ export function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 		blocks.map(b => b.plaintext)
 	)
 	const redactions = redact(total)
+
 	if(!redactions.length) {
 		return 'all'
 	}

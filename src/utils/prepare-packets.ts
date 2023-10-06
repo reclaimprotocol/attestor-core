@@ -39,7 +39,7 @@ export async function preparePacketsForReveal(
 				zkReveal: undefined
 			})
 			break
-		case 'partial':
+		case 'zk':
 			// the redacted section can be smaller than the actual
 			// plaintext encrypted, in case of TLS1.3 as it has a
 			// content type suffix

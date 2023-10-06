@@ -21,7 +21,7 @@ export type CompleteTLSPacket = {
 	index: number
 	reveal?: { type: 'complete' }
 		| {
-			type: 'partial'
+			type: 'zk'
 			redactedPlaintext: Uint8Array
 		}
 }

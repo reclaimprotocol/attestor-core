@@ -40,10 +40,6 @@ export async function main<T extends ProviderName>(
 		params: paramsJson.params,
 		client,
 		logger,
-		defaultWriteRedactionMode: 'zk',
-		additionalConnectOpts: {
-			supportedProtocolVersions: ['TLS1_2']
-		}
 	})
 
 	const transcriptStr = getTranscriptString(receipt!)

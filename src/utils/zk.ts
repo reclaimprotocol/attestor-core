@@ -73,7 +73,7 @@ export function makeZkProofGenerator(
 			packet: CompleteTLSPacket,
 			cipherSuite: keyof typeof SUPPORTED_CIPHER_SUITE_MAP
 		): Promise<ZKReveal> {
-			if(packet.reveal?.type !== 'partial') {
+			if(packet.reveal?.type !== 'zk') {
 				throw new Error('only partial reveals are supported')
 			}
 
