@@ -110,3 +110,18 @@ export function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 		}
 	}
 }
+
+/**
+ * Redact the following slices from the total
+ */
+export function redactSlices(total: Uint8Array, slices: ArraySlice[]) {
+	const redacted = new Uint8Array(total)
+
+	for(const slice of slices) {
+		for(let i = slice.fromIndex;i < slice.toIndex;i++) {
+			redacted[i] = REDACTION_CHAR_CODE
+		}
+	}
+
+	return redacted
+}

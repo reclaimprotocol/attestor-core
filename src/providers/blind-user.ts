@@ -7,7 +7,7 @@
 
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
-import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
+import { getCompleteHttpResponseFromReceipt, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 
 type BlindUserParams = {
@@ -57,7 +57,7 @@ assertValidProviderReceipt(receipt, { userName }) {
 		throw new Error(`Invalid hostPort: ${receipt.hostPort}`)
 	}
 
-	const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+	const req = getHttpRequestHeadersFromTranscript(receipt)
 	if(req.method !== METHOD.toLowerCase()) {
 		throw new Error(`Invalid method: ${req.method}`)
 	}
@@ -71,7 +71,7 @@ assertValidProviderReceipt(receipt, { userName }) {
 	}
 
 	// Parse the HTTP response
-	const res = getCompleteHttpResponseFromTranscript(receipt.transcript)
+	const res = getCompleteHttpResponseFromReceipt(receipt)
 	if(res.statusCode !== 200) {
 		throw new Error(`Invalid status code: ${res.statusCode}`)
 	}

@@ -7,7 +7,7 @@ import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
 import { uint8ArrayToStr } from '../../utils';
 import {
-	getCompleteHttpResponseFromTranscript,
+	getCompleteHttpResponseFromReceipt,
 	getHttpRequestHeadersFromTranscript,
 } from '../../utils/http-parser'
 
@@ -102,7 +102,7 @@ const irsAddress: Provider<IrsParams, IrsSecretParams> = {
 
 		// parse the HTTP request & check
 		// the method, URL, headers, etc. match what we expect
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== METHOD.toLowerCase()) {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
@@ -122,7 +122,7 @@ const irsAddress: Provider<IrsParams, IrsSecretParams> = {
 		// now we parse the HTTP response & check
 		// if the address returned by the API
 		// matches the parameters the user provided
-		const res = getCompleteHttpResponseFromTranscript(receipt.transcript)
+		const res = getCompleteHttpResponseFromReceipt(receipt)
 		if(res.statusCode !== 200) {
 			throw new Error(`Invalid status code: ${res.statusCode}`)
 		}

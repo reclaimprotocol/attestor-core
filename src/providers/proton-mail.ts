@@ -5,7 +5,7 @@
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
 import { gunzipSync } from '../utils'
-import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
+import { getCompleteHttpResponseFromReceipt, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 type ProtonMailParams = {
   email: string
@@ -64,7 +64,7 @@ const ProtonMail: Provider<ProtonMailParams, ProtonMailSecretParams> = {
 			throw new Error(`Invalid hostPort: ${receipt.hostPort}`)
 		}
 
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== 'get') {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
@@ -79,7 +79,7 @@ const ProtonMail: Provider<ProtonMailParams, ProtonMailSecretParams> = {
 			throw new Error('Invalid connection header')
 		}
 
-		const res = getCompleteHttpResponseFromTranscript(receipt.transcript)
+		const res = getCompleteHttpResponseFromReceipt(receipt)
 		if(res.statusCode !== 200) {
 			throw new Error(`Invalid status code: ${res.statusCode}`)
 		}

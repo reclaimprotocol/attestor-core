@@ -1,43 +1,46 @@
 import { detectEnvironment } from '@reclaimprotocol/common-grpc-web-transport'
-import { crypto, generateIV, makeTLSClient, SUPPORTED_CIPHER_SUITE_MAP, SUPPORTED_NAMED_CURVES, TLSConnectionOptions, TLSPresharedKey, TLSSessionTicket } from '@reclaimprotocol/tls'
-import { FinaliseSessionRequest_Block, InitialiseSessionRequest, PullFromSessionResponse, PushToSessionRequest, ReclaimWitnessClient, TlsCipherSuiteType, WitnessVersion } from '../proto/api'
-import { ArraySlice, Logger } from '../types'
-import { logger as MAIN_LOGGER, prepareZkProofs, PrepareZKProofsBaseOpts } from '../utils'
+import { makeTLSClient, PACKET_TYPE, SUPPORTED_CIPHER_SUITE_MAP, SUPPORTED_NAMED_CURVES, TLSConnectionOptions, TLSPresharedKey, TLSSessionTicket } from '@reclaimprotocol/tls'
+import { InitialiseSessionRequest, PullFromSessionResponse, PushToSessionRequest, ReclaimWitnessClient, TranscriptMessageSenderType, WitnessVersion } from '../proto/api'
+import { ArraySlice, CompleteTLSPacket, Logger } from '../types'
+import { getBlocksToReveal, logger as MAIN_LOGGER, PrepareZKProofsBaseOpts, redactSlices } from '../utils'
+import { preparePacketsForReveal } from '../utils/prepare-packets'
 
-export type APITLSClientOptions = {
+export type BaseAPIClientOptions = {
+	client: ReclaimWitnessClient
+	logger?: Logger
+	additionalConnectOpts?: TLSConnectionOptions
+	requestData?: Partial<InitialiseSessionRequest>
+	/**
+	 * Default way to redact data sent from the client to the server.
+	 * For TLS1.3, this is 'key-update', for TLS1.2, this is 'zk'
+	 *
+	 * Note: TLS1.2 does not support key update method, zk is
+	 * the only way to redact data
+	 *
+	 * @default 'key-update'
+	 */
+	defaultWriteRedactionMode?: 'key-update' | 'zk'
+} & PrepareZKProofsBaseOpts
+
+export type APITLSClientOptions = BaseAPIClientOptions & {
 	host: string
 	port: number
-	client: ReclaimWitnessClient
 	handleDataFromServer(data: Uint8Array): void
 	onTlsEnd?(error?: Error): void
 	/** return the sections of the response to redact */
 	redactResponse?(data: Uint8Array): ArraySlice[]
-	request?: Partial<InitialiseSessionRequest>
-	logger?: Logger
-	additionalConnectOpts?: TLSConnectionOptions
-} & PrepareZKProofsBaseOpts
-
-// eslint-disable-next-line camelcase
-type BlockToReveal = Partial<FinaliseSessionRequest_Block>
-
-type ServerBlock = BlockToReveal & {
-	plaintext: Uint8Array
-	ciphertext: Uint8Array
 }
 
-const EMPTY_UINT8ARRAY = new Uint8Array(0)
+type ServerBlock = { plaintext: Uint8Array, index: number }
 
 // we only support chacha20-poly1305 for API sessions
 // that need ZK proofs
 const ZK_CIPHER_SUITES: (keyof typeof SUPPORTED_CIPHER_SUITE_MAP)[]
-	= ['TLS_CHACHA20_POLY1305_SHA256']
-
-// map the TLS cipher suites to the API cipher suites
-const CIPHER_SUITE_MAP: { [K in keyof typeof SUPPORTED_CIPHER_SUITE_MAP]: TlsCipherSuiteType } = {
-	'TLS_CHACHA20_POLY1305_SHA256': TlsCipherSuiteType.TLS_CIPHER_SUITE_TYPE_CHACHA20_POLY1305_SHA256,
-	'TLS_AES_256_GCM_SHA384': TlsCipherSuiteType.TLS_CIPHER_SUITE_TYPE_AES_256_GCM_SHA384,
-	'TLS_AES_128_GCM_SHA256': TlsCipherSuiteType.TLS_CIPHER_SUITE_TYPE_AES_128_GCM_SHA256,
-}
+	= [
+		'TLS_CHACHA20_POLY1305_SHA256',
+		'TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256',
+		'TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256',
+	]
 
 const NAMED_CURVE_LIST = detectEnvironment() === 'node'
 	? SUPPORTED_NAMED_CURVES
@@ -51,25 +54,26 @@ export const makeAPITLSClient = ({
 	redactResponse,
 	handleDataFromServer,
 	onTlsEnd,
-	request,
+	requestData,
 	logger: _logger,
 	additionalConnectOpts,
 	zkOperator,
-	zkProofConcurrency
+	zkProofConcurrency,
+	defaultWriteRedactionMode = 'key-update'
 }: APITLSClientOptions) => {
 	let sessionId: string | undefined
-	let abort: AbortController | undefined
-
-	let pendingReveal = false
+	let pullFromSessionAbort: AbortController | undefined
 	let psk: TLSPresharedKey | undefined
+	let metadata: ReturnType<typeof tls.getMetadata>
 
 	const logger = _logger || MAIN_LOGGER?.child({ })
 	const enableResponseRedaction = !!redactResponse
 	const { generateOutOfBandSession } = additionalConnectOpts || {}
 
-	const blocksToReveal: BlockToReveal[] = []
-	const allServerBlocks: ServerBlock[] = []
-	const cipherSuites = enableResponseRedaction ? ZK_CIPHER_SUITES : undefined
+	const allBlocks: CompleteTLSPacket[] = []
+	const cipherSuites = enableResponseRedaction
+		? ZK_CIPHER_SUITES
+		: undefined
 
 	if(!enableResponseRedaction) {
 		logger.info('disabled ZK proofs')
@@ -83,54 +87,63 @@ export const makeAPITLSClient = ({
 		namedCurves: NAMED_CURVE_LIST,
 		...additionalConnectOpts || {},
 		onHandshake() {
+			metadata = tls.getMetadata()
 			onHandshake?.()
 		},
-		async onRecvData(plaintext, { authTag, ciphertext }) {
-			const keys = tls.getKeys()!
-			const key = await crypto.exportKey(keys.serverEncKey)
-			const iv = generateIV(keys.serverIv, keys.recordRecvCount - 1)
-
-			allServerBlocks.push({
-				authTag,
-				directReveal: { key, iv },
-				plaintext,
-				ciphertext,
+		onRead(packet, ctx) {
+			allBlocks.push({
+				packet,
+				ctx,
+				sender: TranscriptMessageSenderType
+					.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER,
+				index: -1,
 			})
-
-			await handleDataFromServer(plaintext)
+		},
+		onApplicationData(plaintext) {
+			return handleDataFromServer(plaintext)
 		},
 		onTlsEnd,
-		async write({ header, content, authTag }) {
+		async write(packet, ctx) {
 			if(!sessionId) {
 				throw new Error('Too early to write')
 			}
 
-			if(pendingReveal && authTag?.length) {
-				const keys = tls.getKeys()!
-				const key = await crypto.exportKey(keys.clientEncKey)
-				const iv = generateIV(keys.clientIv, keys.recordSendCount - 1)
-
-				blocksToReveal.push({
-					authTag,
-					directReveal: { key, iv }
-				})
-				pendingReveal = false
-			}
-
 			const req: PushToSessionRequest = {
 				sessionId,
-				messages: [
-					{
-						recordHeader: header,
-						content,
-						authenticationTag: authTag || EMPTY_UINT8ARRAY
-					}
-				]
+				message: {
+					recordHeader: packet.header,
+					content: packet.content,
+				}
 			}
-			await client.pushToSession(req)
+			const res = await client.pushToSession(req)
+
+			const completePkt: CompleteTLSPacket = {
+				packet,
+				ctx,
+				sender: TranscriptMessageSenderType
+					.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT,
+				index: res.index,
+			}
+			allBlocks.push(completePkt)
+
+			if(
+				// reveal all handshake msgs
+				// from the client -- so witness knows
+				// there was no sneaky business
+				ctx.type === 'ciphertext'
+				&& (
+					ctx.contentType === 'HANDSHAKE'
+					|| packet.header[0] !== PACKET_TYPE.WRAPPED_RECORD
+				)
+			) {
+				completePkt.reveal = { type: 'complete' }
+			}
 
 			logger.debug(
-				{ sessionId, length: content.length },
+				{
+					sessionId,
+					length: packet.content.length
+				},
 				'pushed data'
 			)
 		}
@@ -143,16 +156,13 @@ export const makeAPITLSClient = ({
 				await generatePSK()
 			}
 
-			let initialiseSessionParams = request
+			let initialiseSessionParams = requestData
 			if(
 				!initialiseSessionParams?.beaconBasedProviderClaimRequest
 				&& !initialiseSessionParams?.receiptGenerationRequest
 			) {
 				initialiseSessionParams = {
-					receiptGenerationRequest: {
-						host,
-						port
-					},
+					receiptGenerationRequest: { host, port },
 					beaconBasedProviderClaimRequest: undefined
 				}
 			}
@@ -161,7 +171,7 @@ export const makeAPITLSClient = ({
 
 			const res = await client.initialiseSession(initialiseSessionParams)
 			sessionId = res.sessionId
-			abort = new AbortController()
+			pullFromSessionAbort = new AbortController()
 
 			logger.debug({ sessionId }, 'initialised session')
 
@@ -170,7 +180,7 @@ export const makeAPITLSClient = ({
 					sessionId,
 					version: WitnessVersion.WITNESS_VERSION_1_0_0
 				},
-				{ signal: abort?.signal }
+				{ signal: pullFromSessionAbort?.signal }
 			)
 
 			logger.debug('pulling from session')
@@ -194,10 +204,10 @@ export const makeAPITLSClient = ({
 				throw new Error('Handshake failed')
 			}
 
-			logger.debug({ meta: tls.getMetadata() }, 'handshake done')
+			logger.debug({ metadata }, 'handshake done')
 
 			return () => {
-				abort?.abort()
+				pullFromSessionAbort?.abort()
 			}
 		},
 		async cancel() {
@@ -205,7 +215,7 @@ export const makeAPITLSClient = ({
 				throw new Error('Nothing to cancel')
 			}
 
-			abort?.abort()
+			pullFromSessionAbort?.abort()
 			await client.cancelSession({ sessionId })
 
 			await tls.end()
@@ -215,72 +225,120 @@ export const makeAPITLSClient = ({
 				throw new Error('Nothing to cancel')
 			}
 
+			let serverBlocksToReveal: ReturnType<typeof getBlocksToReveal<ServerBlock>> = 'all'
 			if(redactResponse && enableResponseRedaction) {
-				const zkBlocks = await prepareZkProofs(
-					{
-						blocks: allServerBlocks,
-						redact: redactResponse,
-						logger,
-						zkOperator,
-						zkProofConcurrency,
+				const serverBlocks: ServerBlock[] = []
+				for(let i = 0;i < allBlocks.length;i++) {
+					const b = allBlocks[i]
+					if(
+						b.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER
+						&& b.ctx.type === 'ciphertext'
+						&& b.ctx.contentType === 'APPLICATION_DATA'
+					) {
+						serverBlocks.push({
+							plaintext: b.ctx.plaintext,
+							index: i,
+						})
 					}
-				)
+				}
 
-				// if all blocks should be revealed, reveal them all
-				if(zkBlocks === 'all') {
-					blocksToReveal.push(...allServerBlocks)
-				} else {
-					for(const { block } of zkBlocks) {
-						blocksToReveal.push(block)
+				serverBlocksToReveal = getBlocksToReveal(
+					serverBlocks,
+					redactResponse
+				)
+			}
+
+			if(serverBlocksToReveal === 'all') {
+				// reveal all server side blocks
+				for(const block of allBlocks) {
+					if(block.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER) {
+						block.reveal = { type: 'complete' }
 					}
 				}
 			} else {
-				blocksToReveal.push(...allServerBlocks)
+				for(const block of serverBlocksToReveal) {
+					allBlocks[block.block.index].reveal = {
+						type: 'partial',
+						redactedPlaintext: block.redactedPlaintext
+					}
+				}
 			}
 
-			abort?.abort()
+			const revealBlocks = await preparePacketsForReveal(
+				allBlocks,
+				{
+					logger,
+					zkOperator,
+					zkProofConcurrency,
+					cipherSuite: metadata.cipherSuite!,
+				}
+			)
 
-			const cipherSuite = tls.getMetadata().cipherSuite!
 			const result = await client.finaliseSession({
 				sessionId,
-				revealBlocks: blocksToReveal,
-				cipherSuite: CIPHER_SUITE_MAP[cipherSuite]
+				revealBlocks,
 			})
 
-			tls.end()
+			await tls.end()
+			pullFromSessionAbort?.abort()
 
 			return result
 		},
 		async write(data: Uint8Array, redactedSections: ArraySlice[]) {
-			let currentIndex = 0
-			for(let i = 0;i < redactedSections.length;i++) {
-				const section = redactedSections[i]
-				const block = data.slice(currentIndex, section.fromIndex)
+			const writeRedactMode = metadata?.version === 'TLS1_2'
+				? 'zk'
+				: defaultWriteRedactionMode
+			if(writeRedactMode === 'key-update') {
+				await writeRedactedWithKeyUpdate()
+			} else {
+				await writeRedactedZk()
+			}
+
+			async function writeRedactedWithKeyUpdate() {
+				let currentIndex = 0
+				for(let i = 0;i < redactedSections.length;i++) {
+					const section = redactedSections[i]
+					const block = data.slice(currentIndex, section.fromIndex)
+					if(block.length) {
+						await writeWithReveal(block, true)
+					}
+
+					const redacted = data.slice(section.fromIndex, section.toIndex)
+					await writeWithReveal(redacted, false)
+					currentIndex = section.toIndex
+				}
+
+				// write if redactions were there
+				const lastBlockStart = redactedSections?.[redactedSections.length - 1]?.toIndex || 0
+				const block = data.slice(lastBlockStart)
 				if(block.length) {
 					await writeWithReveal(block, true)
 				}
-
-				const redacted = data.slice(section.fromIndex, section.toIndex)
-				await writeWithReveal(redacted, false)
-				currentIndex = section.toIndex
 			}
 
-			// write if redactions were there
-			const lastBlockStart = redactedSections?.[redactedSections.length - 1]?.toIndex || 0
-			const block = data.slice(lastBlockStart)
-			if(block.length) {
-				await writeWithReveal(block, true)
+			async function writeRedactedZk() {
+				await tls.write(data)
+				const lastBlock = getLastBlock(
+					TranscriptMessageSenderType
+						.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
+				)
+				lastBlock!.reveal = {
+					type: 'partial',
+					redactedPlaintext: redactSlices(
+						data,
+						redactedSections
+					)
+				}
 			}
 		}
 	}
-
 
 	async function listenToDataFromServer(
 		result: AsyncIterable<PullFromSessionResponse>,
 		onReady: () => void
 	) {
 		try {
-			for await (const { message } of result) {
+			for await (const { message, index } of result) {
 				// empty record header means the session is ready
 				if(!message?.recordHeader?.length) {
 					onReady()
@@ -288,11 +346,13 @@ export const makeAPITLSClient = ({
 				}
 
 				const type = message.recordHeader[0]
-				tls.handleReceivedPacket(type, {
+				await tls.handleReceivedPacket(type, {
 					header: message.recordHeader,
 					content: message.content,
-					authTag: message.authenticationTag,
 				})
+
+				const block = getLastBlock(TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER)
+				block!.index = index
 			}
 		} catch(error) {
 			if(!error.message.includes('aborted')) {
@@ -310,11 +370,15 @@ export const makeAPITLSClient = ({
 			await tls.updateTrafficKeys()
 		}
 
-		if(reveal) {
-			pendingReveal = true
-		}
-
 		await tls.write(data)
+		// find the last packet sent by the client
+		// and mark it for reveal
+		const lastPkt = getLastBlock(TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT)
+		if(reveal) {
+			lastPkt!.reveal = { type: 'complete' }
+		} else {
+			delete lastPkt!.reveal
+		}
 
 		if(!reveal) {
 			await tls.updateTrafficKeys()
@@ -330,12 +394,9 @@ export const makeAPITLSClient = ({
 			logger,
 			cipherSuites,
 			...additionalConnectOpts || {},
-			async write({ header, content, authTag }) {
+			async write({ header, content }) {
 				socket.write(header)
 				socket.write(content)
-				if(authTag) {
-					socket.write(authTag)
-				}
 			},
 			onSessionTicket(ticket) {
 				onTicket?.(ticket)
@@ -358,5 +419,15 @@ export const makeAPITLSClient = ({
 		logger.info('got TLS ticket, ending session...')
 		socket.end()
 		tls.end()
+	}
+
+	function getLastBlock(sender: TranscriptMessageSenderType) {
+		// set the correct index for the server blocks
+		for(let i = allBlocks.length - 1;i >= 0;i--) {
+			const block = allBlocks[i]
+			if(block.sender === sender) {
+				return block
+			}
+		}
 	}
 }

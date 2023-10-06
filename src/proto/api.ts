@@ -43,51 +43,6 @@ export function transcriptMessageSenderTypeToJSON(object: TranscriptMessageSende
   }
 }
 
-export enum TlsCipherSuiteType {
-  TLS_CIPHER_SUITE_TYPE_UNKNOWN = 0,
-  TLS_CIPHER_SUITE_TYPE_AES_128_GCM_SHA256 = 1,
-  TLS_CIPHER_SUITE_TYPE_AES_256_GCM_SHA384 = 2,
-  TLS_CIPHER_SUITE_TYPE_CHACHA20_POLY1305_SHA256 = 3,
-  UNRECOGNIZED = -1,
-}
-
-export function tlsCipherSuiteTypeFromJSON(object: any): TlsCipherSuiteType {
-  switch (object) {
-    case 0:
-    case "TLS_CIPHER_SUITE_TYPE_UNKNOWN":
-      return TlsCipherSuiteType.TLS_CIPHER_SUITE_TYPE_UNKNOWN;
-    case 1:
-    case "TLS_CIPHER_SUITE_TYPE_AES_128_GCM_SHA256":
-      return TlsCipherSuiteType.TLS_CIPHER_SUITE_TYPE_AES_128_GCM_SHA256;
-    case 2:
-    case "TLS_CIPHER_SUITE_TYPE_AES_256_GCM_SHA384":
-      return TlsCipherSuiteType.TLS_CIPHER_SUITE_TYPE_AES_256_GCM_SHA384;
-    case 3:
-    case "TLS_CIPHER_SUITE_TYPE_CHACHA20_POLY1305_SHA256":
-      return TlsCipherSuiteType.TLS_CIPHER_SUITE_TYPE_CHACHA20_POLY1305_SHA256;
-    case -1:
-    case "UNRECOGNIZED":
-    default:
-      return TlsCipherSuiteType.UNRECOGNIZED;
-  }
-}
-
-export function tlsCipherSuiteTypeToJSON(object: TlsCipherSuiteType): string {
-  switch (object) {
-    case TlsCipherSuiteType.TLS_CIPHER_SUITE_TYPE_UNKNOWN:
-      return "TLS_CIPHER_SUITE_TYPE_UNKNOWN";
-    case TlsCipherSuiteType.TLS_CIPHER_SUITE_TYPE_AES_128_GCM_SHA256:
-      return "TLS_CIPHER_SUITE_TYPE_AES_128_GCM_SHA256";
-    case TlsCipherSuiteType.TLS_CIPHER_SUITE_TYPE_AES_256_GCM_SHA384:
-      return "TLS_CIPHER_SUITE_TYPE_AES_256_GCM_SHA384";
-    case TlsCipherSuiteType.TLS_CIPHER_SUITE_TYPE_CHACHA20_POLY1305_SHA256:
-      return "TLS_CIPHER_SUITE_TYPE_CHACHA20_POLY1305_SHA256";
-    case TlsCipherSuiteType.UNRECOGNIZED:
-    default:
-      return "UNRECOGNIZED";
-  }
-}
-
 export enum ServiceSignatureType {
   SERVICE_SIGNATURE_TYPE_UNKNOWN = 0,
   /**
@@ -129,7 +84,6 @@ export function serviceSignatureTypeToJSON(object: ServiceSignatureType): string
 export enum WitnessVersion {
   WITNESS_VERSION_UNKNOWN = 0,
   WITNESS_VERSION_1_0_0 = 1,
-  WITNESS_VERSION_1_1_0 = 2,
   UNRECOGNIZED = -1,
 }
 
@@ -141,9 +95,6 @@ export function witnessVersionFromJSON(object: any): WitnessVersion {
     case 1:
     case "WITNESS_VERSION_1_0_0":
       return WitnessVersion.WITNESS_VERSION_1_0_0;
-    case 2:
-    case "WITNESS_VERSION_1_1_0":
-      return WitnessVersion.WITNESS_VERSION_1_1_0;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -157,9 +108,46 @@ export function witnessVersionToJSON(object: WitnessVersion): string {
       return "WITNESS_VERSION_UNKNOWN";
     case WitnessVersion.WITNESS_VERSION_1_0_0:
       return "WITNESS_VERSION_1_0_0";
-    case WitnessVersion.WITNESS_VERSION_1_1_0:
-      return "WITNESS_VERSION_1_1_0";
     case WitnessVersion.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
+export enum TLSVersion {
+  TLS_VERSION_UNKNOWN = 0,
+  TLS_VERSION_1_2 = 2,
+  TLS_VERSION_1_3 = 3,
+  UNRECOGNIZED = -1,
+}
+
+export function tLSVersionFromJSON(object: any): TLSVersion {
+  switch (object) {
+    case 0:
+    case "TLS_VERSION_UNKNOWN":
+      return TLSVersion.TLS_VERSION_UNKNOWN;
+    case 2:
+    case "TLS_VERSION_1_2":
+      return TLSVersion.TLS_VERSION_1_2;
+    case 3:
+    case "TLS_VERSION_1_3":
+      return TLSVersion.TLS_VERSION_1_3;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return TLSVersion.UNRECOGNIZED;
+  }
+}
+
+export function tLSVersionToJSON(object: TLSVersion): string {
+  switch (object) {
+    case TLSVersion.TLS_VERSION_UNKNOWN:
+      return "TLS_VERSION_UNKNOWN";
+    case TLSVersion.TLS_VERSION_1_2:
+      return "TLS_VERSION_1_2";
+    case TLSVersion.TLS_VERSION_1_3:
+      return "TLS_VERSION_1_3";
+    case TLSVersion.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
   }
@@ -168,7 +156,6 @@ export function witnessVersionToJSON(object: WitnessVersion): string {
 export interface TLSPacket {
   recordHeader: Uint8Array;
   content: Uint8Array;
-  authenticationTag: Uint8Array;
 }
 
 export interface TranscriptMessage {
@@ -176,6 +163,13 @@ export interface TranscriptMessage {
   redacted: boolean;
   /** if redacted, message is empty */
   message: Uint8Array;
+  packetHeader: Uint8Array;
+  /**
+   * Length of the plaintext. Only
+   * available for cipher schemes that
+   * don't have padding
+   */
+  plaintextLength: number;
 }
 
 export interface ProviderClaimData {
@@ -214,11 +208,14 @@ export interface TLSReceipt {
    * in the order they were received
    */
   transcript: TranscriptMessage[];
+  /** the version of TLS used */
+  tlsVersion: TLSVersion;
   /** sign(proto(TLSReceipt w/o signature)) */
   signature: Uint8Array;
 }
 
 export interface GetVerifierPublicKeyRequest {
+  signatureType: ServiceSignatureType;
 }
 
 export interface GetVerifierPublicKeyResponse {
@@ -280,12 +277,16 @@ export interface InitialiseSessionResponse {
 export interface PushToSessionRequest {
   /** opaque ID assigned to the client for this request */
   sessionId: string;
-  /** messages to push */
-  messages: TLSPacket[];
+  /**
+   * messages to push, specify in the order
+   * to be sent to the server
+   */
+  message: TLSPacket | undefined;
 }
 
-/** empty response */
 export interface PushToSessionResponse {
+  /** index of the packet in the server */
+  index: number;
 }
 
 export interface PullFromSessionRequest {
@@ -297,7 +298,11 @@ export interface PullFromSessionRequest {
 
 export interface PullFromSessionResponse {
   /** messages pulled from the server */
-  message: TLSPacket | undefined;
+  message:
+    | TLSPacket
+    | undefined;
+  /** index of the packet in the server */
+  index: number;
 }
 
 export interface CancelSessionRequest {
@@ -311,20 +316,18 @@ export interface CancelSessionResponse {
 export interface FinaliseSessionRequest {
   sessionId: string;
   revealBlocks: FinaliseSessionRequest_Block[];
-  cipherSuite: TlsCipherSuiteType;
 }
 
 export interface FinaliseSessionRequest_Block {
-  /** auth tag of the block to reveal */
-  authTag: Uint8Array;
-  /**
-   * key & IV for direct reveal;
-   * kept for backwards compatibility
-   */
-  key: Uint8Array;
-  iv: Uint8Array;
   directReveal: FinaliseSessionRequest_BlockRevealDirect | undefined;
-  zkReveal: FinaliseSessionRequest_BlockRevealZk | undefined;
+  zkReveal:
+    | FinaliseSessionRequest_BlockRevealZk
+    | undefined;
+  /**
+   * index of the block in the transcript.
+   * (0 indexed -- including msgs from client & server)
+   */
+  index: number;
 }
 
 /**
@@ -338,6 +341,11 @@ export interface FinaliseSessionRequest_BlockRevealDirect {
   key: Uint8Array;
   /** IV for the block */
   iv: Uint8Array;
+  /**
+   * used to generate IV in authenticated
+   * cipher suites
+   */
+  recordNumber: number;
 }
 
 /** partially or fully reveal the block via a zk proof */
@@ -369,7 +377,7 @@ export interface FinaliseSessionResponse {
 }
 
 function createBaseTLSPacket(): TLSPacket {
-  return { recordHeader: new Uint8Array(0), content: new Uint8Array(0), authenticationTag: new Uint8Array(0) };
+  return { recordHeader: new Uint8Array(0), content: new Uint8Array(0) };
 }
 
 export const TLSPacket = {
@@ -379,9 +387,6 @@ export const TLSPacket = {
     }
     if (message.content.length !== 0) {
       writer.uint32(18).bytes(message.content);
-    }
-    if (message.authenticationTag.length !== 0) {
-      writer.uint32(26).bytes(message.authenticationTag);
     }
     return writer;
   },
@@ -407,13 +412,6 @@ export const TLSPacket = {
 
           message.content = reader.bytes();
           continue;
-        case 3:
-          if (tag !== 26) {
-            break;
-          }
-
-          message.authenticationTag = reader.bytes();
-          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -427,42 +425,39 @@ export const TLSPacket = {
     return {
       recordHeader: isSet(object.recordHeader) ? bytesFromBase64(object.recordHeader) : new Uint8Array(0),
       content: isSet(object.content) ? bytesFromBase64(object.content) : new Uint8Array(0),
-      authenticationTag: isSet(object.authenticationTag)
-        ? bytesFromBase64(object.authenticationTag)
-        : new Uint8Array(0),
     };
   },
 
   toJSON(message: TLSPacket): unknown {
     const obj: any = {};
-    message.recordHeader !== undefined &&
-      (obj.recordHeader = base64FromBytes(
-        message.recordHeader !== undefined ? message.recordHeader : new Uint8Array(0),
-      ));
-    message.content !== undefined &&
-      (obj.content = base64FromBytes(message.content !== undefined ? message.content : new Uint8Array(0)));
-    message.authenticationTag !== undefined &&
-      (obj.authenticationTag = base64FromBytes(
-        message.authenticationTag !== undefined ? message.authenticationTag : new Uint8Array(0),
-      ));
+    if (message.recordHeader.length !== 0) {
+      obj.recordHeader = base64FromBytes(message.recordHeader);
+    }
+    if (message.content.length !== 0) {
+      obj.content = base64FromBytes(message.content);
+    }
     return obj;
   },
 
   create(base?: DeepPartial<TLSPacket>): TLSPacket {
     return TLSPacket.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<TLSPacket>): TLSPacket {
     const message = createBaseTLSPacket();
     message.recordHeader = object.recordHeader ?? new Uint8Array(0);
     message.content = object.content ?? new Uint8Array(0);
-    message.authenticationTag = object.authenticationTag ?? new Uint8Array(0);
     return message;
   },
 };
 
 function createBaseTranscriptMessage(): TranscriptMessage {
-  return { senderType: 0, redacted: false, message: new Uint8Array(0) };
+  return {
+    senderType: 0,
+    redacted: false,
+    message: new Uint8Array(0),
+    packetHeader: new Uint8Array(0),
+    plaintextLength: 0,
+  };
 }
 
 export const TranscriptMessage = {
@@ -475,6 +470,12 @@ export const TranscriptMessage = {
     }
     if (message.message.length !== 0) {
       writer.uint32(26).bytes(message.message);
+    }
+    if (message.packetHeader.length !== 0) {
+      writer.uint32(34).bytes(message.packetHeader);
+    }
+    if (message.plaintextLength !== 0) {
+      writer.uint32(40).uint32(message.plaintextLength);
     }
     return writer;
   },
@@ -507,6 +508,20 @@ export const TranscriptMessage = {
 
           message.message = reader.bytes();
           continue;
+        case 4:
+          if (tag !== 34) {
+            break;
+          }
+
+          message.packetHeader = reader.bytes();
+          continue;
+        case 5:
+          if (tag !== 40) {
+            break;
+          }
+
+          message.plaintextLength = reader.uint32();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -521,27 +536,41 @@ export const TranscriptMessage = {
       senderType: isSet(object.senderType) ? transcriptMessageSenderTypeFromJSON(object.senderType) : 0,
       redacted: isSet(object.redacted) ? Boolean(object.redacted) : false,
       message: isSet(object.message) ? bytesFromBase64(object.message) : new Uint8Array(0),
+      packetHeader: isSet(object.packetHeader) ? bytesFromBase64(object.packetHeader) : new Uint8Array(0),
+      plaintextLength: isSet(object.plaintextLength) ? Number(object.plaintextLength) : 0,
     };
   },
 
   toJSON(message: TranscriptMessage): unknown {
     const obj: any = {};
-    message.senderType !== undefined && (obj.senderType = transcriptMessageSenderTypeToJSON(message.senderType));
-    message.redacted !== undefined && (obj.redacted = message.redacted);
-    message.message !== undefined &&
-      (obj.message = base64FromBytes(message.message !== undefined ? message.message : new Uint8Array(0)));
+    if (message.senderType !== 0) {
+      obj.senderType = transcriptMessageSenderTypeToJSON(message.senderType);
+    }
+    if (message.redacted === true) {
+      obj.redacted = message.redacted;
+    }
+    if (message.message.length !== 0) {
+      obj.message = base64FromBytes(message.message);
+    }
+    if (message.packetHeader.length !== 0) {
+      obj.packetHeader = base64FromBytes(message.packetHeader);
+    }
+    if (message.plaintextLength !== 0) {
+      obj.plaintextLength = Math.round(message.plaintextLength);
+    }
     return obj;
   },
 
   create(base?: DeepPartial<TranscriptMessage>): TranscriptMessage {
     return TranscriptMessage.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<TranscriptMessage>): TranscriptMessage {
     const message = createBaseTranscriptMessage();
     message.senderType = object.senderType ?? 0;
     message.redacted = object.redacted ?? false;
     message.message = object.message ?? new Uint8Array(0);
+    message.packetHeader = object.packetHeader ?? new Uint8Array(0);
+    message.plaintextLength = object.plaintextLength ?? 0;
     return message;
   },
 };
@@ -655,20 +684,33 @@ export const ProviderClaimData = {
 
   toJSON(message: ProviderClaimData): unknown {
     const obj: any = {};
-    message.provider !== undefined && (obj.provider = message.provider);
-    message.parameters !== undefined && (obj.parameters = message.parameters);
-    message.owner !== undefined && (obj.owner = message.owner);
-    message.timestampS !== undefined && (obj.timestampS = Math.round(message.timestampS));
-    message.context !== undefined && (obj.context = message.context);
-    message.identifier !== undefined && (obj.identifier = message.identifier);
-    message.epoch !== undefined && (obj.epoch = Math.round(message.epoch));
+    if (message.provider !== "") {
+      obj.provider = message.provider;
+    }
+    if (message.parameters !== "") {
+      obj.parameters = message.parameters;
+    }
+    if (message.owner !== "") {
+      obj.owner = message.owner;
+    }
+    if (message.timestampS !== 0) {
+      obj.timestampS = Math.round(message.timestampS);
+    }
+    if (message.context !== "") {
+      obj.context = message.context;
+    }
+    if (message.identifier !== "") {
+      obj.identifier = message.identifier;
+    }
+    if (message.epoch !== 0) {
+      obj.epoch = Math.round(message.epoch);
+    }
     return obj;
   },
 
   create(base?: DeepPartial<ProviderClaimData>): ProviderClaimData {
     return ProviderClaimData.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<ProviderClaimData>): ProviderClaimData {
     const message = createBaseProviderClaimData();
     message.provider = object.provider ?? "";
@@ -747,16 +789,21 @@ export const ProviderClaimInfo = {
 
   toJSON(message: ProviderClaimInfo): unknown {
     const obj: any = {};
-    message.provider !== undefined && (obj.provider = message.provider);
-    message.parameters !== undefined && (obj.parameters = message.parameters);
-    message.context !== undefined && (obj.context = message.context);
+    if (message.provider !== "") {
+      obj.provider = message.provider;
+    }
+    if (message.parameters !== "") {
+      obj.parameters = message.parameters;
+    }
+    if (message.context !== "") {
+      obj.context = message.context;
+    }
     return obj;
   },
 
   create(base?: DeepPartial<ProviderClaimInfo>): ProviderClaimInfo {
     return ProviderClaimInfo.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<ProviderClaimInfo>): ProviderClaimInfo {
     const message = createBaseProviderClaimInfo();
     message.provider = object.provider ?? "";
@@ -767,7 +814,7 @@ export const ProviderClaimInfo = {
 };
 
 function createBaseTLSReceipt(): TLSReceipt {
-  return { hostPort: "", timestampS: 0, transcript: [], signature: new Uint8Array(0) };
+  return { hostPort: "", timestampS: 0, transcript: [], tlsVersion: 0, signature: new Uint8Array(0) };
 }
 
 export const TLSReceipt = {
@@ -780,6 +827,9 @@ export const TLSReceipt = {
     }
     for (const v of message.transcript) {
       TranscriptMessage.encode(v!, writer.uint32(26).fork()).ldelim();
+    }
+    if (message.tlsVersion !== 0) {
+      writer.uint32(40).int32(message.tlsVersion);
     }
     if (message.signature.length !== 0) {
       writer.uint32(34).bytes(message.signature);
@@ -815,6 +865,13 @@ export const TLSReceipt = {
 
           message.transcript.push(TranscriptMessage.decode(reader, reader.uint32()));
           continue;
+        case 5:
+          if (tag !== 40) {
+            break;
+          }
+
+          message.tlsVersion = reader.int32() as any;
+          continue;
         case 4:
           if (tag !== 34) {
             break;
@@ -838,44 +895,54 @@ export const TLSReceipt = {
       transcript: Array.isArray(object?.transcript)
         ? object.transcript.map((e: any) => TranscriptMessage.fromJSON(e))
         : [],
+      tlsVersion: isSet(object.tlsVersion) ? tLSVersionFromJSON(object.tlsVersion) : 0,
       signature: isSet(object.signature) ? bytesFromBase64(object.signature) : new Uint8Array(0),
     };
   },
 
   toJSON(message: TLSReceipt): unknown {
     const obj: any = {};
-    message.hostPort !== undefined && (obj.hostPort = message.hostPort);
-    message.timestampS !== undefined && (obj.timestampS = Math.round(message.timestampS));
-    if (message.transcript) {
-      obj.transcript = message.transcript.map((e) => e ? TranscriptMessage.toJSON(e) : undefined);
-    } else {
-      obj.transcript = [];
+    if (message.hostPort !== "") {
+      obj.hostPort = message.hostPort;
     }
-    message.signature !== undefined &&
-      (obj.signature = base64FromBytes(message.signature !== undefined ? message.signature : new Uint8Array(0)));
+    if (message.timestampS !== 0) {
+      obj.timestampS = Math.round(message.timestampS);
+    }
+    if (message.transcript?.length) {
+      obj.transcript = message.transcript.map((e) => TranscriptMessage.toJSON(e));
+    }
+    if (message.tlsVersion !== 0) {
+      obj.tlsVersion = tLSVersionToJSON(message.tlsVersion);
+    }
+    if (message.signature.length !== 0) {
+      obj.signature = base64FromBytes(message.signature);
+    }
     return obj;
   },
 
   create(base?: DeepPartial<TLSReceipt>): TLSReceipt {
     return TLSReceipt.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<TLSReceipt>): TLSReceipt {
     const message = createBaseTLSReceipt();
     message.hostPort = object.hostPort ?? "";
     message.timestampS = object.timestampS ?? 0;
     message.transcript = object.transcript?.map((e) => TranscriptMessage.fromPartial(e)) || [];
+    message.tlsVersion = object.tlsVersion ?? 0;
     message.signature = object.signature ?? new Uint8Array(0);
     return message;
   },
 };
 
 function createBaseGetVerifierPublicKeyRequest(): GetVerifierPublicKeyRequest {
-  return {};
+  return { signatureType: 0 };
 }
 
 export const GetVerifierPublicKeyRequest = {
-  encode(_: GetVerifierPublicKeyRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+  encode(message: GetVerifierPublicKeyRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.signatureType !== 0) {
+      writer.uint32(8).int32(message.signatureType);
+    }
     return writer;
   },
 
@@ -886,6 +953,13 @@ export const GetVerifierPublicKeyRequest = {
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.signatureType = reader.int32() as any;
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -895,21 +969,24 @@ export const GetVerifierPublicKeyRequest = {
     return message;
   },
 
-  fromJSON(_: any): GetVerifierPublicKeyRequest {
-    return {};
+  fromJSON(object: any): GetVerifierPublicKeyRequest {
+    return { signatureType: isSet(object.signatureType) ? serviceSignatureTypeFromJSON(object.signatureType) : 0 };
   },
 
-  toJSON(_: GetVerifierPublicKeyRequest): unknown {
+  toJSON(message: GetVerifierPublicKeyRequest): unknown {
     const obj: any = {};
+    if (message.signatureType !== 0) {
+      obj.signatureType = serviceSignatureTypeToJSON(message.signatureType);
+    }
     return obj;
   },
 
   create(base?: DeepPartial<GetVerifierPublicKeyRequest>): GetVerifierPublicKeyRequest {
     return GetVerifierPublicKeyRequest.fromPartial(base ?? {});
   },
-
-  fromPartial(_: DeepPartial<GetVerifierPublicKeyRequest>): GetVerifierPublicKeyRequest {
+  fromPartial(object: DeepPartial<GetVerifierPublicKeyRequest>): GetVerifierPublicKeyRequest {
     const message = createBaseGetVerifierPublicKeyRequest();
+    message.signatureType = object.signatureType ?? 0;
     return message;
   },
 };
@@ -968,16 +1045,18 @@ export const GetVerifierPublicKeyResponse = {
 
   toJSON(message: GetVerifierPublicKeyResponse): unknown {
     const obj: any = {};
-    message.publicKey !== undefined &&
-      (obj.publicKey = base64FromBytes(message.publicKey !== undefined ? message.publicKey : new Uint8Array(0)));
-    message.signatureType !== undefined && (obj.signatureType = serviceSignatureTypeToJSON(message.signatureType));
+    if (message.publicKey.length !== 0) {
+      obj.publicKey = base64FromBytes(message.publicKey);
+    }
+    if (message.signatureType !== 0) {
+      obj.signatureType = serviceSignatureTypeToJSON(message.signatureType);
+    }
     return obj;
   },
 
   create(base?: DeepPartial<GetVerifierPublicKeyResponse>): GetVerifierPublicKeyResponse {
     return GetVerifierPublicKeyResponse.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<GetVerifierPublicKeyResponse>): GetVerifierPublicKeyResponse {
     const message = createBaseGetVerifierPublicKeyResponse();
     message.publicKey = object.publicKey ?? new Uint8Array(0);
@@ -1056,20 +1135,22 @@ export const InitialiseSessionRequest = {
 
   toJSON(message: InitialiseSessionRequest): unknown {
     const obj: any = {};
-    message.receiptGenerationRequest !== undefined && (obj.receiptGenerationRequest = message.receiptGenerationRequest
-      ? InitialiseSessionRequest_ReceiptGenerationRequest.toJSON(message.receiptGenerationRequest)
-      : undefined);
-    message.beaconBasedProviderClaimRequest !== undefined &&
-      (obj.beaconBasedProviderClaimRequest = message.beaconBasedProviderClaimRequest
-        ? InitialiseSessionRequest_BeaconBasedProviderClaimRequest.toJSON(message.beaconBasedProviderClaimRequest)
-        : undefined);
+    if (message.receiptGenerationRequest !== undefined) {
+      obj.receiptGenerationRequest = InitialiseSessionRequest_ReceiptGenerationRequest.toJSON(
+        message.receiptGenerationRequest,
+      );
+    }
+    if (message.beaconBasedProviderClaimRequest !== undefined) {
+      obj.beaconBasedProviderClaimRequest = InitialiseSessionRequest_BeaconBasedProviderClaimRequest.toJSON(
+        message.beaconBasedProviderClaimRequest,
+      );
+    }
     return obj;
   },
 
   create(base?: DeepPartial<InitialiseSessionRequest>): InitialiseSessionRequest {
     return InitialiseSessionRequest.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<InitialiseSessionRequest>): InitialiseSessionRequest {
     const message = createBaseInitialiseSessionRequest();
     message.receiptGenerationRequest =
@@ -1138,8 +1219,12 @@ export const InitialiseSessionRequest_ReceiptGenerationRequest = {
 
   toJSON(message: InitialiseSessionRequest_ReceiptGenerationRequest): unknown {
     const obj: any = {};
-    message.host !== undefined && (obj.host = message.host);
-    message.port !== undefined && (obj.port = Math.round(message.port));
+    if (message.host !== "") {
+      obj.host = message.host;
+    }
+    if (message.port !== 0) {
+      obj.port = Math.round(message.port);
+    }
     return obj;
   },
 
@@ -1148,7 +1233,6 @@ export const InitialiseSessionRequest_ReceiptGenerationRequest = {
   ): InitialiseSessionRequest_ReceiptGenerationRequest {
     return InitialiseSessionRequest_ReceiptGenerationRequest.fromPartial(base ?? {});
   },
-
   fromPartial(
     object: DeepPartial<InitialiseSessionRequest_ReceiptGenerationRequest>,
   ): InitialiseSessionRequest_ReceiptGenerationRequest {
@@ -1240,13 +1324,18 @@ export const InitialiseSessionRequest_BeaconBasedProviderClaimRequest = {
 
   toJSON(message: InitialiseSessionRequest_BeaconBasedProviderClaimRequest): unknown {
     const obj: any = {};
-    message.epoch !== undefined && (obj.epoch = Math.round(message.epoch));
-    message.timestampS !== undefined && (obj.timestampS = Math.round(message.timestampS));
-    message.info !== undefined && (obj.info = message.info ? ProviderClaimInfo.toJSON(message.info) : undefined);
-    message.ownerProof !== undefined &&
-      (obj.ownerProof = message.ownerProof
-        ? InitialiseSessionRequest_ClaimOwner.toJSON(message.ownerProof)
-        : undefined);
+    if (message.epoch !== 0) {
+      obj.epoch = Math.round(message.epoch);
+    }
+    if (message.timestampS !== 0) {
+      obj.timestampS = Math.round(message.timestampS);
+    }
+    if (message.info !== undefined) {
+      obj.info = ProviderClaimInfo.toJSON(message.info);
+    }
+    if (message.ownerProof !== undefined) {
+      obj.ownerProof = InitialiseSessionRequest_ClaimOwner.toJSON(message.ownerProof);
+    }
     return obj;
   },
 
@@ -1255,7 +1344,6 @@ export const InitialiseSessionRequest_BeaconBasedProviderClaimRequest = {
   ): InitialiseSessionRequest_BeaconBasedProviderClaimRequest {
     return InitialiseSessionRequest_BeaconBasedProviderClaimRequest.fromPartial(base ?? {});
   },
-
   fromPartial(
     object: DeepPartial<InitialiseSessionRequest_BeaconBasedProviderClaimRequest>,
   ): InitialiseSessionRequest_BeaconBasedProviderClaimRequest {
@@ -1326,16 +1414,18 @@ export const InitialiseSessionRequest_ClaimOwner = {
 
   toJSON(message: InitialiseSessionRequest_ClaimOwner): unknown {
     const obj: any = {};
-    message.address !== undefined && (obj.address = message.address);
-    message.signature !== undefined &&
-      (obj.signature = base64FromBytes(message.signature !== undefined ? message.signature : new Uint8Array(0)));
+    if (message.address !== "") {
+      obj.address = message.address;
+    }
+    if (message.signature.length !== 0) {
+      obj.signature = base64FromBytes(message.signature);
+    }
     return obj;
   },
 
   create(base?: DeepPartial<InitialiseSessionRequest_ClaimOwner>): InitialiseSessionRequest_ClaimOwner {
     return InitialiseSessionRequest_ClaimOwner.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<InitialiseSessionRequest_ClaimOwner>): InitialiseSessionRequest_ClaimOwner {
     const message = createBaseInitialiseSessionRequest_ClaimOwner();
     message.address = object.address ?? "";
@@ -1385,14 +1475,15 @@ export const InitialiseSessionResponse = {
 
   toJSON(message: InitialiseSessionResponse): unknown {
     const obj: any = {};
-    message.sessionId !== undefined && (obj.sessionId = message.sessionId);
+    if (message.sessionId !== "") {
+      obj.sessionId = message.sessionId;
+    }
     return obj;
   },
 
   create(base?: DeepPartial<InitialiseSessionResponse>): InitialiseSessionResponse {
     return InitialiseSessionResponse.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<InitialiseSessionResponse>): InitialiseSessionResponse {
     const message = createBaseInitialiseSessionResponse();
     message.sessionId = object.sessionId ?? "";
@@ -1401,7 +1492,7 @@ export const InitialiseSessionResponse = {
 };
 
 function createBasePushToSessionRequest(): PushToSessionRequest {
-  return { sessionId: "", messages: [] };
+  return { sessionId: "", message: undefined };
 }
 
 export const PushToSessionRequest = {
@@ -1409,8 +1500,8 @@ export const PushToSessionRequest = {
     if (message.sessionId !== "") {
       writer.uint32(10).string(message.sessionId);
     }
-    for (const v of message.messages) {
-      TLSPacket.encode(v!, writer.uint32(18).fork()).ldelim();
+    if (message.message !== undefined) {
+      TLSPacket.encode(message.message, writer.uint32(18).fork()).ldelim();
     }
     return writer;
   },
@@ -1434,7 +1525,7 @@ export const PushToSessionRequest = {
             break;
           }
 
-          message.messages.push(TLSPacket.decode(reader, reader.uint32()));
+          message.message = TLSPacket.decode(reader, reader.uint32());
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -1448,17 +1539,17 @@ export const PushToSessionRequest = {
   fromJSON(object: any): PushToSessionRequest {
     return {
       sessionId: isSet(object.sessionId) ? String(object.sessionId) : "",
-      messages: Array.isArray(object?.messages) ? object.messages.map((e: any) => TLSPacket.fromJSON(e)) : [],
+      message: isSet(object.message) ? TLSPacket.fromJSON(object.message) : undefined,
     };
   },
 
   toJSON(message: PushToSessionRequest): unknown {
     const obj: any = {};
-    message.sessionId !== undefined && (obj.sessionId = message.sessionId);
-    if (message.messages) {
-      obj.messages = message.messages.map((e) => e ? TLSPacket.toJSON(e) : undefined);
-    } else {
-      obj.messages = [];
+    if (message.sessionId !== "") {
+      obj.sessionId = message.sessionId;
+    }
+    if (message.message !== undefined) {
+      obj.message = TLSPacket.toJSON(message.message);
     }
     return obj;
   },
@@ -1466,21 +1557,25 @@ export const PushToSessionRequest = {
   create(base?: DeepPartial<PushToSessionRequest>): PushToSessionRequest {
     return PushToSessionRequest.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<PushToSessionRequest>): PushToSessionRequest {
     const message = createBasePushToSessionRequest();
     message.sessionId = object.sessionId ?? "";
-    message.messages = object.messages?.map((e) => TLSPacket.fromPartial(e)) || [];
+    message.message = (object.message !== undefined && object.message !== null)
+      ? TLSPacket.fromPartial(object.message)
+      : undefined;
     return message;
   },
 };
 
 function createBasePushToSessionResponse(): PushToSessionResponse {
-  return {};
+  return { index: 0 };
 }
 
 export const PushToSessionResponse = {
-  encode(_: PushToSessionResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+  encode(message: PushToSessionResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.index !== 0) {
+      writer.uint32(8).uint32(message.index);
+    }
     return writer;
   },
 
@@ -1491,6 +1586,13 @@ export const PushToSessionResponse = {
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.index = reader.uint32();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1500,21 +1602,24 @@ export const PushToSessionResponse = {
     return message;
   },
 
-  fromJSON(_: any): PushToSessionResponse {
-    return {};
+  fromJSON(object: any): PushToSessionResponse {
+    return { index: isSet(object.index) ? Number(object.index) : 0 };
   },
 
-  toJSON(_: PushToSessionResponse): unknown {
+  toJSON(message: PushToSessionResponse): unknown {
     const obj: any = {};
+    if (message.index !== 0) {
+      obj.index = Math.round(message.index);
+    }
     return obj;
   },
 
   create(base?: DeepPartial<PushToSessionResponse>): PushToSessionResponse {
     return PushToSessionResponse.fromPartial(base ?? {});
   },
-
-  fromPartial(_: DeepPartial<PushToSessionResponse>): PushToSessionResponse {
+  fromPartial(object: DeepPartial<PushToSessionResponse>): PushToSessionResponse {
     const message = createBasePushToSessionResponse();
+    message.index = object.index ?? 0;
     return message;
   },
 };
@@ -1573,15 +1678,18 @@ export const PullFromSessionRequest = {
 
   toJSON(message: PullFromSessionRequest): unknown {
     const obj: any = {};
-    message.sessionId !== undefined && (obj.sessionId = message.sessionId);
-    message.version !== undefined && (obj.version = witnessVersionToJSON(message.version));
+    if (message.sessionId !== "") {
+      obj.sessionId = message.sessionId;
+    }
+    if (message.version !== 0) {
+      obj.version = witnessVersionToJSON(message.version);
+    }
     return obj;
   },
 
   create(base?: DeepPartial<PullFromSessionRequest>): PullFromSessionRequest {
     return PullFromSessionRequest.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<PullFromSessionRequest>): PullFromSessionRequest {
     const message = createBasePullFromSessionRequest();
     message.sessionId = object.sessionId ?? "";
@@ -1591,13 +1699,16 @@ export const PullFromSessionRequest = {
 };
 
 function createBasePullFromSessionResponse(): PullFromSessionResponse {
-  return { message: undefined };
+  return { message: undefined, index: 0 };
 }
 
 export const PullFromSessionResponse = {
   encode(message: PullFromSessionResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.message !== undefined) {
       TLSPacket.encode(message.message, writer.uint32(10).fork()).ldelim();
+    }
+    if (message.index !== 0) {
+      writer.uint32(16).uint32(message.index);
     }
     return writer;
   },
@@ -1616,6 +1727,13 @@ export const PullFromSessionResponse = {
 
           message.message = TLSPacket.decode(reader, reader.uint32());
           continue;
+        case 2:
+          if (tag !== 16) {
+            break;
+          }
+
+          message.index = reader.uint32();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1626,24 +1744,32 @@ export const PullFromSessionResponse = {
   },
 
   fromJSON(object: any): PullFromSessionResponse {
-    return { message: isSet(object.message) ? TLSPacket.fromJSON(object.message) : undefined };
+    return {
+      message: isSet(object.message) ? TLSPacket.fromJSON(object.message) : undefined,
+      index: isSet(object.index) ? Number(object.index) : 0,
+    };
   },
 
   toJSON(message: PullFromSessionResponse): unknown {
     const obj: any = {};
-    message.message !== undefined && (obj.message = message.message ? TLSPacket.toJSON(message.message) : undefined);
+    if (message.message !== undefined) {
+      obj.message = TLSPacket.toJSON(message.message);
+    }
+    if (message.index !== 0) {
+      obj.index = Math.round(message.index);
+    }
     return obj;
   },
 
   create(base?: DeepPartial<PullFromSessionResponse>): PullFromSessionResponse {
     return PullFromSessionResponse.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<PullFromSessionResponse>): PullFromSessionResponse {
     const message = createBasePullFromSessionResponse();
     message.message = (object.message !== undefined && object.message !== null)
       ? TLSPacket.fromPartial(object.message)
       : undefined;
+    message.index = object.index ?? 0;
     return message;
   },
 };
@@ -1689,14 +1815,15 @@ export const CancelSessionRequest = {
 
   toJSON(message: CancelSessionRequest): unknown {
     const obj: any = {};
-    message.sessionId !== undefined && (obj.sessionId = message.sessionId);
+    if (message.sessionId !== "") {
+      obj.sessionId = message.sessionId;
+    }
     return obj;
   },
 
   create(base?: DeepPartial<CancelSessionRequest>): CancelSessionRequest {
     return CancelSessionRequest.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<CancelSessionRequest>): CancelSessionRequest {
     const message = createBaseCancelSessionRequest();
     message.sessionId = object.sessionId ?? "";
@@ -1741,7 +1868,6 @@ export const CancelSessionResponse = {
   create(base?: DeepPartial<CancelSessionResponse>): CancelSessionResponse {
     return CancelSessionResponse.fromPartial(base ?? {});
   },
-
   fromPartial(_: DeepPartial<CancelSessionResponse>): CancelSessionResponse {
     const message = createBaseCancelSessionResponse();
     return message;
@@ -1749,7 +1875,7 @@ export const CancelSessionResponse = {
 };
 
 function createBaseFinaliseSessionRequest(): FinaliseSessionRequest {
-  return { sessionId: "", revealBlocks: [], cipherSuite: 0 };
+  return { sessionId: "", revealBlocks: [] };
 }
 
 export const FinaliseSessionRequest = {
@@ -1759,9 +1885,6 @@ export const FinaliseSessionRequest = {
     }
     for (const v of message.revealBlocks) {
       FinaliseSessionRequest_Block.encode(v!, writer.uint32(18).fork()).ldelim();
-    }
-    if (message.cipherSuite !== 0) {
-      writer.uint32(24).int32(message.cipherSuite);
     }
     return writer;
   },
@@ -1787,13 +1910,6 @@ export const FinaliseSessionRequest = {
 
           message.revealBlocks.push(FinaliseSessionRequest_Block.decode(reader, reader.uint32()));
           continue;
-        case 3:
-          if (tag !== 24) {
-            break;
-          }
-
-          message.cipherSuite = reader.int32() as any;
-          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1809,61 +1925,45 @@ export const FinaliseSessionRequest = {
       revealBlocks: Array.isArray(object?.revealBlocks)
         ? object.revealBlocks.map((e: any) => FinaliseSessionRequest_Block.fromJSON(e))
         : [],
-      cipherSuite: isSet(object.cipherSuite) ? tlsCipherSuiteTypeFromJSON(object.cipherSuite) : 0,
     };
   },
 
   toJSON(message: FinaliseSessionRequest): unknown {
     const obj: any = {};
-    message.sessionId !== undefined && (obj.sessionId = message.sessionId);
-    if (message.revealBlocks) {
-      obj.revealBlocks = message.revealBlocks.map((e) => e ? FinaliseSessionRequest_Block.toJSON(e) : undefined);
-    } else {
-      obj.revealBlocks = [];
+    if (message.sessionId !== "") {
+      obj.sessionId = message.sessionId;
     }
-    message.cipherSuite !== undefined && (obj.cipherSuite = tlsCipherSuiteTypeToJSON(message.cipherSuite));
+    if (message.revealBlocks?.length) {
+      obj.revealBlocks = message.revealBlocks.map((e) => FinaliseSessionRequest_Block.toJSON(e));
+    }
     return obj;
   },
 
   create(base?: DeepPartial<FinaliseSessionRequest>): FinaliseSessionRequest {
     return FinaliseSessionRequest.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<FinaliseSessionRequest>): FinaliseSessionRequest {
     const message = createBaseFinaliseSessionRequest();
     message.sessionId = object.sessionId ?? "";
     message.revealBlocks = object.revealBlocks?.map((e) => FinaliseSessionRequest_Block.fromPartial(e)) || [];
-    message.cipherSuite = object.cipherSuite ?? 0;
     return message;
   },
 };
 
 function createBaseFinaliseSessionRequest_Block(): FinaliseSessionRequest_Block {
-  return {
-    authTag: new Uint8Array(0),
-    key: new Uint8Array(0),
-    iv: new Uint8Array(0),
-    directReveal: undefined,
-    zkReveal: undefined,
-  };
+  return { directReveal: undefined, zkReveal: undefined, index: 0 };
 }
 
 export const FinaliseSessionRequest_Block = {
   encode(message: FinaliseSessionRequest_Block, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.authTag.length !== 0) {
-      writer.uint32(10).bytes(message.authTag);
-    }
-    if (message.key.length !== 0) {
-      writer.uint32(18).bytes(message.key);
-    }
-    if (message.iv.length !== 0) {
-      writer.uint32(26).bytes(message.iv);
-    }
     if (message.directReveal !== undefined) {
       FinaliseSessionRequest_BlockRevealDirect.encode(message.directReveal, writer.uint32(34).fork()).ldelim();
     }
     if (message.zkReveal !== undefined) {
       FinaliseSessionRequest_BlockRevealZk.encode(message.zkReveal, writer.uint32(42).fork()).ldelim();
+    }
+    if (message.index !== 0) {
+      writer.uint32(48).uint32(message.index);
     }
     return writer;
   },
@@ -1875,27 +1975,6 @@ export const FinaliseSessionRequest_Block = {
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
-        case 1:
-          if (tag !== 10) {
-            break;
-          }
-
-          message.authTag = reader.bytes();
-          continue;
-        case 2:
-          if (tag !== 18) {
-            break;
-          }
-
-          message.key = reader.bytes();
-          continue;
-        case 3:
-          if (tag !== 26) {
-            break;
-          }
-
-          message.iv = reader.bytes();
-          continue;
         case 4:
           if (tag !== 34) {
             break;
@@ -1910,6 +1989,13 @@ export const FinaliseSessionRequest_Block = {
 
           message.zkReveal = FinaliseSessionRequest_BlockRevealZk.decode(reader, reader.uint32());
           continue;
+        case 6:
+          if (tag !== 48) {
+            break;
+          }
+
+          message.index = reader.uint32();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1921,52 +2007,46 @@ export const FinaliseSessionRequest_Block = {
 
   fromJSON(object: any): FinaliseSessionRequest_Block {
     return {
-      authTag: isSet(object.authTag) ? bytesFromBase64(object.authTag) : new Uint8Array(0),
-      key: isSet(object.key) ? bytesFromBase64(object.key) : new Uint8Array(0),
-      iv: isSet(object.iv) ? bytesFromBase64(object.iv) : new Uint8Array(0),
       directReveal: isSet(object.directReveal)
         ? FinaliseSessionRequest_BlockRevealDirect.fromJSON(object.directReveal)
         : undefined,
       zkReveal: isSet(object.zkReveal) ? FinaliseSessionRequest_BlockRevealZk.fromJSON(object.zkReveal) : undefined,
+      index: isSet(object.index) ? Number(object.index) : 0,
     };
   },
 
   toJSON(message: FinaliseSessionRequest_Block): unknown {
     const obj: any = {};
-    message.authTag !== undefined &&
-      (obj.authTag = base64FromBytes(message.authTag !== undefined ? message.authTag : new Uint8Array(0)));
-    message.key !== undefined &&
-      (obj.key = base64FromBytes(message.key !== undefined ? message.key : new Uint8Array(0)));
-    message.iv !== undefined && (obj.iv = base64FromBytes(message.iv !== undefined ? message.iv : new Uint8Array(0)));
-    message.directReveal !== undefined && (obj.directReveal = message.directReveal
-      ? FinaliseSessionRequest_BlockRevealDirect.toJSON(message.directReveal)
-      : undefined);
-    message.zkReveal !== undefined &&
-      (obj.zkReveal = message.zkReveal ? FinaliseSessionRequest_BlockRevealZk.toJSON(message.zkReveal) : undefined);
+    if (message.directReveal !== undefined) {
+      obj.directReveal = FinaliseSessionRequest_BlockRevealDirect.toJSON(message.directReveal);
+    }
+    if (message.zkReveal !== undefined) {
+      obj.zkReveal = FinaliseSessionRequest_BlockRevealZk.toJSON(message.zkReveal);
+    }
+    if (message.index !== 0) {
+      obj.index = Math.round(message.index);
+    }
     return obj;
   },
 
   create(base?: DeepPartial<FinaliseSessionRequest_Block>): FinaliseSessionRequest_Block {
     return FinaliseSessionRequest_Block.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<FinaliseSessionRequest_Block>): FinaliseSessionRequest_Block {
     const message = createBaseFinaliseSessionRequest_Block();
-    message.authTag = object.authTag ?? new Uint8Array(0);
-    message.key = object.key ?? new Uint8Array(0);
-    message.iv = object.iv ?? new Uint8Array(0);
     message.directReveal = (object.directReveal !== undefined && object.directReveal !== null)
       ? FinaliseSessionRequest_BlockRevealDirect.fromPartial(object.directReveal)
       : undefined;
     message.zkReveal = (object.zkReveal !== undefined && object.zkReveal !== null)
       ? FinaliseSessionRequest_BlockRevealZk.fromPartial(object.zkReveal)
       : undefined;
+    message.index = object.index ?? 0;
     return message;
   },
 };
 
 function createBaseFinaliseSessionRequest_BlockRevealDirect(): FinaliseSessionRequest_BlockRevealDirect {
-  return { key: new Uint8Array(0), iv: new Uint8Array(0) };
+  return { key: new Uint8Array(0), iv: new Uint8Array(0), recordNumber: 0 };
 }
 
 export const FinaliseSessionRequest_BlockRevealDirect = {
@@ -1976,6 +2056,9 @@ export const FinaliseSessionRequest_BlockRevealDirect = {
     }
     if (message.iv.length !== 0) {
       writer.uint32(18).bytes(message.iv);
+    }
+    if (message.recordNumber !== 0) {
+      writer.uint32(24).uint32(message.recordNumber);
     }
     return writer;
   },
@@ -2001,6 +2084,13 @@ export const FinaliseSessionRequest_BlockRevealDirect = {
 
           message.iv = reader.bytes();
           continue;
+        case 3:
+          if (tag !== 24) {
+            break;
+          }
+
+          message.recordNumber = reader.uint32();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2014,25 +2104,32 @@ export const FinaliseSessionRequest_BlockRevealDirect = {
     return {
       key: isSet(object.key) ? bytesFromBase64(object.key) : new Uint8Array(0),
       iv: isSet(object.iv) ? bytesFromBase64(object.iv) : new Uint8Array(0),
+      recordNumber: isSet(object.recordNumber) ? Number(object.recordNumber) : 0,
     };
   },
 
   toJSON(message: FinaliseSessionRequest_BlockRevealDirect): unknown {
     const obj: any = {};
-    message.key !== undefined &&
-      (obj.key = base64FromBytes(message.key !== undefined ? message.key : new Uint8Array(0)));
-    message.iv !== undefined && (obj.iv = base64FromBytes(message.iv !== undefined ? message.iv : new Uint8Array(0)));
+    if (message.key.length !== 0) {
+      obj.key = base64FromBytes(message.key);
+    }
+    if (message.iv.length !== 0) {
+      obj.iv = base64FromBytes(message.iv);
+    }
+    if (message.recordNumber !== 0) {
+      obj.recordNumber = Math.round(message.recordNumber);
+    }
     return obj;
   },
 
   create(base?: DeepPartial<FinaliseSessionRequest_BlockRevealDirect>): FinaliseSessionRequest_BlockRevealDirect {
     return FinaliseSessionRequest_BlockRevealDirect.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<FinaliseSessionRequest_BlockRevealDirect>): FinaliseSessionRequest_BlockRevealDirect {
     const message = createBaseFinaliseSessionRequest_BlockRevealDirect();
     message.key = object.key ?? new Uint8Array(0);
     message.iv = object.iv ?? new Uint8Array(0);
+    message.recordNumber = object.recordNumber ?? 0;
     return message;
   },
 };
@@ -2082,10 +2179,8 @@ export const FinaliseSessionRequest_BlockRevealZk = {
 
   toJSON(message: FinaliseSessionRequest_BlockRevealZk): unknown {
     const obj: any = {};
-    if (message.proofs) {
-      obj.proofs = message.proofs.map((e) => e ? FinaliseSessionRequest_ZKProof.toJSON(e) : undefined);
-    } else {
-      obj.proofs = [];
+    if (message.proofs?.length) {
+      obj.proofs = message.proofs.map((e) => FinaliseSessionRequest_ZKProof.toJSON(e));
     }
     return obj;
   },
@@ -2093,7 +2188,6 @@ export const FinaliseSessionRequest_BlockRevealZk = {
   create(base?: DeepPartial<FinaliseSessionRequest_BlockRevealZk>): FinaliseSessionRequest_BlockRevealZk {
     return FinaliseSessionRequest_BlockRevealZk.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<FinaliseSessionRequest_BlockRevealZk>): FinaliseSessionRequest_BlockRevealZk {
     const message = createBaseFinaliseSessionRequest_BlockRevealZk();
     message.proofs = object.proofs?.map((e) => FinaliseSessionRequest_ZKProof.fromPartial(e)) || [];
@@ -2186,23 +2280,24 @@ export const FinaliseSessionRequest_ZKProof = {
 
   toJSON(message: FinaliseSessionRequest_ZKProof): unknown {
     const obj: any = {};
-    message.proofJson !== undefined && (obj.proofJson = message.proofJson);
-    message.decryptedRedactedCiphertext !== undefined &&
-      (obj.decryptedRedactedCiphertext = base64FromBytes(
-        message.decryptedRedactedCiphertext !== undefined ? message.decryptedRedactedCiphertext : new Uint8Array(0),
-      ));
-    message.redactedPlaintext !== undefined &&
-      (obj.redactedPlaintext = base64FromBytes(
-        message.redactedPlaintext !== undefined ? message.redactedPlaintext : new Uint8Array(0),
-      ));
-    message.startIdx !== undefined && (obj.startIdx = Math.round(message.startIdx));
+    if (message.proofJson !== "") {
+      obj.proofJson = message.proofJson;
+    }
+    if (message.decryptedRedactedCiphertext.length !== 0) {
+      obj.decryptedRedactedCiphertext = base64FromBytes(message.decryptedRedactedCiphertext);
+    }
+    if (message.redactedPlaintext.length !== 0) {
+      obj.redactedPlaintext = base64FromBytes(message.redactedPlaintext);
+    }
+    if (message.startIdx !== 0) {
+      obj.startIdx = Math.round(message.startIdx);
+    }
     return obj;
   },
 
   create(base?: DeepPartial<FinaliseSessionRequest_ZKProof>): FinaliseSessionRequest_ZKProof {
     return FinaliseSessionRequest_ZKProof.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<FinaliseSessionRequest_ZKProof>): FinaliseSessionRequest_ZKProof {
     const message = createBaseFinaliseSessionRequest_ZKProof();
     message.proofJson = object.proofJson ?? "";
@@ -2278,18 +2373,21 @@ export const FinaliseSessionResponse = {
 
   toJSON(message: FinaliseSessionResponse): unknown {
     const obj: any = {};
-    message.receipt !== undefined && (obj.receipt = message.receipt ? TLSReceipt.toJSON(message.receipt) : undefined);
-    message.claimData !== undefined &&
-      (obj.claimData = message.claimData ? ProviderClaimData.toJSON(message.claimData) : undefined);
-    message.signature !== undefined &&
-      (obj.signature = base64FromBytes(message.signature !== undefined ? message.signature : new Uint8Array(0)));
+    if (message.receipt !== undefined) {
+      obj.receipt = TLSReceipt.toJSON(message.receipt);
+    }
+    if (message.claimData !== undefined) {
+      obj.claimData = ProviderClaimData.toJSON(message.claimData);
+    }
+    if (message.signature.length !== 0) {
+      obj.signature = base64FromBytes(message.signature);
+    }
     return obj;
   },
 
   create(base?: DeepPartial<FinaliseSessionResponse>): FinaliseSessionResponse {
     return FinaliseSessionResponse.fromPartial(base ?? {});
   },
-
   fromPartial(object: DeepPartial<FinaliseSessionResponse>): FinaliseSessionResponse {
     const message = createBaseFinaliseSessionResponse();
     message.receipt = (object.receipt !== undefined && object.receipt !== null)
@@ -2431,10 +2529,10 @@ export interface ReclaimWitnessClient<CallOptionsExt = {}> {
   ): Promise<FinaliseSessionResponse>;
 }
 
-declare var self: any | undefined;
-declare var window: any | undefined;
-declare var global: any | undefined;
-var tsProtoGlobalThis: any = (() => {
+declare const self: any | undefined;
+declare const window: any | undefined;
+declare const global: any | undefined;
+const tsProtoGlobalThis: any = (() => {
   if (typeof globalThis !== "undefined") {
     return globalThis;
   }

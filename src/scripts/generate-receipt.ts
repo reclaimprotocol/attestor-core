@@ -2,7 +2,8 @@ import { config } from 'dotenv'
 config()
 
 import { readFile } from 'fs/promises'
-import { createGrpcWebClient, generateProviderReceipt, getTranscriptString, logger, ProviderName, ProviderParams, providers, ProviderSecretParams } from '..'
+import * as niceGrpc from 'nice-grpc'
+import { createGrpcWebClient, generateProviderReceipt, getTranscriptString, Logger, logger, proto, ProviderName, ProviderParams, providers, ProviderSecretParams } from '..'
 
 export type ProviderReceiptGenerationParams<P extends ProviderName> = {
 	name: P
@@ -28,8 +29,7 @@ export async function main<T extends ProviderName>(
 
 	const witnessHostPort = getCliArgument('witness')
 		|| DEFAULT_WITNESS_HOST_PORT
-
-	const client = await createGrpcWebClient(
+	const client = await getWitnessClient(
 		witnessHostPort,
 		logger
 	)
@@ -40,9 +40,13 @@ export async function main<T extends ProviderName>(
 		params: paramsJson.params,
 		client,
 		logger,
+		defaultWriteRedactionMode: 'zk',
+		additionalConnectOpts: {
+			supportedProtocolVersions: ['TLS1_2']
+		}
 	})
 
-	const transcriptStr = getTranscriptString(receipt!.transcript)
+	const transcriptStr = getTranscriptString(receipt!)
 	console.log('receipt:\n', transcriptStr)
 
 	try {
@@ -92,6 +96,25 @@ function getCliArgument(arg: string) {
 	}
 
 	return process.argv[index + 1]
+}
+
+function getWitnessClient(url: string, logger: Logger) {
+	const parsedUrl = new URL(url)
+	if(
+		parsedUrl.protocol === 'grpcs:'
+		|| parsedUrl.protocol === 'grpc:'
+	) {
+		const address = `${parsedUrl.hostname}:${parsedUrl.port || 8001}`
+		const channel = niceGrpc.createChannel(address)
+		const client = niceGrpc.createClient(
+			proto.ReclaimWitnessDefinition,
+			channel,
+		)
+
+		return client
+	}
+
+	return createGrpcWebClient(url, logger)
 }
 
 if(require.main === module) {

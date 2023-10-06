@@ -1,7 +1,7 @@
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
 import {
-	getCompleteHttpResponseFromTranscript,
+	getCompleteHttpResponseFromReceipt,
 	getHttpRequestHeadersFromTranscript,
 } from '../../utils/http-parser'
 import { buildQueryString, DEFAULT_QUERY_STRING } from './utils'
@@ -56,7 +56,7 @@ const oneMg: Provider<OneOmgParams, OneMgSecretParams> = {
 			throw new Error(`Invalid hostPort: ${receipt.hostPort}`)
 		}
 
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== 'get') {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
@@ -65,7 +65,7 @@ const oneMg: Provider<OneOmgParams, OneMgSecretParams> = {
 			throw new Error(`Invalid path: ${req.url}`)
 		}
 
-		const res = getCompleteHttpResponseFromTranscript(receipt.transcript)
+		const res = getCompleteHttpResponseFromReceipt(receipt)
 
 		if(res.statusCode !== 200) {
 			throw new Error(

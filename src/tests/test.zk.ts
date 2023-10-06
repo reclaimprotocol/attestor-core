@@ -7,7 +7,7 @@ import {
 	makeDefaultZkOperator,
 	prepareZkProofs,
 	uint8ArrayToStr,
-	verifyZKBlock
+	verifyZkPacket
 } from '../utils'
 
 type ServerBlock = BlockToReveal & {
@@ -162,7 +162,7 @@ describe('ZK', () => {
 			}
 
 			for(const { block, redactedPlaintext } of proofs) {
-				const x = await verifyZKBlock(
+				const x = await verifyZkPacket(
 					{
 						ciphertext: block.ciphertext,
 						zkReveal: block.zkReveal!,

@@ -4,7 +4,7 @@
 
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
-import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
+import { getCompleteHttpResponseFromReceipt, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
 
 type MediumFollowersCountParams = {
   username: string
@@ -58,7 +58,7 @@ const mediumFollowersCount: Provider<MediumFollowersCountParams, MediumFollowers
 			throw new Error(`Invalid hostPort: ${receipt.hostPort}`)
 		}
 
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== 'get') {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
@@ -72,7 +72,7 @@ const mediumFollowersCount: Provider<MediumFollowersCountParams, MediumFollowers
 		}
 
 		// Parse the HTTP response
-		const res = getCompleteHttpResponseFromTranscript(receipt.transcript)
+		const res = getCompleteHttpResponseFromReceipt(receipt)
 		if(res.statusCode !== 200) {
 			throw new Error(`Invalid status code: ${res.statusCode}`)
 		}
