@@ -2,6 +2,7 @@ import bybitBalance from './bybit/bybit-balance'
 import bybitSpotPnl from './bybit/bybit-spot-pnl'
 import chessRating from './chess/chess-rating'
 import chessUser from './chess/chess-user'
+import googleDomains from './domain-google/domain-google'
 import ebayUser from './ebay/ebay-user'
 import irsAddress from './irs/irs-address'
 import irsName from './irs/irs-name'
@@ -28,6 +29,7 @@ import coindcxBalance from './coindcx-balance'
 import coinswitchBalance from './coinswitch-balance'
 import DevfolioHackathonsCount from './devfolio-hackathon-participated'
 import { dunzoLastOrder } from './dunzo'
+import facebookAccountCreationDate from './facebook-account-creation-date'
 import facebookFriendsCount from './facebook-friends-count'
 import flickrUser from './flickr-user'
 import makeGithubProvider from './github-claim'
@@ -77,6 +79,7 @@ export const providers = {
 	'swiggy-total-count': swiggyTotalOrder,
 	'wikipedia-user': wikipediaUser,
 	'facebook-friends-count': facebookFriendsCount,
+	'facebook-account-creation-date': facebookAccountCreationDate,
 	'binance-asset-balance': binanceAssetBalance,
 	'ebay-user': ebayUser,
 	'flickr-user': flickrUser,
@@ -120,6 +123,7 @@ export const providers = {
 	'swiggy-equal': swiggyUser,
 	'one-mg': oneMg,
 	'kaggle-username': kaggleUsername,
+	'domain-google': googleDomains,
 }
 
 export type ProviderName = keyof typeof providers;

@@ -14,7 +14,8 @@
 		"generate:contracts-data": "sh ./src/scripts/contract-data-gen.sh",
 		"verify:root-ca": "ts-node src/scripts/verify-root-ca.ts",
 		"generate:receipt": "ts-node src/scripts/generate-receipt.ts",
-		"example:oneMg": "ts-node src/scripts/generate-receipt.ts --json example/one-mg.json"
+		"example:oneMg": "ts-node src/scripts/generate-receipt.ts --json example/one-mg.json",
+		"example:facebook-data": "ts-node src/scripts/generate-receipt.ts --json example/facebook-data.json"
 	},
 	"files": [
 		"lib/*"

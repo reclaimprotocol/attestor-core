@@ -1,0 +1,12 @@
+{
+    "name": "domain-google",
+    "params": {
+        "domainList": "{{GOOGLE_DOMAINS}}"
+        
+    },
+    "secretParams": {
+        "cookieStr": "{{GOOGLE_DOMAIN_COOKIE}}",
+        "xsrfToken": "{{GOOGLE_DOMAIN_XSRF_TOKEN}}",
+        "userIdNumber":"{{GOOGLE_DOMAIN_USERID}}"
+    }
+}

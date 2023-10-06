@@ -20,10 +20,17 @@ export type WindowRPCRequest<N extends ProviderName = any> = ({
 	request: CreateClaimOptions<N>
 } | {
 	type: 'extractHtmlElement'
-	request: Parameters<typeof extractHTMLElement>
+	request: {
+		html: string,
+		xpathExpression: string,
+		contentsOnly: boolean
+	}
 } | {
 	type: 'extractJSONValueIndex'
-	request: Parameters<typeof extractJSONValueIndex>
+	request: {
+		json: string,
+		jsonPath: string
+	}
 }
 ) & IdentifiedMessage
 
@@ -116,13 +123,13 @@ export function setupWindowRpc() {
 			case 'extractHtmlElement':
 				respond({
 					type: 'extractHtmlElementDone',
-					response: extractHTMLElement(...req.request),
+					response: extractHTMLElement(req.request.html, req.request.xpathExpression, req.request.contentsOnly),
 				})
 				break
 			case 'extractJSONValueIndex':
 				respond({
 					type: 'extractJSONValueIndexDone',
-					response: extractJSONValueIndex(...req.request),
+					response: extractJSONValueIndex(req.request.json, req.request.jsonPath),
 				})
 				break
 			default:
