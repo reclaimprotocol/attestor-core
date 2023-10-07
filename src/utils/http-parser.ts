@@ -72,10 +72,6 @@ export function makeHttpResponseParser() {
 		 * @param data the data to parse
 		 */
 		onChunk(data: Uint8Array) {
-			if(res.complete) {
-				throw new Error('got more data after response was complete')
-			}
-
 			// concatenate the remaining data from the last chunk
 			remaining = concatenateUint8Arrays([remaining, data])
 			// if we don't have the headers yet, keep reading lines
@@ -131,10 +127,6 @@ export function makeHttpResponseParser() {
 							continue
 						}
 
-						if(res.complete) {
-							throw new Error('got more data after response was complete')
-						}
-
 						const chunkSize = Number.parseInt(line, 16)
 						// if chunk size is 0, we're done
 						if(!chunkSize) {
@@ -183,6 +175,10 @@ export function makeHttpResponseParser() {
 	}
 
 	function readBody() {
+		if(res.complete) {
+			throw new Error('got more data after response was complete')
+		}
+
 		if(!res.bodyStartIndex) {
 			res.bodyStartIndex = currentByteIdx
 		}
