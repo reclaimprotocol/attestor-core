@@ -7,7 +7,7 @@ module.exports = {
 		libraryTarget: 'commonjs2',
 		filename: 'reclaim-witness.min.js',
 		path: process.env.BUNDLE_PATH
-			|| path.resolve(__dirname, 'browser')
+			|| path.resolve(__dirname, 'browser/resources')
 	},
 	mode: process.env.NODE_ENV
 		|| 'development',

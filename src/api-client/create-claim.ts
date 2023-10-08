@@ -47,23 +47,16 @@ export async function createClaim<Name extends ProviderName>({
 	params,
 	secretParams,
 	resumeFromStep,
-	additionalConnectOpts,
-	zkOperator,
 	ownerPrivateKey,
 	didUpdateCreateStep,
 	context = '',
 	beacon = makeBeacon(),
 	logger = LOGGER,
 	makeGrpcClient = createGrpcWebClient,
-	zkProofConcurrency
+	...opts
 }: CreateClaimOptions<Name>) {
 	if(!providers[name].areValidParams(params)) {
 		throw new Error(`Invalid params for provider "${name}"`)
-	}
-
-	additionalConnectOpts = {
-		...providers[name].additionalClientOptions || {},
-		...additionalConnectOpts,
 	}
 
 	let witnessHosts: string[]
@@ -176,10 +169,8 @@ export async function createClaim<Name extends ProviderName>({
 				receiptGenerationRequest: undefined,
 			},
 			client: grpcClient,
-			additionalConnectOpts,
 			logger,
-			zkOperator,
-			zkProofConcurrency,
+			...opts
 		})
 
 		return {

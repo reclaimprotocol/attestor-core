@@ -1,38 +1,33 @@
 import {
+	CONFIG as ZK_CONFIG,
+	EncryptionAlgorithm,
 	generateProof,
 	makeLocalSnarkJsZkOperator,
 	makeRemoteSnarkJsZkOperator,
-	toUint8Array,
-	toUintArray,
 	verifyProof,
-	ZKOperator
-} from '@reclaimprotocol/circom-chacha20'
+	ZKOperator,
+} from '@reclaimprotocol/circom-symmetric-crypto'
 import { detectEnvironment } from '@reclaimprotocol/common-grpc-web-transport'
 import { crypto, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 import PQueue from 'p-queue'
 import { DEFAULT_REMOTE_ZK_PARAMS, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from '../config'
-import { FinaliseSessionRequest_BlockRevealZk as ZKReveal } from '../proto/api'
+import { FinaliseSessionRequest_BlockRevealZk as ZKReveal, FinaliseSessionRequest_ZKProof as ZKProof } from '../proto/api'
 import { CompleteTLSPacket, Logger } from '../types'
 import { getPureCiphertext } from './generics'
 import { logger as LOGGER } from './logger'
 import { isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from './redactions'
 
-const CHACHA_CHUNK_SIZE = 64
-
-type ZKChunk = {
-	chunk: Uint8Array
-	counter: number
-}
-
 type GenerateZKChunkProofOpts = {
 	key: Uint8Array
 	iv: Uint8Array
 	ciphertext: Uint8Array
+	redactedPlaintext: Uint8Array
+	offsetChunks: number
 }
 
 export type PrepareZKProofsBaseOpts = {
-	/** params for ZK proof gen */
-	zkOperator?: ZKOperator
+	/** get ZK operator for specified algorithm */
+	zkOperators?: { [E in EncryptionAlgorithm]?: ZKOperator }
 	/**
 	 * max number of ZK proofs to generate concurrently
 	 * @default 1
@@ -46,15 +41,17 @@ type PrepareZKProofsOpts = {
 } & PrepareZKProofsBaseOpts
 
 type ZKVerifyOpts = {
+	cipherSuite: keyof typeof SUPPORTED_CIPHER_SUITE_MAP
 	ciphertext: Uint8Array
 	zkReveal: ZKReveal
-	operator: ZKOperator
 	logger?: Logger
+	/** get ZK operator for specified algorithm */
+	zkOperators?: { [E in EncryptionAlgorithm]?: ZKOperator }
 }
 
 export function makeZkProofGenerator(
 	{
-		zkOperator,
+		zkOperators,
 		logger,
 		zkProofConcurrency = DEFAULT_ZK_CONCURRENCY,
 		maxZkChunks = MAX_ZK_CHUNKS,
@@ -87,6 +84,9 @@ export function makeZkProofGenerator(
 				)
 			}
 
+			const alg = getAlgorithmForCipherSuite(cipherSuite)
+			const chunkSizeBytes = getChunkSizeBytes(alg)
+
 			const {
 				redactedPlaintext,
 			} = packet.reveal
@@ -97,54 +97,74 @@ export function makeZkProofGenerator(
 				cipherSuite
 			)
 
-			const zkChunks = getChunksWithIvCounter(redactedPlaintext)
-			chunksDone += zkChunks.length
-
-			return {
-				proofs: await Promise.all(zkChunks.map(chunk => {
-					return zkQueue.add(
-						() => generateProofForChunk(
+			const chunks = Math.ceil(ciphertext.length / chunkSizeBytes)
+			const tasks: Promise<void>[] = []
+			const proofs: ZKProof[] = []
+			for(let i = 0;i < chunks;i++) {
+				tasks.push(
+					zkQueue.add(async() => {
+						const proof = await generateProofForChunk(
+							alg,
 							{
 								key,
 								iv,
 								ciphertext,
+								redactedPlaintext,
+								offsetChunks: i
 							},
-							chunk
-						),
-						{ throwOnTimeout: true }
-					)
-				}))
+						)
+						if(proof) {
+							proofs.push(proof)
+						}
+					}, { throwOnTimeout: true })
+				)
+
+				chunksDone += 1
 			}
+
+			await Promise.all(tasks)
+
+			return { proofs }
 		}
 	}
 
 	async function generateProofForChunk(
+		algorithm: EncryptionAlgorithm,
 		{
 			key,
 			iv,
 			ciphertext,
+			redactedPlaintext,
+			offsetChunks,
 		}: GenerateZKChunkProofOpts,
-		{ chunk, counter }: ZKChunk,
-	) {
-		zkOperator = zkOperator || await makeDefaultZkOperator(logger)
+	): Promise<ZKProof | undefined> {
+		const zkOperator = zkOperators?.[algorithm]
+			|| await makeDefaultZkOperator(algorithm, logger)
+		const chunkSize = getChunkSizeBytes(algorithm)
 
-		const startIdx = (counter - 1) * CHACHA_CHUNK_SIZE
-		const endIdx = counter * CHACHA_CHUNK_SIZE
+		const startIdx = offsetChunks * chunkSize
+		const endIdx = (offsetChunks + 1) * chunkSize
 		const ciphertextChunk = ciphertext
 			.slice(startIdx, endIdx)
+		const plaintextChunk = redactedPlaintext
+			.slice(startIdx, endIdx)
+		if(isFullyRedacted(plaintextChunk)) {
+			return
+		}
 
 		// redact ciphertext if plaintext is redacted
 		// to prepare for decryption in ZK circuit
 		// the ZK circuit will take in the redacted ciphertext,
 		// which shall produce the redacted plaintext
 		for(let i = 0;i < ciphertextChunk.length;i++) {
-			if(chunk[i] === REDACTION_CHAR_CODE) {
+			if(plaintextChunk[i] === REDACTION_CHAR_CODE) {
 				ciphertextChunk[i] = REDACTION_CHAR_CODE
 			}
 		}
 
 		const proof = await generateProof(
-			{ key, iv, startCounter: counter },
+			algorithm,
+			{ key, iv, offset: offsetChunks },
 			{ ciphertext: ciphertextChunk },
 			zkOperator,
 		)
@@ -156,10 +176,8 @@ export function makeZkProofGenerator(
 
 		return {
 			proofJson: proof.proofJson,
-			decryptedRedactedCiphertext: toUint8Array(
-				proof.plaintext
-			),
-			redactedPlaintext: chunk,
+			decryptedRedactedCiphertext: proof.plaintext,
+			redactedPlaintext: plaintextChunk,
 			startIdx,
 		}
 	}
@@ -170,9 +188,10 @@ export function makeZkProofGenerator(
  */
 export async function verifyZkPacket(
 	{
+		cipherSuite,
 		ciphertext,
 		zkReveal,
-		operator,
+		zkOperators,
 		logger
 	}: ZKVerifyOpts,
 ) {
@@ -181,6 +200,9 @@ export async function verifyZkPacket(
 	}
 
 	const { proofs } = zkReveal
+	const algorithm = getAlgorithmForCipherSuite(cipherSuite)
+	const operator = zkOperators?.[algorithm]
+		|| await makeDefaultZkOperator(algorithm, logger)
 	/**
 	 * to verify if the user has given us the correct redacted plaintext,
 	 * and isn't providing plaintext that they haven't proven they have
@@ -226,9 +248,9 @@ export async function verifyZkPacket(
 
 			await verifyProof(
 				{
+					algorithm,
 					proofJson,
-					plaintext:
-						toUintArray(decryptedRedactedCiphertext),
+					plaintext: decryptedRedactedCiphertext,
 				},
 				{ ciphertext: ciphertextChunk },
 				operator
@@ -249,57 +271,46 @@ export async function verifyZkPacket(
 	return { redactedPlaintext: realRedactedPlaintext }
 }
 
-/**
- * Split the redacted plaintext into chacha-sized chunks,
- * and set a counter for each chunk.
- *
- * It will only return chunks that are fully or partially revealed
- * @param redactedPlaintext the redacted plaintext that need be split
- * @param blockSize the size of blocks to split data into
- */
-function getChunksWithIvCounter(
-	redactedPlaintext: Uint8Array,
-	blockSize = CHACHA_CHUNK_SIZE
+function getAlgorithmForCipherSuite(cipherSuite: keyof typeof SUPPORTED_CIPHER_SUITE_MAP) {
+	if(cipherSuite.includes('CHACHA20')) {
+		return 'chacha20'
+	}
+
+	if(cipherSuite.includes('AES_256_GCM')) {
+		return 'aes-256-ctr'
+	}
+
+	throw new Error(`${cipherSuite} not supported for ZK ops`)
+}
+
+function getChunkSizeBytes(alg: EncryptionAlgorithm) {
+	const {
+		chunkSize,
+		bitsPerWord
+	} = ZK_CONFIG[alg]
+
+	return chunkSize * bitsPerWord / 8
+}
+
+const zkOperators: { [E in EncryptionAlgorithm]?: Promise<ZKOperator> } = {}
+export function makeDefaultZkOperator(
+	algorithm: EncryptionAlgorithm,
+	logger?: Logger
 ) {
-	const chunks = chunkBuffer(redactedPlaintext, blockSize)
-	const chunksWithCounter: ZKChunk[] = []
-	for(let i = 0;i < chunks.length;i++) {
-		if(!isFullyRedacted(chunks[i])) {
-			chunksWithCounter.push({
-				chunk: chunks[i],
-				counter: i + 1,
-			})
-		}
-	}
-
-	return chunksWithCounter
-}
-
-function chunkBuffer(buffer: Uint8Array, chunkSize: number) {
-	const chunks: Uint8Array[] = []
-	for(let i = 0;i < buffer.length;i += chunkSize) {
-		chunks.push(buffer.slice(i, i + chunkSize))
-	}
-
-	return chunks
-}
-
-let zkOperator: Promise<ZKOperator> | undefined
-export function makeDefaultZkOperator(logger?: Logger) {
-	if(!zkOperator) {
+	if(!zkOperators[algorithm]) {
 		const isNode = detectEnvironment() === 'node'
 		logger?.debug(
 			{ type: isNode ? 'local' : 'remote' },
 			'using zk operator'
 		)
 
-		zkOperator = isNode
-			? makeLocalSnarkJsZkOperator(logger)
+		zkOperators[algorithm] = isNode
+			? makeLocalSnarkJsZkOperator(algorithm, logger)
 			: makeRemoteSnarkJsZkOperator(
 				DEFAULT_REMOTE_ZK_PARAMS,
 				logger
 			)
 	}
 
-	return zkOperator
+	return zkOperators[algorithm]!
 }

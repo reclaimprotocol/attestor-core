@@ -98,5 +98,14 @@ export function getPureCiphertext(
 
 	// 16 => auth tag length
 	content = content.slice(0, -16)
+
+	const {
+		ivLength: fixedIvLength,
+	} = SUPPORTED_CIPHER_SUITE_MAP[cipherSuite]
+	// 12 => total IV length
+	const recordIvLength = 12 - fixedIvLength
+	// record IV is prefixed to the ciphertext
+	content = content.slice(recordIvLength)
+
 	return content
 }

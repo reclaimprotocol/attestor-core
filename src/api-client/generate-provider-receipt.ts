@@ -33,7 +33,10 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 		: provider.hostPort
 
 
-	additionalConnectOpts = additionalConnectOpts || { }
+	additionalConnectOpts = {
+		...provider.additionalClientOptions || {},
+		...additionalConnectOpts,
+	}
 	if(provider.additionalClientOptions?.rootCAs) {
 		additionalConnectOpts.rootCAs = [
 			...(additionalConnectOpts.rootCAs || [ ]),

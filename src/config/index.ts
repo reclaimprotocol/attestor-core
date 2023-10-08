@@ -9,6 +9,6 @@ export const DEFAULT_CHAIN_ID = 0x1a4
 export const DEFAULT_PORT = 443
 
 export const DEFAULT_REMOTE_ZK_PARAMS = {
-	zkeyUrl: '/circuit.zkey',
-	circuitWasmUrl: '/circuit.wasm',
+	zkeyUrl: '/resources/{algorithm}/circuit_final.zkey',
+	circuitWasmUrl: '/resources/{algorithm}/circuit.wasm',
 }

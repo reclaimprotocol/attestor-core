@@ -10,12 +10,12 @@ type PreparePacketsForRevealOpts = {
 
 /**
  * Prepares the packets for reveal to the server
+ * according to the specified reveal type
  */
 export async function preparePacketsForReveal(
 	packets: CompleteTLSPacket[],
 	opts: PreparePacketsForRevealOpts
 ): Promise<PacketToReveal[]> {
-	console.log(packets.map((p, i) => ({ ...p, i })))
 	const packetsToReveal: PacketToReveal[] = []
 	const proofGenerator = makeZkProofGenerator(opts)
 	const proofTasks: Promise<void>[] = []

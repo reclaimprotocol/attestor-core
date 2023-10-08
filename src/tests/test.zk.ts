@@ -1,28 +1,23 @@
-import { ZKOperator } from '@reclaimprotocol/circom-chacha20'
-import { concatenateUint8Arrays, crypto } from '@reclaimprotocol/tls'
-import { createCipheriv } from 'crypto'
+import { crypto, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 import { CompleteTLSPacket } from '../types'
 import {
 	getBlocksToReveal,
 	getPureCiphertext,
 	logger,
-	makeDefaultZkOperator,
 	makeZkProofGenerator,
 	redactSlices,
 	uint8ArrayToStr,
 	verifyZkPacket
 } from '../utils'
 
-const AUTH_TAG_BYTE_LENGTH = 16
+const ZK_CIPHER_SUITES: (keyof typeof SUPPORTED_CIPHER_SUITE_MAP)[] = [
+	'TLS_CHACHA20_POLY1305_SHA256',
+	'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384'
+]
 
 jest.setTimeout(60_000) // 60s
 
-describe('ZK', () => {
-
-	let operator: ZKOperator
-	beforeAll(async() => {
-		operator = await makeDefaultZkOperator()
-	})
+describe('ZK Tests', () => {
 
 	it('should correctly redact blocks', () => {
 		const vectors = [
@@ -95,14 +90,13 @@ describe('ZK', () => {
 		}
 	})
 
-	it('should generate chacha ZK proof for some ciphertext', async() => {
+	it.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some ciphertext', async(cipherSuite) => {
 		const key = Buffer.alloc(32, 0)
 		const iv = Buffer.alloc(12, 0)
-		const encKey = await crypto.importKey(
-			'CHACHA20-POLY1305',
-			key,
-		)
-		const cipherSuite = 'TLS_CHACHA20_POLY1305_SHA256'
+		const alg = cipherSuite.includes('CHACHA20')
+			? 'CHACHA20-POLY1305'
+			: 'AES-256-GCM'
+		const encKey = await crypto.importKey(alg, key)
 		const vectors = [
 			{
 				plaintext: 'My cool API secret is "my name jeff". Please don\'t reveal it',
@@ -131,15 +125,19 @@ describe('ZK', () => {
 			// ensure redaction fn kinda works at least
 			expect(redactedPlaintext).not.toEqual(plaintextArr)
 
-			const cipher = createCipheriv('chacha20-poly1305', key, iv, { authTagLength: 16 })
-			cipher.setAAD(Buffer.alloc(AUTH_TAG_BYTE_LENGTH, 1), { plaintextLength: plaintext.length })
-			const ciphertext = concatenateUint8Arrays(
-				[
-					cipher.update(plaintext),
-					cipher.final(),
-					cipher.getAuthTag()
-				]
+			const total = await crypto.authenticatedEncrypt(
+				alg,
+				{
+					key: encKey,
+					iv,
+					data: Buffer.from(plaintext, 'ascii'),
+					aead: Buffer.alloc(0),
+				}
 			)
+			const ciphertext = Buffer.concat([
+				total.ciphertext,
+				total.authTag
+			])
 
 			const packet: CompleteTLSPacket = {
 				packet: {
@@ -172,8 +170,8 @@ describe('ZK', () => {
 				{
 					ciphertext: getPureCiphertext(ciphertext, cipherSuite),
 					zkReveal,
-					operator,
-					logger
+					logger,
+					cipherSuite,
 				},
 			)
 

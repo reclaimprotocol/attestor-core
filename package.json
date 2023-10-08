@@ -24,7 +24,7 @@
 	"author": "Adhiraj Singh",
 	"license": "ISC",
 	"dependencies": {
-		"@reclaimprotocol/circom-chacha20": "^1.1.0",
+		"@reclaimprotocol/circom-symmetric-crypto": "github:reclaimprotocol/circom-chacha20",
 		"@reclaimprotocol/common-grpc-web-transport": "github:questbook/common-grpc-web-transport",
 		"@reclaimprotocol/tls": "github:reclaimprotocol/tls",
 		"canonicalize": "^2.0.0",

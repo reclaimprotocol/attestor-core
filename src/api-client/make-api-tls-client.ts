@@ -37,9 +37,14 @@ type ServerAppDataPacket = { plaintext: Uint8Array, index: number }
 // that need ZK proofs
 const ZK_CIPHER_SUITES: (keyof typeof SUPPORTED_CIPHER_SUITE_MAP)[]
 	= [
+		// chacha-20
 		'TLS_CHACHA20_POLY1305_SHA256',
 		'TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256',
 		'TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256',
+		// aes-256
+		'TLS_AES_256_GCM_SHA384',
+		'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384',
+		'TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384'
 	]
 
 const NAMED_CURVE_LIST = detectEnvironment() === 'node'
@@ -57,9 +62,8 @@ export const makeAPITLSClient = ({
 	requestData,
 	logger: _logger,
 	additionalConnectOpts,
-	zkOperator,
-	zkProofConcurrency,
-	defaultWriteRedactionMode = 'key-update'
+	defaultWriteRedactionMode = 'key-update',
+	...opts
 }: APITLSClientOptions) => {
 	let sessionId: string | undefined
 	let pullFromSessionAbort: AbortController | undefined
@@ -67,25 +71,20 @@ export const makeAPITLSClient = ({
 	let metadata: ReturnType<typeof tls.getMetadata>
 
 	const logger = _logger || MAIN_LOGGER?.child({ })
-	const enableResponseRedaction = !!redactResponse
 	const { generateOutOfBandSession } = additionalConnectOpts || {}
+	additionalConnectOpts = {
+		...additionalConnectOpts || {},
+		namedCurves: NAMED_CURVE_LIST,
+		cipherSuites: ZK_CIPHER_SUITES
+	}
 
 	const allPackets: CompleteTLSPacket[] = []
-	const cipherSuites = enableResponseRedaction
-		? ZK_CIPHER_SUITES
-		: undefined
-
-	if(!enableResponseRedaction) {
-		logger.info('disabled ZK proofs')
-	}
 
 	let onHandshake: (() => void) | undefined
 	const tls = makeTLSClient({
 		host,
 		logger,
-		cipherSuites,
-		namedCurves: NAMED_CURVE_LIST,
-		...additionalConnectOpts || {},
+		...additionalConnectOpts,
 		onHandshake() {
 			metadata = tls.getMetadata()
 			onHandshake?.()
@@ -219,7 +218,7 @@ export const makeAPITLSClient = ({
 			}
 
 			let serverPacketsToReveal: ReturnType<typeof getBlocksToReveal<ServerAppDataPacket>> = 'all'
-			if(redactResponse && enableResponseRedaction) {
+			if(redactResponse) {
 				const serverBlocks: ServerAppDataPacket[] = []
 				for(let i = 0;i < allPackets.length;i++) {
 					const b = allPackets[i]
@@ -292,9 +291,8 @@ export const makeAPITLSClient = ({
 				allPackets,
 				{
 					logger,
-					zkOperator,
-					zkProofConcurrency,
 					cipherSuite: metadata.cipherSuite!,
+					...opts,
 				}
 			)
 
@@ -413,8 +411,7 @@ export const makeAPITLSClient = ({
 		const tls = makeTLSClient({
 			host,
 			logger,
-			cipherSuites,
-			...additionalConnectOpts || {},
+			...additionalConnectOpts,
 			async write({ header, content }) {
 				socket.write(header)
 				socket.write(content)
