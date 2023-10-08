@@ -1,8 +1,7 @@
-import { crypto, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
+import { crypto, encryptWrappedRecord, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 import { CompleteTLSPacket } from '../types'
 import {
 	getBlocksToReveal,
-	getPureCiphertext,
 	logger,
 	makeZkProofGenerator,
 	redactSlices,
@@ -92,7 +91,10 @@ describe('ZK Tests', () => {
 
 	it.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some ciphertext', async(cipherSuite) => {
 		const key = Buffer.alloc(32, 0)
-		const iv = Buffer.alloc(12, 0)
+		const {
+			ivLength: fixedIvLength,
+		} = SUPPORTED_CIPHER_SUITE_MAP[cipherSuite]
+		const fixedIv = Buffer.alloc(fixedIvLength, 0)
 		const alg = cipherSuite.includes('CHACHA20')
 			? 'CHACHA20-POLY1305'
 			: 'AES-256-GCM'
@@ -125,19 +127,21 @@ describe('ZK Tests', () => {
 			// ensure redaction fn kinda works at least
 			expect(redactedPlaintext).not.toEqual(plaintextArr)
 
-			const total = await crypto.authenticatedEncrypt(
-				alg,
+			const { ciphertext, iv } = await encryptWrappedRecord(
+				plaintextArr,
 				{
 					key: encKey,
-					iv,
-					data: Buffer.from(plaintext, 'ascii'),
-					aead: Buffer.alloc(0),
+					iv: fixedIv,
+					recordNumber: 0,
+					recordHeaderOpts: {
+						type: 'WRAPPED_RECORD'
+					},
+					cipherSuite,
+					version: cipherSuite.includes('ECDHE_')
+						? 'TLS1_2'
+						: 'TLS1_3',
 				}
 			)
-			const ciphertext = Buffer.concat([
-				total.ciphertext,
-				total.authTag
-			])
 
 			const packet: CompleteTLSPacket = {
 				packet: {
@@ -168,7 +172,7 @@ describe('ZK Tests', () => {
 
 			const x = await verifyZkPacket(
 				{
-					ciphertext: getPureCiphertext(ciphertext, cipherSuite),
+					ciphertext,
 					zkReveal,
 					logger,
 					cipherSuite,

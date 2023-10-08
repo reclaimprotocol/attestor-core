@@ -20,6 +20,10 @@ import { isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from './re
 type GenerateZKChunkProofOpts = {
 	key: Uint8Array
 	iv: Uint8Array
+	/**
+	 * ciphertext obtained from the TLS packet
+	 * includes authTag, record IV, and ciphertext
+	 */
 	ciphertext: Uint8Array
 	redactedPlaintext: Uint8Array
 	offsetChunks: number
@@ -203,6 +207,8 @@ export async function verifyZkPacket(
 	const algorithm = getAlgorithmForCipherSuite(cipherSuite)
 	const operator = zkOperators?.[algorithm]
 		|| await makeDefaultZkOperator(algorithm, logger)
+
+	ciphertext = getPureCiphertext(ciphertext, cipherSuite)
 	/**
 	 * to verify if the user has given us the correct redacted plaintext,
 	 * and isn't providing plaintext that they haven't proven they have
