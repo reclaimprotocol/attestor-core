@@ -1,5 +1,5 @@
 import { CommonTransport } from '@reclaimprotocol/common-grpc-web-transport'
-import { areUint8ArraysEqual, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
+import { areUint8ArraysEqual, CipherSuite, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 import { createChannel, createClient } from 'nice-grpc-web'
 import { ReclaimWitnessClient, ReclaimWitnessDefinition, TLSReceipt, TranscriptMessageSenderType } from '../proto/api'
 import { Logger } from '../types'
@@ -81,20 +81,31 @@ export function gunzipSync(buf: Uint8Array): Uint8Array {
 }
 
 /**
+ * Fetch the ZK algorithm for the specified cipher suite
+ */
+export function getZkAlgorithmForCipherSuite(cipherSuite: CipherSuite) {
+	if(cipherSuite.includes('CHACHA20')) {
+		return 'chacha20'
+	}
+
+	if(cipherSuite.includes('AES_256_GCM')) {
+		return 'aes-256-ctr'
+	}
+
+	throw new Error(`${cipherSuite} not supported for ZK ops`)
+}
+
+/**
  * Get the pure ciphertext without any MAC,
  * or authentication tag,
  * @param content content w/o header
  */
 export function getPureCiphertext(
 	content: Uint8Array,
-	cipherSuite: keyof typeof SUPPORTED_CIPHER_SUITE_MAP
+	cipherSuite: CipherSuite
 ) {
-	if(
-		!cipherSuite.includes('CHACHA20')
-		&& !cipherSuite.includes('GCM')
-	) {
-		throw new Error(`unsupported cipher suite: ${cipherSuite}`)
-	}
+	// assert that the cipher suite is supported
+	getZkAlgorithmForCipherSuite(cipherSuite)
 
 	// 16 => auth tag length
 	content = content.slice(0, -16)

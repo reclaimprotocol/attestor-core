@@ -8,12 +8,12 @@ import {
 	ZKOperator,
 } from '@reclaimprotocol/circom-symmetric-crypto'
 import { detectEnvironment } from '@reclaimprotocol/common-grpc-web-transport'
-import { crypto, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
+import { CipherSuite, crypto } from '@reclaimprotocol/tls'
 import PQueue from 'p-queue'
 import { DEFAULT_REMOTE_ZK_PARAMS, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from '../config'
 import { FinaliseSessionRequest_BlockRevealZk as ZKReveal, FinaliseSessionRequest_ZKProof as ZKProof } from '../proto/api'
 import { CompleteTLSPacket, Logger } from '../types'
-import { getPureCiphertext } from './generics'
+import { getPureCiphertext, getZkAlgorithmForCipherSuite } from './generics'
 import { logger as LOGGER } from './logger'
 import { isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from './redactions'
 
@@ -45,7 +45,7 @@ type PrepareZKProofsOpts = {
 } & PrepareZKProofsBaseOpts
 
 type ZKVerifyOpts = {
-	cipherSuite: keyof typeof SUPPORTED_CIPHER_SUITE_MAP
+	cipherSuite: CipherSuite
 	ciphertext: Uint8Array
 	zkReveal: ZKReveal
 	logger?: Logger
@@ -72,7 +72,7 @@ export function makeZkProofGenerator(
 	return {
 		async generateProof(
 			packet: CompleteTLSPacket,
-			cipherSuite: keyof typeof SUPPORTED_CIPHER_SUITE_MAP
+			cipherSuite: CipherSuite
 		): Promise<ZKReveal> {
 			if(packet.reveal?.type !== 'zk') {
 				throw new Error('only partial reveals are supported')
@@ -88,7 +88,7 @@ export function makeZkProofGenerator(
 				)
 			}
 
-			const alg = getAlgorithmForCipherSuite(cipherSuite)
+			const alg = getZkAlgorithmForCipherSuite(cipherSuite)
 			const chunkSizeBytes = getChunkSizeBytes(alg)
 
 			const {
@@ -204,7 +204,7 @@ export async function verifyZkPacket(
 	}
 
 	const { proofs } = zkReveal
-	const algorithm = getAlgorithmForCipherSuite(cipherSuite)
+	const algorithm = getZkAlgorithmForCipherSuite(cipherSuite)
 	const operator = zkOperators?.[algorithm]
 		|| await makeDefaultZkOperator(algorithm, logger)
 
@@ -275,18 +275,6 @@ export async function verifyZkPacket(
 	)
 
 	return { redactedPlaintext: realRedactedPlaintext }
-}
-
-function getAlgorithmForCipherSuite(cipherSuite: keyof typeof SUPPORTED_CIPHER_SUITE_MAP) {
-	if(cipherSuite.includes('CHACHA20')) {
-		return 'chacha20'
-	}
-
-	if(cipherSuite.includes('AES_256_GCM')) {
-		return 'aes-256-ctr'
-	}
-
-	throw new Error(`${cipherSuite} not supported for ZK ops`)
 }
 
 function getChunkSizeBytes(alg: EncryptionAlgorithm) {

@@ -9,7 +9,7 @@ import {
 	verifyZkPacket
 } from '../utils'
 
-const ZK_CIPHER_SUITES: (keyof typeof SUPPORTED_CIPHER_SUITE_MAP)[] = [
+const ZK_CIPHER_SUITES: (CipherSuite)[] = [
 	'TLS_CHACHA20_POLY1305_SHA256',
 	'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384'
 ]

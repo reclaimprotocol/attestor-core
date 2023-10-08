@@ -1,10 +1,10 @@
-import { concatenateUint8Arrays, crypto, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
+import { CipherSuite, concatenateUint8Arrays, crypto } from '@reclaimprotocol/tls'
 import { FinaliseSessionRequest_Block as PacketToReveal } from '../proto/api'
 import { CompleteTLSPacket, Logger } from '../types'
 import { makeZkProofGenerator, PrepareZKProofsBaseOpts } from './zk'
 
 type PreparePacketsForRevealOpts = {
-	cipherSuite: keyof typeof SUPPORTED_CIPHER_SUITE_MAP
+	cipherSuite: CipherSuite
 	logger: Logger
 } & PrepareZKProofsBaseOpts
 

@@ -1,5 +1,5 @@
 import { detectEnvironment } from '@reclaimprotocol/common-grpc-web-transport'
-import { makeTLSClient, PACKET_TYPE, SUPPORTED_CIPHER_SUITE_MAP, SUPPORTED_NAMED_CURVES, TLSConnectionOptions, TLSPresharedKey, TLSSessionTicket } from '@reclaimprotocol/tls'
+import { CipherSuite, makeTLSClient, PACKET_TYPE, SUPPORTED_NAMED_CURVES, TLSConnectionOptions, TLSPresharedKey, TLSSessionTicket } from '@reclaimprotocol/tls'
 import { InitialiseSessionRequest, PullFromSessionResponse, PushToSessionRequest, ReclaimWitnessClient, TranscriptMessageSenderType, WitnessVersion } from '../proto/api'
 import { ArraySlice, CompleteTLSPacket, Logger } from '../types'
 import { getBlocksToReveal, logger as MAIN_LOGGER, PrepareZKProofsBaseOpts, redactSlices } from '../utils'
@@ -35,7 +35,7 @@ type ServerAppDataPacket = { plaintext: Uint8Array, index: number }
 
 // we only support chacha20-poly1305 for API sessions
 // that need ZK proofs
-const ZK_CIPHER_SUITES: (keyof typeof SUPPORTED_CIPHER_SUITE_MAP)[]
+const ZK_CIPHER_SUITES: CipherSuite[]
 	= [
 		// chacha-20
 		'TLS_CHACHA20_POLY1305_SHA256',
