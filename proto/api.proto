@@ -20,6 +20,7 @@ enum ServiceSignatureType {
 enum WitnessVersion {
 	WITNESS_VERSION_UNKNOWN = 0;
 	WITNESS_VERSION_1_0_0 = 1;
+	WITNESS_VERSION_1_1_0 = 2;
 }
 
 enum TLSVersion {
@@ -31,6 +32,8 @@ enum TLSVersion {
 message TLSPacket {
 	bytes recordHeader = 1;
 	bytes content = 2;
+	/** @deprecated provide authenticationTag in 'content' */
+	bytes authenticationTag = 3;
 }
 
 message TranscriptMessage {
@@ -154,7 +157,7 @@ message PushToSessionRequest {
 	 * messages to push, specify in the order
 	 * to be sent to the server
 	 */
-	TLSPacket message = 2;
+	repeated TLSPacket messages = 2;
 }
 
 message PushToSessionResponse {
@@ -189,6 +192,11 @@ message FinaliseSessionRequest {
 	repeated Block revealBlocks = 2;
 
 	message Block {
+		/**
+		 * auth tag of the block to reveal
+		 * @deprecated specify block using index
+		 */
+		bytes authTag = 1;
 		BlockRevealDirect directReveal = 4;
 		BlockRevealZk zkReveal = 5;
 		/**

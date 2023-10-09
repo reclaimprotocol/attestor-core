@@ -36,7 +36,8 @@ export async function preparePacketsForReveal(
 					iv: packet.ctx.fixedIv,
 					recordNumber: packet.ctx.recordNumber,
 				},
-				zkReveal: undefined
+				zkReveal: undefined,
+				authTag: new Uint8Array(0)
 			})
 			break
 		case 'zk':
@@ -56,7 +57,8 @@ export async function preparePacketsForReveal(
 				packetsToReveal.push({
 					index: packet.index,
 					directReveal: undefined,
-					zkReveal
+					zkReveal,
+					authTag: new Uint8Array(0)
 				})
 			})())
 			break

@@ -84,6 +84,7 @@ export function serviceSignatureTypeToJSON(object: ServiceSignatureType): string
 export enum WitnessVersion {
   WITNESS_VERSION_UNKNOWN = 0,
   WITNESS_VERSION_1_0_0 = 1,
+  WITNESS_VERSION_1_1_0 = 2,
   UNRECOGNIZED = -1,
 }
 
@@ -95,6 +96,9 @@ export function witnessVersionFromJSON(object: any): WitnessVersion {
     case 1:
     case "WITNESS_VERSION_1_0_0":
       return WitnessVersion.WITNESS_VERSION_1_0_0;
+    case 2:
+    case "WITNESS_VERSION_1_1_0":
+      return WitnessVersion.WITNESS_VERSION_1_1_0;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -108,6 +112,8 @@ export function witnessVersionToJSON(object: WitnessVersion): string {
       return "WITNESS_VERSION_UNKNOWN";
     case WitnessVersion.WITNESS_VERSION_1_0_0:
       return "WITNESS_VERSION_1_0_0";
+    case WitnessVersion.WITNESS_VERSION_1_1_0:
+      return "WITNESS_VERSION_1_1_0";
     case WitnessVersion.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -156,6 +162,8 @@ export function tLSVersionToJSON(object: TLSVersion): string {
 export interface TLSPacket {
   recordHeader: Uint8Array;
   content: Uint8Array;
+  /** @deprecated provide authenticationTag in 'content' */
+  authenticationTag: Uint8Array;
 }
 
 export interface TranscriptMessage {
@@ -281,7 +289,7 @@ export interface PushToSessionRequest {
    * messages to push, specify in the order
    * to be sent to the server
    */
-  message: TLSPacket | undefined;
+  messages: TLSPacket[];
 }
 
 export interface PushToSessionResponse {
@@ -319,6 +327,11 @@ export interface FinaliseSessionRequest {
 }
 
 export interface FinaliseSessionRequest_Block {
+  /**
+   * auth tag of the block to reveal
+   * @deprecated specify block using index
+   */
+  authTag: Uint8Array;
   directReveal: FinaliseSessionRequest_BlockRevealDirect | undefined;
   zkReveal:
     | FinaliseSessionRequest_BlockRevealZk
@@ -377,7 +390,7 @@ export interface FinaliseSessionResponse {
 }
 
 function createBaseTLSPacket(): TLSPacket {
-  return { recordHeader: new Uint8Array(0), content: new Uint8Array(0) };
+  return { recordHeader: new Uint8Array(0), content: new Uint8Array(0), authenticationTag: new Uint8Array(0) };
 }
 
 export const TLSPacket = {
@@ -387,6 +400,9 @@ export const TLSPacket = {
     }
     if (message.content.length !== 0) {
       writer.uint32(18).bytes(message.content);
+    }
+    if (message.authenticationTag.length !== 0) {
+      writer.uint32(26).bytes(message.authenticationTag);
     }
     return writer;
   },
@@ -412,6 +428,13 @@ export const TLSPacket = {
 
           message.content = reader.bytes();
           continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.authenticationTag = reader.bytes();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -425,6 +448,9 @@ export const TLSPacket = {
     return {
       recordHeader: isSet(object.recordHeader) ? bytesFromBase64(object.recordHeader) : new Uint8Array(0),
       content: isSet(object.content) ? bytesFromBase64(object.content) : new Uint8Array(0),
+      authenticationTag: isSet(object.authenticationTag)
+        ? bytesFromBase64(object.authenticationTag)
+        : new Uint8Array(0),
     };
   },
 
@@ -436,6 +462,9 @@ export const TLSPacket = {
     if (message.content.length !== 0) {
       obj.content = base64FromBytes(message.content);
     }
+    if (message.authenticationTag.length !== 0) {
+      obj.authenticationTag = base64FromBytes(message.authenticationTag);
+    }
     return obj;
   },
 
@@ -446,6 +475,7 @@ export const TLSPacket = {
     const message = createBaseTLSPacket();
     message.recordHeader = object.recordHeader ?? new Uint8Array(0);
     message.content = object.content ?? new Uint8Array(0);
+    message.authenticationTag = object.authenticationTag ?? new Uint8Array(0);
     return message;
   },
 };
@@ -1492,7 +1522,7 @@ export const InitialiseSessionResponse = {
 };
 
 function createBasePushToSessionRequest(): PushToSessionRequest {
-  return { sessionId: "", message: undefined };
+  return { sessionId: "", messages: [] };
 }
 
 export const PushToSessionRequest = {
@@ -1500,8 +1530,8 @@ export const PushToSessionRequest = {
     if (message.sessionId !== "") {
       writer.uint32(10).string(message.sessionId);
     }
-    if (message.message !== undefined) {
-      TLSPacket.encode(message.message, writer.uint32(18).fork()).ldelim();
+    for (const v of message.messages) {
+      TLSPacket.encode(v!, writer.uint32(18).fork()).ldelim();
     }
     return writer;
   },
@@ -1525,7 +1555,7 @@ export const PushToSessionRequest = {
             break;
           }
 
-          message.message = TLSPacket.decode(reader, reader.uint32());
+          message.messages.push(TLSPacket.decode(reader, reader.uint32()));
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -1539,7 +1569,7 @@ export const PushToSessionRequest = {
   fromJSON(object: any): PushToSessionRequest {
     return {
       sessionId: isSet(object.sessionId) ? String(object.sessionId) : "",
-      message: isSet(object.message) ? TLSPacket.fromJSON(object.message) : undefined,
+      messages: Array.isArray(object?.messages) ? object.messages.map((e: any) => TLSPacket.fromJSON(e)) : [],
     };
   },
 
@@ -1548,8 +1578,8 @@ export const PushToSessionRequest = {
     if (message.sessionId !== "") {
       obj.sessionId = message.sessionId;
     }
-    if (message.message !== undefined) {
-      obj.message = TLSPacket.toJSON(message.message);
+    if (message.messages?.length) {
+      obj.messages = message.messages.map((e) => TLSPacket.toJSON(e));
     }
     return obj;
   },
@@ -1560,9 +1590,7 @@ export const PushToSessionRequest = {
   fromPartial(object: DeepPartial<PushToSessionRequest>): PushToSessionRequest {
     const message = createBasePushToSessionRequest();
     message.sessionId = object.sessionId ?? "";
-    message.message = (object.message !== undefined && object.message !== null)
-      ? TLSPacket.fromPartial(object.message)
-      : undefined;
+    message.messages = object.messages?.map((e) => TLSPacket.fromPartial(e)) || [];
     return message;
   },
 };
@@ -1951,11 +1979,14 @@ export const FinaliseSessionRequest = {
 };
 
 function createBaseFinaliseSessionRequest_Block(): FinaliseSessionRequest_Block {
-  return { directReveal: undefined, zkReveal: undefined, index: 0 };
+  return { authTag: new Uint8Array(0), directReveal: undefined, zkReveal: undefined, index: 0 };
 }
 
 export const FinaliseSessionRequest_Block = {
   encode(message: FinaliseSessionRequest_Block, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.authTag.length !== 0) {
+      writer.uint32(10).bytes(message.authTag);
+    }
     if (message.directReveal !== undefined) {
       FinaliseSessionRequest_BlockRevealDirect.encode(message.directReveal, writer.uint32(34).fork()).ldelim();
     }
@@ -1975,6 +2006,13 @@ export const FinaliseSessionRequest_Block = {
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.authTag = reader.bytes();
+          continue;
         case 4:
           if (tag !== 34) {
             break;
@@ -2007,6 +2045,7 @@ export const FinaliseSessionRequest_Block = {
 
   fromJSON(object: any): FinaliseSessionRequest_Block {
     return {
+      authTag: isSet(object.authTag) ? bytesFromBase64(object.authTag) : new Uint8Array(0),
       directReveal: isSet(object.directReveal)
         ? FinaliseSessionRequest_BlockRevealDirect.fromJSON(object.directReveal)
         : undefined,
@@ -2017,6 +2056,9 @@ export const FinaliseSessionRequest_Block = {
 
   toJSON(message: FinaliseSessionRequest_Block): unknown {
     const obj: any = {};
+    if (message.authTag.length !== 0) {
+      obj.authTag = base64FromBytes(message.authTag);
+    }
     if (message.directReveal !== undefined) {
       obj.directReveal = FinaliseSessionRequest_BlockRevealDirect.toJSON(message.directReveal);
     }
@@ -2034,6 +2076,7 @@ export const FinaliseSessionRequest_Block = {
   },
   fromPartial(object: DeepPartial<FinaliseSessionRequest_Block>): FinaliseSessionRequest_Block {
     const message = createBaseFinaliseSessionRequest_Block();
+    message.authTag = object.authTag ?? new Uint8Array(0);
     message.directReveal = (object.directReveal !== undefined && object.directReveal !== null)
       ? FinaliseSessionRequest_BlockRevealDirect.fromPartial(object.directReveal)
       : undefined;

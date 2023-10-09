@@ -114,10 +114,13 @@ export const makeAPITLSClient = ({
 
 			const req: PushToSessionRequest = {
 				sessionId,
-				message: {
-					recordHeader: packet.header,
-					content: packet.content,
-				}
+				messages: [
+					{
+						recordHeader: packet.header,
+						content: packet.content,
+						authenticationTag: new Uint8Array(0),
+					}
+				]
 			}
 			const res = await client.pushToSession(req)
 
@@ -170,7 +173,7 @@ export const makeAPITLSClient = ({
 			const pullResult = await client.pullFromSession(
 				{
 					sessionId,
-					version: WitnessVersion.WITNESS_VERSION_1_0_0
+					version: WitnessVersion.WITNESS_VERSION_1_1_0,
 				},
 				{ signal: pullFromSessionAbort?.signal }
 			)
