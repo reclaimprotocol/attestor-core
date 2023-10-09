@@ -3,7 +3,7 @@
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
 import { gunzipSync } from '../../utils'
-import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
+import { getCompleteHttpResponseFromReceipt, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
 
 
 // params for the request that will be publicly available
@@ -73,7 +73,7 @@ const lichessUsername: Provider<LichessUserParams, LichessLoginSecretParams> = {
 
 		// parse the HTTP request & check
 		// the method, URL, headers, etc. match what we expect
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== 'get') {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
@@ -82,9 +82,7 @@ const lichessUsername: Provider<LichessUserParams, LichessLoginSecretParams> = {
 			throw new Error(`Invalid path: ${req.url}`)
 		}
 
-		const res = getCompleteHttpResponseFromTranscript(
-			receipt.transcript
-		)
+		const res = getCompleteHttpResponseFromReceipt(receipt)
 
 		if(res.statusCode === 303) {
 			throw new Error(`Invalid Login: ${res.statusCode} received. Try checking cookies.`)

@@ -4,7 +4,5 @@ node_modules
 lib
 .DS_Store
 *.LICENSE.txt
-browser/circuit.wasm
-browser/circuit.zkey
-browser/reclaim-witness.min.js
+browser/resources
 .env

@@ -8,7 +8,7 @@
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
 import { uint8ArrayToStr } from '../utils'
-import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
+import { getCompleteHttpResponseFromReceipt, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 type InstagramPostsTypeParams = {
 	igCDNFileNames: string[] // list of CDN filenames
@@ -94,7 +94,7 @@ const instagramUserWeekPost: Provider<InstagramPostsTypeParams, InstagramPostsTy
 
 		// parse the HTTP request & check
 		// the method, URL, headers, etc. match what we expect
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== METHOD.toLowerCase()) {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
@@ -112,7 +112,7 @@ const instagramUserWeekPost: Provider<InstagramPostsTypeParams, InstagramPostsTy
 		}
 
 		// now we parse the HTTP response
-		const res = getCompleteHttpResponseFromTranscript(receipt.transcript)
+		const res = getCompleteHttpResponseFromReceipt(receipt)
 		if(res.statusCode !== 200) {
 			throw new Error(`Invalid status code: ${res.statusCode}`)
 		}

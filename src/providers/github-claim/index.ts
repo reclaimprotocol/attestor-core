@@ -2,7 +2,7 @@ import { DEFAULT_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { Provider } from '../../types'
 import { uint8ArrayToStr } from '../../utils'
 import {
-	getCompleteHttpResponseFromTranscript,
+	getCompleteHttpResponseFromReceipt,
 	getHttpRequestHeadersFromTranscript,
 } from '../../utils/http-parser'
 import {
@@ -93,7 +93,7 @@ const makeGithubProvider = <T extends GithubClaimType>() => <Provider<GithubPara
 
 		// parse the HTTP request & check
 		// the method, URL, headers, etc. match what we expect
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== METHOD.toLowerCase()) {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
@@ -113,7 +113,7 @@ const makeGithubProvider = <T extends GithubClaimType>() => <Provider<GithubPara
 		// now we parse the HTTP response & check
 		// if the emailAddress returned by the API
 		// matches the parameters the user provided
-		const res = getCompleteHttpResponseFromTranscript(receipt.transcript)
+		const res = getCompleteHttpResponseFromReceipt(receipt)
 
 		if(!res.headers['content-type']?.startsWith('application/json')) {
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)

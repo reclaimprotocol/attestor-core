@@ -5,7 +5,7 @@ import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
 import { gunzipSync, uint8ArrayToStr } from '../../utils'
 import {
-	getCompleteHttpResponseFromTranscript,
+	getCompleteHttpResponseFromReceipt,
 	getHttpRequestHeadersFromTranscript,
 } from '../../utils/http-parser'
 
@@ -71,7 +71,7 @@ const UidaiAadhaarUid: Provider<UidaiParams, UidaiSecretParams> = {
 
 		// parse the HTTP request & check
 		// the method, URL, headers, etc. match what we expect
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== 'post') {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
@@ -80,7 +80,7 @@ const UidaiAadhaarUid: Provider<UidaiParams, UidaiSecretParams> = {
 			throw new Error(`Invalid path: ${req.url}`)
 		}
 
-		const res = getCompleteHttpResponseFromTranscript(receipt.transcript)
+		const res = getCompleteHttpResponseFromReceipt(receipt)
 
 		if(res.statusCode === 303) {
 			throw new Error(

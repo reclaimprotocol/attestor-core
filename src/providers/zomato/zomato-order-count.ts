@@ -3,7 +3,7 @@
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
 import { gunzipSync } from '../../utils'
-import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
+import { getCompleteHttpResponseFromReceipt, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
 
 
 // params for the request that will be publicly available
@@ -66,7 +66,7 @@ const zomatoOrders: Provider<ZomatoOrderParams, ZomatoLoginSecretParams> = {
 
 		// parse the HTTP request & check
 		// the method, URL, headers, etc. match what we expect
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== 'get') {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
@@ -75,9 +75,7 @@ const zomatoOrders: Provider<ZomatoOrderParams, ZomatoLoginSecretParams> = {
 			throw new Error(`Invalid path: ${req.url}`)
 		}
 
-		const res = getCompleteHttpResponseFromTranscript(
-			receipt.transcript
-		)
+		const res = getCompleteHttpResponseFromReceipt(receipt)
 
 		if(!res.headers['content-type']?.startsWith('text/html')) {
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)

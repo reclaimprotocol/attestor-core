@@ -1,6 +1,6 @@
-import { areUint8ArraysEqual, concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
+import { concatenateUint8Arrays, CONTENT_TYPE_MAP, PACKET_TYPE, strToUint8Array } from '@reclaimprotocol/tls'
 import type { IncomingHttpHeaders } from 'http'
-import { TLSReceipt, TranscriptMessageSenderType } from '../proto/api'
+import { TLSReceipt, TLSVersion, TranscriptMessageSenderType } from '../proto/api'
 import { ArraySlice } from '../types'
 import { findIndexInUint8Array, uint8ArrayToStr } from './generics'
 import { REDACTION_CHAR_CODE } from './redactions'
@@ -37,9 +37,10 @@ type HttpResponse = {
 	chunks?: ArraySlice[]
 }
 
-export const CLIENT_CERTIFICATE_RESPONSE_CIPHERTEXT_SIZE = 37
-
-const HTTP_REQ_PREFIX = strToUint8Array('HTTP/')
+type ApplicationMessage = {
+	data: Uint8Array
+	sender: TranscriptMessageSenderType
+}
 
 const DEFAULT_REDACTION_DATA = new Uint8Array(4)
 	.fill(REDACTION_CHAR_CODE)
@@ -126,10 +127,6 @@ export function makeHttpResponseParser() {
 							continue
 						}
 
-						if(res.complete) {
-							throw new Error('got more data after response was complete')
-						}
-
 						const chunkSize = Number.parseInt(line, 16)
 						// if chunk size is 0, we're done
 						if(!chunkSize) {
@@ -178,6 +175,10 @@ export function makeHttpResponseParser() {
 	}
 
 	function readBody() {
+		if(res.complete) {
+			throw new Error('got more data after response was complete')
+		}
+
 		if(!res.bodyStartIndex) {
 			res.bodyStartIndex = currentByteIdx
 		}
@@ -223,47 +224,12 @@ export function makeHttpResponseParser() {
  * Will throw an error if the response is incomplete or redacted.
  * @returns the http response
  */
-export function getCompleteHttpResponseFromTranscript(
-	transcript: TLSReceipt['transcript']
-) {
-	const serverResponseBlocks: Uint8Array[] = []
-	let srvResStartIdx = -1
-	for(let i = 0;i < transcript.length;i++) {
-		const msg = transcript[i]
-		const content = msg.message
-		if(
-			msg.senderType === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER
-			// does the message start with HTTP/ ?
-			&& areUint8ArraysEqual(
-				content.slice(0, HTTP_REQ_PREFIX.length),
-				HTTP_REQ_PREFIX
-			)
-		) {
-			srvResStartIdx = i
-			break
-		}
-	}
-
-	if(srvResStartIdx < 0) {
-		throw new Error('Could not find server response in transcript')
-	}
-
-	for(let i = srvResStartIdx;i < transcript.length;i++) {
-		const msg = transcript[i]
-		if(msg.senderType === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT) {
-			break
-		}
-
-		if(msg.redacted) {
-			break
-		}
-
-		serverResponseBlocks.push(msg.message)
-	}
-
+export function getCompleteHttpResponseFromReceipt(receipt: TLSReceipt) {
+	const applMsgs = extractApplicationDataMsgsFromTranscript(receipt)
+		.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER)
 	const resParser = makeHttpResponseParser()
-	for(const block of serverResponseBlocks) {
-		resParser.onChunk(block)
+	for(const { data } of applMsgs) {
+		resParser.onChunk(data)
 	}
 
 	if(!resParser.res.complete) {
@@ -274,43 +240,67 @@ export function getCompleteHttpResponseFromTranscript(
 }
 
 /**
+ * Finds all application data messages in a transcript
+ * and returns them. Removes the "contentType" suffix from the message.
+ * in TLS 1.3
+ */
+export function extractApplicationDataMsgsFromTranscript(
+	{ transcript, tlsVersion }: TLSReceipt,
+) {
+	const msgs: ApplicationMessage[] = []
+	for(const m of transcript) {
+		if(m.packetHeader[0] !== PACKET_TYPE.WRAPPED_RECORD) {
+			continue
+		}
+
+		let data: Uint8Array
+		// redacted msgs but with a valid packet header
+		// can be considered application data messages
+		if(m.redacted) {
+			if(!m.plaintextLength) {
+				data = DEFAULT_REDACTION_DATA
+			} else {
+				const len = tlsVersion === TLSVersion.TLS_VERSION_1_3
+					// remove content type suffix
+					? m.plaintextLength - 1
+					: m.plaintextLength
+				data = new Uint8Array(len)
+					.fill(REDACTION_CHAR_CODE)
+			}
+		// otherwise, we need to check the content type
+		} else if(tlsVersion === TLSVersion.TLS_VERSION_1_3) {
+			const contentType = m.message[m.message.length - 1]
+			if(contentType !== CONTENT_TYPE_MAP['APPLICATION_DATA']) {
+				continue
+			}
+
+			data = m.message.slice(0, -1)
+		} else {
+			data = m.message
+		}
+
+		msgs.push({ data, sender: m.senderType })
+	}
+
+	return msgs
+}
+
+/**
  * Read the HTTP request from a TLS receipt transcript.
  * Note: this currently does not read a body, only headers.
  *
  * @param transcript the transcript to read from
  * @returns the parsed HTTP request
  */
-export function getHttpRequestHeadersFromTranscript(
-	transcript: TLSReceipt['transcript']
-) {
-	// get the first provider message sent by the client
-	// to get the same, we need to skip the first two messages sent by the client
-	// (the client hello and the client finish)
-	let clientSentMsgs = transcript
-		.filter(m => m.senderType === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT)
-		.slice(2)
-
-
-	// case for client certificate request providers, they add an extra message
-	// check for the redacted message size to make sure it's a handshake one
-	// this is super hacky -- but well it works
-	if(clientSentMsgs[0].redacted && clientSentMsgs[0].message?.length === CLIENT_CERTIFICATE_RESPONSE_CIPHERTEXT_SIZE) {
-		clientSentMsgs = clientSentMsgs.slice(1)
-	}
+export function getHttpRequestHeadersFromTranscript(receipt: TLSReceipt) {
+	const applMsgs = extractApplicationDataMsgsFromTranscript(receipt)
+	const clientMsgs = applMsgs
+		.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT)
 
 	// if the first message is redacted, we can't parse it
 	// as we don't know what the request was
-	if(clientSentMsgs[0].redacted) {
+	if(clientMsgs[0].data[0] === REDACTION_CHAR_CODE) {
 		throw new Error('First client message request is redacted. Cannot parse')
-	}
-
-	const buffers: Uint8Array[] = []
-	for(const msg of clientSentMsgs) {
-		if(msg.redacted) {
-			buffers.push(DEFAULT_REDACTION_DATA)
-		} else {
-			buffers.push(msg.message)
-		}
 	}
 
 	const request: HttpRequest = {
@@ -319,8 +309,7 @@ export function getHttpRequestHeadersFromTranscript(
 		protocol: '',
 		headers: {},
 	}
-
-	let requestBuffer = concatenateUint8Arrays(buffers)
+	let requestBuffer = concatenateUint8Arrays(clientMsgs.map(m => m.data))
 	// keep reading lines until we get to the end of the headers
 	for(let line = getLine();typeof line !== 'undefined';line = getLine()) {
 		if(line === '') {

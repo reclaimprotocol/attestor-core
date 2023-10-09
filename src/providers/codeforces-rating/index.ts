@@ -4,7 +4,7 @@
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
 import { gunzipSync, uint8ArrayToStr } from '../../utils'
-import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
+import { getCompleteHttpResponseFromReceipt, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
 import { parseResponse } from './utils'
 
 
@@ -75,7 +75,7 @@ const CodeforcesRating: Provider<CodeforcesRatingParams, CodeforcesLoginSecretPa
 
 		// parse the HTTP request & check
 		// the method, URL, headers, etc. match what we expect
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== 'get') {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
@@ -84,9 +84,7 @@ const CodeforcesRating: Provider<CodeforcesRatingParams, CodeforcesLoginSecretPa
 			throw new Error(`Invalid path: ${req.url}`)
 		}
 
-		const res = getCompleteHttpResponseFromTranscript(
-			receipt.transcript
-		)
+		const res = getCompleteHttpResponseFromReceipt(receipt)
 
 		if(!res.headers['content-type']?.startsWith('text/html')) {
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)

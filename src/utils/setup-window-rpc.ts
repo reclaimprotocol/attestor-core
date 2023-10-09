@@ -21,14 +21,14 @@ export type WindowRPCRequest<N extends ProviderName = any> = ({
 } | {
 	type: 'extractHtmlElement'
 	request: {
-		html: string,
-		xpathExpression: string,
+		html: string
+		xpathExpression: string
 		contentsOnly: boolean
 	}
 } | {
 	type: 'extractJSONValueIndex'
 	request: {
-		json: string,
+		json: string
 		jsonPath: string
 	}
 }
