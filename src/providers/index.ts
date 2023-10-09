@@ -2,13 +2,13 @@ import bybitBalance from './bybit/bybit-balance'
 import bybitSpotPnl from './bybit/bybit-spot-pnl'
 import chessRating from './chess/chess-rating'
 import chessUser from './chess/chess-user'
-import googleDomains from './domain-google/domain-google'
 import ebayUser from './ebay/ebay-user'
 import irsAddress from './irs/irs-address'
 import irsName from './irs/irs-name'
 import kaggleUsername from './kaggle/kaggle-username'
 import lichessUsername from './lichess/lichess-username'
 import mediumFollowersCount from './medium/medium-follower-count'
+import nameBrightDomainList from './namebright/namebright-domains'
 import SoundcloudUsername from './soundcloud/soundcloud-username'
 import spotifyAccountType from './spotify/spotify-account-type'
 import spotifyEmail from './spotify/spotify-email'
@@ -123,7 +123,7 @@ export const providers = {
 	'swiggy-equal': swiggyUser,
 	'one-mg': oneMg,
 	'kaggle-username': kaggleUsername,
-	'domain-google': googleDomains,
+	'namebright-domains': nameBrightDomainList,
 }
 
 export type ProviderName = keyof typeof providers;

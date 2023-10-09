@@ -1,0 +1,10 @@
+{
+    "name": "namebright-domains",
+    "params": {
+        "domainList": "{{NAMEBRIGHT_DOMAINS}}"
+        
+    },
+    "secretParams": {
+        "authorisationHeader": "{{NAMEBRIGHT_TOKEN}}"
+    }
+}
