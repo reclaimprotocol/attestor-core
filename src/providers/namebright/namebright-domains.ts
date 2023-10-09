@@ -112,7 +112,6 @@ const nameBrightDomainList: Provider<NameBrightDomains, NameBrightSecretParams> 
 		}
 
 		try {
-			console.log(res)
 			const resBody = JSON.parse(uint8ArrayToStr(res.body))
 			if(resBody?.result.items.length && domainList === '') {
 				throw new Error(`Received Domain list does not match expected "${domainList}"`)
