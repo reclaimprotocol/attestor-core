@@ -1,3 +1,4 @@
-cp node_modules/@reclaimprotocol/circom-chacha20/resources/circuit_final.zkey ./browser/circuit.zkey
-cp node_modules/@reclaimprotocol/circom-chacha20/resources/circuit.wasm ./browser/circuit.wasm
+cp -r node_modules/@reclaimprotocol/circom-symmetric-crypto/resources/ ./browser/resources
+# remove r1cs files, we don't need them in prod
+rm -r ./browser/resources/*/*.r1cs
 npm exec webpack

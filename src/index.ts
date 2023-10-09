@@ -1,3 +1,4 @@
+export * as tls from '@reclaimprotocol/tls'
 export * from './api-client'
 export * from './config'
 export * from './types'

@@ -2,7 +2,7 @@ import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
 import { gunzipSync } from '../../utils'
 import {
-	getCompleteHttpResponseFromTranscript,
+	getCompleteHttpResponseFromReceipt,
 	getHttpRequestHeadersFromTranscript,
 } from '../../utils/http-parser'
 
@@ -75,12 +75,12 @@ const TinderMatchCount: Provider<
 
 		// parse the HTTP request & check
 		// the method, URL, headers, etc. match what we expect
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== 'get') {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
 
-		const res = getCompleteHttpResponseFromTranscript(receipt.transcript)
+		const res = getCompleteHttpResponseFromReceipt(receipt)
 		if(!res.headers['content-type']?.startsWith('application/json')) {
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)
 		}

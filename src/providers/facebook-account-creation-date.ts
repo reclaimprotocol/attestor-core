@@ -2,7 +2,7 @@ import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
 import { uint8ArrayToStr } from '../utils'
 import {
-	getCompleteHttpResponseFromTranscript,
+	getCompleteHttpResponseFromReceipt,
 	getHttpRequestHeadersFromTranscript,
 } from '../utils/http-parser'
 
@@ -58,7 +58,7 @@ const facebookAccountCreationDate: Provider<
 			throw new Error(`Invalid hostPort: ${receipt.hostPort}`)
 		}
 
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== 'get') {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
@@ -73,7 +73,7 @@ const facebookAccountCreationDate: Provider<
 		}
 
 		// Parse the HTTP response
-		const res = getCompleteHttpResponseFromTranscript(receipt.transcript)
+		const res = getCompleteHttpResponseFromReceipt(receipt)
 
 
 		if(res.statusCode !== 200) {

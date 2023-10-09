@@ -2,7 +2,7 @@ import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
 import { gunzipSync } from '../../utils'
 import {
-	getCompleteHttpResponseFromTranscript,
+	getCompleteHttpResponseFromReceipt,
 	getHttpRequestHeadersFromTranscript,
 } from '../../utils/http-parser'
 
@@ -63,12 +63,12 @@ const SwiggyTotalOrder: Provider<
 			throw new Error(`Invalid hostPort: ${receipt.hostPort}`)
 		}
 
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== 'get') {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
 
-		const res = getCompleteHttpResponseFromTranscript(receipt.transcript)
+		const res = getCompleteHttpResponseFromReceipt(receipt)
 		if(!res.headers['content-type']?.startsWith('application/json')) {
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)
 		}

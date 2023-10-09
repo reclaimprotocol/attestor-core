@@ -4,7 +4,7 @@
 
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
-import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
+import { getCompleteHttpResponseFromReceipt, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
 
 type SoundcloudUsernameParams = {
   username: string
@@ -52,7 +52,7 @@ const SoundcloudUsername: Provider<SoundcloudUsernameParams, SoundcloudUsernameS
 			throw new Error(`Invalid hostPort: ${receipt.hostPort}`)
 		}
 
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== 'get') {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
@@ -66,7 +66,7 @@ const SoundcloudUsername: Provider<SoundcloudUsernameParams, SoundcloudUsernameS
 		}
 
 		// Parse the HTTP response
-		const res = getCompleteHttpResponseFromTranscript(receipt.transcript)
+		const res = getCompleteHttpResponseFromReceipt(receipt)
 		if(res.statusCode !== 200) {
 			throw new Error(`Invalid status code: ${res.statusCode}`)
 		}

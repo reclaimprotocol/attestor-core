@@ -5,7 +5,7 @@
 import { DEFAULT_PORT } from '../config'
 import { Provider } from '../types'
 import { gunzipSync, uint8ArrayToStr } from '../utils'
-import { getCompleteHttpResponseFromTranscript, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
+import { getCompleteHttpResponseFromReceipt, getHttpRequestHeadersFromTranscript } from '../utils/http-parser'
 
 type WikipediaUserParams = {
 	userName: string
@@ -65,7 +65,7 @@ const wikipediaUser: Provider<WikipediaUserParams, WikipediaUserSecretParams> = 
 
 		// parse the HTTP request & check
 		// the method, URL, headers, etc. match what we expect
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== METHOD.toLowerCase()) {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
@@ -82,9 +82,7 @@ const wikipediaUser: Provider<WikipediaUserParams, WikipediaUserSecretParams> = 
 			throw new Error('Invalid connection header')
 		}
 
-		const res = getCompleteHttpResponseFromTranscript(
-			receipt.transcript
-		)
+		const res = getCompleteHttpResponseFromReceipt(receipt)
 
 		if(!res.headers['content-type']?.startsWith('text/html')) {
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)

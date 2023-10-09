@@ -136,7 +136,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 	},
 	assertValidProviderReceipt(receipt, params) {
-		const req = getHttpRequestHeadersFromTranscript(receipt.transcript)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
 		if(req.method !== params.method.toLowerCase()) {
 			throw new Error(`Invalid method: ${req.method}`)
 		}

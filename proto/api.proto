@@ -7,13 +7,6 @@ enum TranscriptMessageSenderType {
 	TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER = 2;
 }
 
-enum TlsCipherSuiteType {
-	TLS_CIPHER_SUITE_TYPE_UNKNOWN = 0;
-	TLS_CIPHER_SUITE_TYPE_AES_128_GCM_SHA256 = 1;
-	TLS_CIPHER_SUITE_TYPE_AES_256_GCM_SHA384 = 2;
-	TLS_CIPHER_SUITE_TYPE_CHACHA20_POLY1305_SHA256 = 3;
-}
-
 enum ServiceSignatureType {
 	SERVICE_SIGNATURE_TYPE_UNKNOWN = 0;
 	/**
@@ -30,9 +23,16 @@ enum WitnessVersion {
 	WITNESS_VERSION_1_1_0 = 2;
 }
 
+enum TLSVersion {
+	TLS_VERSION_UNKNOWN = 0;
+	TLS_VERSION_1_2 = 2;
+	TLS_VERSION_1_3 = 3;
+}
+
 message TLSPacket {
 	bytes recordHeader = 1;
 	bytes content = 2;
+	/** @deprecated provide authenticationTag in 'content' */
 	bytes authenticationTag = 3;
 }
 
@@ -41,6 +41,13 @@ message TranscriptMessage {
 	bool redacted = 2;
 	/** if redacted, message is empty */
 	bytes message = 3;
+	bytes packetHeader = 4;
+	/**
+	 * Length of the plaintext. Only
+	 * available for cipher schemes that
+	 * don't have padding
+	 */
+	uint32 plaintextLength = 5;
 }
 
 message ProviderClaimData {
@@ -81,12 +88,14 @@ message TLSReceipt {
 	 * in the order they were received
 	 */
 	repeated TranscriptMessage transcript = 3;
+	/** the version of TLS used */
+	TLSVersion tlsVersion = 5;
 	/** sign(proto(TLSReceipt w/o signature)) */
 	bytes signature = 4;
 }
 
 message GetVerifierPublicKeyRequest {
-
+	ServiceSignatureType signatureType = 1;
 }
 
 message GetVerifierPublicKeyResponse {
@@ -144,12 +153,16 @@ message InitialiseSessionResponse {
 message PushToSessionRequest {
 	/** opaque ID assigned to the client for this request */
 	string sessionId = 1;
-	/** messages to push */
+	/**
+	 * messages to push, specify in the order
+	 * to be sent to the server
+	 */
 	repeated TLSPacket messages = 2;
 }
 
 message PushToSessionResponse {
-	// empty response
+	/** index of the packet in the server */
+	uint32 index = 1;
 }
 
 message PullFromSessionRequest {
@@ -157,12 +170,13 @@ message PullFromSessionRequest {
 	string sessionId = 1;
 	/** indicate the version of the client */
 	WitnessVersion version = 2;
-
 }
 
 message PullFromSessionResponse {
 	/** messages pulled from the server */
 	TLSPacket message = 1;
+	/** index of the packet in the server */
+	uint32 index = 2;
 }
 
 message CancelSessionRequest {
@@ -176,19 +190,20 @@ message CancelSessionResponse {
 message FinaliseSessionRequest {
 	string sessionId = 1;
 	repeated Block revealBlocks = 2;
-	TlsCipherSuiteType cipherSuite = 3;
 
 	message Block {
-		/** auth tag of the block to reveal */
-		bytes authTag = 1;
 		/**
-		 * key & IV for direct reveal;
-		 * kept for backwards compatibility
+		 * auth tag of the block to reveal
+		 * @deprecated specify block using index
 		 */
-		bytes key = 2;
-		bytes iv = 3;
+		bytes authTag = 1;
 		BlockRevealDirect directReveal = 4;
 		BlockRevealZk zkReveal = 5;
+		/**
+		 * index of the block in the transcript.
+		 * (0 indexed -- including msgs from client & server)
+		 */
+		uint32 index = 6;
 	}
 
 	// direct reveal of the block via the key & IV
@@ -200,6 +215,11 @@ message FinaliseSessionRequest {
 		bytes key = 1;
 		/** IV for the block */
 		bytes iv = 2;
+		/**
+		 * used to generate IV in authenticated
+		 * cipher suites
+		 */
+		uint32 recordNumber = 3;
 	}
 
 	// partially or fully reveal the block via a zk proof

@@ -1,10 +1,8 @@
-import { strToUint8Array, TLSConnectionOptions } from '@reclaimprotocol/tls'
+import { strToUint8Array } from '@reclaimprotocol/tls'
 import { DEFAULT_PORT } from '../config'
-import { InitialiseSessionRequest, ReclaimWitnessClient } from '../proto/api'
 import { ProviderName, ProviderParams, providers, ProviderSecretParams } from '../providers'
-import { Logger } from '../types'
-import { logger as MAIN_LOGGER, makeHttpResponseParser, PrepareZKProofsBaseOpts } from '../utils'
-import { makeAPITLSClient } from './make-api-tls-client'
+import { logger as MAIN_LOGGER, makeHttpResponseParser } from '../utils'
+import { BaseAPIClientOptions, makeAPITLSClient } from './make-api-tls-client'
 
 export type GenerateProviderReceiptOptions<N extends ProviderName> = {
 	/** name of the provider to generate signed receipt for */
@@ -16,22 +14,15 @@ export type GenerateProviderReceiptOptions<N extends ProviderName> = {
 	 */
 	secretParams: ProviderSecretParams<N>
 	params: ProviderParams<N>
-	requestData?: Partial<InitialiseSessionRequest>
-	client: ReclaimWitnessClient
-	additionalConnectOpts?: TLSConnectionOptions
-	logger?: Logger
-} & PrepareZKProofsBaseOpts
+} & BaseAPIClientOptions
 
 export async function generateProviderReceipt<Name extends ProviderName>({
 	name,
 	secretParams,
 	params,
-	client,
-	requestData,
-	additionalConnectOpts,
 	logger,
-	zkOperator,
-	zkProofConcurrency
+	additionalConnectOpts,
+	...opts
 }: GenerateProviderReceiptOptions<Name>) {
 	logger = logger || MAIN_LOGGER
 	const provider = providers[name]
@@ -41,9 +32,11 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 		? provider.hostPort(params)
 		: provider.hostPort
 
-	const [host, port] = hostPort.split(':')
 
-	additionalConnectOpts = additionalConnectOpts || { }
+	additionalConnectOpts = {
+		...provider.additionalClientOptions || {},
+		...additionalConnectOpts,
+	}
 	if(provider.additionalClientOptions?.rootCAs) {
 		additionalConnectOpts.rootCAs = [
 			...(additionalConnectOpts.rootCAs || [ ]),
@@ -51,16 +44,14 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 		]
 	}
 
+	const [host, port] = hostPort.split(':')
 	const resParser = makeHttpResponseParser()
 	const apiClient = makeAPITLSClient({
 		host,
 		port: port ? +port : DEFAULT_PORT,
-		request: requestData,
-		client,
 		logger,
 		additionalConnectOpts,
-		zkOperator,
-		zkProofConcurrency,
+		...opts,
 		handleDataFromServer(data) {
 			resParser.onChunk(data)
 			if(resParser.res.complete) {
