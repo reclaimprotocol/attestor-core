@@ -1,15 +1,15 @@
-export const buildQueryString = (url: string, obj: Record<string, string>) => {
+export function sortedStringify(obj: any[]) {
+	if(obj && typeof obj === 'object') {
+		if(Array.isArray(obj)) {
+			return `[${obj.map(sortedStringify).join(',')}]`
+		}
 
-
-	const query = new URLSearchParams(obj).toString()
-	if(Object.keys(obj).length === 0) {
-		return url
+		return `{${Object.keys(obj).sort().map(key => `"${key}":${sortedStringify(obj[key])}`).join(',')}}`
 	}
 
-	return url + '?' + query
-}
+	if(typeof obj === 'string') {
+		return `"${obj}"`
+	}
 
-export const DEFAULT_QUERY_STRING = {
-	'page_number': '0',
-	'page_size': '6',
+	return String(obj)
 }
