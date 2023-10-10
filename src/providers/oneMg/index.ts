@@ -7,7 +7,7 @@ import {
 import { sortedStringify } from './utils'
 
 type OneOmgParams = {
-	userData: string;
+	userData: string
 };
 
 type OneMgSecretParams = {
