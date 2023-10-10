@@ -4,14 +4,14 @@ import {
 	getCompleteHttpResponseFromReceipt,
 	getHttpRequestHeadersFromTranscript,
 } from '../../utils/http-parser'
-import { buildQueryString, DEFAULT_QUERY_STRING } from './utils'
+import { sortedStringify } from './utils'
+
 type OneOmgParams = {
-  data: unknown[]
-  queryString: Record<string, string>
+	userData: string;
 };
 
 type OneMgSecretParams = {
-  session: string
+  cookieStr: string
 };
 
 const HOST = 'www.1mg.com'
@@ -23,35 +23,29 @@ const oneMg: Provider<OneOmgParams, OneMgSecretParams> = {
 	areValidParams(params): params is OneOmgParams {
 		return true
 	},
-	createRequest({ session }, { queryString }) {
-		const cookie = `session=${session};`
-
-		const requestPath = buildQueryString(PATH, {
-			...DEFAULT_QUERY_STRING,
-			...queryString,
-		})
+	createRequest({ cookieStr }) {
 
 		const data = [
-			`GET ${requestPath} HTTP/1.1`,
+			`GET ${PATH} HTTP/1.1`,
 			'Host: ' + HOST,
 			'accept: application/json, text/plain, */*',
-			`cookie: ${cookie}`,
+			`cookie: ${cookieStr}`,
 			'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
 			'\r\n',
 		].join('\r\n')
-		const cookieStartIndex = data.indexOf(cookie)
+		const cookieStartIndex = data.indexOf(cookieStr)
 
 		return {
 			data,
 			redactions: [
 				{
 					fromIndex: cookieStartIndex,
-					toIndex: cookieStartIndex + cookie.length,
+					toIndex: cookieStartIndex + cookieStr.length,
 				},
 			],
 		}
 	},
-	assertValidProviderReceipt(receipt, { data: dataParam }) {
+	assertValidProviderReceipt(receipt, { userData }) {
 		if(receipt.hostPort !== HOSTPORT) {
 			throw new Error(`Invalid hostPort: ${receipt.hostPort}`)
 		}
@@ -73,15 +67,15 @@ const oneMg: Provider<OneOmgParams, OneMgSecretParams> = {
 			)
 		}
 
-		let data: { orders: unknown }
 
 		try {
-			const newData = new Uint8Array(res.body)
-			const body = new TextDecoder().decode(newData)
+			const parsedRes = JSON.parse(res.body.toString())
+			const parsedClient = JSON.parse(userData)
 
-			data = JSON.parse(body) as { orders: unknown }
+			const sortedParsedRes = sortedStringify(parsedRes.orders)
+			const sortedParsedClient = sortedStringify(parsedClient.orders)
 
-			if(JSON.stringify(data.orders) !== JSON.stringify(dataParam)) {
+			if(sortedParsedRes !== sortedParsedClient) {
 				throw new Error('Invalid data')
 			}
 		} catch(error) {
