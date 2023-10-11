@@ -7,56 +7,65 @@ import { getCompleteHttpResponseFromReceipt, getHttpRequestHeadersFromTranscript
 
 // params for the request that will be publicly available
 // contains the domain list of the logged in user
-type NameBrightDomains = {
+type NameCheapDomains = {
 	domainList: string
 
 }
 
-// params required to generate the http request to NameBright
+// params required to generate the http request to NameCheap
 // these would contain fields that are to be hidden from the public,
 // including the witness
-type NameBrightSecretParams = {
+type NameCheapSecretParams = {
 	/** bearer token for authentication */
-	authorisationHeader: string
+	cookieStr: string
+	antiForgeryStr: string
 }
 
 // where to send the HTTP request
-const HOST = 'client.namebright.com'
+const HOST = 'ap.www.namecheap.com'
 const HOSTPORT = `${HOST}:${DEFAULT_PORT}`
 
 
 // what API to call
 const METHOD = 'POST'
-const PATH = '/SearchDomains'
+const PATH = '/Domains/GetDomainList'
 
-const nameBrightDomainList: Provider<NameBrightDomains, NameBrightSecretParams> = {
+const nameCheapDomainList: Provider<NameCheapDomains, NameCheapSecretParams> = {
 	hostPort: HOSTPORT,
-	areValidParams(params): params is NameBrightDomains {
+	areValidParams(params): params is NameCheapDomains {
 		return (
 			typeof params.domainList === 'string'
 		)
 	},
-	createRequest({ authorisationHeader }) {
+	createRequest({ cookieStr, antiForgeryStr }) {
 		// this is a simple http request construction.
 		// see https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages
 		const bodyVal = JSON.stringify({
-			sortBy:'domainName',
-			sortDirection:'Ascending'
+			gridStateModel:{
+				ServerChunkSize:1000,
+				LastAvailableChunkIndex:0,
+				IsLazyLoading:true,
+				TotalServerItemsCount:null
+			},
+			isOverViewPage:true,
 		})
 		const data = [
 			`${METHOD} ${PATH} HTTP/1.1`,
 			'Host: ' + HOST,
 			'accept: application/json, text/plain, */*',
 			'accept-language: en-GB,en-US;q=0.9,en;q=0.8',
-			'authorization: ' + authorisationHeader,
-			'Connection: close',
+			'cookie: ' + cookieStr,
 			'content-length: ' + bodyVal.length,
-			'content-type: application/json',
+			'Connection: close',
+			'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+			'content-type: application/json;charset=UTF-8',
+			'_nccompliance: ' + antiForgeryStr,
 			`\r\n${bodyVal}`
 		].join('\r\n')
 
 		// find the cookie string and redact it
-		const tokenStartIndex = data.indexOf(authorisationHeader)
+		const cookieStartIndex = data.indexOf(cookieStr)
+		const antiForgeryStartIndex = data.indexOf(antiForgeryStr)
 
 		return {
 			data,
@@ -64,8 +73,12 @@ const nameBrightDomainList: Provider<NameBrightDomains, NameBrightSecretParams> 
 			// should be added to this array
 			redactions: [
 				{
-					fromIndex: tokenStartIndex,
-					toIndex: tokenStartIndex + authorisationHeader.length
+					fromIndex: cookieStartIndex,
+					toIndex: cookieStartIndex + cookieStr.length
+				},
+				{
+					fromIndex: antiForgeryStartIndex,
+					toIndex: antiForgeryStartIndex + antiForgeryStr.length
 				}
 			]
 		}
@@ -112,20 +125,27 @@ const nameBrightDomainList: Provider<NameBrightDomains, NameBrightSecretParams> 
 		}
 
 		try {
-			const resBody = JSON.parse(uint8ArrayToStr(res.body))
-			if(resBody?.result.items.length && domainList === '') {
-				throw new Error(`Received Domain list does not match expected "${domainList}"`)
-			}
+			const resBodyStr = uint8ArrayToStr(res.body)
+			const pattern = /\"Data\":((.|\s)*?)\,\"Metadata\":/
+			const matchPattern = resBodyStr.match(pattern)
+			if(matchPattern) {
+				const regexPattern = /,{2,}/g
+				const replacedString = matchPattern[1].replace(regexPattern, ',')
+				const resBody = JSON.parse(replacedString)
+				if(resBody?.length) {
+					let extractedDomains = ''
+					for(var i = 0;i < resBody.length;i++) {
+						extractedDomains += (resBody[i][1]) + ','
+					}
 
-			let extractedDomains = ''
-			if(resBody?.result.items.length) {
-				for(var i = 0;i < resBody?.result.items.length;i++) {
-					extractedDomains += (resBody?.result.items[i].domainName) + ','
+					if(extractedDomains !== domainList) {
+						throw new Error(`Received Domain list ${extractedDomains} does not match expected "${domainList}"`)
+					}
+				} else if(resBody?.length === 0 && domainList !== '') {
+					throw new Error(`Received Domain list ${resBody} does not match`)
 				}
-			}
-
-			if(extractedDomains !== domainList) {
-				throw new Error(`Received Domain list ${extractedDomains} does not match expected "${domainList}"`)
+			} else {
+				throw new Error('Invalid response body from API')
 			}
 		} catch(error) {
 			throw new Error(error)
@@ -133,6 +153,6 @@ const nameBrightDomainList: Provider<NameBrightDomains, NameBrightSecretParams> 
 	},
 }
 
-export default nameBrightDomainList
+export default nameCheapDomainList
 
 
