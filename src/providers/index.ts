@@ -9,6 +9,7 @@ import kaggleUsername from './kaggle/kaggle-username'
 import lichessUsername from './lichess/lichess-username'
 import mediumFollowersCount from './medium/medium-follower-count'
 import nameBrightDomainList from './namebright/namebright-domains'
+import nameCheapDomainList from './namecheap/namecheap-domains'
 import SoundcloudUsername from './soundcloud/soundcloud-username'
 import spotifyAccountType from './spotify/spotify-account-type'
 import spotifyEmail from './spotify/spotify-email'
@@ -124,6 +125,7 @@ export const providers = {
 	'one-mg': oneMg,
 	'kaggle-username': kaggleUsername,
 	'namebright-domains': nameBrightDomainList,
+	'namecheap-domains': nameCheapDomainList,
 }
 
 export type ProviderName = keyof typeof providers;
