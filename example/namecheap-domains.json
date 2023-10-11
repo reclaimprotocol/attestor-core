@@ -1,11 +1,11 @@
 {
     "name": "namecheap-domains",
     "params": {
-        "domainList": "{{NAMEBRIGHT_DOMAINS}}"
+        "domainList": "{{NAMECHEAP_DOMAINS}}"
         
     },
     "secretParams": {
-        "cookieStr": "{{NAMEBRIGHT_COOKIE}}",
-        "antiForgeryStr": "{{NAMEBRIGHT_ANTI_FORGERY}}"
+        "cookieStr": "{{NAMECHEAP_COOKIE}}",
+        "antiForgeryStr": "{{NAMECHEAP_ANTI_FORGERY}}"
     }
 }

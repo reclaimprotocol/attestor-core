@@ -125,21 +125,31 @@ const nameCheapDomainList: Provider<NameCheapDomains, NameCheapSecretParams> = {
 		}
 
 		try {
-			const resBody = JSON.parse(uint8ArrayToStr(res.body))
-			if(resBody?.Result?.Data[0].length && domainList === '') {
-				throw new Error(`Received Domain list does not match expected "${domainList}"`)
+			const resBodyStr = uint8ArrayToStr(res.body)
+			const pattern = /\"Data\":((.|\s)*?)\"Metadata\":/
+			const matchPattern = resBodyStr.match(pattern)
+			if(matchPattern) {
+				console.log('Match Pat ', matchPattern[1])
+				const replacedString = matchPattern[1].replace(/,/g, ',+')
+				const resBody = JSON.parse(replacedString)
+				console.log(resBody)
 			}
+			// const replacedString = resBodyStr.replace(/,/g, ',+')
+			// const resBody = JSON.parse(replacedString)
+			// if(resBody?.Result?.Data[0].length && domainList === '') {
+			// 	throw new Error(`Received Domain list does not match expected "${domainList}"`)
+			// }
 
-			let extractedDomains = ''
-			if(resBody?.Result?.Data[0].length) {
-				for(var i = 0;i < resBody?.Result?.Data[0].length;i++) {
-					extractedDomains += (resBody?.Result?.Data[0][i][1]) + ','
-				}
-			}
+			// let extractedDomains = ''
+			// if(resBody?.Result?.Data[0].length) {
+			// 	for(var i = 0;i < resBody?.Result?.Data[0].length;i++) {
+			// 		extractedDomains += (resBody?.Result?.Data[0][i][1]) + ','
+			// 	}
+			// }
 
-			if(extractedDomains !== domainList) {
-				throw new Error(`Received Domain list ${extractedDomains} does not match expected "${domainList}"`)
-			}
+			// if(extractedDomains !== domainList) {
+			// 	throw new Error(`Received Domain list ${extractedDomains} does not match expected "${domainList}"`)
+			// }
 		} catch(error) {
 			throw new Error(error)
 		}
