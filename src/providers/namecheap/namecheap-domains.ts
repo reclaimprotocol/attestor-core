@@ -126,30 +126,27 @@ const nameCheapDomainList: Provider<NameCheapDomains, NameCheapSecretParams> = {
 
 		try {
 			const resBodyStr = uint8ArrayToStr(res.body)
-			const pattern = /\"Data\":((.|\s)*?)\"Metadata\":/
+			const pattern = /\"Data\":((.|\s)*?)\,\"Metadata\":/
 			const matchPattern = resBodyStr.match(pattern)
 			if(matchPattern) {
-				console.log('Match Pat ', matchPattern[1])
-				const replacedString = matchPattern[1].replace(/,/g, ',+')
+				const regexPattern = /,{2,}/g
+				const replacedString = matchPattern[1].replace(regexPattern, ',')
 				const resBody = JSON.parse(replacedString)
-				console.log(resBody)
+				if(resBody?.length) {
+					let extractedDomains = ''
+					for(var i = 0;i < resBody.length;i++) {
+						extractedDomains += (resBody[i][1]) + ','
+					}
+
+					if(extractedDomains !== domainList) {
+						throw new Error(`Received Domain list ${extractedDomains} does not match expected "${domainList}"`)
+					}
+				} else if(resBody?.length === 0 && domainList !== '') {
+					throw new Error(`Received Domain list ${resBody} does not match`)
+				}
+			} else {
+				throw new Error('Invalid response body from API')
 			}
-			// const replacedString = resBodyStr.replace(/,/g, ',+')
-			// const resBody = JSON.parse(replacedString)
-			// if(resBody?.Result?.Data[0].length && domainList === '') {
-			// 	throw new Error(`Received Domain list does not match expected "${domainList}"`)
-			// }
-
-			// let extractedDomains = ''
-			// if(resBody?.Result?.Data[0].length) {
-			// 	for(var i = 0;i < resBody?.Result?.Data[0].length;i++) {
-			// 		extractedDomains += (resBody?.Result?.Data[0][i][1]) + ','
-			// 	}
-			// }
-
-			// if(extractedDomains !== domainList) {
-			// 	throw new Error(`Received Domain list ${extractedDomains} does not match expected "${domainList}"`)
-			// }
 		} catch(error) {
 			throw new Error(error)
 		}

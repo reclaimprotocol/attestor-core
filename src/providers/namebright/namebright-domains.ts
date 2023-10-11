@@ -119,7 +119,6 @@ const nameBrightDomainList: Provider<NameBrightDomains, NameBrightSecretParams> 
 
 			let extractedDomains = ''
 			if(resBody?.result.items.length) {
-				console.log(resBody?.result.items)
 				for(var i = 0;i < resBody?.result.items.length;i++) {
 					extractedDomains += (resBody?.result.items[i].domainName) + ','
 				}
