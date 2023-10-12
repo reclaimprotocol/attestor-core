@@ -74,6 +74,8 @@ const oneMg: Provider<OneOmgParams, OneMgSecretParams> = {
 
 			const sortedParsedRes = sortedStringify(parsedRes.orders)
 			const sortedParsedClient = sortedStringify(parsedClient.orders)
+			console.log('sortedParsedRes', sortedParsedRes)
+			console.log('sortedParsedClient', sortedParsedClient)
 			if(sortedParsedRes !== sortedParsedClient) {
 				throw new Error('Invalid data')
 			}
