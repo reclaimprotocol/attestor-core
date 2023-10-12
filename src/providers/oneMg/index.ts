@@ -69,12 +69,11 @@ const oneMg: Provider<OneOmgParams, OneMgSecretParams> = {
 
 
 		try {
-			const parsedRes = JSON.parse(res.body.toString())
-			const parsedClient = JSON.parse(userData)
+			const parsedRes = JSON.parse(JSON.stringify((res.body.toString())))
+			const parsedClient = JSON.parse(JSON.stringify(userData))
 
 			const sortedParsedRes = sortedStringify(parsedRes.orders)
 			const sortedParsedClient = sortedStringify(parsedClient.orders)
-
 			if(sortedParsedRes !== sortedParsedClient) {
 				throw new Error('Invalid data')
 			}
