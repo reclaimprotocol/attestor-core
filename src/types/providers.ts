@@ -42,6 +42,9 @@ export interface Provider<Params extends { [_: string]: unknown }, SecretParams>
 	 * Eg. if the response is "hello my secret is xyz",
 	 * and you want to redact "xyz", you would return
 	 * [{start: 17, end: 20}]
+	 *
+	 * This is run on the client side, to selct which portions of
+	 * the server response to send to the witness
 	 * */
 	getResponseRedactions?(response: Uint8Array, params: Params): ArraySlice[]
 	/**

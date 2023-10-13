@@ -11,6 +11,7 @@ import { JSDOM } from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
 import { ArraySlice } from '../../types'
 import { makeHttpResponseParser } from '../../utils'
+import { HTTPProviderParams, HTTPProviderParamsV2 } from './types'
 
 export type JSONIndex = {
     start: number
@@ -190,4 +191,45 @@ export function parseHttpResponse(buff: Uint8Array) {
 	parser.onChunk(buff)
 	parser.streamEnded()
 	return parser.res
+}
+
+export function normaliseParamsToV2(params: HTTPProviderParams): HTTPProviderParamsV2 {
+	// is already v2
+	if('responseMatches' in params) {
+		return params
+	}
+
+	const matches: HTTPProviderParamsV2['responseMatches'] = []
+	const redactions: HTTPProviderParamsV2['responseRedactions'] = []
+	for(const rs of params.responseSelections) {
+		// if there is any response selection,
+		// map to a v2 response redaction
+		if(
+			rs.xPath || rs.jsonPath
+			|| (rs.responseMatch && params.useZK)
+		) {
+			redactions.push({
+				xPath: rs.xPath,
+				jsonPath: rs.jsonPath,
+				regex: rs.responseMatch
+			})
+		}
+
+		if(rs.responseMatch) {
+			matches.push({
+				type: 'regex',
+				value: rs.responseMatch
+			})
+		}
+	}
+
+	return {
+		...params,
+		responseMatches: matches,
+		responseRedactions: redactions
+	}
+}
+
+export function makeRegex(str: string) {
+	return new RegExp(str, 'sgi')
 }
