@@ -17,23 +17,32 @@ type CreateRequestResult = {
 /**
  * Generic interface for a provider that can be used to verify
  * claims on a TLS receipt
+ *
  * @notice "Params" are the parameters you want to claim against.
  * These would typically be found in the response body
+ *
  * @notice "SecretParams" are the parameters that are used to make the API request.
  * These must be redacted in the request construction in "createRequest" & cannot be viewed by anyone
  */
 export interface Provider<Params extends { [_: string]: unknown }, SecretParams> {
 	/**
-	 * host:port pairs considered valid for this provider;
+	 * host:port to connect to for this provider;
 	 * the protocol establishes a connection to the first one
-	 * when a request is received from a user
-	 * Eg. ["www.google.com:443"]
+	 * when a request is received from a user.
+	 *
+	 * Run on witness side when creating a new session
+	 *
+	 * Eg. "www.google.com:443", (p) => p.url.host
 	 * */
 	hostPort: string | ((params: Params) => string)
 
 	/** extra options to pass to the client like root CA certificates */
 	additionalClientOptions?: TLSConnectionOptions
-	/** check the parameters are valid */
+	/**
+	 * check the parameters are valid
+	 * Run client & witness side, to verify the parameters
+	 * are valid
+	 * */
 	areValidParams(params: { [_: string]: unknown }): params is Params
 	/** generate the raw request to be sent to through the TLS receipt */
 	createRequest(secretParams: SecretParams, params: Params): CreateRequestResult
@@ -51,6 +60,8 @@ export interface Provider<Params extends { [_: string]: unknown }, SecretParams>
 	 * verify a generated TLS receipt against given parameters
 	 * to ensure the receipt does contain the claims the
 	 * user is claiming to have
+	 *
+	 * This is run on the witness side.
 	 * @param receipt the TLS receipt to verify
 	 * @param params the parameters to verify the receipt against. Eg. `{"email": "abcd@gmail.com"}`
 	 * */
