@@ -72,6 +72,8 @@ export type HTTPProviderParamsV2 = {
 	 * portions are sent to the witness. The witness will only be able
 	 * to see the selected portions alongside the first line of the HTTP
 	 * response (i.e. "HTTP/1.1 200 OK")
+	 *
+	 * To disable any redactions, pass an empty array
 	 * */
     responseRedactions: {
 		/**
