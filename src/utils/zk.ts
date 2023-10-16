@@ -298,12 +298,23 @@ export function makeDefaultZkOperator(
 			'using zk operator'
 		)
 
-		zkOperators[algorithm] = isNode
-			? makeLocalSnarkJsZkOperator(algorithm, logger)
-			: makeRemoteSnarkJsZkOperator(
-				DEFAULT_REMOTE_ZK_PARAMS,
+		if(isNode) {
+			zkOperators[algorithm] = makeLocalSnarkJsZkOperator(
+				algorithm,
 				logger
 			)
+		} else {
+			const { zkeyUrl, circuitWasmUrl } = DEFAULT_REMOTE_ZK_PARAMS
+			zkOperators[algorithm] = makeRemoteSnarkJsZkOperator(
+				{
+					zkeyUrl: zkeyUrl
+						.replace('{algorithm}', algorithm),
+					circuitWasmUrl: circuitWasmUrl
+						.replace('{algorithm}', algorithm),
+				},
+				logger
+			)
+		}
 	}
 
 	return zkOperators[algorithm]!
