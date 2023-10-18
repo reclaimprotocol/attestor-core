@@ -1,0 +1,9 @@
+{
+    "name": "uber-rides",
+    "params": {
+        "rides": 171
+    },
+    "secretParams": {
+        "cookieStr": "{{UBER_COOKIES}}"
+    }
+}

@@ -15,6 +15,7 @@ import spotifyAccountType from './spotify/spotify-account-type'
 import spotifyEmail from './spotify/spotify-email'
 import spotifyUserName from './spotify/spotify-username'
 import stravaLastRun from './strava/strava-last-run'
+import uberRides from './uber/uber-rides'
 import UidaiAadhaarAddress from './uidai/uidai-address'
 import UidaiAadhaarDOB from './uidai/uidai-dob'
 import UidaiAadhaar from './uidai/uidai-name'
@@ -129,6 +130,7 @@ export const providers = {
 	'namebright-domains': nameBrightDomainList,
 	'namecheap-domains': nameCheapDomainList,
 	'strava-last-run': stravaLastRun,
+	'uber-rides': uberRides,
 }
 
 export type ProviderName = keyof typeof providers;
