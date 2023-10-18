@@ -3,7 +3,7 @@ import { wrapInHttpProvider } from '../http-provider/wrapper'
 // params for the request that will be publicly available
 // contains the rides taken by the logged in user
 type UberRides = {
-	rides: string
+	rides: number
 }
 
 // params required to generate the http request to uber
@@ -46,7 +46,7 @@ const uberRides = wrapInHttpProvider<UberRides, UberSecretParams>({
 	}),
 	areValidParams: (params): params is UberRides => {
 		return (
-			typeof params.rides === 'string'
+			typeof params.rides === 'number'
 		)
 	}
 })
