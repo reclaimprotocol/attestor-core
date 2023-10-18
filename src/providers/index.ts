@@ -14,6 +14,7 @@ import SoundcloudUsername from './soundcloud/soundcloud-username'
 import spotifyAccountType from './spotify/spotify-account-type'
 import spotifyEmail from './spotify/spotify-email'
 import spotifyUserName from './spotify/spotify-username'
+import stravaLastRun from './strava/strava-last-run'
 import UidaiAadhaarAddress from './uidai/uidai-address'
 import UidaiAadhaarDOB from './uidai/uidai-dob'
 import UidaiAadhaar from './uidai/uidai-name'
@@ -60,6 +61,7 @@ import { twitterFollowersCount, twitterUsername } from './twitter'
 import wikipediaUser from './wikipedia-user'
 import YCombinatorLogin from './ycombinator-login'
 import zohoEmail from './zoho-email'
+
 export const providers = {
 	'google-login': googleLogin,
 	'yc-login': YCombinatorLogin,
@@ -126,6 +128,7 @@ export const providers = {
 	'kaggle-username': kaggleUsername,
 	'namebright-domains': nameBrightDomainList,
 	'namecheap-domains': nameCheapDomainList,
+	'strava-last-run': stravaLastRun,
 }
 
 export type ProviderName = keyof typeof providers;
