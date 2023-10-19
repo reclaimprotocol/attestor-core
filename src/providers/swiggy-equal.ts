@@ -89,7 +89,7 @@ assertValidProviderReceipt(receipt, { userData }) {
 	}
 
 	const data = JSON.parse(html)
-	const parsedClient = JSON.parse(JSON.stringify(userData))
+	const parsedClient = JSON.parse(userData)
 	delete data.csrfToken
 
 	data.data.orders.forEach(order => {
