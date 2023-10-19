@@ -53,6 +53,7 @@ import oneMg from './oneMg'
 import outlookLogin from './outlook-login'
 import ProtonMail from './proton-mail'
 import quoraUser from './quora-user'
+import scholarGoogle from './scholar-google'
 import spotifyPremium from './spotify-premium'
 import swiggyUser from './swiggy-equal'
 import swiggyTotalOrder from './swiggy-min-order'
@@ -131,6 +132,7 @@ export const providers = {
 	'namecheap-domains': nameCheapDomainList,
 	'strava-last-run': stravaLastRun,
 	'uber-rides': uberRides,
+	'scholar-google': scholarGoogle,
 }
 
 export type ProviderName = keyof typeof providers;

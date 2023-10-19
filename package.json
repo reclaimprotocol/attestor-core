@@ -15,7 +15,8 @@
 		"verify:root-ca": "ts-node src/scripts/verify-root-ca.ts",
 		"generate:receipt": "ts-node src/scripts/generate-receipt.ts",
 		"example:one-mg": "ts-node src/scripts/generate-receipt.ts --json example/onemg-equal.json",
-		"example:facebook-data": "ts-node src/scripts/generate-receipt.ts --json example/facebook-data.json"
+		"example:facebook-data": "ts-node src/scripts/generate-receipt.ts --json example/facebook-data.json",
+		"example:scholar-google": "ts-node src/scripts/generate-receipt.ts --json example/scholar-google.json"
 	},
 	"files": [
 		"lib/*"
