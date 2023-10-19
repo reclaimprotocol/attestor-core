@@ -89,10 +89,33 @@ assertValidProviderReceipt(receipt, { userData }) {
 	}
 
 	const data = JSON.parse(html)
+	const parsedClient = JSON.parse(JSON.stringify(userData))
 	delete data.csrfToken
 
+	data.data.orders.forEach(order => {
+		// Sort the order_items array based on item_id
+		order.order_items.sort((a, b) => a.item_id - b.item_id)
+
+		order.order_items.forEach(item => {
+			delete item.item_key // delete item_key
+		})
+
+		delete order.loyalty_protobuf // delete loyalty_protobuf from order
+	})
+
+	parsedClient.data.orders.forEach(order => {
+		// Sort the order_items array based on item_id
+		order.order_items.sort((a, b) => a.item_id - b.item_id)
+
+		order.order_items.forEach(item => {
+			delete item.item_key // delete item_key
+		})
+
+		delete order.loyalty_protobuf // delete loyalty_protobuf from order
+	})
+
 	// Check if the following account is in the response
-	if(JSON.stringify(data) !== userData) {
+	if(JSON.stringify(data) !== JSON.stringify(parsedClient)) {
 		throw new Error('User data did not match at witness')
 	}
 
