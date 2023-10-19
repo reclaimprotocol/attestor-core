@@ -1,0 +1,9 @@
+{
+    "name": "scholar-google",
+    "params": {
+        "citations": 3
+    },
+    "secretParams": {
+        "cookieStr": "__Secure-3PSID=cAgXmugEKNI1REn4RyGqJxnf4mf5mHK7zZnxpHSuQnQjRFBK4lno_ALB2cVlF883ovT0uA.;   __Secure-3PSIDTS=sidts-CjIB3e41hdY3ere3nsmRPFTmxGOkHs41nLR2BV4cHFNpVGfBCH-BI1ErBUEJ_8c9ztcMtBAA;"
+    }
+}
