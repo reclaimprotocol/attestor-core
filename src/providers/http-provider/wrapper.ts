@@ -1,5 +1,5 @@
 import { Provider } from '../../types'
-import HTTP_PROVIDER, { HTTPProviderParams, HTTPProviderSecretParams } from '.'
+import HTTP_PROVIDER, { HTTPProviderParams, HTTPProviderParamsV2, HTTPProviderSecretParams } from '.'
 
 type WrapInHttpProviderOpts<P extends { [_: string]: unknown }, SP, N> = {
 	getParams: (params: P) => N
@@ -10,7 +10,7 @@ type WrapInHttpProviderOpts<P extends { [_: string]: unknown }, SP, N> = {
 /**
  * Wrap a provider in an HTTP provider
  */
-export function wrapInHttpProvider<P extends { [_: string]: unknown }, SP, ParamType extends(HTTPProviderParams)=HTTPProviderParams>({
+export function wrapInHttpProvider<P extends { [_: string]: unknown }, SP, ParamType extends(HTTPProviderParams | HTTPProviderParamsV2)=HTTPProviderParams>({
 	getParams,
 	getSecretParams,
 	areValidParams,
