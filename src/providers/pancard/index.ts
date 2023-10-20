@@ -1,4 +1,3 @@
-import { HTTPProviderParamsV2 } from '../http-provider'
 import { wrapInHttpProvider } from '../http-provider/wrapper'
 import { areValidPanCardParams } from './utils'
 
@@ -17,8 +16,7 @@ type PanCardNumberSecretParams = {};
 
 const panCardNumber = wrapInHttpProvider<
   PanCardNumberParams,
-  PanCardNumberSecretParams,
-  HTTPProviderParamsV2
+  PanCardNumberSecretParams
 >({
 	getParams: ({
 		panCardNumber,
@@ -32,7 +30,6 @@ const panCardNumber = wrapInHttpProvider<
 
 		url: 'https://ids.digilocker.gov.in/api/2.0/issueddocs',
 		method: 'POST',
-
 		responseRedactions: [
 			{
 				regex: `"uri"\s*:\s*"in.gov.pan-PANCR-${panCardNumber}"[^}]*?"doc_type_id"\s*:\s*"PANCR"`,
