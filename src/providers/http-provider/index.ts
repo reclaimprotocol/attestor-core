@@ -36,7 +36,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		)
 	},
 	createRequest(secretParams, params) {
-		if(!secretParams.cookieStr && !secretParams.authorisationHeader) {
+		if(!secretParams.cookieStr && !secretParams.authorisationHeader && !params.headers) {
 			throw new Error('auth parameters are not set')
 		}
 

@@ -42,10 +42,7 @@ const panCardNumber = wrapInHttpProvider<
 			},
 		],
 	}),
-	getSecretParams: () => ({
-		// the provider does not require any cookie nor auth header, the secret params are in header
-		cookieStr: 'cookie',
-	}),
+	getSecretParams: () => ({}),
 	areValidParams: areValidPanCardParams,
 })
 
