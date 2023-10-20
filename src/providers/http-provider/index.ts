@@ -99,8 +99,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			return []
 		}
 
-		//console.log('response here', uint8ArrayToBinaryStr(response))
-
 		const res = parseHttpResponse(response)
 
 		const headerEndIndex = res.statusLineEndIndex!
@@ -151,7 +149,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 					throw new Error(`regexp ${rs.regex} does not match found element '${elem}'`)
 				}
 
-				elementIdx = match.index
+				elementIdx = bodyStartIdx + match.index
 				elementLength = regexp.lastIndex - match.index
 				element = match[0]
 			}
