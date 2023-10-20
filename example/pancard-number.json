@@ -1,0 +1,11 @@
+{
+    "name": "pancard-number",
+    "params": {
+        "panCardNumber": "",
+        "deviceSecurityId": "",
+        "jtoken": ""
+    },
+    "secretParams": { 
+        
+    }
+}

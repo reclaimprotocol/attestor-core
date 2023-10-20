@@ -108,6 +108,9 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 
 		const body = uint8ArrayToBinaryStr(res.body)
+		console.log('body here', JSON.stringify(body))
+
+		// console.log('response here', JSON.stringify(res))
 
 		const reveals: ArraySlice[] = [{ fromIndex: 0, toIndex: headerEndIndex }]
 		for(const rs of params.responseRedactions) {
@@ -178,6 +181,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 			redactions.push({ fromIndex: currentIndex, toIndex: response.length })
 		}
+
+		console.log('redactions: ', redactions)
 
 		return redactions
 	},

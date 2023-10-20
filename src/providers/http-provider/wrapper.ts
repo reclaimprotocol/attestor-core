@@ -1,8 +1,8 @@
 import { Provider } from '../../types'
 import HTTP_PROVIDER, { HTTPProviderParams, HTTPProviderSecretParams } from '.'
 
-type WrapInHttpProviderOpts<P extends { [_: string]: unknown }, SP> = {
-	getParams: (params: P) => HTTPProviderParams
+type WrapInHttpProviderOpts<P extends { [_: string]: unknown }, SP, N> = {
+	getParams: (params: P) => N
 	getSecretParams: (params: SP) => HTTPProviderSecretParams
 	areValidParams: Provider<P, SP>['areValidParams']
 }
@@ -10,11 +10,11 @@ type WrapInHttpProviderOpts<P extends { [_: string]: unknown }, SP> = {
 /**
  * Wrap a provider in an HTTP provider
  */
-export function wrapInHttpProvider<P extends { [_: string]: unknown }, SP>({
+export function wrapInHttpProvider<P extends { [_: string]: unknown }, SP, ParamType extends(HTTPProviderParams)=HTTPProviderParams>({
 	getParams,
 	getSecretParams,
 	areValidParams,
-}: WrapInHttpProviderOpts<P, SP>): Provider<P, SP> {
+}: WrapInHttpProviderOpts<P, SP, ParamType>): Provider<P, SP> {
 	return {
 		hostPort(params: P) {
 			if(typeof HTTP_PROVIDER.hostPort === 'string') {
