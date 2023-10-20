@@ -4,9 +4,9 @@ import { areValidPanCardParams } from './utils'
 // params for the request that will be publicly available
 // contains the rides taken by the logged in user
 export type PanCardNumberParams = {
-  jtoken: string
-  panCardNumber: string
-  deviceSecurityId: string
+    jtoken: string
+    panCardNumber: string
+    deviceSecurityId: string
 };
 
 // params required to generate the http request to uber
@@ -15,8 +15,8 @@ export type PanCardNumberParams = {
 type PanCardNumberSecretParams = {};
 
 const panCardNumber = wrapInHttpProvider<
-  PanCardNumberParams,
-  PanCardNumberSecretParams
+    PanCardNumberParams,
+    PanCardNumberSecretParams
 >({
 	getParams: ({
 		panCardNumber,
@@ -25,7 +25,7 @@ const panCardNumber = wrapInHttpProvider<
 	}: PanCardNumberParams) => ({
 		headers: {
 			'device-security-id': deviceSecurityId,
-			jtoken,
+			jtoken
 		},
 
 		url: 'https://ids.digilocker.gov.in/api/2.0/issueddocs',
@@ -42,10 +42,7 @@ const panCardNumber = wrapInHttpProvider<
 			},
 		],
 	}),
-	getSecretParams: () => ({
-		// the provider does not require any cookie nor auth header, the secret params are in header
-		cookieStr: 'cookie',
-	}),
+	getSecretParams: () => ({}),
 	areValidParams: areValidPanCardParams,
 })
 
