@@ -11,7 +11,7 @@ import * as jsdom from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
 import { ArraySlice } from '../../types'
 import { makeHttpResponseParser } from '../../utils'
-import { HTTPProviderParams, HTTPProviderParamsV2 } from './types'
+import { HidableHeaders, HTTPProviderParams, HTTPProviderParamsV2 } from './types'
 
 export type JSONIndex = {
     start: number
@@ -159,11 +159,15 @@ function traverse(
 	return null
 }
 
-export function buildHeaders(input: Record<string, string>) {
+export function buildHeaders(input: HidableHeaders) {
 	const headers: string[] = []
 
 	for(const [key, value] of Object.entries(input)) {
-		headers.push(`${key}: ${value}`)
+		if(typeof value === 'object') {
+			headers.push(`${key}: ${value.value}`)
+		} else {
+			headers.push(`${key}: ${value}`)
+		}
 	}
 
 	return headers

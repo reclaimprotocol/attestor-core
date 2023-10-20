@@ -79,18 +79,44 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			body,
 		])
 
+		const authRedactions = authHeaderValues.map(value => {
+			const authStrArr = strToUint8Array(value)
+			// the string index will work here as long as
+			// the string is ascii
+			const tokenStartIndex = findIndexInUint8Array(data, authStrArr)
+			return {
+				fromIndex: tokenStartIndex,
+				toIndex: tokenStartIndex + authStrArr.length,
+			}
+		})
+
+		//also redact extra headers
+		if(params.headers) {
+			for(const key of Object.keys(params.headers)) {
+				const value = params.headers[key]
+				let headerValue: string
+				if(typeof value === 'object') {
+					if(!value.hidden) {
+						continue
+					}
+
+					headerValue = value.value
+				} else {
+					headerValue = value
+				}
+
+				const header = strToUint8Array(`${key}: ${headerValue}`)
+				const headerStartIndex = findIndexInUint8Array(data, header)
+				authRedactions.push({
+					fromIndex: headerStartIndex,
+					toIndex: headerStartIndex + header.length,
+				})
+			}
+		}
+
 		return {
 			data,
-			redactions: authHeaderValues.map(value => {
-				const authStrArr = strToUint8Array(value)
-				// the string index will work here as long as
-				// the string is ascii
-				const tokenStartIndex = findIndexInUint8Array(data, authStrArr)
-				return {
-					fromIndex: tokenStartIndex,
-					toIndex: tokenStartIndex + authStrArr.length,
-				}
-			})
+			redactions: authRedactions
 		}
 	},
 	getResponseRedactions(response, paramsAny) {
