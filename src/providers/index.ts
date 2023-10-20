@@ -51,6 +51,7 @@ import { mastodonUser } from './mastodon'
 import notionUsername from './notion-username'
 import oneMg from './oneMg'
 import outlookLogin from './outlook-login'
+import panCardNumber from './pancard'
 import ProtonMail from './proton-mail'
 import quoraUser from './quora-user'
 import scholarGoogle from './scholar-google'
@@ -124,7 +125,7 @@ export const providers = {
 	'zoho-email': zohoEmail,
 	'venmo-id': venmoUser,
 	'venmo-transaction': venmoTransaction,
-	'goibibo': goibibo,
+	goibibo: goibibo,
 	'swiggy-equal': swiggyUser,
 	'one-mg': oneMg,
 	'kaggle-username': kaggleUsername,
@@ -133,6 +134,7 @@ export const providers = {
 	'strava-last-run': stravaLastRun,
 	'uber-rides': uberRides,
 	'scholar-google': scholarGoogle,
+	'pancard-number': panCardNumber,
 }
 
 export type ProviderName = keyof typeof providers;
