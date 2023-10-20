@@ -99,6 +99,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			return []
 		}
 
+		//console.log('response here', uint8ArrayToBinaryStr(response))
+
 		const res = parseHttpResponse(response)
 
 		const headerEndIndex = res.statusLineEndIndex!
@@ -108,9 +110,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 
 		const body = uint8ArrayToBinaryStr(res.body)
-		console.log('body here', JSON.stringify(body))
+		//console.log('body here', JSON.stringify(body))
 
-		// console.log('response here', JSON.stringify(res))
 
 		const reveals: ArraySlice[] = [{ fromIndex: 0, toIndex: headerEndIndex }]
 		for(const rs of params.responseRedactions) {
@@ -152,7 +153,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 					throw new Error(`regexp ${rs.regex} does not match found element '${elem}'`)
 				}
 
-				elementIdx = bodyStartIdx + match.index
+				elementIdx = match.index
 				elementLength = regexp.lastIndex - match.index
 				element = match[0]
 			}
@@ -182,7 +183,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			redactions.push({ fromIndex: currentIndex, toIndex: response.length })
 		}
 
-		console.log('redactions: ', redactions)
+		//console.log('redactions: ', redactions)
 
 		return redactions
 	},
