@@ -28,6 +28,7 @@ const PATH = '/inbox'
 
 const lichessUsername: Provider<LichessUserParams, LichessLoginSecretParams> = {
 	hostPort: HOSTPORT,
+	defaultRedactionMode: 'zk',
 	areValidParams(params): params is LichessUserParams {
 		return (
 			typeof params.username === 'string'
@@ -62,7 +63,7 @@ const lichessUsername: Provider<LichessUserParams, LichessLoginSecretParams> = {
 					fromIndex: cookieStartIndex,
 					toIndex: cookieStartIndex + cookieStr.length
 				}
-			]
+			],
 		}
 	},
 	assertValidProviderReceipt(receipt, { username }) {

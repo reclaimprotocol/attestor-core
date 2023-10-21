@@ -12,7 +12,9 @@ type CreateRequestResult = {
    */
   data: Uint8Array | string
   redactions: ArraySlice[]
-};
+}
+
+export type RedactionMode = 'key-update' | 'zk'
 
 /**
  * Generic interface for a provider that can be used to verify
@@ -41,6 +43,13 @@ export interface Provider<
 
   /** extra options to pass to the client like root CA certificates */
   additionalClientOptions?: TLSConnectionOptions
+  /**
+   * default redaction mode to use. If not specified,
+   * the default is 'key-update'. It's switched to 'zk'
+   * for TLS1.2 requests as TLS1.2 don't support key updates
+   * @default 'key-update'
+   */
+  defaultRedactionMode?: RedactionMode
   /**
    * check the parameters are valid
    * Run client & witness side, to verify the parameters
