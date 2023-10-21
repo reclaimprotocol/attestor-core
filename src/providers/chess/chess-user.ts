@@ -35,7 +35,7 @@ createRequest({ cookie }) {
 		'Connection: close',
 		'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
 		'cookie:' + cookie,
-		'user-agent:reclaim/0.0.1',
+		'user-agent: reclaim/0.0.1',
 		'\r\n',
 	].join('\r\n')
 	const cookieStartIndex = data.indexOf(cookie)
