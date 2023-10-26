@@ -98,7 +98,7 @@ assertValidProviderReceipt(receipt, { userData }) {
 
 		order.order_items.forEach(item => {
 			delete item.item_key // delete item_key
-			delete item.addons;
+			delete item.addons
 		})
 
 		delete order.loyalty_protobuf // delete loyalty_protobuf from order
@@ -110,7 +110,7 @@ assertValidProviderReceipt(receipt, { userData }) {
 
 		order.order_items.forEach(item => {
 			delete item.item_key // delete item_key
-			delete item.addons;
+			delete item.addons
 		})
 
 		delete order.loyalty_protobuf // delete loyalty_protobuf from order
