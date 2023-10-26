@@ -1,0 +1,10 @@
+{
+  "name": "binance-dob",
+  "params": {
+    "dateOfBirth": "{{BINANCE_DOB}}",
+    "csrfToken": "{{BINANCE_CSRF}}"
+  },
+  "secretParams": {
+    "cookieStr": "{{BINANCE_COOKIE}}"
+  }
+}
