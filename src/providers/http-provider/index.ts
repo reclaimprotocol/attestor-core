@@ -1,6 +1,5 @@
 import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
-import { RECLAIM_USER_AGENT } from '../../../lib'
-import { DEFAULT_PORT } from '../../config'
+import { DEFAULT_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { TranscriptMessageSenderType } from '../../proto/api'
 import { ArraySlice, Provider } from '../../types'
 import { findIndexInUint8Array, getHttpRequestHeadersFromTranscript, uint8ArrayToBinaryStr, } from '../../utils'
