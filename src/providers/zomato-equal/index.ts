@@ -33,10 +33,12 @@ const zomatoOrdersEqual: Provider<ZomatoOrderParams, ZomatoLoginSecretParams> = 
 
 		const data = [
 			`GET ${PATH} HTTP/1.1`,
-			'Host: ' + HOST,
-			'accept: application/json, text/plain, */*',
-			`cookie: ${cookieStr}`,
-			'user-agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+			`Host: ${HOST}`,
+			'Accept: */*',
+			'Accept-Encoding: identity',
+			`Cookie: ${cookieStr}`,
+			'User-Agent: reclaim/0.0.1',
+			'Content-Length: 0',
 			'\r\n',
 		].join('\r\n')
 		const cookieStartIndex = data.indexOf(cookieStr)
