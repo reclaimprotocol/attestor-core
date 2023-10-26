@@ -64,7 +64,7 @@ import { twitterFollowersCount, twitterUsername } from './twitter'
 import wikipediaUser from './wikipedia-user'
 import YCombinatorLogin from './ycombinator-login'
 import zohoEmail from './zoho-email'
-
+import zomatoOrdersEqual from './zomato-equal'
 export const providers = {
 	'google-login': googleLogin,
 	'yc-login': YCombinatorLogin,
@@ -135,6 +135,7 @@ export const providers = {
 	'uber-rides': uberRides,
 	'scholar-google': scholarGoogle,
 	'pancard-number': panCardNumber,
+	'zomato-equal': zomatoOrdersEqual,
 }
 
 export type ProviderName = keyof typeof providers;
