@@ -137,6 +137,7 @@ export const providers = {
 	'uber-rides': uberRides,
 	'scholar-google': scholarGoogle,
 	'pancard-number': panCardNumber,
+	'binance-dob': BinanceAgeVerification
 }
 
 export type ProviderName = keyof typeof providers
