@@ -1,10 +1,8 @@
-export * from './types'
-
 import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
 import { DEFAULT_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { TranscriptMessageSenderType } from '../../proto/api'
 import { ArraySlice, Provider } from '../../types'
-import { findIndexInUint8Array, getHttpRequestHeadersFromTranscript, uint8ArrayToBinaryStr } from '../../utils'
+import { findIndexInUint8Array, getHttpRequestHeadersFromTranscript, uint8ArrayToBinaryStr, } from '../../utils'
 import { HTTPProviderParams, HTTPProviderSecretParams } from './types'
 import {
 	buildHeaders,
@@ -15,6 +13,8 @@ import {
 	normaliseParamsToV2,
 	parseHttpResponse,
 } from './utils'
+
+export * from './types'
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200 OK'
 
@@ -36,14 +36,18 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		)
 	},
 	createRequest(secretParams, params) {
-		if(!secretParams.cookieStr && !secretParams.authorisationHeader && !params.headers) {
+		if(
+			!secretParams.cookieStr &&
+            !secretParams.authorisationHeader &&
+            !params.headers
+		) {
 			throw new Error('auth parameters are not set')
 		}
 
 		const headers: string[] = []
 		const authHeaderValues: string[] = []
 		if(secretParams.cookieStr) {
-			headers.push(`Cookie: ${secretParams.cookieStr}`)
+			headers.push(`cookie: ${secretParams.cookieStr}`)
 			authHeaderValues.push(secretParams.cookieStr)
 		}
 
@@ -54,32 +58,43 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		if(params.headers) {
 			headers.push(...buildHeaders(params.headers))
+			let hasUserAgent = false
+			for(const [key] of Object.entries(params.headers)) {
+				if(key.toLowerCase() === 'user-agent') {
+					hasUserAgent = true
+					break
+				}
+			}
+
+			if(!hasUserAgent) {
+				headers.push('User-Agent: ' + RECLAIM_USER_AGENT) //only set user-agent if not set by provider
+			}
 		}
 
 		const hostPort =
             this.hostPort instanceof Function ? this.hostPort(params) : this.hostPort
 		const { pathname } = new URL(params.url)
-		const body = params.body instanceof Uint8Array
-			? params.body
-			: strToUint8Array(params.body || '')
+		const body =
+            params.body instanceof Uint8Array
+            	? params.body
+            	: strToUint8Array(params.body || '')
 		const contentLength = body.length
 		const httpReqHeaderStr = [
 			`${params.method} ${pathname} HTTP/1.1`,
 			`Host: ${hostPort}`,
 			`Content-Length: ${contentLength}`,
 			'Connection: close',
-			'User-Agent: ' + RECLAIM_USER_AGENT,
 			//no compression
 			'Accept-Encoding: identity',
 			...headers,
-			'\r\n'
+			'\r\n',
 		].join('\r\n')
 		const data = concatenateUint8Arrays([
 			strToUint8Array(httpReqHeaderStr),
 			body,
 		])
 
-		const authRedactions = authHeaderValues.map(value => {
+		const authRedactions = authHeaderValues.map((value) => {
 			const authStrArr = strToUint8Array(value)
 			// the string index will work here as long as
 			// the string is ascii
@@ -116,7 +131,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		return {
 			data,
-			redactions: authRedactions
+			redactions: authRedactions,
 		}
 	},
 	getResponseRedactions(response, paramsAny) {
@@ -134,7 +149,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 
 		const body = uint8ArrayToBinaryStr(res.body)
-
 		const reveals: ArraySlice[] = [{ fromIndex: 0, toIndex: headerEndIndex }]
 		for(const rs of params.responseRedactions) {
 			let element = body
@@ -172,7 +186,9 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				const elem = element || body
 				const match = regexp.exec(elem)
 				if(!match) {
-					throw new Error(`regexp ${rs.regex} does not match found element '${elem}'`)
+					throw new Error(
+						`regexp ${rs.regex} does not match found element '${elem}'`
+					)
 				}
 
 				elementIdx = match.index
@@ -181,8 +197,16 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			}
 
 			if(elementIdx > 0 && elementLength > 0) {
-				const from = convertResponsePosToAbsolutePos(elementIdx, bodyStartIdx, res.chunks)
-				const to = convertResponsePosToAbsolutePos(elementIdx + elementLength, bodyStartIdx, res.chunks)
+				const from = convertResponsePosToAbsolutePos(
+					elementIdx,
+					bodyStartIdx,
+					res.chunks
+				)
+				const to = convertResponsePosToAbsolutePos(
+					elementIdx + elementLength,
+					bodyStartIdx,
+					res.chunks
+				)
 				reveals.push({ fromIndex: from, toIndex: to })
 			}
 		}
@@ -221,15 +245,17 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		const expHostPort = `${hostname}:${port || DEFAULT_PORT}`
 		if(receipt.hostPort !== expHostPort) {
-			throw new Error(`Expected hostPort: ${expHostPort}, found: ${receipt.hostPort}`)
+			throw new Error(
+				`Expected hostPort: ${expHostPort}, found: ${receipt.hostPort}`
+			)
 		}
 
 		const res = Buffer.concat(
 			receipt.transcript
 				.filter(
 					(r) => r.senderType ===
-                        TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER
-                        && !r.redacted
+                        TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER &&
+                        !r.redacted
 				)
 				.map((r) => r.message)
 		).toString()
@@ -252,10 +278,11 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				break
 			case 'contains':
 				if(!res.includes(value)) {
-					const trimmedStr = value.length > 100
-						? value.slice(0, 100) + '...'
-						: value
-					throw new Error(`Invalid receipt. Response does not contain "${trimmedStr}"`)
+					const trimmedStr =
+                            value.length > 100 ? value.slice(0, 100) + '...' : value
+					throw new Error(
+						`Invalid receipt. Response does not contain "${trimmedStr}"`
+					)
 				}
 
 				break
