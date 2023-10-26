@@ -1,291 +1,295 @@
-export * from './types'
-
 import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
-import { DEFAULT_PORT, RECLAIM_USER_AGENT } from '../../config'
+import { RECLAIM_USER_AGENT } from '../../../lib'
+import { DEFAULT_PORT } from '../../config'
 import { TranscriptMessageSenderType } from '../../proto/api'
 import { ArraySlice, Provider } from '../../types'
-import {
-  findIndexInUint8Array,
-  getHttpRequestHeadersFromTranscript,
-  uint8ArrayToBinaryStr,
-} from '../../utils'
+import { findIndexInUint8Array, getHttpRequestHeadersFromTranscript, uint8ArrayToBinaryStr, } from '../../utils'
 import { HTTPProviderParams, HTTPProviderSecretParams } from './types'
 import {
-  buildHeaders,
-  convertResponsePosToAbsolutePos,
-  extractHTMLElement,
-  extractJSONValueIndex,
-  makeRegex,
-  normaliseParamsToV2,
-  parseHttpResponse,
+	buildHeaders,
+	convertResponsePosToAbsolutePos,
+	extractHTMLElement,
+	extractJSONValueIndex,
+	makeRegex,
+	normaliseParamsToV2,
+	parseHttpResponse,
 } from './utils'
+
+export * from './types'
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200 OK'
 
 const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
-  hostPort(params) {
-    const { host } = new URL(params.url)
-    if (!host) {
-      throw new Error('url is incorrect')
-    }
+	hostPort(params) {
+		const { host } = new URL(params.url)
+		if(!host) {
+			throw new Error('url is incorrect')
+		}
 
-    return host
-  },
-  areValidParams(params): params is HTTPProviderParams {
-    return (
-      typeof params.url === 'string' &&
-      (params.method === 'GET' || params.method === 'POST') &&
-      Array.isArray(params.responseSelections) &&
-      params.responseSelections.length > 0
-    )
-  },
-  createRequest(secretParams, params) {
-    if (
-      !secretParams.cookieStr &&
-      !secretParams.authorisationHeader &&
-      !params.headers
-    ) {
-      throw new Error('auth parameters are not set')
-    }
+		return host
+	},
+	areValidParams(params): params is HTTPProviderParams {
+		return (
+			typeof params.url === 'string' &&
+            (params.method === 'GET' || params.method === 'POST') &&
+            Array.isArray(params.responseSelections) &&
+            params.responseSelections.length > 0
+		)
+	},
+	createRequest(secretParams, params) {
+		if(
+			!secretParams.cookieStr &&
+            !secretParams.authorisationHeader &&
+            !params.headers
+		) {
+			throw new Error('auth parameters are not set')
+		}
 
-    const headers: string[] = []
-    const authHeaderValues: string[] = []
-    if (secretParams.cookieStr) {
-      headers.push(`Cookie: ${secretParams.cookieStr}`)
-      authHeaderValues.push(secretParams.cookieStr)
-    }
+		const headers: string[] = []
+		const authHeaderValues: string[] = []
+		if(secretParams.cookieStr) {
+			headers.push(`cookie: ${secretParams.cookieStr}`)
+			authHeaderValues.push(secretParams.cookieStr)
+		}
 
-    if (secretParams.authorisationHeader) {
-      headers.push(`Authorization: ${secretParams.authorisationHeader}`)
-      authHeaderValues.push(secretParams.authorisationHeader)
-    }
+		if(secretParams.authorisationHeader) {
+			headers.push(`Authorization: ${secretParams.authorisationHeader}`)
+			authHeaderValues.push(secretParams.authorisationHeader)
+		}
 
-    if (params.headers) {
-      headers.push(...buildHeaders(params.headers))
-    }
+		if(params.headers) {
+			headers.push(...buildHeaders(params.headers))
+			let hasUserAgent = false
+			for(const [key] of Object.entries(params.headers)) {
+				if(key.toLowerCase() === 'user-agent') {
+					hasUserAgent = true
+					break
+				}
+			}
 
-    const hostPort =
-      this.hostPort instanceof Function ? this.hostPort(params) : this.hostPort
-    const { pathname } = new URL(params.url)
-    const body =
-      params.body instanceof Uint8Array
-        ? params.body
-        : strToUint8Array(params.body || '')
-    const contentLength = body.length
-    const httpReqHeaderStr = [
-      `${params.method} ${pathname} HTTP/1.1`,
-      `Host: ${hostPort}`,
-      `Content-Length: ${contentLength}`,
-      'Connection: close',
-      'User-Agent: ' + RECLAIM_USER_AGENT,
-      //no compression
-      'Accept-Encoding: identity',
-      ...headers,
-      '\r\n',
-    ].join('\r\n')
-    const data = concatenateUint8Arrays([
-      strToUint8Array(httpReqHeaderStr),
-      body,
-    ])
+			if(!hasUserAgent) {
+				headers.push('User-Agent: ' + RECLAIM_USER_AGENT) //only set user-agent if not set by provider
+			}
+		}
 
-    const authRedactions = authHeaderValues.map((value) => {
-      const authStrArr = strToUint8Array(value)
-      // the string index will work here as long as
-      // the string is ascii
-      const tokenStartIndex = findIndexInUint8Array(data, authStrArr)
-      return {
-        fromIndex: tokenStartIndex,
-        toIndex: tokenStartIndex + authStrArr.length,
-      }
-    })
+		const hostPort =
+            this.hostPort instanceof Function ? this.hostPort(params) : this.hostPort
+		const { pathname } = new URL(params.url)
+		const body =
+            params.body instanceof Uint8Array
+            	? params.body
+            	: strToUint8Array(params.body || '')
+		const contentLength = body.length
+		const httpReqHeaderStr = [
+			`${params.method} ${pathname} HTTP/1.1`,
+			`Host: ${hostPort}`,
+			`Content-Length: ${contentLength}`,
+			'Connection: close',
+			//no compression
+			'Accept-Encoding: identity',
+			...headers,
+			'\r\n',
+		].join('\r\n')
+		const data = concatenateUint8Arrays([
+			strToUint8Array(httpReqHeaderStr),
+			body,
+		])
 
-    //also redact extra headers
-    if (params.headers) {
-      for (const key of Object.keys(params.headers)) {
-        const value = params.headers[key]
-        let headerValue: string
-        if (typeof value === 'object') {
-          if (!value.hidden) {
-            continue
-          }
+		const authRedactions = authHeaderValues.map((value) => {
+			const authStrArr = strToUint8Array(value)
+			// the string index will work here as long as
+			// the string is ascii
+			const tokenStartIndex = findIndexInUint8Array(data, authStrArr)
+			return {
+				fromIndex: tokenStartIndex,
+				toIndex: tokenStartIndex + authStrArr.length,
+			}
+		})
 
-          headerValue = value.value
-        } else {
-          headerValue = value
-        }
+		//also redact extra headers
+		if(params.headers) {
+			for(const key of Object.keys(params.headers)) {
+				const value = params.headers[key]
+				let headerValue: string
+				if(typeof value === 'object') {
+					if(!value.hidden) {
+						continue
+					}
 
-        const header = strToUint8Array(`${key}: ${headerValue}`)
-        const headerStartIndex = findIndexInUint8Array(data, header)
-        authRedactions.push({
-          fromIndex: headerStartIndex,
-          toIndex: headerStartIndex + header.length,
-        })
-      }
-    }
+					headerValue = value.value
+				} else {
+					headerValue = value
+				}
 
-    return {
-      data,
-      redactions: authRedactions,
-    }
-  },
-  getResponseRedactions(response, paramsAny) {
-    const params = normaliseParamsToV2(paramsAny)
-    if (!params.responseRedactions?.length) {
-      return []
-    }
+				const header = strToUint8Array(`${key}: ${headerValue}`)
+				const headerStartIndex = findIndexInUint8Array(data, header)
+				authRedactions.push({
+					fromIndex: headerStartIndex,
+					toIndex: headerStartIndex + header.length,
+				})
+			}
+		}
 
-    const res = parseHttpResponse(response)
-    console.log('response----', res)
+		return {
+			data,
+			redactions: authRedactions,
+		}
+	},
+	getResponseRedactions(response, paramsAny) {
+		const params = normaliseParamsToV2(paramsAny)
+		if(!params.responseRedactions?.length) {
+			return []
+		}
 
-    const headerEndIndex = res.statusLineEndIndex!
-    const bodyStartIdx = res.bodyStartIndex!
-    if (bodyStartIdx < 4) {
-      throw new Error('Failed to find body')
-    }
+		const res = parseHttpResponse(response)
 
-    const body = uint8ArrayToBinaryStr(res.body)
-    console.log('body---', body)
-    const reveals: ArraySlice[] = [{ fromIndex: 0, toIndex: headerEndIndex }]
-    for (const rs of params.responseRedactions) {
-      let element = body
-      let elementIdx = -1
-      let elementLength = -1
+		const headerEndIndex = res.statusLineEndIndex!
+		const bodyStartIdx = res.bodyStartIndex!
+		if(bodyStartIdx < 4) {
+			throw new Error('Failed to find body')
+		}
 
-      if (rs.xPath) {
-        element = extractHTMLElement(body, rs.xPath, !!rs.jsonPath)
-        elementIdx = body.indexOf(element)
-        if (elementIdx < 0) {
-          throw new Error(`Failed to find element: "${rs.xPath}"`)
-        }
+		const body = uint8ArrayToBinaryStr(res.body)
+		const reveals: ArraySlice[] = [{ fromIndex: 0, toIndex: headerEndIndex }]
+		for(const rs of params.responseRedactions) {
+			let element = body
+			let elementIdx = -1
+			let elementLength = -1
 
-        elementLength = element.length
-      }
+			if(rs.xPath) {
+				element = extractHTMLElement(body, rs.xPath, !!rs.jsonPath)
+				elementIdx = body.indexOf(element)
+				if(elementIdx < 0) {
+					throw new Error(`Failed to find element: "${rs.xPath}"`)
+				}
 
-      if (rs.jsonPath) {
-        const { start, end } = extractJSONValueIndex(element, rs.jsonPath)
-        // if there's only json path used
-        if (elementIdx < 0) {
-          elementIdx = 0
-        }
+				elementLength = element.length
+			}
 
-        if (start < 0) {
-          throw new Error('Failed to find element')
-        }
+			if(rs.jsonPath) {
+				const { start, end } = extractJSONValueIndex(element, rs.jsonPath)
+				// if there's only json path used
+				if(elementIdx < 0) {
+					elementIdx = 0
+				}
 
-        element = body.slice(elementIdx + start, elementIdx + end)
-        elementIdx += start
-        elementLength = end - start
-      }
+				if(start < 0) {
+					throw new Error('Failed to find element')
+				}
 
-      if (rs.regex) {
-        const regexp = makeRegex(rs.regex)
-        const elem = element || body
-        const match = regexp.exec(elem)
-        if (!match) {
-          throw new Error(
-            `regexp ${rs.regex} does not match found element '${elem}'`
-          )
-        }
+				element = body.slice(elementIdx + start, elementIdx + end)
+				elementIdx += start
+				elementLength = end - start
+			}
 
-        elementIdx = match.index
-        elementLength = regexp.lastIndex - match.index
-        element = match[0]
-      }
+			if(rs.regex) {
+				const regexp = makeRegex(rs.regex)
+				const elem = element || body
+				const match = regexp.exec(elem)
+				if(!match) {
+					throw new Error(
+						`regexp ${rs.regex} does not match found element '${elem}'`
+					)
+				}
 
-      if (elementIdx > 0 && elementLength > 0) {
-        const from = convertResponsePosToAbsolutePos(
-          elementIdx,
-          bodyStartIdx,
-          res.chunks
-        )
-        const to = convertResponsePosToAbsolutePos(
-          elementIdx + elementLength,
-          bodyStartIdx,
-          res.chunks
-        )
-        reveals.push({ fromIndex: from, toIndex: to })
-      }
-    }
+				elementIdx = match.index
+				elementLength = regexp.lastIndex - match.index
+				element = match[0]
+			}
 
-    reveals.sort((a, b) => {
-      return a.toIndex - b.toIndex
-    })
+			if(elementIdx > 0 && elementLength > 0) {
+				const from = convertResponsePosToAbsolutePos(
+					elementIdx,
+					bodyStartIdx,
+					res.chunks
+				)
+				const to = convertResponsePosToAbsolutePos(
+					elementIdx + elementLength,
+					bodyStartIdx,
+					res.chunks
+				)
+				reveals.push({ fromIndex: from, toIndex: to })
+			}
+		}
 
-    const redactions: ArraySlice[] = []
-    if (reveals.length > 1) {
-      let currentIndex = 0
-      for (const r of reveals) {
-        if (currentIndex < r.fromIndex) {
-          redactions.push({ fromIndex: currentIndex, toIndex: r.fromIndex })
-        }
+		reveals.sort((a, b) => {
+			return a.toIndex - b.toIndex
+		})
 
-        currentIndex = r.toIndex
-      }
+		const redactions: ArraySlice[] = []
+		if(reveals.length > 1) {
+			let currentIndex = 0
+			for(const r of reveals) {
+				if(currentIndex < r.fromIndex) {
+					redactions.push({ fromIndex: currentIndex, toIndex: r.fromIndex })
+				}
 
-      redactions.push({ fromIndex: currentIndex, toIndex: response.length })
-    }
+				currentIndex = r.toIndex
+			}
 
-    return redactions
-  },
-  assertValidProviderReceipt(receipt, paramsAny) {
-    const params = normaliseParamsToV2(paramsAny)
-    const req = getHttpRequestHeadersFromTranscript(receipt)
-    if (req.method !== params.method.toLowerCase()) {
-      throw new Error(`Invalid method: ${req.method}`)
-    }
+			redactions.push({ fromIndex: currentIndex, toIndex: response.length })
+		}
 
-    const { hostname, pathname, port } = new URL(params.url)
-    if (req.url !== pathname) {
-      throw new Error(`Expected path: ${pathname}, found: ${req.url}`)
-    }
+		return redactions
+	},
+	assertValidProviderReceipt(receipt, paramsAny) {
+		const params = normaliseParamsToV2(paramsAny)
+		const req = getHttpRequestHeadersFromTranscript(receipt)
+		if(req.method !== params.method.toLowerCase()) {
+			throw new Error(`Invalid method: ${req.method}`)
+		}
 
-    const expHostPort = `${hostname}:${port || DEFAULT_PORT}`
-    if (receipt.hostPort !== expHostPort) {
-      throw new Error(
-        `Expected hostPort: ${expHostPort}, found: ${receipt.hostPort}`
-      )
-    }
+		const { hostname, pathname, port } = new URL(params.url)
+		if(req.url !== pathname) {
+			throw new Error(`Expected path: ${pathname}, found: ${req.url}`)
+		}
 
-    const res = Buffer.concat(
-      receipt.transcript
-        .filter(
-          (r) =>
-            r.senderType ===
-              TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER &&
-            !r.redacted
-        )
-        .map((r) => r.message)
-    ).toString()
+		const expHostPort = `${hostname}:${port || DEFAULT_PORT}`
+		if(receipt.hostPort !== expHostPort) {
+			throw new Error(
+				`Expected hostPort: ${expHostPort}, found: ${receipt.hostPort}`
+			)
+		}
 
-    if (!res.includes(OK_HTTP_HEADER)) {
-      throw new Error(`Missing "${OK_HTTP_HEADER}" header in response`)
-    }
+		const res = Buffer.concat(
+			receipt.transcript
+				.filter(
+					(r) => r.senderType ===
+                        TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER &&
+                        !r.redacted
+				)
+				.map((r) => r.message)
+		).toString()
 
-    if (req.headers['connection'] !== 'close') {
-      throw new Error('Connection header must be "close"')
-    }
+		if(!res.includes(OK_HTTP_HEADER)) {
+			throw new Error(`Missing "${OK_HTTP_HEADER}" header in response`)
+		}
 
-    for (const { type, value } of params.responseMatches) {
-      switch (type) {
-        case 'regex':
-          if (!makeRegex(value).test(res)) {
-            throw new Error(`Invalid receipt. Regex "${value}" failed to match`)
-          }
+		if(req.headers['connection'] !== 'close') {
+			throw new Error('Connection header must be "close"')
+		}
 
-          break
-        case 'contains':
-          if (!res.includes(value)) {
-            const trimmedStr =
-              value.length > 100 ? value.slice(0, 100) + '...' : value
-            throw new Error(
-              `Invalid receipt. Response does not contain "${trimmedStr}"`
-            )
-          }
+		for(const { type, value } of params.responseMatches) {
+			switch (type) {
+			case 'regex':
+				if(!makeRegex(value).test(res)) {
+					throw new Error(`Invalid receipt. Regex "${value}" failed to match`)
+				}
 
-          break
-      }
-    }
-  },
+				break
+			case 'contains':
+				if(!res.includes(value)) {
+					const trimmedStr =
+                            value.length > 100 ? value.slice(0, 100) + '...' : value
+					throw new Error(
+						`Invalid receipt. Response does not contain "${trimmedStr}"`
+					)
+				}
+
+				break
+			}
+		}
+	},
 }
 
 export default HTTP_PROVIDER
