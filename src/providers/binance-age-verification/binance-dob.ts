@@ -1,3 +1,7 @@
+/**
+ * Extracts the DOB from Binance Account
+ */
+
 import { wrapInHttpProvider } from '../http-provider/wrapper'
 
 // params for the request that will be publicly available
