@@ -1,25 +1,21 @@
 // The zomato-equal orders provider aims to prove the zomato food orders
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
-import { uint8ArrayToStr } from '../../utils'
-import {
-	getCompleteHttpResponseFromReceipt,
-	getHttpRequestHeadersFromTranscript,
-} from '../../utils/http-parser'
+import { getCompleteHttpResponseFromReceipt, getHttpRequestHeadersFromTranscript, } from '../../utils/http-parser'
 
 // params for the request that will be publicly available
 // contains the url and food userData of the logged in user
 type ZomatoOrderParams = {
-	url: string
-	userData: string
+    url: string
+    userData: string
 }
 
 // params required to generate the http request to Zomato
 // these would contain fields that are to be hidden from the public,
 // including the witness
 type ZomatoLoginSecretParams = {
-	/** cookie string for authentication */
-	cookieStr: string
+    /** cookie string for authentication */
+    cookieStr: string
 }
 
 // where to send the HTTP request
@@ -94,7 +90,7 @@ const zomatoOrdersEqual: Provider<ZomatoOrderParams, ZomatoLoginSecretParams> = 
 			],
 		}
 	},
-	assertValidProviderReceipt(receipt, { userData }) {
+	assertValidProviderReceipt(receipt) {
 		if(receipt.hostPort !== HOSTPORT) {
 			throw new Error(`Invalid hostPort: ${receipt.hostPort}`)
 		}
