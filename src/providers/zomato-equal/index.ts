@@ -17,8 +17,26 @@ type ZomatoLoginSecretParams = {
     /** cookie string for authentication */
     cookieStr: string
 }
-const HOST = 'zomato-creatoros.koyeb.app'
+
+// where to send the HTTP request
+const HOST = 'scrape.smartproxy.com'
+const API_URL = 'https://zomato.com/webroutes/user/orders?page=1'
 const HOSTPORT = `${HOST}:${DEFAULT_PORT}`
+
+
+// what API to call
+const METHOD = 'POST'
+const PATH = '/v1/tasks'
+
+const extractCookiesFromStr = (cookieStr: string) => {
+	const cookies = cookieStr.split(';')
+	const cookieDictArr = cookies.map(cookie => {
+		const cookieVal = cookie.substring(cookie.indexOf('=') + 1)
+		const cookieKey = cookie.split('=')[0]
+		return { ['key']: cookieKey, ['value']: cookieVal }
+	})
+	return cookieDictArr
+}
 
 
 const zomatoOrdersEqual: Provider<ZomatoOrderParams, ZomatoLoginSecretParams> = {
@@ -26,7 +44,7 @@ const zomatoOrdersEqual: Provider<ZomatoOrderParams, ZomatoLoginSecretParams> = 
 	areValidParams(params): params is ZomatoOrderParams {
 		return true
 	},
-	createRequest(secretParams, params) {
+	createRequest({ cookieStr }) {
 
 		const payloadHeaders = {
 			'Accept': '*/*',
@@ -47,30 +65,32 @@ const zomatoOrdersEqual: Provider<ZomatoOrderParams, ZomatoLoginSecretParams> = 
 		})
 
 		const data = [
-			`GET ${params.url} HTTP/1.1`,
+			`${METHOD} ${PATH} HTTP/1.1`,
 			`Host: ${HOST}`,
-			'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-			'Accept-Encoding: identity',
-			`Cookie: ${secretParams.cookieStr}`,
-			'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
-			'Content-Length: 0',
-			'\r\n',
+			'accept: application/json',
+			'Content-Type: application/json',
+			'Connection: close',
+			'Authorization: Basic VTAwMDAxMTE3ODQ6cHZxZXdjSzl0cFRvM05iNTZa',
+			`Content-Length: ${payload.length}`,
+			'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36',
+			'X-Smartproxy-Geo: United States',
+			`\r\n${payload}\}`
 		].join('\r\n')
-		const cookieStartIndex = data.indexOf(secretParams.cookieStr)
+
+
+		const cookieStrStartIndex = data.indexOf(`${payload}`)
 
 		return {
 			data,
 			redactions: [
 				{
-					fromIndex: cookieStartIndex,
-					toIndex: cookieStartIndex + secretParams.cookieStr.length,
+					fromIndex: cookieStrStartIndex,
+					toIndex: cookieStrStartIndex + `${payload}`.length,
 				},
 			],
 		}
 	},
-
-	assertValidProviderReceipt(receipt, { userData, url }) {
-    
+	assertValidProviderReceipt(receipt) {
 		if(receipt.hostPort !== HOSTPORT) {
 			throw new Error(`Invalid hostPort: ${receipt.hostPort}`)
 		}
@@ -80,7 +100,7 @@ const zomatoOrdersEqual: Provider<ZomatoOrderParams, ZomatoLoginSecretParams> = 
 			throw new Error(`Invalid method: ${req.method}`)
 		}
 
-		if(!req.url.startsWith(url)) {
+		if(!req.url.startsWith(PATH)) {
 			throw new Error(`Invalid path: ${req.url}`)
 		}
 
