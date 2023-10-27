@@ -60,12 +60,9 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		if(params.headers) {
 			headers.push(...buildHeaders(params.headers))
-			for(const [key] of Object.entries(params.headers)) {
-				if(key.toLowerCase() === 'user-agent') {
-					hasUserAgent = true
-					break
-				}
-			}
+			hasUserAgent = Object.keys(params.headers).find(k => {
+				return k.toLowerCase() === 'user-agent'
+			}) !== undefined
 		}
 
 		if(!hasUserAgent) {
