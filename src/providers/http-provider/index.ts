@@ -137,7 +137,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	getResponseRedactions(response, paramsAny) {
 		const res = parseHttpResponse(response)
 		if(((res.statusCode / 100) >> 0) !== 2) {
-			throw new Error(`Server returned error "${res.statusCode} ${res.statusMessage}"`)
+			throw new Error(`Provider returned error "${res.statusCode} ${res.statusMessage}"`)
 		}
 
 		const params = normaliseParamsToV2(paramsAny)
