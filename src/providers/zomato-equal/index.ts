@@ -20,40 +20,39 @@ type ZomatoLoginSecretParams = {
 	/** cookie string for authentication */
 	cookieStr: string
 }
-const HOST = 'www.zomato.com'
+const HOST = 'zomato-creatoros.koyeb.app'
 const HOSTPORT = `${HOST}:${DEFAULT_PORT}`
-const PATH = '/webroutes/user/orders?page=1'
 
 const zomatoOrdersEqual: Provider<ZomatoOrderParams, ZomatoLoginSecretParams> = {
 	hostPort: HOSTPORT,
 	areValidParams(params): params is ZomatoOrderParams {
 		return true
 	},
-	createRequest({ cookieStr }) {
+	createRequest(secretParams, params) {
 
 		const data = [
-			`GET ${PATH} HTTP/1.1`,
+			`GET ${params.url} HTTP/1.1`,
 			`Host: ${HOST}`,
-			'Accept: */*',
+			'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
 			'Accept-Encoding: identity',
-			`Cookie: ${cookieStr}`,
-			'User-Agent: reclaim/0.0.1',
+			`Cookie: ${secretParams.cookieStr}`,
+			'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
 			'Content-Length: 0',
 			'\r\n',
 		].join('\r\n')
-		const cookieStartIndex = data.indexOf(cookieStr)
+		const cookieStartIndex = data.indexOf(secretParams.cookieStr)
 
 		return {
 			data,
 			redactions: [
 				{
 					fromIndex: cookieStartIndex,
-					toIndex: cookieStartIndex + cookieStr.length,
+					toIndex: cookieStartIndex + secretParams.cookieStr.length,
 				},
 			],
 		}
 	},
-	assertValidProviderReceipt(receipt, { userData }) {
+	assertValidProviderReceipt(receipt, { userData, url }) {
 		if(receipt.hostPort !== HOSTPORT) {
 			throw new Error(`Invalid hostPort: ${receipt.hostPort}`)
 		}
@@ -63,7 +62,7 @@ const zomatoOrdersEqual: Provider<ZomatoOrderParams, ZomatoLoginSecretParams> = 
 			throw new Error(`Invalid method: ${req.method}`)
 		}
 
-		if(!req.url.startsWith(PATH)) {
+		if(!req.url.startsWith(url)) {
 			throw new Error(`Invalid path: ${req.url}`)
 		}
 
