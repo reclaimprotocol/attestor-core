@@ -135,12 +135,15 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 	},
 	getResponseRedactions(response, paramsAny) {
+		const res = parseHttpResponse(response)
+		if(((res.statusCode / 100) >> 0) !== 2) {
+			throw new Error(`Server returned error "${res.statusCode} ${res.statusMessage}"`)
+		}
+
 		const params = normaliseParamsToV2(paramsAny)
 		if(!params.responseRedactions?.length) {
 			return []
 		}
-
-		const res = parseHttpResponse(response)
 
 		const headerEndIndex = res.statusLineEndIndex!
 		const bodyStartIdx = res.bodyStartIndex!
