@@ -1,3 +1,4 @@
+import BinanceAgeVerification from './binance-age-verification/binance-dob'
 import bybitBalance from './bybit/bybit-balance'
 import bybitSpotPnl from './bybit/bybit-spot-pnl'
 import chessRating from './chess/chess-rating'
@@ -64,7 +65,7 @@ import { twitterFollowersCount, twitterUsername } from './twitter'
 import wikipediaUser from './wikipedia-user'
 import YCombinatorLogin from './ycombinator-login'
 import zohoEmail from './zoho-email'
-import zomatoOrdersEqual from './zomato-equal'
+
 export const providers = {
 	'google-login': googleLogin,
 	'yc-login': YCombinatorLogin,
@@ -135,17 +136,17 @@ export const providers = {
 	'uber-rides': uberRides,
 	'scholar-google': scholarGoogle,
 	'pancard-number': panCardNumber,
-	'zomato-equal': zomatoOrdersEqual,
+	'binance-dob': BinanceAgeVerification
 }
 
-export type ProviderName = keyof typeof providers;
+export type ProviderName = keyof typeof providers
 
-type Provider<E extends ProviderName> = (typeof providers)[E];
+type Provider<E extends ProviderName> = (typeof providers)[E]
 
 export type ProviderParams<E extends ProviderName> = Parameters<
-  Provider<E>['assertValidProviderReceipt']
->[1];
+    Provider<E>['assertValidProviderReceipt']
+>[1]
 
 export type ProviderSecretParams<E extends ProviderName> = Parameters<
-  Provider<E>['createRequest']
->[0];
+    Provider<E>['createRequest']
+>[0]
