@@ -56,19 +56,20 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			authHeaderValues.push(secretParams.authorisationHeader)
 		}
 
+		let hasUserAgent = false
+
 		if(params.headers) {
 			headers.push(...buildHeaders(params.headers))
-			let hasUserAgent = false
 			for(const [key] of Object.entries(params.headers)) {
 				if(key.toLowerCase() === 'user-agent') {
 					hasUserAgent = true
 					break
 				}
 			}
+		}
 
-			if(!hasUserAgent) {
-				headers.push('User-Agent: ' + RECLAIM_USER_AGENT) //only set user-agent if not set by provider
-			}
+		if(!hasUserAgent) {
+			headers.push('User-Agent: ' + RECLAIM_USER_AGENT) //only set user-agent if not set by provider
 		}
 
 		const hostPort =
