@@ -16,6 +16,7 @@ import {
 
 type SwiggyUserParams = {
     userData: string
+	orderId: string
 };
 
 type SwiggyUserSecretParams = {
@@ -31,26 +32,26 @@ const URL = '/dapi/order/all?order_id='
 const swiggyUser: Provider<SwiggyUserParams, SwiggyUserSecretParams> = { hostPort: HOSTPORT, areValidParams(params): params is SwiggyUserParams {
 	return typeof params.userData === 'string'
 },
-createRequest({ cookieStr }) {
+createRequest(secretParams, params) {
 	const data = [
-		'GET /dapi/order/all?order_id= HTTP/1.1',
+		`GET /dapi/order/all?order_id=${params.orderId} HTTP/1.1`,
 		'Host: www.swiggy.com',
 		'Connection: close',
-		'cookie:' + cookieStr,
+		'cookie:' + secretParams.cookieStr,
 		'user-agent: reclaim/0.0.1',
 		'Accept-Encoding: gzip, deflate',
 		'\r\n',
 	].join('\r\n')
 
 
-	const cookieStartIndex = data.indexOf(cookieStr)
+	const cookieStartIndex = data.indexOf(secretParams.cookieStr)
 
 	return {
 		data,
 		redactions: [
 			{
 				fromIndex: cookieStartIndex,
-				toIndex: cookieStartIndex + cookieStr.length,
+				toIndex: cookieStartIndex + secretParams.cookieStr.length,
 			},
 		],
 	}
