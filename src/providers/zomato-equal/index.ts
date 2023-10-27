@@ -1,6 +1,7 @@
 // The zomato-equal orders provider aims to prove the zomato food orders
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
+import { uint8ArrayToStr } from '../../utils'
 import {
 	getCompleteHttpResponseFromReceipt,
 	getHttpRequestHeadersFromTranscript,
@@ -33,10 +34,10 @@ const zomatoOrdersEqual: Provider<ZomatoOrderParams, ZomatoLoginSecretParams> = 
 		const data = [
 			`GET ${params.url} HTTP/1.1`,
 			`Host: ${HOST}`,
-			'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+			'Accept: */*',
 			'Accept-Encoding: identity',
 			`Cookie: ${secretParams.cookieStr}`,
-			'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
+			'User-Agent: reclaim/0.0.1',
 			'Content-Length: 0',
 			'\r\n',
 		].join('\r\n')
@@ -75,12 +76,26 @@ const zomatoOrdersEqual: Provider<ZomatoOrderParams, ZomatoLoginSecretParams> = 
 		}
 
 
+		const parsedRes = JSON.parse(uint8ArrayToStr(res.body))
+		const parsedClient = JSON.parse(userData)
+
+		delete parsedRes.sections.SECTION_USER_ORDER_HISTORY.noOrderButton.pageToLoad
+		delete parsedClient.sections.SECTION_USER_ORDER_HISTORY.noOrderButton.pageToLoad
+
+		for(const orderId in parsedRes.entities.ORDER) {
+			if(parsedRes.entities.ORDER[orderId].hasOwnProperty('resInfo') && parsedRes.entities.ORDER[orderId].resInfo.hasOwnProperty('thumb')) {
+			  delete parsedRes.entities.ORDER[orderId].resInfo.thumb
+			}
+		  }
+
+		  for(const orderId in parsedClient.entities.ORDER) {
+			if(parsedClient.entities.ORDER[orderId].hasOwnProperty('resInfo') && parsedClient.entities.ORDER[orderId].resInfo.hasOwnProperty('thumb')) {
+			  delete parsedClient.entities.ORDER[orderId].resInfo.thumb
+			}
+		  }
+
 		try {
-			const parsedRes = JSON.stringify(JSON.parse(res.body.toString()))
-			const parsedClient = JSON.stringify(JSON.parse(userData))
-
-
-			if(parsedRes !== parsedClient) {
+			if(JSON.stringify(parsedRes) !== JSON.stringify(parsedClient)) {
 				throw new Error('Invalid data')
 			}
 		} catch(error) {
