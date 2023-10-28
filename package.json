@@ -16,7 +16,7 @@
 		"generate:receipt": "ts-node src/scripts/generate-receipt.ts",
 		"example:one-mg": "ts-node src/scripts/generate-receipt.ts --json example/onemg-equal.json",
 		"example:facebook-data": "ts-node src/scripts/generate-receipt.ts --json example/facebook-data.json",
-		"example:scholar-google": "ts-node src/scripts/generate-receipt.ts --json example/scholar-google.json",
+		"example:scholar-citations": "ts-node src/scripts/generate-receipt.ts --json example/scholar-citations.json",
 		"example:pancard-number": "ts-node src/scripts/generate-receipt.ts --json example/pancard-number.json"
 	},
 	"files": [
