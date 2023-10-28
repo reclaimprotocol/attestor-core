@@ -27,7 +27,7 @@ const HOSTPORT = `${HOST}:${DEFAULT_PORT}`
 const zomatoOrdersEqual: Provider<ZomatoOrderParams, ZomatoLoginSecretParams> = {
 	hostPort: HOSTPORT,
 	areValidParams(params): params is ZomatoOrderParams {
-		return true
+		return typeof params.userData === 'string'
 	},
 	createRequest(secretParams, params) {
 
