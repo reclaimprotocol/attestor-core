@@ -134,7 +134,7 @@ export const providers = {
 	'namecheap-domains': nameCheapDomainList,
 	'strava-last-run': stravaLastRun,
 	'uber-rides': uberRides,
-	'scholar-google': scholarGoogle,
+	'scholar-citations': scholarGoogle,
 	'pancard-number': panCardNumber,
 	'binance-dob': BinanceAgeVerification
 }
