@@ -95,37 +95,37 @@ assertValidProviderReceipt(receipt, { userData }) {
 
 	data.data.orders.forEach(order => {
 		// Sort the order_items array based on item_id
-		order.order_items.sort((a, b) => a.item_id - b.item_id)
+		order.order_items.sort((a, b) => String(a.item_id).localeCompare(String(b.item_id)))
 
 		order.order_items.forEach(item => {
-			// Sort the variants array based on variation_id
-			if(item.variants && Array.isArray(item.variants)) {
-				item.variants.sort((a, b) => a.variation_id - b.variation_id)
-			}
+		  // Sort the variants array based on variation_id
+		  if(item.variants && Array.isArray(item.variants)) {
+			  item.variants.sort((a, b) => String(a.variation_id).localeCompare(String(b.variation_id)))
+		  }
 
-			delete item.item_key // delete item_key
-			delete item.addons
+		  delete item.item_key // delete item_key
+		  delete item.addons
 		})
 
 		delete order.loyalty_protobuf // delete loyalty_protobuf from order
-	})
+	  })
 
 	parsedClient.data.orders.forEach(order => {
 		// Sort the order_items array based on item_id
-		order.order_items.sort((a, b) => a.item_id - b.item_id)
+		order.order_items.sort((a, b) => String(a.item_id).localeCompare(String(b.item_id)))
 
 		order.order_items.forEach(item => {
-			// Sort the variants array based on variation_id
-			if(item.variants && Array.isArray(item.variants)) {
-				item.variants.sort((a, b) => a.variation_id - b.variation_id)
-			}
+		  // Sort the variants array based on variation_id
+		  if(item.variants && Array.isArray(item.variants)) {
+			  item.variants.sort((a, b) => String(a.variation_id).localeCompare(String(b.variation_id)))
+		  }
 
-			delete item.item_key // delete item_key
-			delete item.addons
+		  delete item.item_key // delete item_key
+		  delete item.addons
 		})
 
 		delete order.loyalty_protobuf // delete loyalty_protobuf from order
-	})
+	  })
 
 	// Check if the following account is in the response
 	if(JSON.stringify(data) !== JSON.stringify(parsedClient)) {
