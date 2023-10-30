@@ -98,6 +98,11 @@ assertValidProviderReceipt(receipt, { userData }) {
 		order.order_items.sort((a, b) => a.item_id - b.item_id)
 
 		order.order_items.forEach(item => {
+			// Sort the variants array based on variation_id
+			if(item.variants && Array.isArray(item.variants)) {
+				item.variants.sort((a, b) => a.variation_id - b.variation_id)
+			}
+
 			delete item.item_key // delete item_key
 			delete item.addons
 		})
@@ -110,6 +115,11 @@ assertValidProviderReceipt(receipt, { userData }) {
 		order.order_items.sort((a, b) => a.item_id - b.item_id)
 
 		order.order_items.forEach(item => {
+			// Sort the variants array based on variation_id
+			if(item.variants && Array.isArray(item.variants)) {
+				item.variants.sort((a, b) => a.variation_id - b.variation_id)
+			}
+
 			delete item.item_key // delete item_key
 			delete item.addons
 		})
