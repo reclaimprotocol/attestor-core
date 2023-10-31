@@ -1,7 +1,7 @@
 {
   "name": "steam",
   "params": {
-    "steamId": "76561198873872015"
+    "steamId": ""
   },
   "secretParams": {
     "cookieStr": "steamLoginSecure=**"
