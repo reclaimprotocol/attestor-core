@@ -17,6 +17,7 @@ import SoundcloudUsername from './soundcloud/soundcloud-username'
 import spotifyAccountType from './spotify/spotify-account-type'
 import spotifyEmail from './spotify/spotify-email'
 import spotifyUserName from './spotify/spotify-username'
+import steamId from './steam/steam-id'
 import stravaLastRun from './strava/strava-last-run'
 import uberRides from './uber/uber-rides'
 import UidaiAadhaarAddress from './uidai/uidai-address'
@@ -68,6 +69,7 @@ import wikipediaUser from './wikipedia-user'
 import YCombinatorLogin from './ycombinator-login'
 import zohoEmail from './zoho-email'
 import zomatoOrdersEqual from './zomato-equal'
+
 
 export const providers = {
 	'google-login': googleLogin,
@@ -140,6 +142,7 @@ export const providers = {
 	'scholar-citations': scholarGoogle,
 	'pancard-number': panCardNumber,
 	'binance-dob': BinanceAgeVerification,
+	'steam': steamId,
 	'zomato-equal': zomatoOrdersEqual,
 	'razorpay-title': razorpayTitle,
 	'razorpay-salary': razorpaySalary
