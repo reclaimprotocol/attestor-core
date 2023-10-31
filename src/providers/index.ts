@@ -65,6 +65,7 @@ import { twitterFollowersCount, twitterUsername } from './twitter'
 import wikipediaUser from './wikipedia-user'
 import YCombinatorLogin from './ycombinator-login'
 import zohoEmail from './zoho-email'
+import steamId from './steam/steam-id'
 
 export const providers = {
 	'google-login': googleLogin,
@@ -136,7 +137,8 @@ export const providers = {
 	'uber-rides': uberRides,
 	'scholar-citations': scholarGoogle,
 	'pancard-number': panCardNumber,
-	'binance-dob': BinanceAgeVerification
+	'binance-dob': BinanceAgeVerification,
+	'steam': steamId
 }
 
 export type ProviderName = keyof typeof providers
