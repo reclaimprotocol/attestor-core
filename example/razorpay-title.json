@@ -1,0 +1,10 @@
+{
+    "name": "razorpay-title",
+    "params": {
+        "title": "{{RAZORPAY_TITLE}}",
+        "csrfToken": "{{RAZORPAY_CSRF_TOKEN}}"
+    },
+    "secretParams": {
+        "cookieStr": "{{RAZORPAY_COOKIE_STR}}"
+    }
+}

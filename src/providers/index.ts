@@ -11,6 +11,8 @@ import lichessUsername from './lichess/lichess-username'
 import mediumFollowersCount from './medium/medium-follower-count'
 import nameBrightDomainList from './namebright/namebright-domains'
 import nameCheapDomainList from './namecheap/namecheap-domains'
+import razorpaySalary from './razorpay/razorpay-salary'
+import razorpayTitle from './razorpay/razorpay-title'
 import SoundcloudUsername from './soundcloud/soundcloud-username'
 import spotifyAccountType from './spotify/spotify-account-type'
 import spotifyEmail from './spotify/spotify-email'
@@ -55,7 +57,7 @@ import outlookLogin from './outlook-login'
 import panCardNumber from './pancard'
 import ProtonMail from './proton-mail'
 import quoraUser from './quora-user'
-import scholarGoogle from './scholar-google'
+import scholarGoogle from './scholar-citations'
 import spotifyPremium from './spotify-premium'
 import swiggyUser from './swiggy-equal'
 import swiggyTotalOrder from './swiggy-min-order'
@@ -66,6 +68,8 @@ import wikipediaUser from './wikipedia-user'
 import YCombinatorLogin from './ycombinator-login'
 import zohoEmail from './zoho-email'
 import steamId from './steam/steam-id'
+import zomatoOrdersEqual from './zomato-equal'
+
 
 export const providers = {
 	'google-login': googleLogin,
@@ -139,6 +143,9 @@ export const providers = {
 	'pancard-number': panCardNumber,
 	'binance-dob': BinanceAgeVerification,
 	'steam': steamId
+	'zomato-equal': zomatoOrdersEqual,
+	'razorpay-title': razorpayTitle,
+	'razorpay-salary': razorpaySalary
 }
 
 export type ProviderName = keyof typeof providers

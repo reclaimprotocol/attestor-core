@@ -1,5 +1,5 @@
 {
-    "name": "scholar-google",
+    "name": "scholar-citations",
     "params": {
         "citations": "{{SCHOLAR_CITATIONS}}"
     },

@@ -51,6 +51,7 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 		port: port ? +port : DEFAULT_PORT,
 		logger,
 		additionalConnectOpts,
+		defaultWriteRedactionMode: provider.defaultRedactionMode,
 		...opts,
 		handleDataFromServer(data) {
 			resParser.onChunk(data)

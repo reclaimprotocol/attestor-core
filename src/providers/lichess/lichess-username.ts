@@ -2,22 +2,22 @@
 
 import { DEFAULT_PORT } from '../../config'
 import { Provider } from '../../types'
-import { gunzipSync } from '../../utils'
+import { uint8ArrayToBinaryStr } from '../../utils'
 import { getCompleteHttpResponseFromReceipt, getHttpRequestHeadersFromTranscript } from '../../utils/http-parser'
 
 
 // params for the request that will be publicly available
 // contains the userId of the logged in user
 type LichessUserParams = {
-	username: string
+    username: string
 }
 
 // params required to generate the http request to Lichess
 // these would contain fields that are to be hidden from the public,
 // including the witness
 type LichessLoginSecretParams = {
-	/** cookie string for authentication */
-	cookieStr: string
+    /** cookie string for authentication */
+    cookieStr: string
 }
 
 // where to send the HTTP request
@@ -47,7 +47,7 @@ const lichessUsername: Provider<LichessUserParams, LichessLoginSecretParams> = {
 			'Connection: close',
 			`cookie: ${cookieStr}`,
 			'User-Agent: reclaim/1.0.0',
-			'Accept-Encoding: gzip, deflate',
+			'Accept-Encoding: identity',
 			'\r\n'
 		].join('\r\n')
 
@@ -93,13 +93,7 @@ const lichessUsername: Provider<LichessUserParams, LichessLoginSecretParams> = {
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)
 		}
 
-		let html: string
-		if(res.headers['content-encoding'] === 'gzip') {
-			const buf = Buffer.from(res.body)
-			html = gunzipSync(buf).toString()
-		} else {
-			html = res.body.toString()
-		}
+		const html = uint8ArrayToBinaryStr(res.body)
 
 		const userRegexp = /lichess.load.then\(\(\)\=\>\{lichess.loadEsm\('msg',\{init:\{"data":{"me":{"name":"\w*","id":"\w*"/g
 

@@ -1,0 +1,10 @@
+{
+    "name": "razorpay-salary",
+    "params": {
+        "salary": 1,
+        "csrfToken": "{{RAZORPAY_CSRF_TOKEN}}"
+    },
+    "secretParams": {
+        "cookieStr": "{{RAZORPAY_COOKIE_STR}}"
+    }
+}

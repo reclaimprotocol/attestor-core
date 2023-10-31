@@ -67,8 +67,6 @@ const scholarGoogle: Provider<ScholarGoogleParams, ScholarGoogleSecretParams> = 
 			throw new Error(`Invalid content-type: ${res.headers['content-type']}`)
 		}
 
-		console.log(res.statusCode)
-
 		let html: string
 		if(res.headers['content-encoding'] === 'gzip') {
 			const buf = Buffer.from(res.body)
