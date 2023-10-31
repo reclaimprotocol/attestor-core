@@ -142,7 +142,7 @@ export const providers = {
 	'scholar-citations': scholarGoogle,
 	'pancard-number': panCardNumber,
 	'binance-dob': BinanceAgeVerification,
-	'steam': steamId
+	'steam': steamId,
 	'zomato-equal': zomatoOrdersEqual,
 	'razorpay-title': razorpayTitle,
 	'razorpay-salary': razorpaySalary
