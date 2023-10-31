@@ -19,6 +19,10 @@ export type CompleteTLSPacket = {
 	sender: TranscriptMessageSenderType
 	/** Index of packet recv from server */
 	index: number
+	/**
+	 * how to reveal the packet to the witness
+	 * "undefined" means "do not reveal this packet"
+	 */
 	reveal?: { type: 'complete' }
 		| {
 			type: 'zk'

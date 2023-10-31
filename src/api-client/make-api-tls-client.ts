@@ -1,6 +1,6 @@
 import { detectEnvironment } from '@reclaimprotocol/common-grpc-web-transport'
 import { CipherSuite, makeTLSClient, PACKET_TYPE, SUPPORTED_NAMED_CURVES, TLSConnectionOptions, TLSPresharedKey, TLSSessionTicket } from '@reclaimprotocol/tls'
-import { InitialiseSessionRequest, PullFromSessionResponse, PushToSessionRequest, ReclaimWitnessClient, TranscriptMessageSenderType, WitnessVersion } from '../proto/api'
+import { InitialiseSessionRequest, PullFromSessionResponse, ReclaimWitnessClient, TranscriptMessageSenderType, WitnessVersion } from '../proto/api'
 import { ArraySlice, CompleteTLSPacket, Logger } from '../types'
 import { getBlocksToReveal, logger as MAIN_LOGGER, PrepareZKProofsBaseOpts, redactSlices } from '../utils'
 import { preparePacketsForReveal } from '../utils/prepare-packets'
@@ -60,9 +60,9 @@ export const makeAPITLSClient = ({
 	handleDataFromServer,
 	onTlsEnd,
 	requestData,
-	logger: _logger,
 	additionalConnectOpts,
 	defaultWriteRedactionMode = 'key-update',
+	logger = MAIN_LOGGER?.child({ }),
 	...opts
 }: APITLSClientOptions) => {
 	let sessionId: string | undefined
@@ -70,7 +70,6 @@ export const makeAPITLSClient = ({
 	let psk: TLSPresharedKey | undefined
 	let metadata: ReturnType<typeof tls.getMetadata>
 
-	const logger = _logger || MAIN_LOGGER?.child({ })
 	const { generateOutOfBandSession } = additionalConnectOpts || {}
 	additionalConnectOpts = {
 		...additionalConnectOpts || {},
@@ -108,36 +107,30 @@ export const makeAPITLSClient = ({
 		},
 		onTlsEnd,
 		async write(packet, ctx) {
-			if(!sessionId) {
-				throw new Error('Too early to write')
-			}
-
-			const req: PushToSessionRequest = {
-				sessionId,
+			// send to the witness to forward
+			// to the destination server
+			const res = await client.pushToSession({
+				sessionId: sessionId!,
 				messages: [
 					{
 						recordHeader: packet.header,
 						content: packet.content,
+						// deprecated, just there for compatibility
 						authenticationTag: new Uint8Array(0),
 					}
 				]
-			}
-			const res = await client.pushToSession(req)
+			})
 
-			const completePkt: CompleteTLSPacket = {
+			allPackets.push({
 				packet,
 				ctx,
 				sender: TranscriptMessageSenderType
 					.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT,
 				index: res.index,
-			}
-			allPackets.push(completePkt)
+			})
 
 			logger.debug(
-				{
-					sessionId,
-					length: packet.content.length
-				},
+				{ length: packet.content.length },
 				'pushed data'
 			)
 		}
@@ -168,9 +161,10 @@ export const makeAPITLSClient = ({
 			sessionId = res.sessionId
 			pullFromSessionAbort = new AbortController()
 
-			logger.debug({ sessionId }, 'initialised session')
+			logger = logger.child({ sessionId })
+			logger.debug('initialised session')
 
-			const pullResult = await client.pullFromSession(
+			const pullIterator = client.pullFromSession(
 				{
 					sessionId,
 					version: WitnessVersion.WITNESS_VERSION_1_1_0,
@@ -181,7 +175,7 @@ export const makeAPITLSClient = ({
 			logger.debug('pulling from session')
 
 			const evPromise = listenToDataFromServer(
-				pullResult,
+				pullIterator,
 				() => {
 					logger.debug('session ready')
 					tls.startHandshake({ psk })
@@ -367,13 +361,21 @@ export const makeAPITLSClient = ({
 					continue
 				}
 
+				logger?.trace(
+					{ length: message.content.length },
+					'received packet'
+				)
+
 				const type = message.recordHeader[0]
 				await tls.handleReceivedPacket(type, {
 					header: message.recordHeader,
 					content: message.content,
 				})
 
-				const block = getLastBlock(TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER)
+				const block = getLastBlock(
+					TranscriptMessageSenderType
+						.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER
+				)
 				block!.index = index
 			}
 		} catch(error) {
