@@ -11,6 +11,8 @@ import lichessUsername from './lichess/lichess-username'
 import mediumFollowersCount from './medium/medium-follower-count'
 import nameBrightDomainList from './namebright/namebright-domains'
 import nameCheapDomainList from './namecheap/namecheap-domains'
+import razorpaySalary from './razorpay/razorpay-salary'
+import razorpayTitle from './razorpay/razorpay-title'
 import SoundcloudUsername from './soundcloud/soundcloud-username'
 import spotifyAccountType from './spotify/spotify-account-type'
 import spotifyEmail from './spotify/spotify-email'
@@ -138,7 +140,9 @@ export const providers = {
 	'scholar-citations': scholarGoogle,
 	'pancard-number': panCardNumber,
 	'binance-dob': BinanceAgeVerification,
-	'zomato-equal': zomatoOrdersEqual
+	'zomato-equal': zomatoOrdersEqual,
+	'razorpay-title': razorpayTitle,
+	'razorpay-salary': razorpaySalary
 }
 
 export type ProviderName = keyof typeof providers
