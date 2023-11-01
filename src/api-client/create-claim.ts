@@ -3,7 +3,7 @@ import { ethers } from 'ethers'
 import { makeBeacon } from '../beacon'
 import { InitialiseSessionRequest_BeaconBasedProviderClaimRequest as ProviderClaimRequest, ProviderClaimData } from '../proto/api'
 import { ProviderName, ProviderParams, providers, ProviderSecretParams } from '../providers'
-import { Beacon, CreateStep, Logger } from '../types'
+import { Beacon, CreateStep, Logger, WitnessData } from '../types'
 import { createGrpcWebClient, fetchWitnessListForClaim, getIdentifierFromClaimInfo, logger as LOGGER, makeOwnerProof, PrepareZKProofsBaseOpts, stringifyClaimParameters, unixTimestampSeconds } from '../utils'
 import { generateProviderReceipt } from './generate-provider-receipt'
 
@@ -59,7 +59,7 @@ export async function createClaim<Name extends ProviderName>({
 		throw new Error(`Invalid params for provider "${name}"`)
 	}
 
-	let witnessHosts: string[]
+	let witnesses: WitnessData[]
 	let timestampS: number
 	let epoch: number
 	let claimData: ProviderClaimData
@@ -75,39 +75,39 @@ export async function createClaim<Name extends ProviderName>({
 	if(!resumeFromStep) {
 		const state = await beacon.getState()
 		timestampS = unixTimestampSeconds()
-		witnessHosts = fetchWitnessListForClaim(
+		witnesses = fetchWitnessListForClaim(
 			state,
 			identifier,
 			timestampS,
 		)
-			.map(w => w.url)
 		epoch = state.epoch
 
 		didUpdateCreateStep?.({
 			name: 'creating',
 			timestampS,
 			epoch,
-			witnessHosts,
+			witnessHosts: witnesses.map(w => w.url),
+			witnesses
 		})
 	} else {
 		epoch = resumeFromStep.epoch
 		timestampS = resumeFromStep.timestampS
 		if(resumeFromStep.name === 'witness-done') {
-			witnessHosts = resumeFromStep.witnessHostsLeft
+			witnesses = resumeFromStep.witnessesLeft
 			claimData = resumeFromStep.claimData!
 			signatures.push(...resumeFromStep.signaturesDone)
 		} else {
-			witnessHosts = resumeFromStep.witnessHosts
+			witnesses = resumeFromStep.witnesses
 		}
 	}
 
 	logger = logger.child({ identifier })
 	logger.info(
-		{ witnessHosts, timestampS, epoch },
+		{ witnesses, timestampS, epoch },
 		'got witness list, sending requests to witnesses'
 	)
 
-	if(!witnessHosts?.length) {
+	if(!witnesses?.length) {
 		throw new Error('No witness hosts were provided')
 	}
 
@@ -119,27 +119,30 @@ export async function createClaim<Name extends ProviderName>({
 	}
 	providerClaimReq.ownerProof = await makeOwnerProof(providerClaimReq, ownerPrivateKey)
 
-	for(let i = 0;i < witnessHosts.length;i++) {
-		const witnessHost = witnessHosts[i]
-		logger.trace({ witnessHost }, 'generating signature for oracle host')
+	for(let i = 0;i < witnesses.length;i++) {
+		const witness = witnesses[i]
+		logger.trace({ witness }, 'generating signature for oracle host')
+		const { url } = witness
 
-		const grpcUrl = witnessHost.startsWith('http:') || witnessHost.startsWith('https:')
-			? witnessHost
-			: `https://${witnessHost}`
+		const grpcUrl = url.startsWith('http:') || url.startsWith('https:')
+			? url
+			: `https://${url}`
 		const { signature, claimData: r } = await generateSignature(grpcUrl)
 		claimData = r!
 
 		signatures.push(signature)
 
-		logger.info({ witnessHost }, 'generated signature for oracle host')
+		logger.info({ witness }, 'generated signature for oracle host')
 
+		const witnessesLeft = witnesses.slice(0, i + 1)
 		didUpdateCreateStep?.({
 			name: 'witness-done',
 			timestampS,
 			epoch,
 			signaturesDone: signatures,
 			claimData,
-			witnessHostsLeft: witnessHosts.slice(i + 1),
+			witnessesLeft,
+			witnessHostsLeft: witnessesLeft.map(w => w.url),
 		})
 	}
 
@@ -147,7 +150,7 @@ export async function createClaim<Name extends ProviderName>({
 		identifier,
 		claimData: claimData!,
 		signatures,
-		witnessHosts,
+		witnesses,
 	}
 
 	async function generateSignature(grpcWebUrl: string) {

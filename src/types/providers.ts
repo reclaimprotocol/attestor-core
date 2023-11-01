@@ -1,5 +1,6 @@
 import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
 import type { ProviderClaimData, TLSReceipt } from '../proto/api'
+import { WitnessData } from './beacon'
 import type { ArraySlice } from './general'
 
 type CreateRequestResult = {
@@ -86,38 +87,30 @@ export interface Provider<
   ): void | Promise<void>
 }
 
-export type CreateStepSmartContract =
-  | {
-      name: 'creating'
-      chainId: number
-      claimId: number
-      witnessHosts: string[]
-    }
-  | {
-      name: 'witness-done'
-      chainId: number
-      claimData: ProviderClaimData
-      signaturesDone: string[]
-    };
-
 export type CreateStep =
   | {
       name: 'creating'
       timestampS: number
       epoch: number
+      /** @deprecated use 'witnesses' */
       witnessHosts: string[]
+      witnesses: WitnessData[]
     }
   | {
       name: 'creating'
       timestampS: number
       epoch: number
+      /** @deprecated use 'witnesses' */
       witnessHosts: string[]
+      witnesses: WitnessData[]
     }
   | {
       name: 'witness-done'
       timestampS: number
       epoch: number
+      /** @deprecated use 'witnessesHosts' */
       witnessHostsLeft: string[]
+      witnessesLeft: WitnessData[]
       claimData: ProviderClaimData
       signaturesDone: string[]
     };
