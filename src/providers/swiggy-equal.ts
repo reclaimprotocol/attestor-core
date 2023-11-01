@@ -7,13 +7,12 @@
 
 
 import { gunzipSync } from 'zlib'
-import { DEFAULT_PORT } from '../../config'
-import { Provider } from '../../types'
+import { DEFAULT_PORT } from '../config'
+import { Provider } from '../types'
 import {
 	getCompleteHttpResponseFromReceipt,
 	getHttpRequestHeadersFromTranscript,
-} from '../../utils/http-parser'
-import { convertNumbersToIntegers } from './utils'
+} from '../utils/http-parser'
 
 type SwiggyUserParams = {
     userData: string
@@ -95,35 +94,37 @@ assertValidProviderReceipt(receipt, { userData }) {
 	delete data.csrfToken
 
 	data.data.orders.forEach(order => {
+		// Sort the order_items array based on item_id
 		order.order_items.sort((a, b) => String(a.item_id).localeCompare(String(b.item_id)))
 
 		order.order_items.forEach(item => {
-			// delete item.variants here
-			delete item.variants
+		  // Sort the variants array based on variation_id
+		  if(item.variants && Array.isArray(item.variants)) {
+			  item.variants.sort((a, b) => String(a.variation_id).localeCompare(String(b.variation_id)))
+		  }
 
-			delete item.item_key
-			delete item.addons
-			convertNumbersToIntegers(item)
+		  delete item.item_key // delete item_key
+		  delete item.addons
 		})
 
-		delete order.loyalty_protobuf
-		convertNumbersToIntegers(order)
+		delete order.loyalty_protobuf // delete loyalty_protobuf from order
 	  })
 
 	parsedClient.data.orders.forEach(order => {
+		// Sort the order_items array based on item_id
 		order.order_items.sort((a, b) => String(a.item_id).localeCompare(String(b.item_id)))
 
 		order.order_items.forEach(item => {
-			// delete item.variants here
-			delete item.variants
+		  // Sort the variants array based on variation_id
+		  if(item.variants && Array.isArray(item.variants)) {
+			  item.variants.sort((a, b) => String(a.variation_id).localeCompare(String(b.variation_id)))
+		  }
 
-			delete item.item_key
-			delete item.addons
-			convertNumbersToIntegers(item)
+		  delete item.item_key // delete item_key
+		  delete item.addons
 		})
 
-		delete order.loyalty_protobuf
-		convertNumbersToIntegers(order)
+		delete order.loyalty_protobuf // delete loyalty_protobuf from order
 	  })
 
 	// Check if the following account is in the response
