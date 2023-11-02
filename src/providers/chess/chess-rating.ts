@@ -87,10 +87,12 @@ assertValidProviderReceipt(receipt, { rating, userName }) {
 	// Create regex patterns to extract rating type and value
 	const ratingTypePattern = /^(.+)\|/
 	const ratingValuePattern = /\|(\d+)$/
+	const ratingPageOwnerPattern = /<[^>]*>\s*Edit\s*<[^>]*>/
 
 	// Extract rating type and value using the regex patterns
 	const ratingTypeMatch = rating.match(ratingTypePattern)
 	const ratingValueMatch = rating.match(ratingValuePattern)
+	const ratingPageOwner = bodyStr.match(ratingPageOwnerPattern)
 
 	if(!ratingTypeMatch || !ratingValueMatch) {
 		throw new Error('Invalid rating format')
@@ -98,6 +100,11 @@ assertValidProviderReceipt(receipt, { rating, userName }) {
 
 	const ratingType = ratingTypeMatch[1]
 	const ratingValueAsNumber = parseInt(ratingValueMatch[1])
+	const isOwner = ratingPageOwner !== null
+
+	if(!isOwner) {
+		throw new Error('User is not the owner of the Rating')
+	}
 
 
 	const pattern = new RegExp(`"${ratingType}":{[^}]*"last_rating":\\s*${ratingValueAsNumber}\\s*,`)
