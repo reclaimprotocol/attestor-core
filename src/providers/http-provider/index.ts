@@ -158,12 +158,13 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 			if(rs.xPath) {
 				element = extractHTMLElement(body, rs.xPath, !!rs.jsonPath)
-				elementIdx = body.indexOf(element)
-				if(elementIdx < 0) {
+				const substr = findSubstringIgnoreLE(body, element)
+				if(substr.index < 0) {
 					throw new Error(`Failed to find element: "${rs.xPath}"`)
 				}
 
-				elementLength = element.length
+				elementIdx = substr.index
+				elementLength = substr.length
 			}
 
 			if(rs.jsonPath) {
@@ -291,5 +292,33 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 	},
 }
+
+// From https://stackoverflow.com/a/3561711/157247
+function escapeRegex(s: string) {
+	return s.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&')
+}
+
+function findSubstringIgnoreLE(str: string, substr: string): { index: number, length: number } {
+	// Split up the text on any of the newline sequences,
+	// then escape the parts in-between,
+	// then join together with the alternation
+	const rexText = substr
+		.split(/\r\n|\n|\r/)
+		.map((part) => escapeRegex(part))
+		.join('(?:\\r\\n|\\n|\\r)')
+	// Create the regex
+	const re = new RegExp(rexText)
+	// Run it
+	const match = re.exec(str)
+	if(match) {
+		return {
+			index: match.index,
+			length: match[0].length
+		}
+	} else {
+		return { index: -1, length: -1 }
+	}
+}
+
 
 export default HTTP_PROVIDER
