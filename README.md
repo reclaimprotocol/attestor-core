@@ -110,6 +110,11 @@ To use this, you'll need to:
 	)
 	```
 
+### Running the Browser SDK Locally
+
+1. Build the SDK for the browser using `npm run build:browser`
+2. Run the nginx server using `docker-compose up --build`
+
 ## Provider
 
 An "provider" in reclaim's context is simply a provider for some reputation or credential.
