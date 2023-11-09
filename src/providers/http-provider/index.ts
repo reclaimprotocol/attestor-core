@@ -71,14 +71,14 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		const hostPort =
             this.hostPort instanceof Function ? this.hostPort(params) : this.hostPort
-		const { pathname } = new URL(params.url)
+		const { pathname, searchParams } = new URL(params.url)
 		const body =
             params.body instanceof Uint8Array
             	? params.body
             	: strToUint8Array(params.body || '')
 		const contentLength = body.length
 		const httpReqHeaderStr = [
-			`${params.method} ${pathname} HTTP/1.1`,
+			`${params.method} ${pathname}${searchParams ? '?' + searchParams : ''} HTTP/1.1`,
 			`Host: ${hostPort}`,
 			`Content-Length: ${contentLength}`,
 			'Connection: close',
@@ -91,7 +91,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			strToUint8Array(httpReqHeaderStr),
 			body,
 		])
-
+		console.log(uint8ArrayToBinaryStr(data))
 		const authRedactions = authHeaderValues.map((value) => {
 			const authStrArr = strToUint8Array(value)
 			// the string index will work here as long as
@@ -240,8 +240,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
 
-		const { hostname, pathname, port } = new URL(params.url)
-		if(req.url !== pathname) {
+		const { hostname, pathname, port, searchParams } = new URL(params.url)
+		if(req.url !== pathname + (searchParams ? '?' + searchParams : '')) {
 			throw new Error(`Expected path: ${pathname}, found: ${req.url}`)
 		}
 
