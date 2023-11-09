@@ -5,11 +5,50 @@
 	</script>
 	<script src="/resources/reclaim-witness.min.js">
 	</script>
-	<script type='text/javascript'>
+	<script>
 		module.exports.setupWindowRpc()
+	</script>
+
+	<script>
+		function appendMemoryUsageStr(str) {
+			document.getElementById('memory-usage').innerHTML += `[${new Date().toJSON()}] Memory usage: ${str}<br/>`;
+		}
+
+		function trackMemoryUsage() {
+			let prevmemusage = ''
+			const interval = setInterval(setMemoryUsage, 25)
+			setMemoryUsage()
+
+			async function setMemoryUsage() {
+				const result = await module.exports.getCurrentMemoryUsage();
+				if(prevmemusage === result.content) {
+					return
+				}
+
+				appendMemoryUsageStr(result.content)
+				if(!result.available) {
+					clearInterval(interval)
+					console.warn('Memory usage tracking is not available: ', result.content)
+				} else {
+					console.log('Memory usage: ', result.content)
+				}
+
+				prevmemusage = result.content
+			}
+		}
+
+		if(window.location.search.includes('track-memory-usage=true')) {
+			trackMemoryUsage()
+		}
 	</script>
 </head>
 <body>
-	Witness SDK RPC
+	<h6>
+		Witness SDK RPC
+	</h6>
+
+	<span id='memory-usage'>
+		
+	</span>
 </body>
 </html>

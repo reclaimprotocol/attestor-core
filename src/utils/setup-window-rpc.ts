@@ -31,6 +31,9 @@ export type WindowRPCRequest<N extends ProviderName = any> = ({
 		json: string
 		jsonPath: string
 	}
+} | {
+	type: 'getCurrentMemoryUsage'
+	request: undefined
 }
 ) & IdentifiedMessage
 
@@ -46,6 +49,12 @@ type WindowRPCData = {
 } | {
 	type: 'extractJSONValueIndexDone'
 	response: ReturnType<typeof extractJSONValueIndex>
+} | {
+	type: 'getCurrentMemoryUsageDone'
+	response: {
+		available: boolean
+		content: string
+	}
 } | {
 	type: 'error'
 	data: {
@@ -132,6 +141,12 @@ export function setupWindowRpc() {
 					response: extractJSONValueIndex(req.request.json, req.request.jsonPath),
 				})
 				break
+			case 'getCurrentMemoryUsage':
+				respond({
+					type: 'getCurrentMemoryUsageDone',
+					response: await getCurrentMemoryUsage(),
+				})
+				break
 			default:
 				throw new Error(`Unknown request type: ${JSON.stringify(req)}`)
 			}
@@ -162,6 +177,46 @@ export function setupWindowRpc() {
 			} else {
 				event.source!.postMessage(resStr)
 			}
+		}
+	}
+}
+
+declare global {
+	interface Performance {
+		measureUserAgentSpecificMemory(): { bytes: number }
+	}
+}
+
+// track memory usage
+export async function getCurrentMemoryUsage() {
+	if(!window.crossOriginIsolated) {
+		return {
+			available: false,
+			content: 'N/A (page not cross-origin-isolated)'
+		}
+	} else if(!performance.measureUserAgentSpecificMemory) {
+		return {
+			available: false,
+			content: 'N/A (performance.measureUserAgentSpecificMemory() is not available)',
+		}
+	} else {
+		try {
+			const result = await performance.measureUserAgentSpecificMemory()
+			const totalmb = Math.round(result.bytes / 1024 / 1024)
+
+			return {
+				available: true,
+				content: `${totalmb}mb`,
+			}
+		} catch(error) {
+			if(error instanceof DOMException && error.name === 'SecurityError') {
+				return {
+					available: false,
+					content: `N/A (${error.message})`,
+				}
+			}
+
+			throw error
 		}
 	}
 }
