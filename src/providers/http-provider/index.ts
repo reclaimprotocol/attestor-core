@@ -2,7 +2,12 @@ import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
 import { DEFAULT_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { TranscriptMessageSenderType } from '../../proto/api'
 import { ArraySlice, Provider } from '../../types'
-import { findIndexInUint8Array, getHttpRequestHeadersFromTranscript, uint8ArrayToBinaryStr, } from '../../utils'
+import {
+	extractApplicationDataMsgsFromTranscript,
+	findIndexInUint8Array,
+	getHttpRequestHeadersFromTranscript,
+	uint8ArrayToBinaryStr,
+} from '../../utils'
 import { HTTPProviderParams, HTTPProviderSecretParams } from './types'
 import {
 	buildHeaders,
@@ -133,6 +138,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 	},
 	getResponseRedactions(response, paramsAny) {
+		console.log(uint8ArrayToBinaryStr(response))
 		const res = parseHttpResponse(response)
 		if(((res.statusCode / 100) >> 0) !== 2) {
 			throw new Error(`Provider returned error "${res.statusCode} ${res.statusMessage}"`)
@@ -252,14 +258,11 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			)
 		}
 
+
 		const res = Buffer.concat(
-			receipt.transcript
-				.filter(
-					(r) => r.senderType ===
-                        TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER &&
-                        !r.redacted
-				)
-				.map((r) => r.message)
+			extractApplicationDataMsgsFromTranscript(receipt)
+				.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER)
+				.map((r) => r.data)
 		).toString()
 
 		if(!res.startsWith(OK_HTTP_HEADER)) {
