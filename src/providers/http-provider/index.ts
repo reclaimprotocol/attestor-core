@@ -138,7 +138,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 	},
 	getResponseRedactions(response, paramsAny) {
-		console.log(uint8ArrayToBinaryStr(response))
 		const res = parseHttpResponse(response)
 		if(((res.statusCode / 100) >> 0) !== 2) {
 			throw new Error(`Provider returned error "${res.statusCode} ${res.statusMessage}"`)
