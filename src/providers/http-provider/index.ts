@@ -36,8 +36,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		return (
 			typeof params.url === 'string' &&
             (params.method === 'GET' || params.method === 'POST') &&
-            Array.isArray(params.responseSelections) &&
-            params.responseSelections.length > 0
+            ((Array.isArray(params.responseSelections) && params.responseSelections.length > 0) || (Array.isArray(params.responseMatches) && params.responseMatches.length > 0))
 		)
 	},
 	createRequest(secretParams, params) {
@@ -262,7 +261,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const res = Buffer.concat(
 			msgs.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER)
 				.map((r) => r.data)
-		).toString()
+		).toString().replace(/^(\*+)/, '') // remove all '*' characters at the beginning
+
 
 		if(!res.startsWith(OK_HTTP_HEADER)) {
 			throw new Error(`Missing "${OK_HTTP_HEADER}" header in response`)
