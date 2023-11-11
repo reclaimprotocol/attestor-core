@@ -16,7 +16,7 @@ import {
 
 export * from './types'
 
-const OK_HTTP_HEADER = 'HTTP/1.1 200 OK'
+const OK_HTTP_HEADER = 'HTTP/1.1 200'
 
 const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	hostPort(params) {
@@ -78,7 +78,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
             	: strToUint8Array(params.body || '')
 		const contentLength = body.length
 		const httpReqHeaderStr = [
-			`${params.method} ${pathname}${searchParams ? '?' + searchParams : ''} HTTP/1.1`,
+			`${params.method} ${pathname}${searchParams?.size ? '?' + searchParams : ''} HTTP/1.1`,
 			`Host: ${hostPort}`,
 			`Content-Length: ${contentLength}`,
 			'Connection: close',
@@ -241,7 +241,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 
 		const { hostname, pathname, port, searchParams } = new URL(params.url)
-		if(req.url !== pathname + (searchParams ? '?' + searchParams : '')) {
+		if(req.url !== pathname + (searchParams?.size ? '?' + searchParams : '')) {
 			throw new Error(`Expected path: ${pathname}, found: ${req.url}`)
 		}
 
@@ -262,7 +262,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				.map((r) => r.message)
 		).toString()
 
-		if(!res.includes(OK_HTTP_HEADER)) {
+		if(!res.startsWith(OK_HTTP_HEADER)) {
 			throw new Error(`Missing "${OK_HTTP_HEADER}" header in response`)
 		}
 
