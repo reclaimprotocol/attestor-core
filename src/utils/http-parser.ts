@@ -6,40 +6,40 @@ import { findIndexInUint8Array, uint8ArrayToStr } from './generics'
 import { REDACTION_CHAR_CODE } from './redactions'
 
 type HttpRequest = {
-	method: string
-	url: string
-	protocol: string
-	headers: IncomingHttpHeaders
+    method: string
+    url: string
+    protocol: string
+    headers: IncomingHttpHeaders
 }
 
 type HttpResponse = {
-	statusCode: number
-	statusMessage: string
-	headers: IncomingHttpHeaders
-	body: Uint8Array
-	headersComplete: boolean
-	complete: boolean
+    statusCode: number
+    statusMessage: string
+    headers: IncomingHttpHeaders
+    body: Uint8Array
+    headersComplete: boolean
+    complete: boolean
 
-	/**
-	 * Index of the first byte of the status line
-	 */
-	statusLineEndIndex?: number
-	/**
-	 * Index of the first byte of the body
-	 * in the complete response
-	 */
-	bodyStartIndex?: number
-	/**
-	 * If using chunked transfer encoding,
-	 * this will be set & contain indices of each
-	 * chunk in the complete response
-	 */
-	chunks?: ArraySlice[]
+    /**
+     * Index of the first byte of the status line
+     */
+    statusLineEndIndex?: number
+    /**
+     * Index of the first byte of the body
+     * in the complete response
+     */
+    bodyStartIndex?: number
+    /**
+     * If using chunked transfer encoding,
+     * this will be set & contain indices of each
+     * chunk in the complete response
+     */
+    chunks?: ArraySlice[]
 }
 
 type ApplicationMessage = {
-	data: Uint8Array
-	sender: TranscriptMessageSenderType
+    data: Uint8Array
+    sender: TranscriptMessageSenderType
 }
 
 const DEFAULT_REDACTION_DATA = new Uint8Array(4)
@@ -68,16 +68,16 @@ export function makeHttpResponseParser() {
 	return {
 		res,
 		/**
-		 * Parse the next chunk of data
-		 * @param data the data to parse
-		 */
+         * Parse the next chunk of data
+         * @param data the data to parse
+         */
 		onChunk(data: Uint8Array) {
 			// concatenate the remaining data from the last chunk
 			remaining = concatenateUint8Arrays([remaining, data])
 			// if we don't have the headers yet, keep reading lines
 			// as each header is in a line
 			if(!res.headersComplete) {
-				for(let line = getLine(); typeof line !== 'undefined';line = getLine()) {
+				for(let line = getLine(); typeof line !== 'undefined'; line = getLine()) {
 					// first line is the HTTP version, status code & message
 					if(!res.statusCode) {
 						const [, statusCode, statusMessage] = line.match(/HTTP\/\d\.\d (\d+) (.*)/) || []
@@ -91,7 +91,7 @@ export function makeHttpResponseParser() {
 							isChunked = true
 							res.chunks = []
 							break
-						// if the response has a content-length, we know how many bytes to read
+							// if the response has a content-length, we know how many bytes to read
 						} else if(res.headers['content-length']) {
 							remainingBodyBytes = Number(res.headers['content-length'])
 							break
@@ -154,9 +154,9 @@ export function makeHttpResponseParser() {
 			}
 		},
 		/**
-		 * Call to prevent further parsing; indicating the end of the request
-		 * Checks that the response is valid & complete, otherwise throws an error
-		 */
+         * Call to prevent further parsing; indicating the end of the request
+         * Checks that the response is valid & complete, otherwise throws an error
+         */
 		streamEnded() {
 			if(!res.headersComplete) {
 				throw new Error('stream ended before headers were complete')
@@ -261,13 +261,13 @@ export function extractApplicationDataMsgsFromTranscript(
 				data = DEFAULT_REDACTION_DATA
 			} else {
 				const len = tlsVersion === TLSVersion.TLS_VERSION_1_3
-					// remove content type suffix
+				// remove content type suffix
 					? m.plaintextLength - 1
 					: m.plaintextLength
 				data = new Uint8Array(len)
 					.fill(REDACTION_CHAR_CODE)
 			}
-		// otherwise, we need to check the content type
+			// otherwise, we need to check the content type
 		} else if(tlsVersion === TLSVersion.TLS_VERSION_1_3) {
 			const contentType = m.message[m.message.length - 1]
 			if(contentType !== CONTENT_TYPE_MAP['APPLICATION_DATA']) {
@@ -288,12 +288,11 @@ export function extractApplicationDataMsgsFromTranscript(
 /**
  * Read the HTTP request from a TLS receipt transcript.
  * Note: this currently does not read a body, only headers.
- *
- * @param transcript the transcript to read from
+ * @param receipt the transcript to read from or application messages if they were extracted beforehand
  * @returns the parsed HTTP request
  */
-export function getHttpRequestHeadersFromTranscript(receipt: TLSReceipt) {
-	const applMsgs = extractApplicationDataMsgsFromTranscript(receipt)
+export function getHttpRequestHeadersFromTranscript(receipt: TLSReceipt | ApplicationMessage[]) {
+	const applMsgs = Array.isArray(receipt) ? receipt : extractApplicationDataMsgsFromTranscript(receipt)
 	const clientMsgs = applMsgs
 		.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT)
 
@@ -311,7 +310,7 @@ export function getHttpRequestHeadersFromTranscript(receipt: TLSReceipt) {
 	}
 	let requestBuffer = concatenateUint8Arrays(clientMsgs.map(m => m.data))
 	// keep reading lines until we get to the end of the headers
-	for(let line = getLine();typeof line !== 'undefined';line = getLine()) {
+	for(let line = getLine(); typeof line !== 'undefined'; line = getLine()) {
 		if(line === '') {
 			break
 		}

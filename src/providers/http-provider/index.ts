@@ -240,7 +240,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	},
 	assertValidProviderReceipt(receipt, paramsAny) {
 		const params = normaliseParamsToV2(paramsAny)
-		const req = getHttpRequestHeadersFromTranscript(receipt)
+		const msgs = extractApplicationDataMsgsFromTranscript(receipt)
+		const req = getHttpRequestHeadersFromTranscript(msgs)
 		if(req.method !== params.method.toLowerCase()) {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
@@ -259,8 +260,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 
 		const res = Buffer.concat(
-			extractApplicationDataMsgsFromTranscript(receipt)
-				.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER)
+			msgs.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER)
 				.map((r) => r.data)
 		).toString()
 
