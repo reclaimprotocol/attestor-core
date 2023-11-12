@@ -95,7 +95,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			strToUint8Array(httpReqHeaderStr),
 			body,
 		])
-		console.log(uint8ArrayToBinaryStr(data))
 		const authRedactions = authHeaderValues.map((value) => {
 			const authStrArr = strToUint8Array(value)
 			// the string index will work here as long as
@@ -246,8 +245,9 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 
 		const { hostname, pathname, port, searchParams } = new URL(params.url)
-		if(req.url !== pathname + (searchParams?.size ? '?' + searchParams : '')) {
-			throw new Error(`Expected path: ${pathname}, found: ${req.url}`)
+		const expectedPath = pathname + (searchParams?.size ? '?' + searchParams : '')
+		if(req.url !== expectedPath) {
+			throw new Error(`Expected path: ${expectedPath}, found: ${req.url}`)
 		}
 
 		const expHostPort = `${hostname}:${port || DEFAULT_PORT}`
