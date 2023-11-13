@@ -6,6 +6,7 @@ import {
 	extractApplicationDataMsgsFromTranscript,
 	findIndexInUint8Array,
 	getHttpRequestHeadersFromTranscript,
+	REDACTION_CHAR_CODE,
 	uint8ArrayToBinaryStr,
 } from '../../utils'
 import { HTTPProviderParams, HTTPProviderSecretParams } from './types'
@@ -258,11 +259,12 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 
 
-		const res = Buffer.concat(
-			msgs.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER)
-				.map((r) => r.data)
-		).toString().replace(/^(\*+)/, '') // remove all '*' characters at the beginning
+		const serverBlocks = msgs.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER)
+			.map((r) => r.data)
+			.filter(b => !b.every(b => b === REDACTION_CHAR_CODE)) // filter out fully redacted blocks
+			.map(b => uint8ArrayToBinaryStr(b))
 
+		const res = serverBlocks.join()
 
 		if(!res.startsWith(OK_HTTP_HEADER)) {
 			throw new Error(`Missing "${OK_HTTP_HEADER}" header in response`)
