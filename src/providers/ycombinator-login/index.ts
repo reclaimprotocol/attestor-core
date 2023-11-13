@@ -21,9 +21,7 @@ const YCombinatorLogin = wrapInHttpProvider({
 			method: 'GET',
 			responseSelections: [
 				{
-					'jsonPath': '$.currentUser',
-					'xPath': "//*[@id='js-react-on-rails-context']",
-					'responseMatch': `{\"id\":${userId},.*?waas_admin.*?:{.*?}.*?:{.*?}.*?(?:full_name|first_name).*?}`
+					'responseMatch': `\{&quot;id&quot;:${userId},.*?waas_admin.*?:{.*?}.*?:{.*?}.*?(?:full_name|first_name).*?}`
 				}
 			]
 		}
