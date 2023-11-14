@@ -1,6 +1,7 @@
 import BinanceAgeVerification from './binance-age-verification/binance-dob'
 import bybitBalance from './bybit/bybit-balance'
 import bybitSpotPnl from './bybit/bybit-spot-pnl'
+import cartaEsopsCount from './carta/carta-esops'
 import chessRating from './chess/chess-rating'
 import chessUser from './chess/chess-user'
 import ebayUser from './ebay/ebay-user'
@@ -145,7 +146,8 @@ export const providers = {
 	'steam': steamId,
 	'zomato-equal': zomatoOrdersEqual,
 	'razorpay-title': razorpayTitle,
-	'razorpay-salary': razorpaySalary
+	'razorpay-salary': razorpaySalary,
+	'carta-esops': cartaEsopsCount,
 }
 
 export type ProviderName = keyof typeof providers
