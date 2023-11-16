@@ -1,6 +1,7 @@
 import BinanceAgeVerification from './binance-age-verification/binance-dob'
 import bybitBalance from './bybit/bybit-balance'
 import bybitSpotPnl from './bybit/bybit-spot-pnl'
+import cartaEsopsCompanies from './carta/carta-companies'
 import cartaEsopsCount from './carta/carta-esops'
 import chessRating from './chess/chess-rating'
 import chessUser from './chess/chess-user'
@@ -148,6 +149,7 @@ export const providers = {
 	'razorpay-title': razorpayTitle,
 	'razorpay-salary': razorpaySalary,
 	'carta-esops': cartaEsopsCount,
+	'carta-companies': cartaEsopsCompanies,
 }
 
 export type ProviderName = keyof typeof providers
