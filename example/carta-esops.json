@@ -1,0 +1,11 @@
+{
+    "name": "carta-esops",
+    "params": {
+        "count": 1
+    },
+    "secretParams": {
+        "userId": "{{CARTA_USERID}}",
+        "cookieStr": "{{CARTA_COOKIE}}",
+        "csrfToken": "{{CARTA_CSRFTOKEN}}"
+    }
+}
