@@ -1,10 +1,11 @@
 {
     "name": "carta-esops",
     "params": {
-        "count": 1,
-        "userId": "1214023"
+        "count": 1
     },
     "secretParams": {
-        "cookieStr": "eshares-sessionid-2=m10vzkgcv9vy0cui49z5xoolklhirwij"
+        "userId": "{{CARTA_USERID}}",
+        "cookieStr": "{{CARTA_COOKIE}}",
+        "csrfToken": "{{CARTA_CSRFTOKEN}}"
     }
 }
