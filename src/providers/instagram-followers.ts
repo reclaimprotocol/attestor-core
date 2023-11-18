@@ -30,7 +30,7 @@ const URL = '/'
 const instagramFollowers: Provider<instagramFollowersParams, instagramFollowersSecretParams> = { hostPort: HOSTPORT, areValidParams(params): params is instagramFollowersParams {
 	return typeof params.userName === 'string' && typeof params.followers === 'number'
 },
-createRequest({ cookie }, {userName}) {
+createRequest({ cookie }, { userName }) {
 	const data = [
 		`GET /${userName} HTTP/1.1`,
 		'Host: www.instagram.com',
@@ -86,10 +86,9 @@ assertValidProviderReceipt(receipt, { userName, followers }) {
 	const bodyStr = uint8ArrayToStr(res.body)
 
 	const pattern = new RegExp(`<meta property="og:description" content="${followers} Followers.*${userName}`)
-    const match = bodyStr.match(pattern)
-    console.log("🚀 ~ file: instagram-followers.ts:90 ~ assertValidProviderReceipt ~ match:", match)
+	const match = bodyStr.match(pattern)
 
-	if(!match){
+	if(!match) {
 		throw new Error(`User doesn't have ${followers} followers`)
 	}
 
