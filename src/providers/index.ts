@@ -49,6 +49,7 @@ import GrowwStocksCount from './groww-stock-balance'
 import hackerEarthUser from './hackerearth-user'
 import hackerRankUsername from './hackerrank-username'
 import httpProvider from './http-provider'
+import instaVerifier from './insta-verifier'
 import instagramUserWeekPost from './instagram-posts'
 import instagramUser from './instagram-user'
 import letterboxdUser from './letterboxd-user'
@@ -150,6 +151,7 @@ export const providers = {
 	'razorpay-salary': razorpaySalary,
 	'carta-esops': cartaEsopsCount,
 	'carta-companies': cartaEsopsCompanies,
+	'insta-verifier': instaVerifier
 }
 
 export type ProviderName = keyof typeof providers
