@@ -232,6 +232,7 @@ export function getCompleteHttpResponseFromReceipt(receipt: TLSReceipt) {
 		resParser.onChunk(data)
 	}
 
+	resParser.streamEnded()
 	if(!resParser.res.complete) {
 		throw new Error('Server response is incomplete')
 	}
