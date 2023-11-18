@@ -52,6 +52,7 @@ import httpProvider from './http-provider'
 import instaVerifier from './insta-verifier'
 import instagramUserWeekPost from './instagram-posts'
 import instagramUser from './instagram-user'
+import instagramFollowers from './instagram-followers'
 import letterboxdUser from './letterboxd-user'
 import loomUser from './loom-user-id'
 import { mastodonUser } from './mastodon'
@@ -98,6 +99,7 @@ export const providers = {
 	'binance-asset-balance': binanceAssetBalance,
 	'ebay-user': ebayUser,
 	'flickr-user': flickrUser,
+	'instagram-followers': instagramFollowers,
 	'instagram-user': instagramUser,
 	'instagram-user-week-posts': instagramUserWeekPost,
 	'blind-user': blindUser,

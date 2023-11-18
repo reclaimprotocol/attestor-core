@@ -1,0 +1,10 @@
+{
+    "name": "instagram-followers",
+    "params": {
+      "userName": "{{userName}}",
+      "followers": 0
+    },
+    "secretParams": {
+      "cookie": "{{cookie}}"
+    }
+}
