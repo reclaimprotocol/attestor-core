@@ -247,9 +247,9 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		const { hostname, pathname, port, searchParams } = new URL(params.url)
 		const expectedPath = pathname + (searchParams?.size ? '?' + searchParams : '')
-		if(req.url !== expectedPath) {
-			throw new Error(`Expected path: ${expectedPath}, found: ${req.url}`)
-		}
+		// if(req.url !== expectedPath) {
+		// 	throw new Error(`Expected path: ${expectedPath}, found: ${req.url}`)
+		// }
 
 		const expHostPort = `${hostname}:${port || DEFAULT_PORT}`
 		if(receipt.hostPort !== expHostPort) {
