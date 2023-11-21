@@ -31,14 +31,16 @@ const instagramFollowers: Provider<instagramFollowersParams, instagramFollowersS
 	return typeof params.userName === 'string' && typeof params.followers === 'number'
 },
 createRequest({ cookie }, { userName }) {
+	const PATH = `/api/v1/users/web_profile_info/?username=${userName}`
 	const data = [
-		`GET /${userName} HTTP/1.1`,
+		`GET ${PATH} HTTP/1.1`,
 		'Host: www.instagram.com',
 		'Connection: close',
 		'authority: www.instagram.com',
 		'accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
 		'cookie:' + cookie,
 		'user-agent: reclaim/0.0.1',
+		'X-IG-App-ID: 936619743392459',
 		'\r\n',
 	].join('\r\n')
 
@@ -82,13 +84,9 @@ assertValidProviderReceipt(receipt, { userName, followers }) {
 		throw new Error(`Invalid status code: ${res.statusCode}`)
 	}
 
-	// Convert Response to string and check if the following account is in the response
-	const bodyStr = uint8ArrayToStr(res.body)
+	const json = JSON.parse(uint8ArrayToStr(res.body))
 
-	const pattern = new RegExp(`<meta property="og:description" content="${followers} Followers.*${userName}`)
-	const match = bodyStr.match(pattern)
-
-	if(!match) {
+	if(json.data.user.edge_followed_by.count !== followers){
 		throw new Error(`User doesn't have ${followers} followers`)
 	}
 
