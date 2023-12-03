@@ -33,6 +33,11 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		return host
 	},
+	geoLocation(params) {
+		return ('geoLocation' in params)
+			? params.geoLocation
+			: undefined
+	},
 	areValidParams(params): params is HTTPProviderParams {
 		return (
 			typeof params.url === 'string' &&
@@ -52,7 +57,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const headers: string[] = []
 		const authHeaderValues: string[] = []
 		if(secretParams.cookieStr) {
-			headers.push(`cookie: ${secretParams.cookieStr}`)
+			headers.push(`Cookie: ${secretParams.cookieStr}`)
 			authHeaderValues.push(secretParams.cookieStr)
 		}
 
@@ -96,6 +101,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			strToUint8Array(httpReqHeaderStr),
 			body,
 		])
+
 		const authRedactions = authHeaderValues.map((value) => {
 			const authStrArr = strToUint8Array(value)
 			// the string index will work here as long as

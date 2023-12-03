@@ -109,9 +109,16 @@ export type HTTPProviderParamsV2 = {
          */
         value: string
     }[]
+
+    /**
+	 * Specify the geographical location from where
+	 * to proxy the request
+	 */
+    geoLocation?: string
 }
 
-export type HTTPProviderParams = HTTPProviderParamsV1 | HTTPProviderParamsV2
+export type HTTPProviderParams = HTTPProviderParamsV1
+    | HTTPProviderParamsV2
 
 export type HTTPProviderSecretParams = {
     /** cookie string for authorisation. Will be redacted from witness */

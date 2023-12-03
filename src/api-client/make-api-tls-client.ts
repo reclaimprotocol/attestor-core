@@ -1,6 +1,6 @@
 import { detectEnvironment } from '@reclaimprotocol/common-grpc-web-transport'
 import { CipherSuite, makeTLSClient, PACKET_TYPE, SUPPORTED_NAMED_CURVES, TLSConnectionOptions, TLSPresharedKey, TLSSessionTicket } from '@reclaimprotocol/tls'
-import { InitialiseSessionRequest, PullFromSessionResponse, ReclaimWitnessClient, TranscriptMessageSenderType, WitnessVersion } from '../proto/api'
+import { InitialiseSessionRequest, InitialiseSessionRequest_BeaconBasedProviderClaimRequest as BeaconBasedProviderRequest, PullFromSessionResponse, ReclaimWitnessClient, TranscriptMessageSenderType, WitnessVersion } from '../proto/api'
 import { ArraySlice, CompleteTLSPacket, Logger } from '../types'
 import { getBlocksToReveal, logger as MAIN_LOGGER, PrepareZKProofsBaseOpts, redactSlices } from '../utils'
 import { preparePacketsForReveal } from '../utils/prepare-packets'
@@ -9,7 +9,7 @@ export type BaseAPIClientOptions = {
 	client: ReclaimWitnessClient
 	logger?: Logger
 	additionalConnectOpts?: TLSConnectionOptions
-	requestData?: Partial<InitialiseSessionRequest>
+	beaconBasedProviderRequest?: BeaconBasedProviderRequest
 	/**
 	 * Default way to redact data sent from the client to the server.
 	 * For TLS1.3, this is 'key-update', for TLS1.2, this is 'zk'
@@ -25,13 +25,17 @@ export type BaseAPIClientOptions = {
 export type APITLSClientOptions = BaseAPIClientOptions & {
 	host: string
 	port: number
+	geoLocation?: string
 	handleDataFromServer(data: Uint8Array): void
 	onTlsEnd?(error?: Error): void
 	/** return the sections of the response to redact */
 	redactResponse?(data: Uint8Array): ArraySlice[]
 }
 
-type ServerAppDataPacket = { plaintext: Uint8Array, index: number }
+type ServerAppDataPacket = {
+	plaintext: Uint8Array
+	index: number
+}
 
 // we only support chacha20-poly1305 for API sessions
 // that need ZK proofs
@@ -59,9 +63,10 @@ export const makeAPITLSClient = ({
 	redactResponse,
 	handleDataFromServer,
 	onTlsEnd,
-	requestData,
+	beaconBasedProviderRequest,
 	additionalConnectOpts,
 	defaultWriteRedactionMode = 'key-update',
+	geoLocation = '',
 	logger = MAIN_LOGGER?.child({ }),
 	...opts
 }: APITLSClientOptions) => {
@@ -144,13 +149,19 @@ export const makeAPITLSClient = ({
 				await generatePSK()
 			}
 
-			let initialiseSessionParams = requestData
-			if(
-				!initialiseSessionParams?.beaconBasedProviderClaimRequest
-				&& !initialiseSessionParams?.receiptGenerationRequest
-			) {
+			let initialiseSessionParams: InitialiseSessionRequest
+			if(beaconBasedProviderRequest) {
 				initialiseSessionParams = {
-					receiptGenerationRequest: { host, port },
+					beaconBasedProviderClaimRequest: beaconBasedProviderRequest,
+					receiptGenerationRequest: undefined
+				}
+			} else {
+				initialiseSessionParams = {
+					receiptGenerationRequest: {
+						host,
+						port,
+						geoLocation,
+					},
 					beaconBasedProviderClaimRequest: undefined
 				}
 			}

@@ -2,7 +2,7 @@ import { CommonTransport } from '@reclaimprotocol/common-grpc-web-transport'
 import { areUint8ArraysEqual, CipherSuite, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 import { createChannel, createClient } from 'nice-grpc-web'
 import { ReclaimWitnessClient, ReclaimWitnessDefinition, TLSReceipt, TranscriptMessageSenderType } from '../proto/api'
-import { Logger } from '../types'
+import { Logger, ProviderField } from '../types'
 import { extractApplicationDataMsgsFromTranscript } from './http-parser'
 
 export function uint8ArrayToStr(arr: Uint8Array) {
@@ -119,4 +119,11 @@ export function getPureCiphertext(
 	content = content.slice(recordIvLength)
 
 	return content
+}
+
+export function getProviderValue<P, T>(params: P, fn: ProviderField<P, T>) {
+	return typeof fn === 'function'
+		// @ts-ignore
+		? fn(params)
+		: fn
 }

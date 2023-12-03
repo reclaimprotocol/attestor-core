@@ -117,7 +117,10 @@ export async function createClaim<Name extends ProviderName>({
 		info: claimInfo,
 		ownerProof: undefined,
 	}
-	providerClaimReq.ownerProof = await makeOwnerProof(providerClaimReq, ownerPrivateKey)
+	providerClaimReq.ownerProof = await makeOwnerProof(
+		providerClaimReq,
+		ownerPrivateKey
+	)
 
 	for(let i = 0;i < witnesses.length;i++) {
 		const witness = witnesses[i]
@@ -167,10 +170,7 @@ export async function createClaim<Name extends ProviderName>({
 			name,
 			secretParams,
 			params,
-			requestData: {
-				beaconBasedProviderClaimRequest: providerClaimReq,
-				receiptGenerationRequest: undefined,
-			},
+			beaconBasedProviderRequest: providerClaimReq,
 			client: grpcClient,
 			logger,
 			...opts

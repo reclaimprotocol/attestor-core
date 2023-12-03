@@ -17,6 +17,8 @@ type CreateRequestResult = {
 
 export type RedactionMode = 'key-update' | 'zk'
 
+export type ProviderField<Params, T> = T | ((params: Params) => T)
+
 /**
  * Generic interface for a provider that can be used to verify
  * claims on a TLS receipt
@@ -40,7 +42,14 @@ export interface Provider<
    *
    * Eg. "www.google.com:443", (p) => p.url.host
    * */
-  hostPort: string | ((params: Params) => string)
+  hostPort: ProviderField<Params, string>
+  /**
+   * Which geo location to send the request from
+   * Provide 2 letter country code, or a function
+   * that returns the country code
+   * @example "US", "IN"
+   */
+  geoLocation?: ProviderField<Params, string | undefined>
 
   /** extra options to pass to the client like root CA certificates */
   additionalClientOptions?: TLSConnectionOptions

@@ -1,7 +1,7 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
 import { DEFAULT_PORT } from '../config'
 import { ProviderName, ProviderParams, providers, ProviderSecretParams } from '../providers'
-import { logger as MAIN_LOGGER, makeHttpResponseParser } from '../utils'
+import { getProviderValue, logger as MAIN_LOGGER, makeHttpResponseParser } from '../utils'
 import { BaseAPIClientOptions, makeAPITLSClient } from './make-api-tls-client'
 
 export type GenerateProviderReceiptOptions<N extends ProviderName> = {
@@ -27,16 +27,14 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 	logger = logger || MAIN_LOGGER
 	const provider = providers[name]
 
-	const hostPort = typeof provider.hostPort === 'function'
-		// @ts-ignore
-		? provider.hostPort(params)
-		: provider.hostPort
-
+	const hostPort = getProviderValue(params, provider.hostPort)
+	const geoLocation = getProviderValue(params, provider.geoLocation)
 
 	additionalConnectOpts = {
 		...provider.additionalClientOptions || {},
 		...additionalConnectOpts,
 	}
+
 	if(provider.additionalClientOptions?.rootCAs) {
 		additionalConnectOpts.rootCAs = [
 			...(additionalConnectOpts.rootCAs || [ ]),
@@ -49,6 +47,7 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 	const apiClient = makeAPITLSClient({
 		host,
 		port: port ? +port : DEFAULT_PORT,
+		geoLocation,
 		logger,
 		additionalConnectOpts,
 		defaultWriteRedactionMode: provider.defaultRedactionMode,

@@ -88,10 +88,16 @@ message TLSReceipt {
 	 * in the order they were received
 	 */
 	repeated TranscriptMessage transcript = 3;
-	/** the version of TLS used */
-	TLSVersion tlsVersion = 5;
 	/** sign(proto(TLSReceipt w/o signature)) */
 	bytes signature = 4;
+	/** the version of TLS used */
+	TLSVersion tlsVersion = 5;
+	/** 
+	 * Geo location from which the request was made.
+	 * 2 letter ISO country code. Empty if geo location
+	 * was not used.
+	 */
+	string geoLocation = 6;
 }
 
 message GetVerifierPublicKeyRequest {
@@ -117,6 +123,15 @@ message InitialiseSessionRequest {
 	message ReceiptGenerationRequest {
 		string host = 1;
 		uint32 port = 2;
+		/**
+		* Geo location from which the request will be made.
+		* Provide 2 letter ISO country code. Leave empty
+		* if you don't want to use geo location.
+		*
+		* Geo location is implemented using an https proxy
+		* eg. US, IN, GB, etc.
+		*/
+		string geoLocation = 3;
 	}
 
 	message BeaconBasedProviderClaimRequest {

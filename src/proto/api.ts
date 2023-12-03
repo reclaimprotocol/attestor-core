@@ -216,10 +216,16 @@ export interface TLSReceipt {
    * in the order they were received
    */
   transcript: TranscriptMessage[];
-  /** the version of TLS used */
-  tlsVersion: TLSVersion;
   /** sign(proto(TLSReceipt w/o signature)) */
   signature: Uint8Array;
+  /** the version of TLS used */
+  tlsVersion: TLSVersion;
+  /**
+   * Geo location from which the request was made.
+   * 2 letter ISO country code. Empty if geo location
+   * was not used.
+   */
+  geoLocation: string;
 }
 
 export interface GetVerifierPublicKeyRequest {
@@ -248,6 +254,15 @@ export interface InitialiseSessionRequest {
 export interface InitialiseSessionRequest_ReceiptGenerationRequest {
   host: string;
   port: number;
+  /**
+   * Geo location from which the request will be made.
+   * Provide 2 letter ISO country code. Leave empty
+   * if you don't want to use geo location.
+   *
+   * Geo location is implemented using an https proxy
+   * eg. US, IN, GB, etc.
+   */
+  geoLocation: string;
 }
 
 export interface InitialiseSessionRequest_BeaconBasedProviderClaimRequest {
@@ -844,7 +859,7 @@ export const ProviderClaimInfo = {
 };
 
 function createBaseTLSReceipt(): TLSReceipt {
-  return { hostPort: "", timestampS: 0, transcript: [], tlsVersion: 0, signature: new Uint8Array(0) };
+  return { hostPort: "", timestampS: 0, transcript: [], signature: new Uint8Array(0), tlsVersion: 0, geoLocation: "" };
 }
 
 export const TLSReceipt = {
@@ -858,11 +873,14 @@ export const TLSReceipt = {
     for (const v of message.transcript) {
       TranscriptMessage.encode(v!, writer.uint32(26).fork()).ldelim();
     }
+    if (message.signature.length !== 0) {
+      writer.uint32(34).bytes(message.signature);
+    }
     if (message.tlsVersion !== 0) {
       writer.uint32(40).int32(message.tlsVersion);
     }
-    if (message.signature.length !== 0) {
-      writer.uint32(34).bytes(message.signature);
+    if (message.geoLocation !== "") {
+      writer.uint32(50).string(message.geoLocation);
     }
     return writer;
   },
@@ -895,6 +913,13 @@ export const TLSReceipt = {
 
           message.transcript.push(TranscriptMessage.decode(reader, reader.uint32()));
           continue;
+        case 4:
+          if (tag !== 34) {
+            break;
+          }
+
+          message.signature = reader.bytes();
+          continue;
         case 5:
           if (tag !== 40) {
             break;
@@ -902,12 +927,12 @@ export const TLSReceipt = {
 
           message.tlsVersion = reader.int32() as any;
           continue;
-        case 4:
-          if (tag !== 34) {
+        case 6:
+          if (tag !== 50) {
             break;
           }
 
-          message.signature = reader.bytes();
+          message.geoLocation = reader.string();
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -925,8 +950,9 @@ export const TLSReceipt = {
       transcript: Array.isArray(object?.transcript)
         ? object.transcript.map((e: any) => TranscriptMessage.fromJSON(e))
         : [],
-      tlsVersion: isSet(object.tlsVersion) ? tLSVersionFromJSON(object.tlsVersion) : 0,
       signature: isSet(object.signature) ? bytesFromBase64(object.signature) : new Uint8Array(0),
+      tlsVersion: isSet(object.tlsVersion) ? tLSVersionFromJSON(object.tlsVersion) : 0,
+      geoLocation: isSet(object.geoLocation) ? String(object.geoLocation) : "",
     };
   },
 
@@ -941,11 +967,14 @@ export const TLSReceipt = {
     if (message.transcript?.length) {
       obj.transcript = message.transcript.map((e) => TranscriptMessage.toJSON(e));
     }
+    if (message.signature.length !== 0) {
+      obj.signature = base64FromBytes(message.signature);
+    }
     if (message.tlsVersion !== 0) {
       obj.tlsVersion = tLSVersionToJSON(message.tlsVersion);
     }
-    if (message.signature.length !== 0) {
-      obj.signature = base64FromBytes(message.signature);
+    if (message.geoLocation !== "") {
+      obj.geoLocation = message.geoLocation;
     }
     return obj;
   },
@@ -958,8 +987,9 @@ export const TLSReceipt = {
     message.hostPort = object.hostPort ?? "";
     message.timestampS = object.timestampS ?? 0;
     message.transcript = object.transcript?.map((e) => TranscriptMessage.fromPartial(e)) || [];
-    message.tlsVersion = object.tlsVersion ?? 0;
     message.signature = object.signature ?? new Uint8Array(0);
+    message.tlsVersion = object.tlsVersion ?? 0;
+    message.geoLocation = object.geoLocation ?? "";
     return message;
   },
 };
@@ -1196,7 +1226,7 @@ export const InitialiseSessionRequest = {
 };
 
 function createBaseInitialiseSessionRequest_ReceiptGenerationRequest(): InitialiseSessionRequest_ReceiptGenerationRequest {
-  return { host: "", port: 0 };
+  return { host: "", port: 0, geoLocation: "" };
 }
 
 export const InitialiseSessionRequest_ReceiptGenerationRequest = {
@@ -1209,6 +1239,9 @@ export const InitialiseSessionRequest_ReceiptGenerationRequest = {
     }
     if (message.port !== 0) {
       writer.uint32(16).uint32(message.port);
+    }
+    if (message.geoLocation !== "") {
+      writer.uint32(26).string(message.geoLocation);
     }
     return writer;
   },
@@ -1234,6 +1267,13 @@ export const InitialiseSessionRequest_ReceiptGenerationRequest = {
 
           message.port = reader.uint32();
           continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.geoLocation = reader.string();
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1244,7 +1284,11 @@ export const InitialiseSessionRequest_ReceiptGenerationRequest = {
   },
 
   fromJSON(object: any): InitialiseSessionRequest_ReceiptGenerationRequest {
-    return { host: isSet(object.host) ? String(object.host) : "", port: isSet(object.port) ? Number(object.port) : 0 };
+    return {
+      host: isSet(object.host) ? String(object.host) : "",
+      port: isSet(object.port) ? Number(object.port) : 0,
+      geoLocation: isSet(object.geoLocation) ? String(object.geoLocation) : "",
+    };
   },
 
   toJSON(message: InitialiseSessionRequest_ReceiptGenerationRequest): unknown {
@@ -1254,6 +1298,9 @@ export const InitialiseSessionRequest_ReceiptGenerationRequest = {
     }
     if (message.port !== 0) {
       obj.port = Math.round(message.port);
+    }
+    if (message.geoLocation !== "") {
+      obj.geoLocation = message.geoLocation;
     }
     return obj;
   },
@@ -1269,6 +1316,7 @@ export const InitialiseSessionRequest_ReceiptGenerationRequest = {
     const message = createBaseInitialiseSessionRequest_ReceiptGenerationRequest();
     message.host = object.host ?? "";
     message.port = object.port ?? 0;
+    message.geoLocation = object.geoLocation ?? "";
     return message;
   },
 };
