@@ -217,15 +217,18 @@ export function normaliseParamsToV2(params: HTTPProviderParams): HTTPProviderPar
 	for(const rs of params.responseSelections) {
 		// if there is any response selection,
 		// map to a v2 response redaction
-		if(rs.xPath || rs.jsonPath) {
-			redactions.push({
-				xPath: rs.xPath,
-				jsonPath: rs.jsonPath,
-			})
-		} else if(rs.responseMatch && params.useZK) {
-			// v1 only supported either a regex
-			// redaction or a json/xpath redaction
-			redactions.push({ regex: rs.responseMatch })
+
+		if(params.useZK) {
+			if((rs.xPath || rs.jsonPath)) {
+				redactions.push({
+					xPath: rs.xPath,
+					jsonPath: rs.jsonPath,
+				})
+			} else if(rs.responseMatch) {
+				// v1 only supported either a regex
+				// redaction or a json/xpath redaction
+				redactions.push({ regex: rs.responseMatch })
+			}
 		}
 
 		if(rs.responseMatch) {
