@@ -8,6 +8,7 @@ import {
 	getHttpRequestHeadersFromTranscript,
 	REDACTION_CHAR_CODE,
 	uint8ArrayToBinaryStr,
+	uint8ArrayToStr,
 } from '../../utils'
 import { HTTPProviderParams, HTTPProviderSecretParams } from './types'
 import {
@@ -254,6 +255,16 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const { hostname, pathname, port, searchParams } = new URL(params.url)
 		const expectedPath = pathname + (searchParams?.size ? '?' + searchParams : '')
 		if(req.url !== expectedPath) {
+
+			//log full request in case path mismatches
+
+			const clientMsgs = msgs
+				.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT)
+			const requestBuffer = concatenateUint8Arrays(clientMsgs.map(m => m.data))
+			const request = uint8ArrayToStr(requestBuffer)
+			console.log('params URL:', params.url)
+			console.log(request)
+
 			throw new Error(`Expected path: ${expectedPath}, found: ${req.url}`)
 		}
 
