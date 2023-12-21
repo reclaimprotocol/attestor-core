@@ -249,27 +249,38 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const msgs = extractApplicationDataMsgsFromTranscript(receipt)
 		const req = getHttpRequestHeadersFromTranscript(msgs)
 		if(req.method !== params.method.toLowerCase()) {
+			logTranscript()
+
 			throw new Error(`Invalid method: ${req.method}`)
+		}
+
+
+		function logTranscript() {
+
+			const clientMsgs = msgs.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT).map(m => m.data)
+			const serverMsgs = msgs.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER).map(m => m.data)
+
+
+			const clientTranscript = uint8ArrayToStr(concatenateUint8Arrays(clientMsgs))
+			const serverTranscript = uint8ArrayToStr(concatenateUint8Arrays(serverMsgs))
+			console.log('====REQUEST=====')
+			console.log(clientTranscript)
+			console.log('====RESPONSE====')
+			console.log(serverTranscript)
 		}
 
 		const { hostname, pathname, port, searchParams } = new URL(params.url)
 		const expectedPath = pathname + (searchParams?.size ? '?' + searchParams : '')
 		if(req.url !== expectedPath) {
-
-			//log full request in case path mismatches
-
-			const clientMsgs = msgs
-				.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT)
-			const requestBuffer = concatenateUint8Arrays(clientMsgs.map(m => m.data))
-			const request = uint8ArrayToStr(requestBuffer)
 			console.log('params URL:', params.url)
-			console.log(request)
-
+			logTranscript()
 			throw new Error(`Expected path: ${expectedPath}, found: ${req.url}`)
 		}
 
 		const expHostPort = `${hostname}:${port || DEFAULT_PORT}`
 		if(receipt.hostPort !== expHostPort) {
+			logTranscript()
+
 			throw new Error(
 				`Expected hostPort: ${expHostPort}, found: ${receipt.hostPort}`
 			)
@@ -284,10 +295,14 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const res = serverBlocks.join()
 
 		if(!res.startsWith(OK_HTTP_HEADER)) {
+			logTranscript()
+
 			throw new Error(`Missing "${OK_HTTP_HEADER}" header in response`)
 		}
 
 		if(req.headers['connection'] !== 'close') {
+			logTranscript()
+
 			throw new Error('Connection header must be "close"')
 		}
 
@@ -295,12 +310,16 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			switch (type) {
 			case 'regex':
 				if(!makeRegex(value).test(res)) {
+					logTranscript()
+
 					throw new Error(`Invalid receipt. Regex "${value}" failed to match`)
 				}
 
 				break
 			case 'contains':
 				if(!res.includes(value)) {
+					logTranscript()
+
 					const trimmedStr =
                             value.length > 100 ? value.slice(0, 100) + '...' : value
 					throw new Error(
