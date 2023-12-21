@@ -44,14 +44,16 @@ type HTTPProviderParamsV1 = {
     useZK?: boolean
 }
 
-export type HidableHeaders = { [key: string]: string | { value: string, hidden: boolean } }
+export type HeaderMap = { [key: string]: string }
 
 export type HTTPProviderParamsV2 = {
     /**
      * Any additional headers to be sent with the request
-     * Note: they will be hidden by default
+     * Note: these will be revealed to the witness & won't be
+     * redacted from the transcript. To add hidden headers,
+     * use 'secretParams.headers' instead
      */
-    headers?: HidableHeaders
+    headers?: HeaderMap
     /**
      * which URL does the request have to be made to
      * for eg. https://amazon.in/orders?q=abcd
@@ -125,4 +127,8 @@ export type HTTPProviderSecretParams = {
     cookieStr?: string
     /** authorisation header value. Will be redacted from witness */
     authorisationHeader?: string
+    /**
+     * Headers that need to be hidden from the witness
+    */
+    headers?: HeaderMap
 }

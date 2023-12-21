@@ -50,38 +50,31 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		if(
 			!secretParams.cookieStr &&
             !secretParams.authorisationHeader &&
-            !params.headers
+            !secretParams.headers
 		) {
 			throw new Error('auth parameters are not set')
 		}
 
-		const headers: string[] = []
-		const authHeaderValues: string[] = []
+		const pubHeaders = params.headers || {}
+		const secHeaders = { ...secretParams.headers }
 		if(secretParams.cookieStr) {
-			headers.push(`Cookie: ${secretParams.cookieStr}`)
-			authHeaderValues.push(secretParams.cookieStr)
+			secHeaders['Cookie'] = secretParams.cookieStr
 		}
 
 		if(secretParams.authorisationHeader) {
-			headers.push(`Authorization: ${secretParams.authorisationHeader}`)
-			authHeaderValues.push(secretParams.authorisationHeader)
+			secHeaders['Authorization'] = secretParams.authorisationHeader
 		}
 
-		let hasUserAgent = false
-
-		if(params.headers) {
-			headers.push(...buildHeaders(params.headers))
-			hasUserAgent = Object.keys(params.headers).find(k => {
-				return k.toLowerCase() === 'user-agent'
-			}) !== undefined
-		}
-
+		const hasUserAgent = Object.keys(pubHeaders)
+			.some(k => k.toLowerCase() === 'user-agent')
 		if(!hasUserAgent) {
-			headers.push('User-Agent: ' + RECLAIM_USER_AGENT) //only set user-agent if not set by provider
+			//only set user-agent if not set by provider
+			pubHeaders['User-Agent'] = RECLAIM_USER_AGENT
 		}
 
-		const hostPort =
-            this.hostPort instanceof Function ? this.hostPort(params) : this.hostPort
+		const hostPort = this.hostPort instanceof Function
+			? this.hostPort(params)
+			: this.hostPort
 		const { pathname, searchParams } = new URL(params.url)
 		const body =
             params.body instanceof Uint8Array
@@ -95,48 +88,27 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			'Connection: close',
 			//no compression
 			'Accept-Encoding: identity',
-			...headers,
+			...buildHeaders(pubHeaders),
+			...buildHeaders(secHeaders),
 			'\r\n',
 		].join('\r\n')
-		const data = concatenateUint8Arrays([
-			strToUint8Array(httpReqHeaderStr),
-			body,
-		])
+		const headerStr = strToUint8Array(httpReqHeaderStr)
+		const data = concatenateUint8Arrays([ headerStr, body ])
 
-		const authRedactions = authHeaderValues.map((value) => {
+		const authRedactions = Object.entries(secHeaders).map(([key, value]) => {
 			const authStrArr = strToUint8Array(value)
 			// the string index will work here as long as
 			// the string is ascii
 			const tokenStartIndex = findIndexInUint8Array(data, authStrArr)
+			if(tokenStartIndex < 0) {
+				throw new Error(`Failed to find header "${key}" in request`)
+			}
+
 			return {
 				fromIndex: tokenStartIndex,
 				toIndex: tokenStartIndex + authStrArr.length,
 			}
 		})
-
-		//also redact extra headers
-		if(params.headers) {
-			for(const key of Object.keys(params.headers)) {
-				const value = params.headers[key]
-				let headerValue: string
-				if(typeof value === 'object') {
-					if(!value.hidden) {
-						continue
-					}
-
-					headerValue = value.value
-				} else {
-					headerValue = value
-				}
-
-				const header = strToUint8Array(`${key}: ${headerValue}`)
-				const headerStartIndex = findIndexInUint8Array(data, header)
-				authRedactions.push({
-					fromIndex: headerStartIndex,
-					toIndex: headerStartIndex + header.length,
-				})
-			}
-		}
 
 		return {
 			data,
