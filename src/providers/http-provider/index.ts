@@ -93,7 +93,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			'\r\n',
 		].join('\r\n')
 		const headerStr = strToUint8Array(httpReqHeaderStr)
-		const data = concatenateUint8Arrays([ headerStr, body ])
+		const data = concatenateUint8Arrays([headerStr, body])
 
 		const authRedactions = Object.entries(secHeaders).map(([key, value]) => {
 			const authStrArr = strToUint8Array(value)
@@ -118,6 +118,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	getResponseRedactions(response, paramsAny) {
 		const res = parseHttpResponse(response)
 		if(((res.statusCode / 100) >> 0) !== 2) {
+			console.log('===RESPONSE===')
+			console.log(uint8ArrayToBinaryStr(res.body))
 			throw new Error(`Provider returned error "${res.statusCode} ${res.statusMessage}"`)
 		}
 
