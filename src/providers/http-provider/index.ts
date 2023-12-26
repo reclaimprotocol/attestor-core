@@ -76,6 +76,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			? this.hostPort(params)
 			: this.hostPort
 		const { pathname, searchParams } = new URL(params.url)
+		console.log('Params URL:', params.url, 'Query:', searchParams)
 		const body =
             params.body instanceof Uint8Array
             	? params.body
