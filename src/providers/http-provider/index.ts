@@ -96,7 +96,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			'\r\n',
 		].join('\r\n')
 		const headerStr = strToUint8Array(httpReqHeaderStr)
-		console.log(httpReqHeaderStr)
 		const data = concatenateUint8Arrays([headerStr, body])
 
 		const authRedactions = Object.entries(secHeaders).map(([key, value]) => {
