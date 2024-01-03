@@ -76,14 +76,16 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			? this.hostPort(params)
 			: this.hostPort
 		const { pathname, searchParams } = new URL(params.url)
-		console.log('Params URL:', params.url, 'Query:', searchParams)
+		console.log('Params URL:', params.url, 'Path:', pathname, 'Query:', searchParams.toString())
 		const body =
             params.body instanceof Uint8Array
             	? params.body
             	: strToUint8Array(params.body || '')
 		const contentLength = body.length
+		const reqLine = `${params.method} ${pathname}${searchParams?.size ? '?' + searchParams.toString() : ''} HTTP/1.1`
+		console.log('Request line:', reqLine)
 		const httpReqHeaderStr = [
-			`${params.method} ${pathname}${searchParams?.size ? '?' + searchParams : ''} HTTP/1.1`,
+			reqLine,
 			`Host: ${hostPort}`,
 			`Content-Length: ${contentLength}`,
 			'Connection: close',
@@ -94,6 +96,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			'\r\n',
 		].join('\r\n')
 		const headerStr = strToUint8Array(httpReqHeaderStr)
+		console.log(httpReqHeaderStr)
 		const data = concatenateUint8Arrays([headerStr, body])
 
 		const authRedactions = Object.entries(secHeaders).map(([key, value]) => {
