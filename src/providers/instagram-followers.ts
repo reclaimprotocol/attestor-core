@@ -58,7 +58,7 @@ createRequest({ cookie }, { userName }) {
 		],
 	}
 },
-assertValidProviderReceipt(receipt, { userName, followers }) {
+assertValidProviderReceipt(receipt, { followers }) {
 
 
 	if(receipt.hostPort !== HOSTPORT) {
@@ -86,7 +86,7 @@ assertValidProviderReceipt(receipt, { userName, followers }) {
 
 	const json = JSON.parse(uint8ArrayToStr(res.body))
 
-	if(json.data.user.edge_followed_by.count !== followers){
+	if(json.data.user.edge_followed_by.count !== followers) {
 		throw new Error(`User doesn't have ${followers} followers`)
 	}
 

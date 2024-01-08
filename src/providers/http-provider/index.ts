@@ -75,14 +75,15 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const hostPort = this.hostPort instanceof Function
 			? this.hostPort(params)
 			: this.hostPort
-		const { pathname, searchParams } = new URL(params.url)
+		const { pathname } = new URL(params.url)
+		const searchParams = params.url.includes('?') ? params.url.split('?')[1] : ''
 		console.log('Params URL:', params.url, 'Path:', pathname, 'Query:', searchParams.toString())
 		const body =
             params.body instanceof Uint8Array
             	? params.body
             	: strToUint8Array(params.body || '')
 		const contentLength = body.length
-		const reqLine = `${params.method} ${pathname}${searchParams?.size ? '?' + searchParams.toString() : ''} HTTP/1.1`
+		const reqLine = `${params.method} ${pathname}${searchParams?.length ? '?' + searchParams : ''} HTTP/1.1`
 		console.log('Request line:', reqLine)
 		const httpReqHeaderStr = [
 			reqLine,
@@ -246,8 +247,9 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			console.log(serverTranscript)
 		}
 
-		const { hostname, pathname, port, searchParams } = new URL(params.url)
-		const expectedPath = pathname + (searchParams?.size ? '?' + searchParams : '')
+		const { hostname, pathname, port } = new URL(params.url)
+		const searchParams = params.url.includes('?') ? params.url.split('?')[1] : ''
+		const expectedPath = pathname + (searchParams?.length ? '?' + searchParams : '')
 		if(req.url !== expectedPath) {
 			console.log('params URL:', params.url)
 			logTranscript()
