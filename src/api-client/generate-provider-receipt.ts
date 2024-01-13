@@ -1,4 +1,5 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
+import { ClientError, Status } from 'nice-grpc-common'
 import { DEFAULT_PORT } from '../config'
 import { ProviderName, ProviderParams, providers, ProviderSecretParams } from '../providers'
 import { getProviderValue, logger as MAIN_LOGGER, makeHttpResponseParser } from '../utils'
@@ -105,9 +106,28 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 	const reqData = typeof request.data === 'string'
 		? strToUint8Array(request.data)
 		: request.data
-	await apiClient.write(reqData, request.redactions)
+	try {
+		await apiClient.write(reqData, request.redactions)
 
-	logger.info('wrote request to server')
+		logger.info('wrote request to server')
+	} catch(err) {
+		if(
+			err instanceof ClientError
+			&& err.code === Status.FAILED_PRECONDITION
+			&& err.message.includes('is not active')
+		) {
+			// wait for complete stream end when the session is closed
+			// mid-write, as this means the server could not process
+			// our request due to some error. Hope the stream end
+			// error will be more descriptive
+			logger.error(
+				{ err },
+				'session closed during write, waiting for stream end'
+			)
+		} else {
+			throw err
+		}
+	}
 
 	await waitForRequestEnd
 
