@@ -26,6 +26,7 @@ const HOSTPORT = `${HOST}:${DEFAULT_PORT}`
 const PATH = '/ssupService/api/demographics/request/v4/profile'
 
 const UidaiAadhaarState: Provider<UidaiParams, UidaiSecretParams> = {
+	geoLocation:'in',
 	hostPort: HOSTPORT,
 	areValidParams(params): params is UidaiParams {
 		return typeof params.stateName === 'string'
