@@ -89,6 +89,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
             	: strToUint8Array(params.body || '')
 		const contentLength = body.length
 		const reqLine = `${params.method} ${pathname}${searchParams?.length ? '?' + searchParams : ''} HTTP/1.1`
+		const secHeadersList = buildHeaders(secHeaders)
 		console.log('Request line:', reqLine)
 		const httpReqHeaderStr = [
 			reqLine,
@@ -98,26 +99,28 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			//no compression
 			'Accept-Encoding: identity',
 			...buildHeaders(pubHeaders),
-			...buildHeaders(secHeaders),
+			...secHeadersList,
 			'\r\n',
 		].join('\r\n')
 		const headerStr = strToUint8Array(httpReqHeaderStr)
 		const data = concatenateUint8Arrays([headerStr, body])
 
-		const authRedactions = Object.entries(secHeaders).map(([key, value]) => {
-			const authStrArr = strToUint8Array(value)
-			// the string index will work here as long as
-			// the string is ascii
-			const tokenStartIndex = findIndexInUint8Array(data, authStrArr)
-			if(tokenStartIndex < 0) {
-				throw new Error(`Failed to find header "${key}" in request`)
-			}
+		// hide all secret headers
+		const secHeadersStr = secHeadersList.join('\r\n')
+		const tokenStartIndex = findIndexInUint8Array(
+			data,
+			strToUint8Array(secHeadersStr)
+		)
+		if(tokenStartIndex < 0) {
+			throw new Error('Failed to find secret headers list in request')
+		}
 
-			return {
+		const authRedactions = [
+			{
 				fromIndex: tokenStartIndex,
-				toIndex: tokenStartIndex + authStrArr.length,
+				toIndex: tokenStartIndex + secHeadersStr.length,
 			}
-		})
+		]
 
 		return {
 			data,
