@@ -1,3 +1,5 @@
+import { RedactionMode } from '../../types'
+
 type HTTPProviderParamsV1 = {
     /**
      * Any additional headers to be sent with the request
@@ -117,6 +119,8 @@ export type HTTPProviderParamsV2 = {
 	 * to proxy the request
 	 */
     geoLocation?: string
+
+    writeRedactionMode?: RedactionMode
 }
 
 export type HTTPProviderParams = HTTPProviderParamsV1

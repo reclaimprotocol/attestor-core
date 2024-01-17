@@ -59,7 +59,7 @@ export interface Provider<
    * for TLS1.2 requests as TLS1.2 don't support key updates
    * @default 'key-update'
    */
-  defaultRedactionMode?: RedactionMode
+  writeRedactionMode?: ProviderField<Params, RedactionMode | undefined>
   /**
    * check the parameters are valid
    * Run client & witness side, to verify the parameters

@@ -30,6 +30,7 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 
 	const hostPort = getProviderValue(params, provider.hostPort)
 	const geoLocation = getProviderValue(params, provider.geoLocation)
+	const redactionMode = getProviderValue(params, provider.writeRedactionMode)
 
 	additionalConnectOpts = {
 		...provider.additionalClientOptions || {},
@@ -51,7 +52,7 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 		geoLocation,
 		logger,
 		additionalConnectOpts,
-		defaultWriteRedactionMode: provider.defaultRedactionMode,
+		defaultWriteRedactionMode: redactionMode,
 		...opts,
 		handleDataFromServer(data) {
 			resParser.onChunk(data)

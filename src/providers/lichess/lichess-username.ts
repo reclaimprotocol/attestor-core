@@ -28,7 +28,7 @@ const PATH = '/inbox'
 
 const lichessUsername: Provider<LichessUserParams, LichessLoginSecretParams> = {
 	hostPort: HOSTPORT,
-	defaultRedactionMode: 'zk',
+	writeRedactionMode: 'zk',
 	areValidParams(params): params is LichessUserParams {
 		return (
 			typeof params.username === 'string'

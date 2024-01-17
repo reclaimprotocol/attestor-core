@@ -34,6 +34,11 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		return host
 	},
+	writeRedactionMode(params) {
+		return ('writeRedactionMode' in params)
+			? params.writeRedactionMode
+			: undefined
+	},
 	geoLocation(params) {
 		return ('geoLocation' in params)
 			? params.geoLocation
@@ -121,6 +126,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	},
 	getResponseRedactions(response, paramsAny) {
 		const res = parseHttpResponse(response)
+		// if the response is not 2xx, then we don't need
+		// to redact anything as the request itself failed
 		if(((res.statusCode / 100) >> 0) !== 2) {
 			console.log('===RESPONSE===')
 			console.log(uint8ArrayToBinaryStr(res.body))
