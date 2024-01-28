@@ -96,28 +96,63 @@ export interface Provider<
   ): void | Promise<void>
 }
 
+export type ProofGenerationStep =
+  | {
+    // initialise session on witness
+    // using initialiseSession RPC
+    name: 'connecting'
+  }
+  | {
+    // once connection to witness
+    // is established, send the
+    // request data to the witness
+    name: 'sending-request-data'
+  }
+  | {
+    // once all the data is sent,
+    // wait for the server's response
+    // to be relayed back to the client
+    name: 'waiting-for-response'
+  }
+  | {
+    // For the proofs of each block to be
+    // generated, update on the progress
+    name: 'generating-zk-proofs'
+    proofsDone: number
+    proofsTotal: number
+    /**
+     * approximate time left in seconds.
+     * Only computed after the first block
+     * is done
+     * */
+    approxTimeLeftS?: number
+  }
+  | {
+    // wait for the witness to verify
+    // said proofs & receipt
+    name: 'waiting-for-verification'
+  }
+
+type StepData = {
+  timestampS: number
+  epoch: number
+  /** @deprecated use 'witnesses' */
+  witnessHosts: string[]
+  witnesses: WitnessData[]
+}
+
 export type CreateStep =
-  | {
-      name: 'creating'
-      timestampS: number
-      epoch: number
-      /** @deprecated use 'witnesses' */
-      witnessHosts: string[]
-      witnesses: WitnessData[]
-    }
-  | {
-      name: 'creating'
-      timestampS: number
-      epoch: number
-      /** @deprecated use 'witnesses' */
-      witnessHosts: string[]
-      witnesses: WitnessData[]
-    }
+  | ({ name: 'creating' } & StepData)
+  | ({
+    name: 'witness-progress'
+    currentWitness: WitnessData
+    step: ProofGenerationStep
+  } & StepData)
   | {
       name: 'witness-done'
       timestampS: number
       epoch: number
-      /** @deprecated use 'witnessesHosts' */
+      /** @deprecated use 'witnessesLeft' */
       witnessHostsLeft: string[]
       witnessesLeft: WitnessData[]
       claimData: ProviderClaimData

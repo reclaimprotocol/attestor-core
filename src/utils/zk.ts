@@ -4,6 +4,8 @@ import {
 	generateProof,
 	makeLocalSnarkJsZkOperator,
 	makeRemoteSnarkJsZkOperator,
+	PrivateInput,
+	PublicInput,
 	verifyProof,
 	ZKOperator,
 } from '@reclaimprotocol/circom-symmetric-crypto'
@@ -11,7 +13,7 @@ import { detectEnvironment } from '@reclaimprotocol/common-grpc-web-transport'
 import { CipherSuite, crypto } from '@reclaimprotocol/tls'
 import PQueue from 'p-queue'
 import { DEFAULT_REMOTE_ZK_PARAMS, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from '../config'
-import { FinaliseSessionRequest_BlockRevealZk as ZKReveal, FinaliseSessionRequest_ZKProof as ZKProof } from '../proto/api'
+import { FinaliseSessionRequest_Block as PacketToReveal, FinaliseSessionRequest_BlockRevealZk as ZKReveal, FinaliseSessionRequest_ZKProof as ZKProof } from '../proto/api'
 import { CompleteTLSPacket, Logger } from '../types'
 import { getPureCiphertext, getZkAlgorithmForCipherSuite } from './generics'
 import { logger as LOGGER } from './logger'
@@ -42,6 +44,7 @@ export type PrepareZKProofsBaseOpts = {
 
 type PrepareZKProofsOpts = {
 	logger?: Logger
+	cipherSuite: CipherSuite
 } & PrepareZKProofsBaseOpts
 
 type ZKVerifyOpts = {
@@ -53,27 +56,43 @@ type ZKVerifyOpts = {
 	zkOperators?: { [E in EncryptionAlgorithm]?: ZKOperator }
 }
 
+type ZKProofToGenerate = {
+	startIdx: number
+	redactedPlaintext: Uint8Array
+	privateInput: PrivateInput
+	publicInput: PublicInput
+}
+
+type ZKPacketToProve = {
+	packet: CompleteTLSPacket
+	algorithm: EncryptionAlgorithm
+	proofsToGenerate: ZKProofToGenerate[]
+}
+
 export function makeZkProofGenerator(
 	{
 		zkOperators,
 		logger,
 		zkProofConcurrency = DEFAULT_ZK_CONCURRENCY,
 		maxZkChunks = MAX_ZK_CHUNKS,
+		cipherSuite,
 	}: PrepareZKProofsOpts
 ) {
 	const zkQueue = new PQueue({
 		concurrency: zkProofConcurrency,
 		autoStart: true,
 	})
+	const packetsToProve: ZKPacketToProve[] = []
 
 	logger = logger || LOGGER.child({ module: 'zk' })
-	let chunksDone = 0
+	let zkChunksToProve = 0
 
 	return {
-		async generateProof(
-			packet: CompleteTLSPacket,
-			cipherSuite: CipherSuite
-		): Promise<ZKReveal> {
+		/**
+		 * Adds the given packet to the list of packets to
+		 * generate ZK proofs for.
+		 */
+		async addPacketToProve(packet: CompleteTLSPacket) {
 			if(packet.reveal?.type !== 'zk') {
 				throw new Error('only partial reveals are supported')
 			}
@@ -82,18 +101,16 @@ export function makeZkProofGenerator(
 				throw new Error('Cannot generate proof for plaintext')
 			}
 
-			if(chunksDone > maxZkChunks) {
+			if(zkChunksToProve > maxZkChunks) {
 				throw new Error(
-					`Too many chunks to prove: ${chunksDone} > ${maxZkChunks}`
+					`Too many chunks to prove: ${zkChunksToProve} > ${maxZkChunks}`
 				)
 			}
 
 			const alg = getZkAlgorithmForCipherSuite(cipherSuite)
 			const chunkSizeBytes = getChunkSizeBytes(alg)
 
-			const {
-				redactedPlaintext,
-			} = packet.reveal
+			const { redactedPlaintext } = packet.reveal
 			const key = await crypto.exportKey(packet.ctx.encKey)
 			const iv = packet.ctx.iv
 			const ciphertext = getPureCiphertext(
@@ -102,37 +119,70 @@ export function makeZkProofGenerator(
 			)
 
 			const chunks = Math.ceil(ciphertext.length / chunkSizeBytes)
-			const tasks: Promise<void>[] = []
-			const proofs: ZKProof[] = []
-			for(let i = 0;i < chunks;i++) {
-				tasks.push(
-					zkQueue.add(async() => {
-						const proof = await generateProofForChunk(
-							alg,
-							{
-								key,
-								iv,
-								ciphertext,
-								redactedPlaintext,
-								offsetChunks: i
-							},
-						)
-						if(proof) {
-							proofs.push(proof)
-						}
-					}, { throwOnTimeout: true })
-				)
+			const packetToProve: ZKPacketToProve = {
+				packet,
+				algorithm: alg,
+				proofsToGenerate: [],
+			}
 
-				chunksDone += 1
+			for(let i = 0;i < chunks;i++) {
+				const proof = getProofGenerationParamsForChunk(
+					alg,
+					{
+						key,
+						iv,
+						ciphertext,
+						redactedPlaintext,
+						offsetChunks: i
+					},
+				)
+				if(!proof) {
+					continue
+				}
+
+				packetToProve.proofsToGenerate.push(proof)
+				zkChunksToProve += 1
+			}
+
+			packetsToProve.push(packetToProve)
+		},
+		getTotalChunksToProve() {
+			return zkChunksToProve
+		},
+		async generateProofs(onChunkDone?: () => void) {
+			const packetsToReveal: PacketToReveal[] = []
+			const tasks: Promise<void>[] = []
+			for(const { packet, algorithm, proofsToGenerate } of packetsToProve) {
+				const packetToReveal: PacketToReveal = {
+					index: packet.index,
+					directReveal: undefined,
+					zkReveal: { proofs: [] },
+					authTag: new Uint8Array(0)
+				}
+				for(const proofToGen of proofsToGenerate) {
+					tasks.push(
+						zkQueue.add(async() => {
+							const proof = await generateProofForChunk(
+								algorithm,
+								proofToGen,
+							)
+
+							onChunkDone?.()
+							packetToReveal.zkReveal!.proofs.push(proof)
+						}, { throwOnTimeout: true })
+					)
+				}
+
+				packetsToReveal.push(packetToReveal)
 			}
 
 			await Promise.all(tasks)
 
-			return { proofs }
-		}
+			return packetsToReveal
+		},
 	}
 
-	async function generateProofForChunk(
+	function getProofGenerationParamsForChunk(
 		algorithm: EncryptionAlgorithm,
 		{
 			key,
@@ -141,9 +191,7 @@ export function makeZkProofGenerator(
 			redactedPlaintext,
 			offsetChunks,
 		}: GenerateZKChunkProofOpts,
-	): Promise<ZKProof | undefined> {
-		const zkOperator = zkOperators?.[algorithm]
-			|| await makeDefaultZkOperator(algorithm, logger)
+	): ZKProofToGenerate | undefined {
 		const chunkSize = getChunkSizeBytes(algorithm)
 
 		const startIdx = offsetChunks * chunkSize
@@ -166,22 +214,37 @@ export function makeZkProofGenerator(
 			}
 		}
 
+		return {
+			startIdx,
+			redactedPlaintext: plaintextChunk,
+			privateInput: { key, iv, offset: offsetChunks },
+			publicInput: { ciphertext: ciphertextChunk },
+		}
+	}
+
+	async function generateProofForChunk(
+		algorithm: EncryptionAlgorithm,
+		{
+			startIdx, redactedPlaintext,
+			privateInput, publicInput
+		}: ZKProofToGenerate
+	): Promise<ZKProof> {
+		const zkOperator = zkOperators?.[algorithm]
+			|| await makeDefaultZkOperator(algorithm, logger)
+
 		const proof = await generateProof(
 			algorithm,
-			{ key, iv, offset: offsetChunks },
-			{ ciphertext: ciphertextChunk },
+			privateInput,
+			publicInput,
 			zkOperator,
 		)
 
-		logger?.debug(
-			{ startIdx, endIdx },
-			'generated proof for chunk'
-		)
+		logger?.debug({ startIdx }, 'generated proof for chunk')
 
 		return {
 			proofJson: proof.proofJson,
 			decryptedRedactedCiphertext: proof.plaintext,
-			redactedPlaintext: plaintextChunk,
+			redactedPlaintext,
 			startIdx,
 		}
 	}

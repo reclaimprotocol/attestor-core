@@ -3,9 +3,13 @@ import { FinaliseSessionRequest_Block as PacketToReveal } from '../proto/api'
 import { CompleteTLSPacket, Logger } from '../types'
 import { makeZkProofGenerator, PrepareZKProofsBaseOpts } from './zk'
 
-type PreparePacketsForRevealOpts = {
+export type PreparePacketsForRevealOpts = {
 	cipherSuite: CipherSuite
 	logger: Logger
+	/**
+	 * Progress of Zk proof generation
+	 */
+	onZkProgress?(blocksDone: number, totalBlocks: number): void
 } & PrepareZKProofsBaseOpts
 
 /**
@@ -14,15 +18,16 @@ type PreparePacketsForRevealOpts = {
  */
 export async function preparePacketsForReveal(
 	packets: CompleteTLSPacket[],
-	opts: PreparePacketsForRevealOpts
+	{ onZkProgress, ...opts }: PreparePacketsForRevealOpts
 ): Promise<PacketToReveal[]> {
 	const packetsToReveal: PacketToReveal[] = []
 	const proofGenerator = makeZkProofGenerator(opts)
-	const proofTasks: Promise<void>[] = []
 
-	for(const packet of packets) {
+	let zkPacketsDone = 0
+
+	await Promise.all(packets.map(async(packet) => {
 		if(packet.ctx.type === 'plaintext') {
-			continue
+			return
 		}
 
 		switch (packet.reveal?.type) {
@@ -51,24 +56,25 @@ export async function preparePacketsForReveal(
 				)
 			])
 
-			proofTasks.push((async() => {
-				const zkReveal = await proofGenerator
-					.generateProof(packet, opts.cipherSuite)
-				packetsToReveal.push({
-					index: packet.index,
-					directReveal: undefined,
-					zkReveal,
-					authTag: new Uint8Array(0)
-				})
-			})())
+			await proofGenerator.addPacketToProve(packet)
 			break
 		default:
 			// no reveal
 			break
 		}
-	}
+	}))
 
-	await Promise.all(proofTasks)
+	const zkPacketsTotal = proofGenerator.getTotalChunksToProve()
+	onZkProgress?.(zkPacketsDone, zkPacketsTotal)
+
+	const zkProofs = await proofGenerator.generateProofs(
+		() => {
+			zkPacketsDone += 1
+			onZkProgress?.(zkPacketsDone, zkPacketsTotal)
+		}
+	)
+
+	packetsToReveal.push(...zkProofs)
 
 	return packetsToReveal
 }

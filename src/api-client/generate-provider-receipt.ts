@@ -2,6 +2,7 @@ import { strToUint8Array } from '@reclaimprotocol/tls'
 import { ClientError, Status } from 'nice-grpc-common'
 import { DEFAULT_PORT } from '../config'
 import { ProviderName, ProviderParams, providers, ProviderSecretParams } from '../providers'
+import { ProofGenerationStep } from '../types'
 import { getProviderValue, logger as MAIN_LOGGER, makeHttpResponseParser } from '../utils'
 import { BaseAPIClientOptions, makeAPITLSClient } from './make-api-tls-client'
 
@@ -15,6 +16,7 @@ export type GenerateProviderReceiptOptions<N extends ProviderName> = {
 	 */
 	secretParams: ProviderSecretParams<N>
 	params: ProviderParams<N>
+	onStep?(step: ProofGenerationStep): void
 } & BaseAPIClientOptions
 
 export async function generateProviderReceipt<Name extends ProviderName>({
@@ -23,6 +25,7 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 	params,
 	logger,
 	additionalConnectOpts,
+	onStep,
 	...opts
 }: GenerateProviderReceiptOptions<Name>) {
 	logger = logger || MAIN_LOGGER
@@ -94,7 +97,7 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 		'generated request'
 	)
 
-	const waitForRequestEnd = new Promise<void>(
+	const waitForAllData = new Promise<void>(
 		(resolve, reject) => {
 			endedHttpRequest = err => (
 				err ? reject(err) : resolve()
@@ -102,7 +105,11 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 		}
 	)
 
+	onStep?.({ name: 'connecting' })
+
 	await apiClient.connect()
+
+	onStep?.({ name: 'sending-request-data' })
 
 	const reqData = typeof request.data === 'string'
 		? strToUint8Array(request.data)
@@ -130,9 +137,28 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 		}
 	}
 
-	await waitForRequestEnd
+	onStep?.({ name: 'waiting-for-response' })
 
-	const res = await apiClient.finish()
+	await waitForAllData
+
+	const startMs = Date.now()
+	const blocksToReveal = await apiClient.getBlocksToReveal(
+		(done, total) => {
+			const timeSinceStartMs = Date.now() - startMs
+			const timePerBlockMs = timeSinceStartMs / done
+			const timeLeftMs = timePerBlockMs * (total - done)
+			onStep?.({
+				name: 'generating-zk-proofs',
+				proofsDone: done,
+				proofsTotal: total,
+				approxTimeLeftS: Math.round(timeLeftMs / 1000),
+			})
+		}
+	)
+
+	onStep?.({ name: 'waiting-for-verification' })
+
+	const res = await apiClient.finish(blocksToReveal)
 
 	logger.info({ claimData: res.claimData }, 'finished request')
 

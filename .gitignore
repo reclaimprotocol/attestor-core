@@ -6,3 +6,4 @@ lib
 *.LICENSE.txt
 browser/resources
 .env
+example-local

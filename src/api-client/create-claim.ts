@@ -125,12 +125,8 @@ export async function createClaim<Name extends ProviderName>({
 	for(let i = 0;i < witnesses.length;i++) {
 		const witness = witnesses[i]
 		logger.trace({ witness }, 'generating signature for oracle host')
-		const { url } = witness
 
-		const grpcUrl = url.startsWith('http:') || url.startsWith('https:')
-			? url
-			: `https://${url}`
-		const { signature, claimData: r } = await generateSignature(grpcUrl)
+		const { signature, claimData: r } = await generateSignature(witness)
 		claimData = r!
 
 		signatures.push(signature)
@@ -156,7 +152,11 @@ export async function createClaim<Name extends ProviderName>({
 		witnesses,
 	}
 
-	async function generateSignature(grpcWebUrl: string) {
+	async function generateSignature(witness: WitnessData) {
+		let { url: grpcWebUrl } = witness
+		grpcWebUrl = grpcWebUrl.startsWith('http:') || grpcWebUrl.startsWith('https:')
+			? grpcWebUrl
+			: `https://${grpcWebUrl}`
 		// the trailing slash messes up the grpc-web client
 		if(grpcWebUrl.endsWith('/')) {
 			grpcWebUrl = grpcWebUrl.slice(0, -1)
@@ -173,6 +173,17 @@ export async function createClaim<Name extends ProviderName>({
 			beaconBasedProviderRequest: providerClaimReq,
 			client: grpcClient,
 			logger,
+			onStep(step) {
+				didUpdateCreateStep?.({
+					name: 'witness-progress',
+					timestampS,
+					epoch,
+					witnesses,
+					witnessHosts: [],
+					currentWitness: witness,
+					step,
+				})
+			},
 			...opts
 		})
 

@@ -1,9 +1,9 @@
 import { detectEnvironment } from '@reclaimprotocol/common-grpc-web-transport'
 import { CipherSuite, makeTLSClient, PACKET_TYPE, SUPPORTED_NAMED_CURVES, TLSConnectionOptions, TLSPresharedKey, TLSSessionTicket } from '@reclaimprotocol/tls'
-import { InitialiseSessionRequest, InitialiseSessionRequest_BeaconBasedProviderClaimRequest as BeaconBasedProviderRequest, PullFromSessionResponse, ReclaimWitnessClient, TranscriptMessageSenderType, WitnessVersion } from '../proto/api'
+import { FinaliseSessionRequest_Block as BlockReveal, InitialiseSessionRequest, InitialiseSessionRequest_BeaconBasedProviderClaimRequest as BeaconBasedProviderRequest, PullFromSessionResponse, ReclaimWitnessClient, TranscriptMessageSenderType, WitnessVersion } from '../proto/api'
 import { ArraySlice, CompleteTLSPacket, Logger } from '../types'
 import { getBlocksToReveal, logger as MAIN_LOGGER, PrepareZKProofsBaseOpts, redactSlices } from '../utils'
-import { preparePacketsForReveal } from '../utils/prepare-packets'
+import { preparePacketsForReveal, PreparePacketsForRevealOpts } from '../utils/prepare-packets'
 
 export type BaseAPIClientOptions = {
 	client: ReclaimWitnessClient
@@ -220,11 +220,14 @@ export const makeAPITLSClient = ({
 
 			await tls.end()
 		},
-		async finish() {
-			if(!sessionId) {
-				throw new Error('Nothing to cancel')
-			}
-
+		/**
+		 * Get the blocks with either the raw key to decrypt
+		 * or the ZK proof to verify the redacted data. These
+		 * can then be sent to the witness to verify the transcript
+		 */
+		async getBlocksToReveal(
+			onZkProgress?: PreparePacketsForRevealOpts['onZkProgress']
+		) {
 			let serverPacketsToReveal: ReturnType<typeof getBlocksToReveal<ServerAppDataPacket>> = 'all'
 			if(redactResponse) {
 				const serverBlocks: ServerAppDataPacket[] = []
@@ -300,9 +303,17 @@ export const makeAPITLSClient = ({
 				{
 					logger,
 					cipherSuite: metadata.cipherSuite!,
+					onZkProgress,
 					...opts,
 				}
 			)
+
+			return revealBlocks
+		},
+		async finish(revealBlocks: BlockReveal[]) {
+			if(!sessionId) {
+				throw new Error('Nothing to cancel')
+			}
 
 			const result = await client.finaliseSession({
 				sessionId,
