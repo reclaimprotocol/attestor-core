@@ -192,7 +192,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 					)
 				}
 
-				elementIdx = match.index
+				elementIdx += match.index
 				elementLength = regexp.lastIndex - match.index
 				element = match[0]
 			}
