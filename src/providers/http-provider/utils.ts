@@ -182,7 +182,7 @@ export function convertResponsePosToAbsolutePos(pos: number, bodyStartIdx: numbe
 
 			const chunkSize = chunks[i].toIndex - chunks[i].fromIndex
 
-			if(pos >= chunkBodyStart && pos < (chunkBodyStart + chunkSize)) {
+			if(pos >= chunkBodyStart && pos <= (chunkBodyStart + chunkSize)) {
 				return pos - chunkBodyStart + chunks[i].fromIndex
 			}
 
