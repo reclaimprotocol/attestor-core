@@ -152,7 +152,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const reveals: ArraySlice[] = [{ fromIndex: 0, toIndex: headerEndIndex }]
 		for(const rs of params.responseRedactions) {
 			let element = body
-			let elementIdx = -1
+			let elementIdx = 0
 			let elementLength = -1
 
 			if(rs.xPath) {
