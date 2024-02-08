@@ -5,8 +5,11 @@ import { Reclaim, Reclaim__factory as ReclaimFactory } from './types'
 
 const existingContractsMap: { [chain: string]: Reclaim } = { }
 
-export function getContract(chainId: number) {
-	const chainKey = `0x${chainId.toString(16)}`
+/**
+ * get the Reclaim beacon contract for the given chain
+ * @param chainId hex-encoded string prefixed by 0x
+ */
+export function getContract(chainKey: string) {
 	if(!existingContractsMap[chainKey]) {
 		const contractData = CONTRACTS_CONFIG[chainKey as keyof typeof CONTRACTS_CONFIG]
 		if(!contractData) {

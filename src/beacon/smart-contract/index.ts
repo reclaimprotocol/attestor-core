@@ -1,12 +1,15 @@
-import { DEFAULT_CHAIN_ID } from '../../config'
+import { BeaconType } from '../../proto/api'
 import { Beacon } from '../../types'
 import { makeBeaconCacheable } from '../../utils'
 import { getContract } from './utils'
 
-export default function makeSmartContractBeacon(chainId?: number): Beacon {
-	chainId = chainId || DEFAULT_CHAIN_ID
+export default function makeSmartContractBeacon(chainId: string): Beacon {
 	const contract = getContract(chainId)
 	return makeBeaconCacheable({
+		identifier: {
+			type: BeaconType.BEACON_TYPE_SMART_CONTRACT,
+			id: chainId.toString()
+		},
 		async getState(epochId) {
 			const epoch = await contract.fetchEpoch(epochId || 0)
 			if(!epoch.id) {

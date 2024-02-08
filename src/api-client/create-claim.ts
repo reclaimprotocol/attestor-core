@@ -1,6 +1,7 @@
 import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
 import { ethers } from 'ethers'
-import { makeBeacon } from '../beacon'
+import { getBeacon } from '../beacon'
+import { DEFAULT_BEACON_IDENTIFIER } from '../config'
 import { InitialiseSessionRequest_BeaconBasedProviderClaimRequest as ProviderClaimRequest, ProviderClaimData } from '../proto/api'
 import { ProviderName, ProviderParams, providers, ProviderSecretParams } from '../providers'
 import { Beacon, CreateStep, Logger, WitnessData } from '../types'
@@ -50,7 +51,7 @@ export async function createClaim<Name extends ProviderName>({
 	ownerPrivateKey,
 	didUpdateCreateStep,
 	context = '',
-	beacon = makeBeacon(),
+	beacon = getBeacon(DEFAULT_BEACON_IDENTIFIER),
 	logger = LOGGER,
 	makeGrpcClient = createGrpcWebClient,
 	...opts
@@ -116,6 +117,7 @@ export async function createClaim<Name extends ProviderName>({
 		timestampS,
 		info: claimInfo,
 		ownerProof: undefined,
+		beacon: beacon.identifier,
 	}
 	providerClaimReq.ownerProof = await makeOwnerProof(
 		providerClaimReq,

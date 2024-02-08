@@ -1,3 +1,4 @@
+import type { BeaconIdentifier } from '../proto/api'
 
 export type WitnessData = {
 	id: string
@@ -12,6 +13,7 @@ export type BeaconState = {
 }
 
 export interface Beacon {
+	identifier: BeaconIdentifier
 	/**
 	 * Get the witnesses for the epoch specified
 	 * or the current epoch if none is specified

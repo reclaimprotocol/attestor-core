@@ -159,6 +159,39 @@ export function tLSVersionToJSON(object: TLSVersion): string {
   }
 }
 
+export enum BeaconType {
+  BEACON_TYPE_UNKNOWN = 0,
+  BEACON_TYPE_SMART_CONTRACT = 1,
+  UNRECOGNIZED = -1,
+}
+
+export function beaconTypeFromJSON(object: any): BeaconType {
+  switch (object) {
+    case 0:
+    case "BEACON_TYPE_UNKNOWN":
+      return BeaconType.BEACON_TYPE_UNKNOWN;
+    case 1:
+    case "BEACON_TYPE_SMART_CONTRACT":
+      return BeaconType.BEACON_TYPE_SMART_CONTRACT;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return BeaconType.UNRECOGNIZED;
+  }
+}
+
+export function beaconTypeToJSON(object: BeaconType): string {
+  switch (object) {
+    case BeaconType.BEACON_TYPE_UNKNOWN:
+      return "BEACON_TYPE_UNKNOWN";
+    case BeaconType.BEACON_TYPE_SMART_CONTRACT:
+      return "BEACON_TYPE_SMART_CONTRACT";
+    case BeaconType.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
 export interface TLSPacket {
   recordHeader: Uint8Array;
   content: Uint8Array;
@@ -239,6 +272,16 @@ export interface GetVerifierPublicKeyResponse {
   signatureType: ServiceSignatureType;
 }
 
+export interface BeaconIdentifier {
+  /** type of beacon */
+  type: BeaconType;
+  /**
+   * ID of the Beacon.
+   * For smart contract, it's the chain ID.
+   */
+  id: string;
+}
+
 export interface InitialiseSessionRequest {
   /**
    * Use if you'd just like a signed receipt
@@ -280,6 +323,7 @@ export interface InitialiseSessionRequest_BeaconBasedProviderClaimRequest {
     | undefined;
   /** proof of who is making the claim */
   ownerProof: InitialiseSessionRequest_ClaimOwner | undefined;
+  beacon: BeaconIdentifier | undefined;
 }
 
 export interface InitialiseSessionRequest_ClaimOwner {
@@ -579,10 +623,10 @@ export const TranscriptMessage = {
   fromJSON(object: any): TranscriptMessage {
     return {
       senderType: isSet(object.senderType) ? transcriptMessageSenderTypeFromJSON(object.senderType) : 0,
-      redacted: isSet(object.redacted) ? Boolean(object.redacted) : false,
+      redacted: isSet(object.redacted) ? globalThis.Boolean(object.redacted) : false,
       message: isSet(object.message) ? bytesFromBase64(object.message) : new Uint8Array(0),
       packetHeader: isSet(object.packetHeader) ? bytesFromBase64(object.packetHeader) : new Uint8Array(0),
-      plaintextLength: isSet(object.plaintextLength) ? Number(object.plaintextLength) : 0,
+      plaintextLength: isSet(object.plaintextLength) ? globalThis.Number(object.plaintextLength) : 0,
     };
   },
 
@@ -717,13 +761,13 @@ export const ProviderClaimData = {
 
   fromJSON(object: any): ProviderClaimData {
     return {
-      provider: isSet(object.provider) ? String(object.provider) : "",
-      parameters: isSet(object.parameters) ? String(object.parameters) : "",
-      owner: isSet(object.owner) ? String(object.owner) : "",
-      timestampS: isSet(object.timestampS) ? Number(object.timestampS) : 0,
-      context: isSet(object.context) ? String(object.context) : "",
-      identifier: isSet(object.identifier) ? String(object.identifier) : "",
-      epoch: isSet(object.epoch) ? Number(object.epoch) : 0,
+      provider: isSet(object.provider) ? globalThis.String(object.provider) : "",
+      parameters: isSet(object.parameters) ? globalThis.String(object.parameters) : "",
+      owner: isSet(object.owner) ? globalThis.String(object.owner) : "",
+      timestampS: isSet(object.timestampS) ? globalThis.Number(object.timestampS) : 0,
+      context: isSet(object.context) ? globalThis.String(object.context) : "",
+      identifier: isSet(object.identifier) ? globalThis.String(object.identifier) : "",
+      epoch: isSet(object.epoch) ? globalThis.Number(object.epoch) : 0,
     };
   },
 
@@ -826,9 +870,9 @@ export const ProviderClaimInfo = {
 
   fromJSON(object: any): ProviderClaimInfo {
     return {
-      provider: isSet(object.provider) ? String(object.provider) : "",
-      parameters: isSet(object.parameters) ? String(object.parameters) : "",
-      context: isSet(object.context) ? String(object.context) : "",
+      provider: isSet(object.provider) ? globalThis.String(object.provider) : "",
+      parameters: isSet(object.parameters) ? globalThis.String(object.parameters) : "",
+      context: isSet(object.context) ? globalThis.String(object.context) : "",
     };
   },
 
@@ -945,14 +989,14 @@ export const TLSReceipt = {
 
   fromJSON(object: any): TLSReceipt {
     return {
-      hostPort: isSet(object.hostPort) ? String(object.hostPort) : "",
-      timestampS: isSet(object.timestampS) ? Number(object.timestampS) : 0,
-      transcript: Array.isArray(object?.transcript)
+      hostPort: isSet(object.hostPort) ? globalThis.String(object.hostPort) : "",
+      timestampS: isSet(object.timestampS) ? globalThis.Number(object.timestampS) : 0,
+      transcript: globalThis.Array.isArray(object?.transcript)
         ? object.transcript.map((e: any) => TranscriptMessage.fromJSON(e))
         : [],
       signature: isSet(object.signature) ? bytesFromBase64(object.signature) : new Uint8Array(0),
       tlsVersion: isSet(object.tlsVersion) ? tLSVersionFromJSON(object.tlsVersion) : 0,
-      geoLocation: isSet(object.geoLocation) ? String(object.geoLocation) : "",
+      geoLocation: isSet(object.geoLocation) ? globalThis.String(object.geoLocation) : "",
     };
   },
 
@@ -1125,6 +1169,80 @@ export const GetVerifierPublicKeyResponse = {
   },
 };
 
+function createBaseBeaconIdentifier(): BeaconIdentifier {
+  return { type: 0, id: "" };
+}
+
+export const BeaconIdentifier = {
+  encode(message: BeaconIdentifier, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.type !== 0) {
+      writer.uint32(8).int32(message.type);
+    }
+    if (message.id !== "") {
+      writer.uint32(18).string(message.id);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): BeaconIdentifier {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseBeaconIdentifier();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.type = reader.int32() as any;
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): BeaconIdentifier {
+    return {
+      type: isSet(object.type) ? beaconTypeFromJSON(object.type) : 0,
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+    };
+  },
+
+  toJSON(message: BeaconIdentifier): unknown {
+    const obj: any = {};
+    if (message.type !== 0) {
+      obj.type = beaconTypeToJSON(message.type);
+    }
+    if (message.id !== "") {
+      obj.id = message.id;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<BeaconIdentifier>): BeaconIdentifier {
+    return BeaconIdentifier.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<BeaconIdentifier>): BeaconIdentifier {
+    const message = createBaseBeaconIdentifier();
+    message.type = object.type ?? 0;
+    message.id = object.id ?? "";
+    return message;
+  },
+};
+
 function createBaseInitialiseSessionRequest(): InitialiseSessionRequest {
   return { receiptGenerationRequest: undefined, beaconBasedProviderClaimRequest: undefined };
 }
@@ -1285,9 +1403,9 @@ export const InitialiseSessionRequest_ReceiptGenerationRequest = {
 
   fromJSON(object: any): InitialiseSessionRequest_ReceiptGenerationRequest {
     return {
-      host: isSet(object.host) ? String(object.host) : "",
-      port: isSet(object.port) ? Number(object.port) : 0,
-      geoLocation: isSet(object.geoLocation) ? String(object.geoLocation) : "",
+      host: isSet(object.host) ? globalThis.String(object.host) : "",
+      port: isSet(object.port) ? globalThis.Number(object.port) : 0,
+      geoLocation: isSet(object.geoLocation) ? globalThis.String(object.geoLocation) : "",
     };
   },
 
@@ -1322,7 +1440,7 @@ export const InitialiseSessionRequest_ReceiptGenerationRequest = {
 };
 
 function createBaseInitialiseSessionRequest_BeaconBasedProviderClaimRequest(): InitialiseSessionRequest_BeaconBasedProviderClaimRequest {
-  return { epoch: 0, timestampS: 0, info: undefined, ownerProof: undefined };
+  return { epoch: 0, timestampS: 0, info: undefined, ownerProof: undefined, beacon: undefined };
 }
 
 export const InitialiseSessionRequest_BeaconBasedProviderClaimRequest = {
@@ -1341,6 +1459,9 @@ export const InitialiseSessionRequest_BeaconBasedProviderClaimRequest = {
     }
     if (message.ownerProof !== undefined) {
       InitialiseSessionRequest_ClaimOwner.encode(message.ownerProof, writer.uint32(34).fork()).ldelim();
+    }
+    if (message.beacon !== undefined) {
+      BeaconIdentifier.encode(message.beacon, writer.uint32(42).fork()).ldelim();
     }
     return writer;
   },
@@ -1380,6 +1501,13 @@ export const InitialiseSessionRequest_BeaconBasedProviderClaimRequest = {
 
           message.ownerProof = InitialiseSessionRequest_ClaimOwner.decode(reader, reader.uint32());
           continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.beacon = BeaconIdentifier.decode(reader, reader.uint32());
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1391,12 +1519,13 @@ export const InitialiseSessionRequest_BeaconBasedProviderClaimRequest = {
 
   fromJSON(object: any): InitialiseSessionRequest_BeaconBasedProviderClaimRequest {
     return {
-      epoch: isSet(object.epoch) ? Number(object.epoch) : 0,
-      timestampS: isSet(object.timestampS) ? Number(object.timestampS) : 0,
+      epoch: isSet(object.epoch) ? globalThis.Number(object.epoch) : 0,
+      timestampS: isSet(object.timestampS) ? globalThis.Number(object.timestampS) : 0,
       info: isSet(object.info) ? ProviderClaimInfo.fromJSON(object.info) : undefined,
       ownerProof: isSet(object.ownerProof)
         ? InitialiseSessionRequest_ClaimOwner.fromJSON(object.ownerProof)
         : undefined,
+      beacon: isSet(object.beacon) ? BeaconIdentifier.fromJSON(object.beacon) : undefined,
     };
   },
 
@@ -1413,6 +1542,9 @@ export const InitialiseSessionRequest_BeaconBasedProviderClaimRequest = {
     }
     if (message.ownerProof !== undefined) {
       obj.ownerProof = InitialiseSessionRequest_ClaimOwner.toJSON(message.ownerProof);
+    }
+    if (message.beacon !== undefined) {
+      obj.beacon = BeaconIdentifier.toJSON(message.beacon);
     }
     return obj;
   },
@@ -1433,6 +1565,9 @@ export const InitialiseSessionRequest_BeaconBasedProviderClaimRequest = {
       : undefined;
     message.ownerProof = (object.ownerProof !== undefined && object.ownerProof !== null)
       ? InitialiseSessionRequest_ClaimOwner.fromPartial(object.ownerProof)
+      : undefined;
+    message.beacon = (object.beacon !== undefined && object.beacon !== null)
+      ? BeaconIdentifier.fromPartial(object.beacon)
       : undefined;
     return message;
   },
@@ -1485,7 +1620,7 @@ export const InitialiseSessionRequest_ClaimOwner = {
 
   fromJSON(object: any): InitialiseSessionRequest_ClaimOwner {
     return {
-      address: isSet(object.address) ? String(object.address) : "",
+      address: isSet(object.address) ? globalThis.String(object.address) : "",
       signature: isSet(object.signature) ? bytesFromBase64(object.signature) : new Uint8Array(0),
     };
   },
@@ -1548,7 +1683,7 @@ export const InitialiseSessionResponse = {
   },
 
   fromJSON(object: any): InitialiseSessionResponse {
-    return { sessionId: isSet(object.sessionId) ? String(object.sessionId) : "" };
+    return { sessionId: isSet(object.sessionId) ? globalThis.String(object.sessionId) : "" };
   },
 
   toJSON(message: InitialiseSessionResponse): unknown {
@@ -1616,8 +1751,10 @@ export const PushToSessionRequest = {
 
   fromJSON(object: any): PushToSessionRequest {
     return {
-      sessionId: isSet(object.sessionId) ? String(object.sessionId) : "",
-      messages: Array.isArray(object?.messages) ? object.messages.map((e: any) => TLSPacket.fromJSON(e)) : [],
+      sessionId: isSet(object.sessionId) ? globalThis.String(object.sessionId) : "",
+      messages: globalThis.Array.isArray(object?.messages)
+        ? object.messages.map((e: any) => TLSPacket.fromJSON(e))
+        : [],
     };
   },
 
@@ -1679,7 +1816,7 @@ export const PushToSessionResponse = {
   },
 
   fromJSON(object: any): PushToSessionResponse {
-    return { index: isSet(object.index) ? Number(object.index) : 0 };
+    return { index: isSet(object.index) ? globalThis.Number(object.index) : 0 };
   },
 
   toJSON(message: PushToSessionResponse): unknown {
@@ -1747,7 +1884,7 @@ export const PullFromSessionRequest = {
 
   fromJSON(object: any): PullFromSessionRequest {
     return {
-      sessionId: isSet(object.sessionId) ? String(object.sessionId) : "",
+      sessionId: isSet(object.sessionId) ? globalThis.String(object.sessionId) : "",
       version: isSet(object.version) ? witnessVersionFromJSON(object.version) : 0,
     };
   },
@@ -1822,7 +1959,7 @@ export const PullFromSessionResponse = {
   fromJSON(object: any): PullFromSessionResponse {
     return {
       message: isSet(object.message) ? TLSPacket.fromJSON(object.message) : undefined,
-      index: isSet(object.index) ? Number(object.index) : 0,
+      index: isSet(object.index) ? globalThis.Number(object.index) : 0,
     };
   },
 
@@ -1886,7 +2023,7 @@ export const CancelSessionRequest = {
   },
 
   fromJSON(object: any): CancelSessionRequest {
-    return { sessionId: isSet(object.sessionId) ? String(object.sessionId) : "" };
+    return { sessionId: isSet(object.sessionId) ? globalThis.String(object.sessionId) : "" };
   },
 
   toJSON(message: CancelSessionRequest): unknown {
@@ -1997,8 +2134,8 @@ export const FinaliseSessionRequest = {
 
   fromJSON(object: any): FinaliseSessionRequest {
     return {
-      sessionId: isSet(object.sessionId) ? String(object.sessionId) : "",
-      revealBlocks: Array.isArray(object?.revealBlocks)
+      sessionId: isSet(object.sessionId) ? globalThis.String(object.sessionId) : "",
+      revealBlocks: globalThis.Array.isArray(object?.revealBlocks)
         ? object.revealBlocks.map((e: any) => FinaliseSessionRequest_Block.fromJSON(e))
         : [],
     };
@@ -2098,7 +2235,7 @@ export const FinaliseSessionRequest_Block = {
         ? FinaliseSessionRequest_BlockRevealDirect.fromJSON(object.directReveal)
         : undefined,
       zkReveal: isSet(object.zkReveal) ? FinaliseSessionRequest_BlockRevealZk.fromJSON(object.zkReveal) : undefined,
-      index: isSet(object.index) ? Number(object.index) : 0,
+      index: isSet(object.index) ? globalThis.Number(object.index) : 0,
     };
   },
 
@@ -2195,7 +2332,7 @@ export const FinaliseSessionRequest_BlockRevealDirect = {
     return {
       key: isSet(object.key) ? bytesFromBase64(object.key) : new Uint8Array(0),
       iv: isSet(object.iv) ? bytesFromBase64(object.iv) : new Uint8Array(0),
-      recordNumber: isSet(object.recordNumber) ? Number(object.recordNumber) : 0,
+      recordNumber: isSet(object.recordNumber) ? globalThis.Number(object.recordNumber) : 0,
     };
   },
 
@@ -2262,7 +2399,7 @@ export const FinaliseSessionRequest_BlockRevealZk = {
 
   fromJSON(object: any): FinaliseSessionRequest_BlockRevealZk {
     return {
-      proofs: Array.isArray(object?.proofs)
+      proofs: globalThis.Array.isArray(object?.proofs)
         ? object.proofs.map((e: any) => FinaliseSessionRequest_ZKProof.fromJSON(e))
         : [],
     };
@@ -2358,14 +2495,14 @@ export const FinaliseSessionRequest_ZKProof = {
 
   fromJSON(object: any): FinaliseSessionRequest_ZKProof {
     return {
-      proofJson: isSet(object.proofJson) ? String(object.proofJson) : "",
+      proofJson: isSet(object.proofJson) ? globalThis.String(object.proofJson) : "",
       decryptedRedactedCiphertext: isSet(object.decryptedRedactedCiphertext)
         ? bytesFromBase64(object.decryptedRedactedCiphertext)
         : new Uint8Array(0),
       redactedPlaintext: isSet(object.redactedPlaintext)
         ? bytesFromBase64(object.redactedPlaintext)
         : new Uint8Array(0),
-      startIdx: isSet(object.startIdx) ? Number(object.startIdx) : 0,
+      startIdx: isSet(object.startIdx) ? globalThis.Number(object.startIdx) : 0,
     };
   },
 
@@ -2620,30 +2757,11 @@ export interface ReclaimWitnessClient<CallOptionsExt = {}> {
   ): Promise<FinaliseSessionResponse>;
 }
 
-declare const self: any | undefined;
-declare const window: any | undefined;
-declare const global: any | undefined;
-const tsProtoGlobalThis: any = (() => {
-  if (typeof globalThis !== "undefined") {
-    return globalThis;
-  }
-  if (typeof self !== "undefined") {
-    return self;
-  }
-  if (typeof window !== "undefined") {
-    return window;
-  }
-  if (typeof global !== "undefined") {
-    return global;
-  }
-  throw "Unable to locate global object";
-})();
-
 function bytesFromBase64(b64: string): Uint8Array {
-  if (tsProtoGlobalThis.Buffer) {
-    return Uint8Array.from(tsProtoGlobalThis.Buffer.from(b64, "base64"));
+  if (globalThis.Buffer) {
+    return Uint8Array.from(globalThis.Buffer.from(b64, "base64"));
   } else {
-    const bin = tsProtoGlobalThis.atob(b64);
+    const bin = globalThis.atob(b64);
     const arr = new Uint8Array(bin.length);
     for (let i = 0; i < bin.length; ++i) {
       arr[i] = bin.charCodeAt(i);
@@ -2653,21 +2771,22 @@ function bytesFromBase64(b64: string): Uint8Array {
 }
 
 function base64FromBytes(arr: Uint8Array): string {
-  if (tsProtoGlobalThis.Buffer) {
-    return tsProtoGlobalThis.Buffer.from(arr).toString("base64");
+  if (globalThis.Buffer) {
+    return globalThis.Buffer.from(arr).toString("base64");
   } else {
     const bin: string[] = [];
     arr.forEach((byte) => {
-      bin.push(String.fromCharCode(byte));
+      bin.push(globalThis.String.fromCharCode(byte));
     });
-    return tsProtoGlobalThis.btoa(bin.join(""));
+    return globalThis.btoa(bin.join(""));
   }
 }
 
 type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
 
 export type DeepPartial<T> = T extends Builtin ? T
-  : T extends Array<infer U> ? Array<DeepPartial<U>> : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
+  : T extends globalThis.Array<infer U> ? globalThis.Array<DeepPartial<U>>
+  : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
   : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
   : Partial<T>;
 

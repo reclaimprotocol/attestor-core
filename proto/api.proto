@@ -29,6 +29,11 @@ enum TLSVersion {
 	TLS_VERSION_1_3 = 3;
 }
 
+enum BeaconType {
+	BEACON_TYPE_UNKNOWN = 0;
+	BEACON_TYPE_SMART_CONTRACT = 1;
+}
+
 message TLSPacket {
 	bytes recordHeader = 1;
 	bytes content = 2;
@@ -111,6 +116,18 @@ message GetVerifierPublicKeyResponse {
 	ServiceSignatureType signatureType = 2;
 }
 
+message BeaconIdentifier {
+	/** 
+	 * type of beacon
+	 */
+	BeaconType type = 1;
+	/** 
+	 * ID of the Beacon.
+	 * For smart contract, it's the chain ID.
+	 */
+	string id = 2;
+}
+
 message InitialiseSessionRequest {
 	/** 
 	 * Use if you'd just like a signed receipt
@@ -147,6 +164,8 @@ message InitialiseSessionRequest {
 		ProviderClaimInfo info = 3;
 		/** proof of who is making the claim */
 		ClaimOwner ownerProof = 4;
+
+		BeaconIdentifier beacon = 5;
 	}
 
 	message ClaimOwner {
