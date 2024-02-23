@@ -295,24 +295,26 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error('Connection header must be "close"')
 		}
 
-		for(const { type, value } of params.responseMatches) {
+		for(const { type, value, invert } of params.responseMatches) {
+			const inv = !!invert // explicitly cast to boolean
 			switch (type) {
 			case 'regex':
-				if(!makeRegex(value).test(res)) {
+				const match = makeRegex(value).test(res)
+				if(match === inv) { // if both true or both false then fail
 					logTranscript()
-
-					throw new Error(`Invalid receipt. Regex "${value}" failed to match`)
+					throw new Error(`Invalid receipt. Regex "${value}" ${inv ? 'matched' : "didn't match"}`)
 				}
 
 				break
 			case 'contains':
-				if(!res.includes(value)) {
+				const includes = res.includes(value)
+				if(includes === inv) {
 					logTranscript()
 
 					const trimmedStr =
                             value.length > 100 ? value.slice(0, 100) + '...' : value
 					throw new Error(
-						`Invalid receipt. Response does not contain "${trimmedStr}"`
+						`Invalid receipt. Response ${inv ? 'contains' : 'does not contain'} "${trimmedStr}"`
 					)
 				}
 

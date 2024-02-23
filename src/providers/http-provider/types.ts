@@ -99,7 +99,7 @@ export type HTTPProviderParamsV2 = {
     /**
      * The witness will use this list to check
      * that the redacted response does indeed match
-     * all of the provided strings/regexes
+     * all the provided strings/regexes
      */
     responseMatches: {
         /**
@@ -112,12 +112,18 @@ export type HTTPProviderParamsV2 = {
          * The string/regex to match against
          */
         value: string
+
+        /**
+         * Inverses the matching logic.
+         * Fail when match is found and proceed otherwise
+         */
+        invert?: boolean
     }[]
 
     /**
-	 * Specify the geographical location from where
-	 * to proxy the request
-	 */
+     * Specify the geographical location from where
+     * to proxy the request
+     */
     geoLocation?: string
 
     writeRedactionMode?: RedactionMode
@@ -133,6 +139,6 @@ export type HTTPProviderSecretParams = {
     authorisationHeader?: string
     /**
      * Headers that need to be hidden from the witness
-    */
+     */
     headers?: HeaderMap
 }
