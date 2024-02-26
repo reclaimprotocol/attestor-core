@@ -120,7 +120,10 @@ describe('ZK Tests', () => {
 			}
 		]
 
-		const proofGenerator = makeZkProofGenerator({ logger })
+		const proofGenerator = makeZkProofGenerator({
+			logger,
+			cipherSuite,
+		})
 		for(const { plaintext, redactions } of vectors) {
 			const plaintextArr = Buffer.from(plaintext)
 			const redactedPlaintext = redactSlices(plaintextArr, redactions)
@@ -165,15 +168,13 @@ describe('ZK Tests', () => {
 				index: 0,
 			}
 
-			const zkReveal = await proofGenerator.generateProof(
-				packet,
-				cipherSuite
-			)
+			await proofGenerator.addPacketToProve(packet)
+			const [{ zkReveal }] = await proofGenerator.generateProofs()
 
 			const x = await verifyZkPacket(
 				{
 					ciphertext,
-					zkReveal,
+					zkReveal: zkReveal!,
 					logger,
 					cipherSuite,
 				},

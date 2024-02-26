@@ -178,6 +178,10 @@ export function makeZkProofGenerator(
 
 			await Promise.all(tasks)
 
+			// reset the packets to prove
+			packetsToProve.splice(0, packetsToProve.length)
+			zkChunksToProve = 0
+
 			return packetsToReveal
 		},
 	}
