@@ -51,6 +51,7 @@ export type WindowRPCIncomingMsg = ({
 } | {
 	type: 'zkProveDone'
 	requestId: string
+	isResponse: true
 	result: {
 		output: Awaited<ReturnType<ZKOperator['groth16FullProve']>>
 	} | {
@@ -59,6 +60,7 @@ export type WindowRPCIncomingMsg = ({
 } | {
 	type: 'zkVerifyDone'
 	requestId: string
+	isResponse: true
 	result: {
 		output: Awaited<ReturnType<ZKOperator['groth16Verify']>>
 	} | {
@@ -98,7 +100,6 @@ export type WindowRPCOutgoingMsg = {
 } | {
 	type: 'zkProve'
 	requestId: string
-	isResponse: true
 	data: {
 		algorithm: EncryptionAlgorithm
 		input: { [_: string]: any }
@@ -106,7 +107,6 @@ export type WindowRPCOutgoingMsg = {
 } | {
 	type: 'zkVerify'
 	requestId: string
-	isResponse: true
 	data: {
 		algorithm: EncryptionAlgorithm
 		publicSignals: number[]

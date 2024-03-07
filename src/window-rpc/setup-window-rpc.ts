@@ -44,7 +44,10 @@ export function setupWindowRpc() {
 			ops?.chacha20?.groth16FullProve({})
 
 			// ignore response messages
-			if('isResponse' in req && req.isResponse) {
+			if(
+				('isResponse' in req && req.isResponse)
+				|| ('requestId' in req && req.requestId)
+			) {
 				windowMsgs.dispatchEvent(new RPCEvent(req))
 				return
 			}
