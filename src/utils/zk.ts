@@ -31,9 +31,11 @@ type GenerateZKChunkProofOpts = {
 	offsetChunks: number
 }
 
+export type ZKOperators = { [E in EncryptionAlgorithm]?: ZKOperator }
+
 export type PrepareZKProofsBaseOpts = {
 	/** get ZK operator for specified algorithm */
-	zkOperators?: { [E in EncryptionAlgorithm]?: ZKOperator }
+	zkOperators?: ZKOperators
 	/**
 	 * max number of ZK proofs to generate concurrently
 	 * @default 1
@@ -53,7 +55,7 @@ type ZKVerifyOpts = {
 	zkReveal: ZKReveal
 	logger?: Logger
 	/** get ZK operator for specified algorithm */
-	zkOperators?: { [E in EncryptionAlgorithm]?: ZKOperator }
+	zkOperators?: ZKOperators
 }
 
 type ZKProofToGenerate = {
