@@ -8,7 +8,7 @@ export const RECLAIM_USER_AGENT = 'reclaim/0.0.1'
 
 export const DEFAULT_BEACON_IDENTIFIER: BeaconIdentifier = {
 	type: 1,
-	id: '0x1a4'
+	id: '0x12c'
 }
 
 export const DEFAULT_PORT = 443
