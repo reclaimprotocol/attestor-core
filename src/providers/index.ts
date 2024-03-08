@@ -7,7 +7,6 @@ import chessRating from './chess/chess-rating'
 import chessUser from './chess/chess-user'
 import ebayUser from './ebay/ebay-user'
 import irsAddress from './irs/irs-address'
-import irsName from './irs/irs-name'
 import kaggleUsername from './kaggle/kaggle-username'
 import lichessUsername from './lichess/lichess-username'
 import mediumFollowersCount from './medium/medium-follower-count'
@@ -130,7 +129,6 @@ export const providers = {
 	'uidai-address': UidaiAadhaarAddress,
 	'twitter-followers-count': twitterFollowersCount,
 	'twitter-username': twitterUsername,
-	'irs-name': irsName,
 	'irs-address': irsAddress,
 	'bybit-spot-pnl': bybitSpotPnl,
 	'zoho-email': zohoEmail,
