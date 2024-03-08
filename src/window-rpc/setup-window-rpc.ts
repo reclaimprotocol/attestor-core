@@ -40,12 +40,9 @@ export function setupWindowRpc() {
 			id = req.id
 			channel = req.channel || ''
 
+			windowMsgs.dispatchEvent(new RPCEvent(req))
 			// ignore response messages
-			if(
-				('isResponse' in req && req.isResponse)
-				|| ('requestId' in req && req.requestId)
-			) {
-				windowMsgs.dispatchEvent(new RPCEvent(req))
+			if(('isResponse' in req && req.isResponse)) {
 				return
 			}
 
@@ -102,7 +99,7 @@ export function setupWindowRpc() {
 				})
 				break
 			default:
-				throw new Error(`Unknown RPC type: ${req.type}`)
+				break
 			}
 		} catch(err) {
 			logger.error(
