@@ -1,7 +1,7 @@
 import { createClaim } from '../api-client'
 import { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
 import { logger, ZKOperators } from '../utils'
-import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from './types'
+import { CommunicationBridge, RPCCreateClaimOptions, RPCErrorResponse, RPCResponse, RPCWitnessClient, WindowRPCIncomingMsg, WindowRPCOutgoingMsg } from './types'
 import { getCurrentMemoryUsage } from './utils'
 import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator } from './window-rpc-zk'
 
@@ -73,9 +73,11 @@ export function setupWindowRpc() {
 						req.request.zkOperatorMode
 					),
 					didUpdateCreateStep(step) {
-						respond({
+						sendMessage({
 							type: 'createClaimStep',
 							step,
+							module: 'witness-sdk',
+							id: req.id,
 						})
 					},
 				})
@@ -165,13 +167,16 @@ export function setupWindowRpc() {
 			}
 		}
 
-		function respond(data: WindowRPCOutgoingMsg) {
-			const res: WindowRPCResponse = {
+		function respond<K extends keyof RPCWitnessClient>(
+			data: RPCResponse<RPCWitnessClient, K>
+				| RPCErrorResponse
+		) {
+			const res = {
 				...data,
 				id,
 				module: 'witness-sdk',
 				isResponse: true
-			}
+			} as WindowRPCOutgoingMsg
 			return sendMessage(res)
 		}
 

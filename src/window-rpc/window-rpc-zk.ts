@@ -1,5 +1,5 @@
 import { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-symmetric-crypto'
-import { CommunicationBridge } from './types'
+import { CommunicationBridge, RPCAppClient } from './types'
 import { generateRpcRequestId } from './utils'
 
 export const ALL_ENC_ALGORITHMS: EncryptionAlgorithm[] = [
@@ -18,59 +18,53 @@ export function makeWindowRpcZkOperator(
 ): ZKOperator {
 	return {
 		groth16FullProve(input) {
-			const requestId = generateRpcRequestId()
-			const waitForRes = waitForResponse<any, 'zkProveDone'>(
-				'zkProveDone',
-				requestId
-			)
+			const id = generateRpcRequestId()
+			const waitForRes = waitForResponse('zkProve', id)
 
 			bridge.send({
 				type: 'zkProve',
-				requestId,
-				data: {
+				id,
+				request: {
 					algorithm,
 					input: input as {},
-				}
+				},
+				module: 'witness-sdk'
 			})
 
 			return waitForRes
 		},
 		groth16Verify(publicSignals, proof) {
-			const requestId = generateRpcRequestId()
-			const waitForRes = waitForResponse<boolean, 'zkVerifyDone'>(
-				'zkVerifyDone',
-				requestId
-			)
+			const id = generateRpcRequestId()
+			const waitForRes = waitForResponse('zkVerify', id)
 
 			bridge.send({
 				type: 'zkVerify',
-				requestId,
-				data: {
+				id,
+				request: {
 					algorithm,
 					publicSignals,
 					proof,
-				}
+				},
+				module: 'witness-sdk'
 			})
 
 			return waitForRes
 		},
 	}
 
-	function waitForResponse<R, T extends 'zkProveDone' | 'zkVerifyDone'>(
+	function waitForResponse<T extends keyof RPCAppClient>(
 		type: T,
 		requestId: string
 	) {
+		type R = Awaited<ReturnType<RPCAppClient[T]>>
+		const returnType = `${type}Done` as const
 		return new Promise<R>((resolve, reject) => {
 			const cancel = bridge.onMessage(msg => {
-				if(
-					msg.type === type
-					&& msg.requestId === requestId
-				) {
-					if('error' in msg.result) {
-						reject(new Error(msg.result.error))
-					} else {
-						// @ts-ignore
-						resolve(msg.result.output)
+				if(msg.id === requestId) {
+					if(msg.type === 'error') {
+						reject(new Error(msg.data.message))
+					} else if(msg.type === returnType) {
+						resolve(msg.response as R)
 					}
 
 					cancel()
