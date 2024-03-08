@@ -53,9 +53,9 @@ type ZKVerifyOpts = {
  * These are things done inside the witness
  */
 export type RPCWitnessClient = {
-	createClaim(options: RPCCreateClaimOptions): Promise<ReturnType<typeof createClaim>>
-	extractHtmlElement(options: ExtractHTMLElementOptions): Promise<ReturnType<typeof extractHTMLElement>>
-	extractJSONValueIndex(options: ExtractJSONValueIndexOptions): Promise<ReturnType<typeof extractJSONValueIndex>>
+	createClaim(options: RPCCreateClaimOptions): ReturnType<typeof createClaim>
+	extractHtmlElement(options: ExtractHTMLElementOptions): ReturnType<typeof extractHTMLElement>
+	extractJSONValueIndex(options: ExtractJSONValueIndexOptions): ReturnType<typeof extractJSONValueIndex>
 	getCurrentMemoryUsage(): Promise<{
 		available: boolean
 		content: string
