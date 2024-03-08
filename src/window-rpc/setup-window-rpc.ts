@@ -40,9 +40,6 @@ export function setupWindowRpc() {
 			id = req.id
 			channel = req.channel || ''
 
-			const ops = getZkOperators('rpc')
-			ops?.chacha20?.groth16FullProve({})
-
 			// ignore response messages
 			if(
 				('isResponse' in req && req.isResponse)
