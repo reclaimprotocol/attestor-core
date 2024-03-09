@@ -39,7 +39,10 @@ type ExtractJSONValueIndexOptions = {
 
 type ZKProveOpts = {
 	algorithm: EncryptionAlgorithm
-	input: { [_: string]: any }
+	input: {
+		/** Base64 encoded witness */
+		witnessB64: string
+	}
 }
 
 type ZKVerifyOpts = {
@@ -66,7 +69,7 @@ export type RPCWitnessClient = {
  * Fns the witness calls on the app
  */
 export type RPCAppClient = {
-	zkProve(opts: ZKProveOpts): ReturnType<ZKOperator['groth16FullProve']>
+	zkProve(opts: ZKProveOpts): ReturnType<ZKOperator['groth16Prove']>
 	zkVerify(opts: ZKVerifyOpts): ReturnType<ZKOperator['groth16Verify']>
 }
 

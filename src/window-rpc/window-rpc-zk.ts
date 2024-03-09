@@ -1,4 +1,6 @@
 import { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-symmetric-crypto'
+import { base64 } from 'ethers/lib/utils'
+import { makeDefaultZkOperator } from '../utils'
 import { CommunicationBridge, RPCAppClient } from './types'
 import { generateRpcRequestId } from './utils'
 
@@ -17,7 +19,11 @@ export function makeWindowRpcZkOperator(
 	bridge: CommunicationBridge
 ): ZKOperator {
 	return {
-		groth16FullProve(input) {
+		async generateWitness(input) {
+			const operator = await makeDefaultZkOperator(algorithm)
+			return operator.generateWitness(input)
+		},
+		groth16Prove(input) {
 			const id = generateRpcRequestId()
 			const waitForRes = waitForResponse('zkProve', id)
 
@@ -26,7 +32,7 @@ export function makeWindowRpcZkOperator(
 				id,
 				request: {
 					algorithm,
-					input: input as {},
+					input: { witnessB64: base64.encode(input) },
 				},
 				module: 'witness-sdk'
 			})
