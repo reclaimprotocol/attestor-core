@@ -1,12 +1,12 @@
 {
-	"0x1a4": {
-		"chainName": "opt-goerli",
-		"address": "0xF93F605142Fb1Efad7Aa58253dDffF67775b4520",
-		"rpcUrl": "https://opt-goerli.g.alchemy.com/v2/rksDkSUXd2dyk2ANy_zzODknx_AAokui"
-	},
     "0x12c": {
-		"chainName": "zk-sync-sepolia",
-		"address": "0xf6456411FD72927451e8432d4664022d190f8b5A",
-		"rpcUrl": "https://sepolia.era.zksync.dev"
-	}
+        "chainName": "zk-sync-sepolia",
+        "address": "0xf6456411FD72927451e8432d4664022d190f8b5A",
+        "rpcUrl": "https://sepolia.era.zksync.dev"
+    },
+    "0xaa37dc": {
+        "chainName": "opt-sepolia",
+        "address": "0x6D0f81BDA11995f25921aAd5B43359630E65Ca96",
+        "rpcUrl": "https://opt-sepolia.g.alchemy.com/v2/aO1-SfG4oFRLyAiLREqzyAUu0HTCwHgs"
+    }
 }
