@@ -151,10 +151,6 @@ export function setupWindowRpc() {
 					}
 
 					function handle(msg: RPCEvent) {
-						if(msg.data.channel !== channel) {
-							return
-						}
-
 						cb(msg.data)
 					}
 				},
