@@ -152,6 +152,7 @@ export function makeZkProofGenerator(
 			return zkChunksToProve
 		},
 		async generateProofs(onChunkDone?: () => void) {
+			const start = Date.now()
 			const packetsToReveal: PacketToReveal[] = []
 			const tasks: Promise<void>[] = []
 			for(const { packet, algorithm, proofsToGenerate } of packetsToProve) {
@@ -179,6 +180,14 @@ export function makeZkProofGenerator(
 			}
 
 			await Promise.all(tasks)
+
+			logger?.info(
+				{
+					durationMs: Date.now() - start,
+					chunks: zkChunksToProve,
+				},
+				'generated ZK proofs'
+			)
 
 			// reset the packets to prove
 			packetsToProve.splice(0, packetsToProve.length)
