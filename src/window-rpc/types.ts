@@ -48,7 +48,7 @@ type ZKProveOpts = {
 type ZKVerifyOpts = {
 	algorithm: EncryptionAlgorithm
 	publicSignals: number[]
-	proof: { [_: string]: any }
+	proof: { [key: string]: string } | string
 }
 
 /**
