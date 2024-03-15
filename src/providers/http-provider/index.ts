@@ -1,4 +1,5 @@
 import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
+import { Buffer } from 'node:buffer'
 import { DEFAULT_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { TranscriptMessageSenderType } from '../../proto/api'
 import { ArraySlice, Provider } from '../../types'
@@ -279,9 +280,9 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const serverBlocks = msgs.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER)
 			.map((r) => r.data)
 			.filter(b => !b.every(b => b === REDACTION_CHAR_CODE)) // filter out fully redacted blocks
-			.map(b => uint8ArrayToBinaryStr(b))
 
-		const res = serverBlocks.join()
+
+		const res = Buffer.from(concatArrays(serverBlocks)).toString()
 
 		if(!res.startsWith(OK_HTTP_HEADER)) {
 			logTranscript()
@@ -320,6 +321,23 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 				break
 			}
+		}
+
+		function concatArrays(bufs: Uint8Array[]) {
+			let offset = 0
+			let bytes = 0
+			const bufs2 = bufs.map((buf) => {
+				bytes += buf.byteLength
+				return buf
+			})
+			const buffer = new ArrayBuffer(bytes)
+			const store = new Uint8Array(buffer)
+			bufs2.forEach((buf) => {
+				store.set(new Uint8Array(buf.buffer || buf, buf.byteOffset), offset)
+				offset += buf.byteLength
+			})
+			return buffer
+
 		}
 	},
 }
