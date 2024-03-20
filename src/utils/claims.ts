@@ -25,6 +25,17 @@ export function createSignDataForClaim(
  * @returns
  */
 export function getIdentifierFromClaimInfo(info: ClaimInfo): ClaimID {
+	//re-canonicalize context if it's not empty
+	if(info.context?.length > 0) {
+		try {
+			const ctx = JSON.parse(info.context)
+			info.context = canonicalize(ctx)!
+		} catch(e) {
+			throw new Error('unable to parse non-empty context. Must be JSON')
+		}
+
+	}
+
 	const str = `${info.provider}\n${info.parameters}\n${info.context || ''}`
 	return utils.keccak256(
 		strToUint8Array(str)

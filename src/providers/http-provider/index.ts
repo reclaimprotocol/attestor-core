@@ -296,26 +296,41 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error('Connection header must be "close"')
 		}
 
+
+		const extractedParams: { [_: string]: string } = {}
 		for(const { type, value, invert } of params.responseMatches) {
-			const inv = !!invert // explicitly cast to boolean
 			switch (type) {
 			case 'regex':
-				const match = makeRegex(value).test(res)
-				if(match === inv) { // if both true or both false then fail
+				const regexRes = makeRegex(value).exec(res)
+				const match = regexRes !== null
+				if(match === invert) { // if both true or both false then fail
 					logTranscript()
-					throw new Error(`Invalid receipt. Regex "${value}" ${inv ? 'matched' : "didn't match"}`)
+					throw new Error(`Invalid receipt. Regex "${value}" ${invert ? 'matched' : "didn't match"}`)
+				}
+
+				if(match) {
+					const groups = regexRes?.groups
+					if(groups) {
+						for(const paramName in groups) {
+							if(paramName in extractedParams) {
+								throw new Error(`Duplicate parameter ${paramName}`)
+							}
+
+							extractedParams[paramName] = groups[paramName]
+						}
+					}
 				}
 
 				break
 			case 'contains':
 				const includes = res.includes(value)
-				if(includes === inv) {
+				if(includes === invert) {
 					logTranscript()
 
 					const trimmedStr =
                             value.length > 100 ? value.slice(0, 100) + '...' : value
 					throw new Error(
-						`Invalid receipt. Response ${inv ? 'contains' : 'does not contain'} "${trimmedStr}"`
+						`Invalid receipt. Response ${invert ? 'contains' : 'does not contain'} "${trimmedStr}"`
 					)
 				}
 
@@ -339,6 +354,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			return buffer
 
 		}
+
+		return { extractedParams: extractedParams }
 	},
 }
 
