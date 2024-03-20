@@ -1,5 +1,4 @@
 import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
-import { Buffer } from 'node:buffer'
 import { DEFAULT_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { TranscriptMessageSenderType } from '../../proto/api'
 import { ArraySlice, Provider } from '../../types'
