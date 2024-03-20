@@ -72,7 +72,9 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 
 		const hasUserAgent = Object.keys(pubHeaders)
-			.some(k => k.toLowerCase() === 'user-agent')
+			.some(k => k.toLowerCase() === 'user-agent') ||
+			Object.keys(secHeaders)
+				.some(k => k.toLowerCase() === 'user-agent')
 		if(!hasUserAgent) {
 			//only set user-agent if not set by provider
 			pubHeaders['User-Agent'] = RECLAIM_USER_AGENT
@@ -282,7 +284,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			.filter(b => !b.every(b => b === REDACTION_CHAR_CODE)) // filter out fully redacted blocks
 
 
-		const res = Buffer.from(concatArrays(serverBlocks)).toString()
+		const res = Buffer.from(concatArrays(...serverBlocks)).toString()
 
 		if(!res.startsWith(OK_HTTP_HEADER)) {
 			logTranscript()
@@ -338,20 +340,16 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			}
 		}
 
-		function concatArrays(bufs: Uint8Array[]) {
-			let offset = 0
-			let bytes = 0
-			const bufs2 = bufs.map((buf) => {
-				bytes += buf.byteLength
-				return buf
+		function concatArrays(...bufs: Uint8Array[]) {
+			const totalSize = bufs.reduce((acc, e) => acc + e.length, 0)
+			const merged = new Uint8Array(totalSize)
+
+			bufs.forEach((array, i, arrays) => {
+				const offset = arrays.slice(0, i).reduce((acc, e) => acc + e.length, 0)
+				merged.set(array, offset)
 			})
-			const buffer = new ArrayBuffer(bytes)
-			const store = new Uint8Array(buffer)
-			bufs2.forEach((buf) => {
-				store.set(new Uint8Array(buf.buffer || buf, buf.byteOffset), offset)
-				offset += buf.byteLength
-			})
-			return buffer
+
+			return merged
 
 		}
 
