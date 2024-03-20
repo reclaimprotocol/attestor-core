@@ -93,7 +93,7 @@ export interface Provider<
   assertValidProviderReceipt(
     receipt: TLSReceipt,
     params: Params
-  ): void | Promise<void>
+  ): void | Promise<void> | { extractedParams: { [key: string]: string } }
 }
 
 export type ProofGenerationStep =

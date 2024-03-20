@@ -1,6 +1,7 @@
 import { config } from 'dotenv'
 config()
 
+import canonicalize from 'canonicalize'
 import { readFile } from 'fs/promises'
 import * as niceGrpc from 'nice-grpc'
 import { createGrpcWebClient, generateProviderReceipt, getTranscriptString, Logger, logger, proto, ProviderName, ProviderParams, providers, ProviderSecretParams } from '..'
@@ -46,11 +47,12 @@ export async function main<T extends ProviderName>(
 	console.log('receipt:\n', transcriptStr)
 
 	try {
-		await providers[paramsJson.name].assertValidProviderReceipt(
+		const res = await providers[paramsJson.name].assertValidProviderReceipt(
 			receipt!,
 			paramsJson.params,
 		)
 		console.log(`receipt is valid for ${paramsJson.name} provider`)
+		console.log(`extracted params: ${canonicalize(Object.keys(res?.extractedParams).length > 0 ? res.extractedParams : undefined) ?? 'none'}`)
 	} catch(err) {
 		console.error(`receipt is invalid for ${paramsJson.name} provider:`, err)
 	}
