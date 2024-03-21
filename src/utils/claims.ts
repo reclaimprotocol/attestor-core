@@ -45,3 +45,10 @@ export function getIdentifierFromClaimInfo(info: ClaimInfo): ClaimID {
 export function stringifyClaimParameters(params: { [key: string]: any }) {
 	return canonicalize(params) || ''
 }
+
+export function hashProviderParams(params): string {
+	const serializedParams = canonicalize(params)!
+	return utils.keccak256(
+		strToUint8Array(serializedParams)
+	).toLowerCase()
+}
