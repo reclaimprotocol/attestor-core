@@ -1,5 +1,6 @@
 import httpProvider from '../providers/http-provider'
 import { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
+import { hashProviderParams } from '../utils'
 
 describe('HTTP Provider Utils tests', () => {
 
@@ -12,7 +13,7 @@ describe('HTTP Provider Utils tests', () => {
 		expect(regexp.test(json.slice(val.start, val.end))).toBe(true)
 	})
 
-	it('should get redactions from chunked response ', () => {
+	it('should get redactions from chunked response', () => {
 		const provider = httpProvider
 		if(provider.getResponseRedactions) {
 			const redactions = provider.getResponseRedactions(chunkedResp, {
@@ -55,6 +56,21 @@ describe('HTTP Provider Utils tests', () => {
 			])
 		}
 
+	})
+	it('should hash provider params consistently', () => {
+		const params = {
+			url: 'https://xargs.org/',
+			responseMatches: [
+				{
+					type: 'regex',
+					value: '<title.*?(?<name>Aiken &amp; Driscoll &amp; Webb)<\\/title>'
+				}
+			],
+			method: 'GET',
+			responseRedactions: [ { xPath: './html/head/title' } ]
+		}
+		const hash = hashProviderParams(params)
+		expect(hash).toEqual('0xe9624d26421a4d898d401e98821ccd645c25b06de97746a6c24a8b12d9aec143')
 	})
 })
 
