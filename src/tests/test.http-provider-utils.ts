@@ -1,4 +1,4 @@
-import httpProvider from '../providers/http-provider'
+import httpProvider, { HTTPProviderParamsV2 } from '../providers/http-provider'
 import { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
 import { hashProviderParams } from '../utils'
 
@@ -58,7 +58,7 @@ describe('HTTP Provider Utils tests', () => {
 
 	})
 	it('should hash provider params consistently', () => {
-		const params = {
+		const params: HTTPProviderParamsV2 = {
 			url: 'https://xargs.org/',
 			responseMatches: [
 				{
@@ -67,10 +67,29 @@ describe('HTTP Provider Utils tests', () => {
 				}
 			],
 			method: 'GET',
-			responseRedactions: [ { xPath: './html/head/title' } ]
+			responseRedactions: [ { xPath: './html/head/title' } ],
+			geoLocation:'US',
 		}
 		const hash = hashProviderParams(params)
-		expect(hash).toEqual('0xe9624d26421a4d898d401e98821ccd645c25b06de97746a6c24a8b12d9aec143')
+		expect(hash).toEqual('0x98fde00dc9f1d88c5166c3b7c911957d52e8f57ea1143ec92aebf529c1e3acd3')
+
+
+		const paramsEx: HTTPProviderParamsV2 = {
+			url: 'https://xargs.org/',
+			responseMatches: [
+				{
+					type: 'regex',
+					value: '<title.*?(?<name>Aiken &amp; Driscoll &amp; Webb)<\\/title>'
+				}
+			],
+			method: 'GET',
+			geoLocation:'US',
+			responseRedactions: [ { xPath: './html/head/title' } ],
+			body:'should not affect hash',
+			headers:{ 'should not':'effect hash' },
+			writeRedactionMode:'key-update', // should not affect hash
+		}
+		expect(hashProviderParams(paramsEx)).toEqual('0x98fde00dc9f1d88c5166c3b7c911957d52e8f57ea1143ec92aebf529c1e3acd3')
 	})
 })
 

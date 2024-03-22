@@ -1,6 +1,7 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
 import canonicalize from 'canonicalize'
 import { utils } from 'ethers'
+import { HTTPProviderParamsV2 } from '../providers/http-provider'
 import { ClaimID, ClaimInfo, CompleteClaimData } from '../types'
 
 export function createSignDataForClaim(
@@ -46,8 +47,16 @@ export function stringifyClaimParameters(params: { [key: string]: any }) {
 	return canonicalize(params) || ''
 }
 
-export function hashProviderParams(params): string {
-	const serializedParams = canonicalize(params)!
+export function hashProviderParams(params: HTTPProviderParamsV2): string {
+	const filteredParams = {
+		url:params.url,
+		method:params.method,
+		responseMatches: params.responseMatches,
+		responseRedactions: params.responseRedactions,
+		geoLocation:params.geoLocation
+	}
+
+	const serializedParams = canonicalize(filteredParams)!
 	return utils.keccak256(
 		strToUint8Array(serializedParams)
 	).toLowerCase()
