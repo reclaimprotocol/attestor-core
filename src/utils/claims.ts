@@ -57,6 +57,7 @@ export function hashProviderParams(params: HTTPProviderParamsV2): string {
 	}
 
 	const serializedParams = canonicalize(filteredParams)!
+	console.log(`providerHash data: ${serializedParams}`)
 	return utils.keccak256(
 		strToUint8Array(serializedParams)
 	).toLowerCase()
