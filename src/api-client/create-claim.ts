@@ -70,7 +70,7 @@ export async function createClaim<Name extends ProviderName>({
 		parameters: stringifyClaimParameters(params),
 		context,
 	}
-	const identifier = getIdentifierFromClaimInfo(claimInfo)
+	let identifier = getIdentifierFromClaimInfo(claimInfo)
 	const signatures: string[] = []
 
 	if(!resumeFromStep) {
@@ -130,6 +130,8 @@ export async function createClaim<Name extends ProviderName>({
 
 		const { signature, claimData: r } = await generateSignature(witness)
 		claimData = r!
+		identifier = claimData.identifier
+		logger.info({ identifier }, 'new identifier')
 
 		signatures.push(signature)
 

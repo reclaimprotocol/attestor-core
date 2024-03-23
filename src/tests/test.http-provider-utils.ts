@@ -74,21 +74,7 @@ describe('HTTP Provider Utils tests', () => {
 		expect(hash).toEqual('0x98fde00dc9f1d88c5166c3b7c911957d52e8f57ea1143ec92aebf529c1e3acd3')
 
 
-		const paramsEx: HTTPProviderParamsV2 = {
-			url: 'https://xargs.org/',
-			responseMatches: [
-				{
-					type: 'regex',
-					value: '<title.*?(?<name>Aiken &amp; Driscoll &amp; Webb)<\\/title>'
-				}
-			],
-			method: 'GET',
-			geoLocation:'US',
-			responseRedactions: [ { xPath: './html/head/title' } ],
-			body:'should not affect hash',
-			headers:{ 'should not':'effect hash' },
-			writeRedactionMode:'key-update', // should not affect hash
-		}
+		const paramsEx: HTTPProviderParamsV2 =			{ 'geoLocation':'', 'url':'https://www.linkedin.com/dashboard/', 'method':'GET', 'body':'', 'responseMatches':[{ 'value':'TOTAL_FOLLOWERS&quot;,&quot;$recipeTypes&quot;:[&quot;com.linkedin.c123aee2ba3dfeb6a4580e7effdf5d3f&quot;],&quot;analyticsTitle&quot;:{&quot;textDirection&quot;:&quot;USER_LOCALE&quot;,&quot;text&quot;:&quot;581&quot;', 'type':'contains' }], 'responseRedactions':[{ 'xPath':'', 'jsonPath':'', 'regex':'TOTAL_FOLLOWERS&quot;,&quot;\\$recipeTypes&quot;:(.*?),&quot;analyticsTitle&quot;:{&quot;textDirection&quot;:&quot;USER_LOCALE&quot;,&quot;text&quot;:&quot;(.*?)&quot;' }] }
 		expect(hashProviderParams(paramsEx)).toEqual('0x98fde00dc9f1d88c5166c3b7c911957d52e8f57ea1143ec92aebf529c1e3acd3')
 	})
 })
