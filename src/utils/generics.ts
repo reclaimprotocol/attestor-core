@@ -92,6 +92,10 @@ export function getZkAlgorithmForCipherSuite(cipherSuite: CipherSuite) {
 		return 'aes-256-ctr'
 	}
 
+	if(cipherSuite.includes('AES_128_GCM')) {
+		return 'aes-128-ctr'
+	}
+
 	throw new Error(`${cipherSuite} not supported for ZK ops`)
 }
 

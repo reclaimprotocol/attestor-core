@@ -11,7 +11,8 @@ import {
 
 const ZK_CIPHER_SUITES: CipherSuite[] = [
 	'TLS_CHACHA20_POLY1305_SHA256',
-	'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384'
+	'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384',
+	'TLS_AES_128_GCM_SHA256'
 ]
 
 jest.setTimeout(60_000) // 60s
@@ -90,14 +91,20 @@ describe('ZK Tests', () => {
 	})
 
 	it.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some ciphertext', async(cipherSuite) => {
-		const key = Buffer.alloc(32, 0)
+		const alg = cipherSuite.includes('CHACHA20')
+			? 'CHACHA20-POLY1305'
+			: (
+				cipherSuite.includes('AES_256_GCM')
+					? 'AES-256-GCM'
+					: 'AES-128-GCM'
+			)
+		const keylength = alg === 'AES-128-GCM' ? 16 : 32
+		const key = Buffer.alloc(keylength, 0)
 		const {
 			ivLength: fixedIvLength,
 		} = SUPPORTED_CIPHER_SUITE_MAP[cipherSuite]
 		const fixedIv = Buffer.alloc(fixedIvLength, 0)
-		const alg = cipherSuite.includes('CHACHA20')
-			? 'CHACHA20-POLY1305'
-			: 'AES-256-GCM'
+
 		const encKey = await crypto.importKey(alg, key)
 		const vectors = [
 			{

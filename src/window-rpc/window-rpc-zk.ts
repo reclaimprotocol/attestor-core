@@ -6,7 +6,8 @@ import { generateRpcRequestId } from './utils'
 
 export const ALL_ENC_ALGORITHMS: EncryptionAlgorithm[] = [
 	'aes-256-ctr',
-	'chacha20'
+	'aes-128-ctr',
+	'chacha20',
 ]
 
 /**
