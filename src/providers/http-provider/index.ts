@@ -72,8 +72,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		const hasUserAgent = Object.keys(pubHeaders)
 			.some(k => k.toLowerCase() === 'user-agent') ||
-			Object.keys(secHeaders)
-				.some(k => k.toLowerCase() === 'user-agent')
+            Object.keys(secHeaders)
+            	.some(k => k.toLowerCase() === 'user-agent')
 		if(!hasUserAgent) {
 			//only set user-agent if not set by provider
 			pubHeaders['User-Agent'] = RECLAIM_USER_AGENT
@@ -300,11 +300,14 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		const extractedParams: { [_: string]: string } = {}
 		for(const { type, value, invert } of params.responseMatches) {
+
+			const inv = !!invert // explicitly cast to boolean
+
 			switch (type) {
 			case 'regex':
 				const regexRes = makeRegex(value).exec(res)
 				const match = regexRes !== null
-				if(match === invert) { // if both true or both false then fail
+				if(match === inv) { // if both true or both false then fail
 					logTranscript()
 					throw new Error(`Invalid receipt. Regex "${value}" ${invert ? 'matched' : "didn't match"}`)
 				}
@@ -325,7 +328,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				break
 			case 'contains':
 				const includes = res.includes(value)
-				if(includes === invert) {
+				if(includes === inv) {
 					logTranscript()
 
 					const trimmedStr =
