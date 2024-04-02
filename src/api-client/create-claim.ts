@@ -137,7 +137,7 @@ export async function createClaim<Name extends ProviderName>({
 
 		logger.info({ witness }, 'generated signature for oracle host')
 
-		const witnessesLeft = witnesses.slice(0, i + 1)
+		const witnessesLeft = witnesses.slice(i + 1)
 		didUpdateCreateStep?.({
 			name: 'witness-done',
 			timestampS,

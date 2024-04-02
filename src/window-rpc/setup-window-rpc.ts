@@ -67,10 +67,6 @@ export function setupWindowRpc() {
 						req.request.zkOperatorMode
 					),
 					didUpdateCreateStep(step) {
-						logger.debug(
-							{ step },
-							'got create claim step update'
-						)
 						sendMessage({
 							type: 'createClaimStep',
 							step,
