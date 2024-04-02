@@ -371,9 +371,13 @@ export function makeDefaultZkOperator(
 ) {
 	if(!zkOperators[algorithm]) {
 		const isNode = detectEnvironment() === 'node'
-		logger?.debug(
-			{ type: isNode ? 'local' : 'remote' },
-			'using zk operator'
+		const opType = isNode ? 'local' : 'remote'
+		logger?.info(
+			{
+				type: opType,
+				algorithm
+			},
+			'fetching zk operator'
 		)
 
 		if(isNode) {
@@ -393,6 +397,14 @@ export function makeDefaultZkOperator(
 				logger
 			)
 		}
+
+		logger?.info(
+			{
+				type: isNode ? 'local' : 'remote',
+				algorithm
+			},
+			'got zk operator'
+		)
 	}
 
 	return zkOperators[algorithm]!
