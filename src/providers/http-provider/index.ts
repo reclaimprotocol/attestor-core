@@ -161,6 +161,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				element = extractHTMLElement(body, rs.xPath, !!rs.jsonPath)
 				const substr = findSubstringIgnoreLE(body, element)
 				if(substr.index < 0) {
+					console.log('===RESPONSE===')
+					console.log(uint8ArrayToBinaryStr(res.body))
 					throw new Error(`Failed to find element: "${rs.xPath}"`)
 				}
 
@@ -176,6 +178,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				}
 
 				if(start < 0) {
+					console.log('===RESPONSE===')
+					console.log(uint8ArrayToBinaryStr(res.body))
 					throw new Error('Failed to find element')
 				}
 
@@ -189,6 +193,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				const elem = element || body
 				const match = regexp.exec(elem)
 				if(!match) {
+					console.log('===RESPONSE===')
+					console.log(uint8ArrayToBinaryStr(res.body))
 					throw new Error(
 						`regexp ${rs.regex} does not match found element '${elem}'`
 					)
