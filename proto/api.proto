@@ -32,6 +32,7 @@ enum TLSVersion {
 enum BeaconType {
 	BEACON_TYPE_UNKNOWN = 0;
 	BEACON_TYPE_SMART_CONTRACT = 1;
+	BEACON_TYPE_RECLAIM_TRUSTED = 2;
 }
 
 message TLSPacket {

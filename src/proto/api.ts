@@ -162,6 +162,7 @@ export function tLSVersionToJSON(object: TLSVersion): string {
 export enum BeaconType {
   BEACON_TYPE_UNKNOWN = 0,
   BEACON_TYPE_SMART_CONTRACT = 1,
+  BEACON_TYPE_RECLAIM_TRUSTED = 2,
   UNRECOGNIZED = -1,
 }
 
@@ -173,6 +174,9 @@ export function beaconTypeFromJSON(object: any): BeaconType {
     case 1:
     case "BEACON_TYPE_SMART_CONTRACT":
       return BeaconType.BEACON_TYPE_SMART_CONTRACT;
+    case 2:
+    case "BEACON_TYPE_RECLAIM_TRUSTED":
+      return BeaconType.BEACON_TYPE_RECLAIM_TRUSTED;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -186,6 +190,8 @@ export function beaconTypeToJSON(object: BeaconType): string {
       return "BEACON_TYPE_UNKNOWN";
     case BeaconType.BEACON_TYPE_SMART_CONTRACT:
       return "BEACON_TYPE_SMART_CONTRACT";
+    case BeaconType.BEACON_TYPE_RECLAIM_TRUSTED:
+      return "BEACON_TYPE_RECLAIM_TRUSTED";
     case BeaconType.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";

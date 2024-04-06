@@ -1,4 +1,5 @@
-import type { BeaconIdentifier } from '../proto/api'
+import RECLAIM_TRUSTED_WITNESS from '../beacon/reclaim-trusted/config.json'
+import { type BeaconIdentifier, BeaconType } from '../proto/api'
 
 export const MAX_ZK_CHUNKS = 40
 
@@ -7,8 +8,8 @@ export const DEFAULT_ZK_CONCURRENCY = 10
 export const RECLAIM_USER_AGENT = 'reclaim/0.0.1'
 
 export const DEFAULT_BEACON_IDENTIFIER: BeaconIdentifier = {
-	type: 1,
-	id: '0xaa37dc'
+	type: BeaconType.BEACON_TYPE_RECLAIM_TRUSTED,
+	id: RECLAIM_TRUSTED_WITNESS.id
 }
 
 export const DEFAULT_PORT = 443

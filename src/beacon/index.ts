@@ -1,5 +1,6 @@
 import { BeaconIdentifier, BeaconType } from '../proto/api'
 import { Beacon } from '../types'
+import { makeReclaimTrustedBeacon } from './reclaim-trusted'
 import makeBeacon from './smart-contract'
 
 const BEACON_MAP: Record<string, Beacon> = {}
@@ -11,7 +12,8 @@ const BEACON_TYPE_MAP: Record<BeaconType, (id: string) => Beacon> = {
 	},
 	[BeaconType.UNRECOGNIZED]: () => {
 		throw new Error('Unrecognized beacon type')
-	}
+	},
+	[BeaconType.BEACON_TYPE_RECLAIM_TRUSTED]: makeReclaimTrustedBeacon
 }
 
 /**
