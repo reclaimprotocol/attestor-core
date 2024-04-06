@@ -193,6 +193,11 @@ export function makeZkProofGenerator(
 			packetsToProve.splice(0, packetsToProve.length)
 			zkChunksToProve = 0
 
+			// release ZK resources to free up memory
+			const alg = getZkAlgorithmForCipherSuite(cipherSuite)
+			const zkOperator = await getZkOperatorForAlgorithm(alg)
+			zkOperator.release?.()
+
 			return packetsToReveal
 		},
 	}
@@ -244,8 +249,7 @@ export function makeZkProofGenerator(
 			privateInput, publicInput
 		}: ZKProofToGenerate
 	): Promise<ZKProof> {
-		const zkOperator = zkOperators?.[algorithm]
-			|| await makeDefaultZkOperator(algorithm, logger)
+		const zkOperator = await getZkOperatorForAlgorithm(algorithm)
 
 		const proof = await generateProof(
 			algorithm,
@@ -262,6 +266,11 @@ export function makeZkProofGenerator(
 			redactedPlaintext,
 			startIdx,
 		}
+	}
+
+	async function getZkOperatorForAlgorithm(algorithm: EncryptionAlgorithm) {
+		return zkOperators?.[algorithm]
+			|| await makeDefaultZkOperator(algorithm, logger)
 	}
 }
 
