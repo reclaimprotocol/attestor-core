@@ -106,7 +106,9 @@ export async function assertValidClaimOwner(request: ClaimRequest) {
 }
 
 export function makeBeaconCacheable(beacon: Beacon): Beacon {
-	const cache: { [epochId: number]: Promise<BeaconState> } = {}
+	const cache: {
+		[epochId: number]: Promise<BeaconState> | BeaconState
+	} = {}
 
 	return {
 		...beacon,
