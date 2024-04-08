@@ -15,7 +15,7 @@ export function makeReclaimTrustedBeacon(id: string): Beacon {
 		getState() {
 			return {
 				witnesses: [CONFIG],
-				epoch: 0,
+				epoch: 1,
 				witnessesRequiredForClaim: 1,
 				nextEpochTimestampS: 0,
 			}
