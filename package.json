@@ -41,7 +41,7 @@
 		"nice-grpc-web": "^2.0.0",
 		"p-queue": "^6.0.0",
 		"protobufjs": "^7.2.5",
-		"snarkjs": "git+https://github.com/reclaimprotocol/snarkjs"
+		"snarkjs": "^0.7.3"
 	},
 	"devDependencies": {
 		"@adiwajshing/eslint-config": "github:adiwajshing/eslint-config",
