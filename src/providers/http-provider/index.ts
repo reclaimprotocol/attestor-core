@@ -270,6 +270,10 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			)
 		}
 
+		if(req.headers.host !== hostname) {
+			logTranscript()
+			throw new Error(`Expected host: ${hostname}, found: ${req.headers.host}`)
+		}
 
 		const serverBlocks = msgs.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER)
 			.map((r) => r.data)
