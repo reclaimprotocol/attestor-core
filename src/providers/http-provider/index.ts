@@ -30,7 +30,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		applicationLayerProtocols: ['http/1.1'],
 	},
 	hostPort(params) {
-		const { host } = new URL(params.url)
+		const { host } = new URL(getURL(params))
 		if(!host) {
 			throw new Error('url is incorrect')
 		}
@@ -532,6 +532,31 @@ function getGeoLocation(params: HTTPProviderParams) {
 	}
 
 	return undefined
+}
+
+function getURL(params: HTTPProviderParams) {
+	if((params as HTTPProviderParamsV2)?.url) {
+		const v2Params = params as HTTPProviderParamsV2
+		let hostPort = v2Params?.url
+		const paramNames: Set<string> = new Set()
+		//extract param names
+
+		let match: RegExpExecArray | null = null
+		while(match = paramsRegex.exec(hostPort)) {
+			paramNames.add(match[1])
+		}
+
+		paramNames.forEach(pn => {
+			if(v2Params.paramValues && pn in v2Params.paramValues) {
+				hostPort = hostPort?.replaceAll(`{{${pn}}}`, v2Params.paramValues[pn].toString())
+			} else {
+				throw new Error(`parameter "${pn}" value not found in templateParams`)
+			}
+		})
+		return hostPort
+	}
+
+	return params.url
 }
 
 export default HTTP_PROVIDER
