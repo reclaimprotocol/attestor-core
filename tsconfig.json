@@ -13,14 +13,17 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "resolveJsonModule": true,
-    "lib": [ "es2020", "DOM" ]
+    "lib": [
+      "es2021",
+      "DOM"
+    ]
   },
   "include": [
-    "src/*.ts", 
+    "src/*.ts",
     "src/**/*.ts"
   ],
   "exclude": [
-    "node_modules", 
+    "node_modules",
     "src/tests"
   ]
 }
