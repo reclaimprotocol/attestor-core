@@ -67,15 +67,30 @@ describe('HTTP Provider Utils tests', () => {
 				}
 			],
 			method: 'GET',
-			responseRedactions: [ { xPath: './html/head/title' } ],
-			geoLocation:'US',
+			responseRedactions: [{ xPath: './html/head/title' }],
+			geoLocation: 'US',
 		}
 		const hash = hashProviderParams(params)
 		expect(hash).toEqual('0x98fde00dc9f1d88c5166c3b7c911957d52e8f57ea1143ec92aebf529c1e3acd3')
 
 
-		const paramsEx: HTTPProviderParamsV2 =			{ 'geoLocation':'', 'url':'https://www.linkedin.com/dashboard/', 'method':'GET', 'body':'', 'responseMatches':[{ 'value':'TOTAL_FOLLOWERS&quot;,&quot;$recipeTypes&quot;:[&quot;com.linkedin.c123aee2ba3dfeb6a4580e7effdf5d3f&quot;],&quot;analyticsTitle&quot;:{&quot;textDirection&quot;:&quot;USER_LOCALE&quot;,&quot;text&quot;:&quot;581&quot;', 'type':'contains' }], 'responseRedactions':[{ 'xPath':'', 'jsonPath':'', 'regex':'TOTAL_FOLLOWERS&quot;,&quot;\\$recipeTypes&quot;:(.*?),&quot;analyticsTitle&quot;:{&quot;textDirection&quot;:&quot;USER_LOCALE&quot;,&quot;text&quot;:&quot;(.*?)&quot;' }] }
-		expect(hashProviderParams(paramsEx)).toEqual('0x98fde00dc9f1d88c5166c3b7c911957d52e8f57ea1143ec92aebf529c1e3acd3')
+		const paramsEx: HTTPProviderParamsV2 = {
+			'geoLocation': '',
+			'url': 'https://www.linkedin.com/dashboard/',
+			'method': 'GET',
+			'body': '',
+			'responseMatches': [
+				{
+					'value': 'TOTAL_FOLLOWERS&quot;,&quot;$recipeTypes&quot;:[&quot;com.linkedin.c123aee2ba3dfeb6a4580e7effdf5d3f&quot;],&quot;analyticsTitle&quot;:{&quot;textDirection&quot;:&quot;USER_LOCALE&quot;,&quot;text&quot;:&quot;581&quot;',
+					'type': 'contains'
+				}],
+			'responseRedactions': [{
+				'xPath': '{{xpath}}',
+				'jsonPath': '',
+				'regex': 'TOTAL_FOLLOWERS&quot;,&quot;\\$recipeTypes&quot;:(.*?),&quot;analyticsTitle&quot;:{&quot;textDirection&quot;:&quot;USER_LOCALE&quot;,&quot;text&quot;:&quot;(.*?)&quot;'
+			}]
+		}
+		expect(hashProviderParams(paramsEx)).toEqual('0xeb0f5b38811b973221eb202ac60abeb41e7808034d5eb56117a367af545127c8')
 	})
 })
 

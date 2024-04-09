@@ -10,7 +10,7 @@ import {
 	uint8ArrayToBinaryStr,
 	uint8ArrayToStr,
 } from '../../utils'
-import { HTTPProviderParams, HTTPProviderSecretParams } from './types'
+import { HTTPProviderParams, HTTPProviderParamsV2, HTTPProviderSecretParams } from './types'
 import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
@@ -44,7 +44,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	},
 	geoLocation(params) {
 		return ('geoLocation' in params)
-			? params.geoLocation
+			? getGeoLocation(params)
 			: undefined
 	},
 	areValidParams(params): params is HTTPProviderParams {
@@ -81,6 +81,9 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			//only set user-agent if not set by provider
 			pubHeaders['User-Agent'] = RECLAIM_USER_AGENT
 		}
+
+		const newParams = substituteParamValues(<HTTPProviderParamsV2>params)
+		params = newParams.newParams
 
 		const hostPort = this.hostPort instanceof Function
 			? this.hostPort(params)
@@ -142,10 +145,13 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error(`Provider returned error "${res.statusCode} ${res.statusMessage}"`)
 		}
 
-		const params = normaliseParamsToV2(paramsAny)
-		if(!params.responseRedactions?.length) {
+		const rawParams = normaliseParamsToV2(paramsAny)
+		if(!rawParams.responseRedactions?.length) {
 			return []
 		}
+
+		const newParams = substituteParamValues(rawParams)
+		const params = newParams.newParams
 
 		const headerEndIndex = res.statusLineEndIndex!
 		const bodyStartIdx = res.bodyStartIndex!
@@ -244,7 +250,12 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		return redactions
 	},
 	assertValidProviderReceipt(receipt, paramsAny) {
-		const params = normaliseParamsToV2(paramsAny)
+		let extractedParams: { [_: string]: string } = {}
+
+		const newParams = substituteParamValues(normaliseParamsToV2(paramsAny))
+		const params = newParams.newParams
+		extractedParams = { ...extractedParams, ...newParams.extractedValues }
+
 		const msgs = extractApplicationDataMsgsFromTranscript(receipt)
 		const req = getHttpRequestHeadersFromTranscript(msgs)
 		if(req.method !== params.method.toLowerCase()) {
@@ -291,7 +302,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 
 
-		const extractedParams: { [_: string]: string } = {}
 		for(const { type, value, invert } of params.responseMatches) {
 
 			const inv = !!invert // explicitly cast to boolean
@@ -332,6 +342,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				}
 
 				break
+			default:
+				throw new Error(`Invalid response match type ${type}`)
 			}
 		}
 
@@ -391,5 +403,135 @@ function findSubstringIgnoreLE(str: string, substr: string): { index: number, le
 	}
 }
 
+
+type ReplacedParams = {
+    newParam: string
+    extractedValues: { [_: string]: string }
+} | null
+
+const paramsRegex = /\{\{([^{}]+)}}/sgi
+
+function substituteParamValues(currentParams: HTTPProviderParamsV2): {
+    newParams: HTTPProviderParamsV2
+    extractedValues: { [_: string]: string }
+} {
+
+	const params = JSON.parse(JSON.stringify(currentParams))
+	let extractedValues: { [_: string]: string } = {}
+
+
+	const urlParams = extractAndReplaceTemplateValues(params.url)
+	if(urlParams) {
+		params.url = urlParams.newParam
+		extractedValues = { ...urlParams.extractedValues }
+	}
+
+
+	let bodyParams: ReplacedParams
+	if(params.body) {
+		const strBody = typeof params.body === 'string' ? params.body : uint8ArrayToStr(params.body)
+		bodyParams = extractAndReplaceTemplateValues(strBody)
+		if(bodyParams) {
+			params.body = bodyParams.newParam
+			extractedValues = { ...extractedValues, ...bodyParams.extractedValues }
+		}
+
+	}
+
+	const geoParams = extractAndReplaceTemplateValues(params.geoLocation)
+	if(geoParams) {
+		params.geoLocation = geoParams.newParam
+		extractedValues = { ...extractedValues, ...geoParams.extractedValues }
+	}
+
+	if(params.responseRedactions) {
+		params.responseRedactions.forEach(r => {
+			if(r.regex) {
+				const regexParams = extractAndReplaceTemplateValues(r.regex)
+				r.regex = regexParams?.newParam
+			}
+
+			if(r.xPath) {
+				const xpathParams = extractAndReplaceTemplateValues(r.xPath)
+				r.xPath = xpathParams?.newParam
+			}
+
+			if(r.jsonPath) {
+				const jsonPathParams = extractAndReplaceTemplateValues(r.jsonPath)
+				r.jsonPath = jsonPathParams?.newParam
+			}
+		})
+	}
+
+	if(params.responseMatches) {
+		params.responseMatches.forEach(r => {
+			if(r.value !== '') {
+				const matchParam = extractAndReplaceTemplateValues(r.value)
+				r.value = matchParam?.newParam!
+				extractedValues = { ...extractedValues, ...matchParam?.extractedValues }
+			}
+		})
+	}
+
+	return {
+		newParams: params,
+		extractedValues: extractedValues
+	}
+
+	function extractAndReplaceTemplateValues(param: string | undefined): ReplacedParams {
+
+		if(!param) {
+			return null
+		}
+
+		const paramNames: Set<string> = new Set()
+		//extract param names
+
+		let match: RegExpExecArray | null = null
+		while(match = paramsRegex.exec(param)) {
+			paramNames.add(match[1])
+		}
+
+		const extractedValues: { [_: string]: string } = {}
+		paramNames.forEach(pn => {
+			if(params.paramValues && pn in params.paramValues) {
+				param = param?.replaceAll(`{{${pn}}}`, params.paramValues[pn])
+				extractedValues[pn] = params.paramValues[pn]
+			} else {
+				throw new Error(`parameter "${pn}" value not found in templateParams`)
+			}
+		})
+
+		return {
+			newParam: param,
+			extractedValues: extractedValues
+		}
+	}
+}
+
+function getGeoLocation(params: HTTPProviderParams) {
+	if((params as HTTPProviderParamsV2)?.geoLocation) {
+		const v2Params = params as HTTPProviderParamsV2
+		let geo = v2Params?.geoLocation!
+		const paramNames: Set<string> = new Set()
+		//extract param names
+
+		let match: RegExpExecArray | null = null
+		while(match = paramsRegex.exec(geo)) {
+			paramNames.add(match[1])
+		}
+
+		paramNames.forEach(pn => {
+			if(v2Params.paramValues && pn in v2Params.paramValues) {
+				geo = geo?.replaceAll(`{{${pn}}}`, v2Params.paramValues[pn].toString())
+			} else {
+				throw new Error(`parameter "${pn}" value not found in templateParams`)
+			}
+		})
+		return geo
+	}
+
+	return undefined
+}
 
 export default HTTP_PROVIDER

@@ -127,6 +127,13 @@ export type HTTPProviderParamsV2 = {
     geoLocation?: string
 
     writeRedactionMode?: RedactionMode
+
+    /**
+     * A map of parameter values which are user in form of {{param}} in URL, responseMatches, responseRedactions,
+     * body, geolocation.
+     * Those in URL, responseMatches & geo will be put into context and signed
+     */
+    paramValues?: { [_: string]: string }
 }
 
 export type HTTPProviderParams = HTTPProviderParamsV1
