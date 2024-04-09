@@ -26,6 +26,9 @@ export * from './types'
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
 
 const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
+	additionalClientOptions: {
+		applicationLayerProtocols: ['http/1.1'],
+	},
 	hostPort(params) {
 		const { host } = new URL(params.url)
 		if(!host) {
