@@ -246,23 +246,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const req = getHttpRequestHeadersFromTranscript(msgs)
 		if(req.method !== params.method.toLowerCase()) {
 			logTranscript()
-
 			throw new Error(`Invalid method: ${req.method}`)
-		}
-
-
-		function logTranscript() {
-
-			const clientMsgs = msgs.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT).map(m => m.data)
-			const serverMsgs = msgs.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER).map(m => m.data)
-
-
-			const clientTranscript = uint8ArrayToStr(concatenateUint8Arrays(clientMsgs))
-			const serverTranscript = uint8ArrayToStr(concatenateUint8Arrays(serverMsgs))
-			console.log('====REQUEST=====')
-			console.log(clientTranscript)
-			console.log('====RESPONSE====')
-			console.log(serverTranscript)
 		}
 
 		const { hostname, pathname, port } = new URL(params.url)
@@ -288,18 +272,14 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			.map((r) => r.data)
 			.filter(b => !b.every(b => b === REDACTION_CHAR_CODE)) // filter out fully redacted blocks
 
-
 		const res = Buffer.from(concatArrays(...serverBlocks)).toString()
-
 		if(!res.startsWith(OK_HTTP_HEADER)) {
 			logTranscript()
-
 			throw new Error(`Missing "${OK_HTTP_HEADER}" header in response`)
 		}
 
 		if(req.headers['connection'] !== 'close') {
 			logTranscript()
-
 			throw new Error('Connection header must be "close"')
 		}
 
@@ -362,6 +342,18 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 
 		return { extractedParams: extractedParams }
+
+		function logTranscript() {
+			const clientMsgs = msgs.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT).map(m => m.data)
+			const serverMsgs = msgs.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER).map(m => m.data)
+
+			const clientTranscript = uint8ArrayToStr(concatenateUint8Arrays(clientMsgs))
+			const serverTranscript = uint8ArrayToStr(concatenateUint8Arrays(serverMsgs))
+			console.log('====REQUEST=====')
+			console.log(clientTranscript)
+			console.log('====RESPONSE====')
+			console.log(serverTranscript)
+		}
 	},
 }
 
