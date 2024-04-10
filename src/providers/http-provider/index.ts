@@ -177,6 +177,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 				elementIdx = substr.index
 				elementLength = substr.length
+				element = body.slice(elementIdx, elementIdx + elementLength)
 			}
 
 			if(rs.jsonPath) {
