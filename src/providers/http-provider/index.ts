@@ -264,7 +264,14 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
 
-		const { hostname, pathname, port } = new URL(params.url)
+		const { protocol, hostname, pathname, port } = new URL(params.url)
+
+		if(protocol !== 'https:') {
+			console.log('params URL:', params.url)
+			logTranscript()
+			throw new Error(`Expected protocol: https, found: ${protocol}`)
+		}
+
 		const searchParams = params.url.includes('?') ? params.url.split('?')[1] : ''
 		const expectedPath = pathname + (searchParams?.length ? '?' + searchParams : '')
 		if(req.url !== expectedPath) {
