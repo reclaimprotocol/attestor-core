@@ -7,3 +7,4 @@ lib
 browser/resources
 .env
 example-local
+.idea
