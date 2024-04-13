@@ -155,7 +155,7 @@ export const paramsV2Schema = {
 	'title': 'HTTP Provider params schema',
 	'type': 'object',
 	'properties': {
-		'geoLocation': { 'type': 'string' },
+		'geoLocation': { 'type': 'string', nullable: true },
 		'headers': {
 			'type': 'object',
 			'additionalProperties': { 'type': 'string' }

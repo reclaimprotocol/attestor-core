@@ -54,7 +54,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const validateParams = ajv.compile(paramsV2Schema)
 		const valid = validateParams(params)
 		if(!valid) {
-			throw new Error(`params validation failed: ${validateParams.errors?.toString()}`)
+			throw new Error(`params validation failed: ${JSON.stringify(validateParams.errors)}`)
 		}
 
 		return (
