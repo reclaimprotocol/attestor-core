@@ -1,4 +1,5 @@
 import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
+import Ajv from 'ajv'
 import { DEFAULT_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { TranscriptMessageSenderType } from '../../proto/api'
 import { ArraySlice, Provider } from '../../types'
@@ -10,7 +11,7 @@ import {
 	uint8ArrayToBinaryStr,
 	uint8ArrayToStr,
 } from '../../utils'
-import { HTTPProviderParams, HTTPProviderParamsV2, HTTPProviderSecretParams } from './types'
+import { HTTPProviderParams, HTTPProviderParamsV2, HTTPProviderSecretParams, paramsV2Schema } from './types'
 import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
@@ -24,6 +25,8 @@ import {
 export * from './types'
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
+const ajv = new Ajv({ allErrors: true, strict: true })
+
 
 const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	additionalClientOptions: {
@@ -48,10 +51,14 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			: undefined
 	},
 	areValidParams(params): params is HTTPProviderParams {
+		const validateParams = ajv.compile(paramsV2Schema)
+		const valid = validateParams(params)
+		if(!valid) {
+			throw new Error(`params validation failed: ${validateParams.errors?.toString()}`)
+		}
+
 		return (
-			typeof params.url === 'string' &&
-            (params.method === 'GET' || params.method === 'POST') &&
-            ((Array.isArray(params.responseSelections) && params.responseSelections.length > 0) || (Array.isArray(params.responseMatches) && params.responseMatches.length > 0))
+			((Array.isArray(params.responseSelections) && params.responseSelections.length > 0) || (Array.isArray(params.responseMatches) && params.responseMatches.length > 0))
 		)
 	},
 	createRequest(secretParams, params) {
