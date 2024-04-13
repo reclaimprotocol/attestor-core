@@ -1,9 +1,0 @@
-{
-  "name": "soundcloud-username",
-  "params": {
-    "username": "Rishavgoenka"
-  },
-  "secretParams": {
-    "cookie": "{{SOUNDCLOUD_COOKIE}}"
-  }
-}

@@ -1,9 +1,0 @@
-{
-  "name": "yc-login",
-  "params": {
-    "userId": "{{YC_USER_ID}}"
-  },
-  "secretParams": {
-    "cookieStr": "{{YC_COOKIE}}"
-  }
-}

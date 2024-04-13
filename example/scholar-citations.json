@@ -1,9 +1,0 @@
-{
-    "name": "scholar-citations",
-    "params": {
-        "citations": "{{SCHOLAR_CITATIONS}}"
-    },
-    "secretParams": {
-        "cookieStr": "{{SCHOLAR_COOKIE}}"
-    }
-}

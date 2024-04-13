@@ -1,9 +1,0 @@
-{
-    "name": "one-mg",
-    "params": {
-      "userData": ""
-    },
-    "secretParams": {
-      "cookieStr": "{{cookieStr}}"
-    }
-  }

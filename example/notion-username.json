@@ -1,9 +1,0 @@
-{
-	"name": "notion-username",
-	"params": {
-        "userName": "{{NOTION_USERNAME}}"
-      },
-      "secretParams": {
-        "token": "{{NOTION_COOKIE}}"
-      }
-}

@@ -1,9 +1,0 @@
-{
-    "name": "loom-user-id",
-    "params": {
-        "userId": "{{LOOM_USER_ID}}"
-    },
-    "secretParams": {
-        "cookieStr": "{{LOOM_COOKIE}}"
-    }
-}

@@ -1,9 +1,0 @@
-{
-    "name": "quora-user",
-    "params": {
-        "userId": "{{QUORA_USER_ID}}"
-    },
-    "secretParams": {
-        "cookieStr": "{{QUORA_COOKIE}}"
-    }
-}

@@ -1,9 +1,0 @@
-{
-    "name": "swiggy-equal",
-    "params": {
-        "userData": "very long string"
-    },
-    "secretParams": {
-        "cookieStr": "{{cookieStr}}"
-    }
-}
