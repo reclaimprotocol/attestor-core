@@ -384,31 +384,25 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	},
 }
 
-// From https://stackoverflow.com/a/3561711/157247
-function escapeRegex(s: string) {
-	return s.replace(/[/\-\\^$*+?.()|[\]{}]/g, '\\$&')
-}
-
-function findSubstringIgnoreLE(str: string, substr: string): { index: number, length: number } {
+export function findSubstringIgnoreLE(str: string, substr: string): { index: number, length: number } {
 	// Split up the text on any of the newline sequences,
 	// then escape the parts in-between,
 	// then join together with the alternation
 	const rexText = substr
 		.split(/\r\n|\n|\r/)
-		.map((part) => escapeRegex(part))
-		.join('(?:\\r\\n|\\n|\\r)')
-	// Create the regex
-	const re = new RegExp(rexText)
-	// Run it
-	const match = re.exec(str)
-	if(match) {
-		return {
-			index: match.index,
-			length: match[0].length
+
+	const newLines = ['\r\n', '\n', '\r']
+
+	//try every type of newline
+	for(const nl of newLines) {
+		const sub = rexText.join(nl)
+		const pos = str.indexOf(sub)
+		if(pos !== -1) {
+			return { index: pos, length: sub.length }
 		}
-	} else {
-		return { index: -1, length: -1 }
 	}
+
+	return { index: -1, length: -1 }
 }
 
 
