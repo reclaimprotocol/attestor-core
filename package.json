@@ -31,6 +31,7 @@
 		"@reclaimprotocol/circom-symmetric-crypto": "git+https://gitlab.reclaimprotocol.org/reclaim/zk-symmetric-crypto",
 		"@reclaimprotocol/common-grpc-web-transport": "github:questbook/common-grpc-web-transport",
 		"@reclaimprotocol/tls": "git+https://gitlab.reclaimprotocol.org/reclaim/tls",
+		"ajv": "^8.12.0",
 		"canonicalize": "^2.0.0",
 		"dotenv": "^16.3.1",
 		"esprima-next": "^5.8.4",

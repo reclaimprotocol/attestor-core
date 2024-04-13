@@ -149,3 +149,73 @@ export type HTTPProviderSecretParams = {
      */
     headers?: HeaderMap
 }
+
+export const paramsV2Schema = {
+	'$schema': 'http://json-schema.org/draft-07/schema#',
+	'title': 'HTTP Provider params schema',
+	'type': 'object',
+	'properties': {
+		'geoLocation': { 'type': 'string' },
+		'headers': {
+			'type': 'object',
+			'additionalProperties': { 'type': 'string' }
+		},
+		'url': { 'type': 'string' },
+		'method': { 'type': 'string', 'enum': ['GET', 'POST'] },
+		'body': { 'type': 'string' },
+		'writeRedactionMode': { 'type': 'string', 'enum': ['zk', 'key-update'] },
+		'useZK': { 'type': 'boolean' },
+		'responseSelections': {
+			'type': 'array',
+			'items': {
+				'type': 'object',
+				'properties': {
+					'xPath': { 'type': 'string' },
+					'jsonPath': { 'type': 'string' },
+					'responseMatch': { 'type': 'string' }
+				},
+				'required': [
+					'responseMatch'
+				],
+				'additionalProperties': false
+			}
+		},
+		'responseMatches': {
+			'type': 'array',
+			'items': {
+				'type': 'object',
+				'properties': {
+					'value': { 'type': 'string' },
+					'type': { 'type': 'string' },
+					'invert': { 'type': 'boolean' }
+				},
+				'required': [
+					'value',
+					'type'
+				],
+				'additionalProperties': false
+			}
+		},
+		'responseRedactions': {
+			'type': 'array',
+			'items': {
+				'type': 'object',
+				'properties': {
+					'xPath': { 'type': 'string' },
+					'jsonPath': { 'type': 'string' },
+					'regex': { 'type': 'string' }
+				},
+				'additionalProperties': false
+			}
+		},
+		'paramValues': {
+			'type': 'object',
+			'additionalProperties': { 'type': 'string' }
+		}
+	},
+	'required': [
+		'url',
+		'method'
+	],
+	'additionalProperties': false
+}
