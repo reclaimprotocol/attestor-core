@@ -26,7 +26,7 @@ export * from './types'
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
 const ajv = new Ajv({ allErrors: true, strict: true, strictRequired: false })
-
+const validateParams = ajv.compile(paramsV2Schema)
 
 const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	additionalClientOptions: {
@@ -51,7 +51,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			: undefined
 	},
 	areValidParams(params): params is HTTPProviderParams {
-		const validateParams = ajv.compile(paramsV2Schema)
 		const valid = validateParams(params)
 		if(!valid) {
 			throw new Error(`params validation failed: ${JSON.stringify(validateParams.errors)}`)
