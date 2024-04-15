@@ -57,9 +57,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error(`params validation failed: ${JSON.stringify(validateParams.errors)}`)
 		}
 
-		return (
-			((Array.isArray(params.responseSelections) && params.responseSelections.length > 0) || (Array.isArray(params.responseMatches) && params.responseMatches.length > 0))
-		)
+		return true
 	},
 	createRequest(secretParams, params) {
 		if(
