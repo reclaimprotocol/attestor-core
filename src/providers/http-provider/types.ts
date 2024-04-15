@@ -167,6 +167,8 @@ export const paramsV2Schema = {
 		'useZK': { 'type': 'boolean' },
 		'responseSelections': {
 			'type': 'array',
+			'minItems': 1,
+			'uniqueItems': true,
 			'items': {
 				'type': 'object',
 				'properties': {
@@ -182,6 +184,8 @@ export const paramsV2Schema = {
 		},
 		'responseMatches': {
 			'type': 'array',
+			'minItems': 1,
+			'uniqueItems': true,
 			'items': {
 				'type': 'object',
 				'properties': {
