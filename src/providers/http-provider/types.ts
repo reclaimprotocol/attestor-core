@@ -162,7 +162,7 @@ export const paramsV2Schema = {
 		},
 		'url': { 'type': 'string' },
 		'method': { 'type': 'string', 'enum': ['GET', 'POST'] },
-		'body': { 'type': 'string' },
+		'body': { 'type': 'string', nullable: true },
 		'writeRedactionMode': { 'type': 'string', 'enum': ['zk', 'key-update'] },
 		'useZK': { 'type': 'boolean' },
 		'responseSelections': {
@@ -170,8 +170,8 @@ export const paramsV2Schema = {
 			'items': {
 				'type': 'object',
 				'properties': {
-					'xPath': { 'type': 'string' },
-					'jsonPath': { 'type': 'string' },
+					'xPath': { 'type': 'string', nullable: true },
+					'jsonPath': { 'type': 'string', nullable: true },
 					'responseMatch': { 'type': 'string' }
 				},
 				'required': [
@@ -186,7 +186,7 @@ export const paramsV2Schema = {
 				'type': 'object',
 				'properties': {
 					'value': { 'type': 'string' },
-					'type': { 'type': 'string' },
+					'type': { 'type': 'string', 'enum': ['regex', 'contains'] },
 					'invert': { 'type': 'boolean' }
 				},
 				'required': [
@@ -201,10 +201,15 @@ export const paramsV2Schema = {
 			'items': {
 				'type': 'object',
 				'properties': {
-					'xPath': { 'type': 'string' },
-					'jsonPath': { 'type': 'string' },
-					'regex': { 'type': 'string' }
+					'xPath': { 'type': 'string', nullable: true },
+					'jsonPath': { 'type': 'string', nullable: true },
+					'regex': { 'type': 'string', nullable: true }
 				},
+				'anyOf': [
+					{ 'required': ['xPath'] },
+					{ 'required': ['jsonPath'] },
+					{ 'required': ['regex'] },
+				],
 				'additionalProperties': false
 			}
 		},
@@ -213,6 +218,10 @@ export const paramsV2Schema = {
 			'additionalProperties': { 'type': 'string' }
 		}
 	},
+	'oneOf': [
+		{ 'required': ['responseMatches'] },
+		{ 'required': ['responseSelections'] }
+	],
 	'required': [
 		'url',
 		'method'

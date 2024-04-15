@@ -25,7 +25,7 @@ import {
 export * from './types'
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
-const ajv = new Ajv({ allErrors: true, strict: true })
+const ajv = new Ajv({ allErrors: true, strict: true, strictRequired: false })
 
 
 const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
