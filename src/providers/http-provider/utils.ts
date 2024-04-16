@@ -1,4 +1,3 @@
-import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
 import {
 	ArrayExpression,
 	Expression,
@@ -266,9 +265,9 @@ export function matchRedactedStrings(templateString: Uint8Array, redactedString?
 		return false
 	}
 
-	let ts = templateString.slice(0, templateString.length)
-	let rs = redactedString.slice(0, redactedString.length)
-	while(ts.length && rs.length) {
+	let ts = -1
+	let rs = -1
+	while(ts < templateString.length && rs < redactedString.length) {
 		let ct = getTChar()
 		let cr = getRChar()
 		if(ct !== cr) {
@@ -292,7 +291,6 @@ export function matchRedactedStrings(templateString: Uint8Array, redactedString?
 				}
 
 				//find the end of redaction
-
 				while(((cr = getRChar()) === REDACTION_CHAR_CODE) && cr !== -1) {
 				}
 
@@ -301,8 +299,8 @@ export function matchRedactedStrings(templateString: Uint8Array, redactedString?
 					return getTChar() === -1
 				}
 
-				//return read char back to its place
-				rs = concatenateUint8Arrays([new Uint8Array([cr]), rs])
+				//rewind redacted string position back 1 char because we read one extra
+				rs--
 			} else {
 				return false
 			}
@@ -311,24 +309,26 @@ export function matchRedactedStrings(templateString: Uint8Array, redactedString?
 
 
 	function getTChar(): number {
-		if(ts.length > 0) {
-			const ch = ts[0]
-			ts = ts.slice(1)
-			return ch
+		ts++
+		if(ts < templateString.length) {
+			return templateString[ts]
 		} else {
 			return -1
 		}
 	}
 
 	function getRChar(): number {
-		if(rs.length > 0) {
-			const ch = rs[0]
-			rs = rs.slice(1)
-			return ch
+		if(!redactedString) {
+			return -1
+		}
+
+		rs++
+		if(rs < redactedString.length) {
+			return redactedString[rs]
 		} else {
 			return -1
 		}
 	}
 
-	return ts.length === 0 && rs.length === 0
+	return ts === templateString.length && rs === redactedString.length
 }

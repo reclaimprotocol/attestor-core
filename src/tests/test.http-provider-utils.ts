@@ -112,11 +112,15 @@ describe('HTTP Provider Utils tests', () => {
 			},
 			{
 				a: 'd{{abc}}',
-				b: 'd*'
+				b: 'd*******************************************'
 			},
 			{
 				a: 'd{{abc}}d{{abwewewewec}}',
 				b: 'd*d*'
+			},
+			{
+				a: '{{abc}}x{{abwewewewec}}',
+				b: '*x*'
 			}
 		]
 
@@ -144,12 +148,16 @@ describe('HTTP Provider Utils tests', () => {
 				b: '*d'
 			},
 			{
-				a: '{{yy}',
+				a: '{{yy',
 				b: '*'
 			},
 			{
 				a: '{{abc}}d{{abwewewewec}}',
 				b: 'a*d*'
+			},
+			{
+				a: '{abc}}',
+				b: '************'
 			}
 		]
 
