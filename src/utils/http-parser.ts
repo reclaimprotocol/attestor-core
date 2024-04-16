@@ -10,6 +10,7 @@ type HttpRequest = {
     url: string
     protocol: string
     headers: IncomingHttpHeaders
+    body?: Uint8Array
 }
 
 type HttpResponse = {
@@ -288,11 +289,10 @@ export function extractApplicationDataMsgsFromTranscript(
 
 /**
  * Read the HTTP request from a TLS receipt transcript.
- * Note: this currently does not read a body, only headers.
  * @param receipt the transcript to read from or application messages if they were extracted beforehand
  * @returns the parsed HTTP request
  */
-export function getHttpRequestHeadersFromTranscript(receipt: TLSReceipt | ApplicationMessage[]) {
+export function getHttpRequestDataFromTranscript(receipt: TLSReceipt | ApplicationMessage[]) {
 	const applMsgs = Array.isArray(receipt) ? receipt : extractApplicationDataMsgsFromTranscript(receipt)
 	const clientMsgs = applMsgs
 		.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT)
@@ -307,7 +307,7 @@ export function getHttpRequestHeadersFromTranscript(receipt: TLSReceipt | Applic
 		method: '',
 		url: '',
 		protocol: '',
-		headers: {},
+		headers: {}
 	}
 	let requestBuffer = concatenateUint8Arrays(clientMsgs.map(m => m.data))
 	// keep reading lines until we get to the end of the headers
@@ -325,6 +325,11 @@ export function getHttpRequestHeadersFromTranscript(receipt: TLSReceipt | Applic
 			const [key, value] = line.split(': ')
 			request.headers[key.toLowerCase()] = value
 		}
+	}
+
+	//the rest is request body
+	if(requestBuffer.length) {
+		request.body = requestBuffer
 	}
 
 	if(!request.method) {

@@ -148,6 +148,12 @@ export type HTTPProviderSecretParams = {
      * Headers that need to be hidden from the witness
      */
     headers?: HeaderMap
+
+    /**
+     * A map of parameter values which are user in form of {{param}} in body
+     * these parameters will NOT be shown to witness and extracted
+     */
+    paramValues?: { [_: string]: string }
 }
 
 export const paramsV2Schema = {

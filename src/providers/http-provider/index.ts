@@ -6,7 +6,7 @@ import { ArraySlice, Provider } from '../../types'
 import {
 	extractApplicationDataMsgsFromTranscript,
 	findIndexInUint8Array,
-	getHttpRequestHeadersFromTranscript,
+	getHttpRequestDataFromTranscript,
 	REDACTION_CHAR_CODE,
 	uint8ArrayToBinaryStr,
 	uint8ArrayToStr,
@@ -18,6 +18,7 @@ import {
 	extractHTMLElement,
 	extractJSONValueIndex,
 	makeRegex,
+	matchRedactedStrings,
 	normaliseParamsToV2,
 	parseHttpResponse,
 } from './utils'
@@ -86,7 +87,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			pubHeaders['User-Agent'] = RECLAIM_USER_AGENT
 		}
 
-		const newParams = substituteParamValues(<HTTPProviderParamsV2>params)
+		const newParams = substituteParamValues(normaliseParamsToV2(params), secretParams)
 		params = newParams.newParams
 
 		const hostPort = this.hostPort instanceof Function
@@ -127,16 +128,25 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error('Failed to find secret headers list in request')
 		}
 
-		const authRedactions = [
+		const redactions = [
 			{
 				fromIndex: tokenStartIndex,
 				toIndex: tokenStartIndex + secHeadersStr.length,
 			}
 		]
 
+		if(newParams.hiddenBodyParts?.length > 0) {
+			for(const hiddenBodyPart of newParams.hiddenBodyParts) {
+				redactions.push({
+					fromIndex: headerStr.length + hiddenBodyPart.index,
+					toIndex: headerStr.length + hiddenBodyPart.index + hiddenBodyPart.length,
+				})
+			}
+		}
+
 		return {
 			data,
-			redactions: authRedactions,
+			redactions: redactions,
 		}
 	},
 	getResponseRedactions(response, paramsAny) {
@@ -256,13 +266,12 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	},
 	assertValidProviderReceipt(receipt, paramsAny) {
 		let extractedParams: { [_: string]: string } = {}
-
 		const newParams = substituteParamValues(normaliseParamsToV2(paramsAny))
 		const params = newParams.newParams
 		extractedParams = { ...extractedParams, ...newParams.extractedValues }
 
 		const msgs = extractApplicationDataMsgsFromTranscript(receipt)
-		const req = getHttpRequestHeadersFromTranscript(msgs)
+		const req = getHttpRequestDataFromTranscript(msgs)
 		if(req.method !== params.method.toLowerCase()) {
 			logTranscript()
 			throw new Error(`Invalid method: ${req.method}`)
@@ -287,7 +296,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const expHostPort = `${hostname}:${port || DEFAULT_PORT}`
 		if(receipt.hostPort !== expHostPort) {
 			logTranscript()
-
 			throw new Error(
 				`Expected hostPort: ${expHostPort}, found: ${receipt.hostPort}`
 			)
@@ -314,9 +322,20 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 
 
-		for(const { type, value, invert } of params.responseMatches) {
+		const paramBody = params.body instanceof Uint8Array
+			? params.body
+			: strToUint8Array(params.body || '')
 
-			const inv = !!invert // explicitly cast to boolean
+		if(paramBody.length > 0) {
+			if(!matchRedactedStrings(paramBody, req.body)) {
+				logTranscript()
+				throw new Error('request body mismatch')
+			}
+		}
+
+
+		for(const { type, value, invert } of params.responseMatches) {
+			const inv = Boolean(invert) // explicitly cast to boolean
 
 			switch (type) {
 			case 'regex':
@@ -413,13 +432,15 @@ export function findSubstringIgnoreLE(str: string, substr: string): { index: num
 type ReplacedParams = {
     newParam: string
     extractedValues: { [_: string]: string }
+    hiddenParts: { index: number, length: number } []
 } | null
 
 const paramsRegex = /\{\{([^{}]+)}}/sgi
 
-function substituteParamValues(currentParams: HTTPProviderParamsV2): {
+function substituteParamValues(currentParams: HTTPProviderParamsV2, secretParams?: HTTPProviderSecretParams): {
     newParams: HTTPProviderParamsV2
     extractedValues: { [_: string]: string }
+    hiddenBodyParts: { index: number, length: number } []
 } {
 
 	const params = JSON.parse(JSON.stringify(currentParams))
@@ -434,12 +455,14 @@ function substituteParamValues(currentParams: HTTPProviderParamsV2): {
 
 
 	let bodyParams: ReplacedParams
+	let hiddenBodyParts: { index: number, length: number } [] = []
 	if(params.body) {
 		const strBody = typeof params.body === 'string' ? params.body : uint8ArrayToStr(params.body)
 		bodyParams = extractAndReplaceTemplateValues(strBody)
 		if(bodyParams) {
 			params.body = bodyParams.newParam
 			extractedValues = { ...extractedValues, ...bodyParams.extractedValues }
+			hiddenBodyParts = bodyParams.hiddenParts
 		}
 
 	}
@@ -481,7 +504,8 @@ function substituteParamValues(currentParams: HTTPProviderParamsV2): {
 
 	return {
 		newParams: params,
-		extractedValues: extractedValues
+		extractedValues: extractedValues,
+		hiddenBodyParts: hiddenBodyParts
 	}
 
 	function extractAndReplaceTemplateValues(param: string | undefined): ReplacedParams {
@@ -499,18 +523,40 @@ function substituteParamValues(currentParams: HTTPProviderParamsV2): {
 		}
 
 		const extractedValues: { [_: string]: string } = {}
+		const hiddenParts: { index: number, length: number }[] = []
 		paramNames.forEach(pn => {
 			if(params.paramValues && pn in params.paramValues) {
 				param = param?.replaceAll(`{{${pn}}}`, params.paramValues[pn])
 				extractedValues[pn] = params.paramValues[pn]
-			} else {
-				throw new Error(`parameter "${pn}" value not found in templateParams`)
+			} else if(secretParams) {
+
+				//replace params with values from secretValues but record the new value position
+				let binParam = strToUint8Array(param!)
+				if(secretParams?.paramValues && pn in secretParams?.paramValues) {
+					let pos = -1
+					const binTemplate = strToUint8Array(`{{${pn}}}`)
+					const templateLen = binTemplate.length
+					const binParamValue = strToUint8Array(secretParams.paramValues[pn])
+					while((pos = findIndexInUint8Array(binParam, binTemplate)) >= 0) {
+						binParam = concatenateUint8Arrays([binParam.slice(0, pos), binParamValue, binParam.slice(pos + templateLen)])
+						hiddenParts.push({
+							index: pos,
+							length: binParamValue.length,
+						})
+					}
+				} else {
+					throw new Error(`parameter's "${pn}" value not found in paramValues and secret parameter's paramValues`)
+				}
+
+				param = uint8ArrayToStr(binParam)
+
 			}
 		})
 
 		return {
 			newParam: param,
-			extractedValues: extractedValues
+			extractedValues: extractedValues,
+			hiddenParts: hiddenParts
 		}
 	}
 }
@@ -564,5 +610,6 @@ function getURL(params: HTTPProviderParams) {
 
 	return params.url
 }
+
 
 export default HTTP_PROVIDER

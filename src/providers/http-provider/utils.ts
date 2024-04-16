@@ -1,3 +1,4 @@
+import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
 import {
 	ArrayExpression,
 	Expression,
@@ -10,7 +11,7 @@ import {
 import * as jsdom from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
 import { ArraySlice } from '../../types'
-import { makeHttpResponseParser } from '../../utils'
+import { makeHttpResponseParser, REDACTION_CHAR_CODE } from '../../utils'
 import { HeaderMap, HTTPProviderParams, HTTPProviderParamsV2 } from './types'
 
 export type JSONIndex = {
@@ -244,4 +245,90 @@ export function normaliseParamsToV2(params: HTTPProviderParams): HTTPProviderPar
 
 export function makeRegex(str: string) {
 	return new RegExp(str, 'sgi')
+}
+
+const TEMPLATE_START_CHARCODE = '{'.charCodeAt(0)
+const TEMPLATE_END_CHARCODE = '}'.charCodeAt(0)
+
+/**
+ * Try to match strings that contain templates like {{param}}
+ * against redacted string that has *** instead of that param
+ * @param param
+ * @param str
+ */
+export function matchRedactedStrings(templateString: Uint8Array, redactedString?: Uint8Array): boolean {
+
+	if(templateString.length === 0 && redactedString?.length === 0) {
+		return true
+	}
+
+	if(!redactedString) {
+		return false
+	}
+
+	let ts = templateString.slice(0, templateString.length)
+	let rs = redactedString.slice(0, redactedString.length)
+	while(ts.length && rs.length) {
+		let ct = getTChar()
+		let cr = getRChar()
+		if(ct !== cr) {
+			// only valid if param contains "{" & redacted contains "*"
+			if(ct === TEMPLATE_START_CHARCODE && cr === REDACTION_CHAR_CODE) {
+				//check that the char after first "{" is also "{"
+				if(getTChar() !== TEMPLATE_START_CHARCODE) {
+					return false
+				}
+
+				//look for first closing bracket
+				while(((ct = getTChar()) !== TEMPLATE_END_CHARCODE) && ct !== -1) {
+				}
+
+				//look for second closing bracket
+				while(((ct = getTChar()) !== TEMPLATE_END_CHARCODE) && ct !== -1) {
+				}
+
+				if(ct === -1) {
+					return false
+				}
+
+				//find the end of redaction
+
+				while(((cr = getRChar()) === REDACTION_CHAR_CODE) && cr !== -1) {
+				}
+
+				if(cr === -1) {
+					//if there's nothing after template too then both ended at the end of strings
+					return getTChar() === -1
+				}
+
+				//return read char back to its place
+				rs = concatenateUint8Arrays([new Uint8Array([cr]), rs])
+			} else {
+				return false
+			}
+		}
+	}
+
+
+	function getTChar(): number {
+		if(ts.length > 0) {
+			const ch = ts[0]
+			ts = ts.slice(1)
+			return ch
+		} else {
+			return -1
+		}
+	}
+
+	function getRChar(): number {
+		if(rs.length > 0) {
+			const ch = rs[0]
+			rs = rs.slice(1)
+			return ch
+		} else {
+			return -1
+		}
+	}
+
+	return ts.length === 0 && rs.length === 0
 }

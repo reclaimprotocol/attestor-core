@@ -1,6 +1,9 @@
+import { strToUint8Array } from '@reclaimprotocol/tls'
 import httpProvider, { HTTPProviderParamsV2 } from '../providers/http-provider'
-import { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
+import { extractHTMLElement, extractJSONValueIndex, matchRedactedStrings } from '../providers/http-provider/utils'
 import { hashProviderParams } from '../utils'
+
+jest.setTimeout(60_000)
 
 describe('HTTP Provider Utils tests', () => {
 
@@ -92,6 +95,69 @@ describe('HTTP Provider Utils tests', () => {
 		}
 		expect(hashProviderParams(paramsEx)).toEqual('0xeb0f5b38811b973221eb202ac60abeb41e7808034d5eb56117a367af545127c8')
 	})
+
+	it('should match redacted strings', () => {
+		const testCases: { a: string, b: string }[] = [
+			{
+				a: 'aaa',
+				b: 'aaa'
+			},
+			{
+				a: '{{abc}}',
+				b: '************'
+			},
+			{
+				a: '{{abc}}d',
+				b: '*d'
+			},
+			{
+				a: 'd{{abc}}',
+				b: 'd*'
+			},
+			{
+				a: 'd{{abc}}d{{abwewewewec}}',
+				b: 'd*d*'
+			}
+		]
+
+		for(const { a, b } of testCases) {
+			expect(matchRedactedStrings(strToUint8Array(a), strToUint8Array(b))).toBeTruthy()
+		}
+	})
+
+	it('should not match bad redacted strings', () => {
+		const testCases: { a: string, b: string }[] = [
+			{
+				a: 'aaa',
+				b: 'aab'
+			},
+			{
+				a: '{{abc}}',
+				b: ''
+			},
+			{
+				a: '',
+				b: '*****'
+			},
+			{
+				a: '{{abc}}{{abc}}d',
+				b: '*d'
+			},
+			{
+				a: '{{yy}',
+				b: '*'
+			},
+			{
+				a: '{{abc}}d{{abwewewewec}}',
+				b: 'a*d*'
+			}
+		]
+
+		for(const { a, b } of testCases) {
+			expect(matchRedactedStrings(strToUint8Array(a), strToUint8Array(b))).toBeFalsy()
+		}
+	})
+
 })
 
 const html = `
