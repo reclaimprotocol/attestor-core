@@ -132,6 +132,7 @@ export type HTTPProviderParamsV2 = {
      * A map of parameter values which are user in form of {{param}} in URL, responseMatches, responseRedactions,
      * body, geolocation.
      * Those in URL, responseMatches & geo will be put into context and signed
+     * This value will NOT be included in provider hash
      */
     paramValues?: { [_: string]: string }
 }
@@ -208,6 +209,7 @@ export const paramsV2Schema = {
 		},
 		'responseRedactions': {
 			'type': 'array',
+			'uniqueItems': true,
 			'items': {
 				'type': 'object',
 				'properties': {
