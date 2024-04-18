@@ -216,7 +216,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				const regexp = makeRegex(rs.regex)
 				const elem = element || body
 				const match = regexp.exec(elem)
-				if(!match?.[0]) {
+				if(!match) {
 					console.log('===RESPONSE===')
 					console.log(uint8ArrayToBinaryStr(res.body))
 					throw new Error(
