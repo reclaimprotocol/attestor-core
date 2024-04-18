@@ -16,6 +16,12 @@ describe('HTTP Provider Utils tests', () => {
 		expect(regexp.test(json.slice(val.start, val.end))).toBe(true)
 	})
 
+	it('should error on incorrect jsonPath', () => {
+		expect(() => {
+			extractJSONValueIndex(('{"asdf": 1}'), '(alert(origin))')
+		}).toThrow('Eval [(expr)] prevented in JSONPath expression')
+	})
+
 	it('should get redactions from chunked response', () => {
 		const provider = httpProvider
 		if(provider.getResponseRedactions) {

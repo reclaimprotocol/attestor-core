@@ -54,6 +54,7 @@ export function extractJSONValueIndex(json: string, jsonPath: string) {
 		json: JSON.parse(json),
 		wrap: false,
 		resultType: 'pointer',
+		preventEval: true
 	})
 	if(!pointers) {
 		throw new Error('jsonPath not found')
