@@ -9,6 +9,7 @@ import {
 } from 'esprima-next'
 import * as jsdom from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
+import { RE2 } from 're2-wasm'
 import { ArraySlice } from '../../types'
 import { makeHttpResponseParser, REDACTION_CHAR_CODE } from '../../utils'
 import { HeaderMap, HTTPProviderParams, HTTPProviderParamsV2 } from './types'
@@ -244,7 +245,7 @@ export function normaliseParamsToV2(params: HTTPProviderParams): HTTPProviderPar
 }
 
 export function makeRegex(str: string) {
-	return new RegExp(str, 'sgi')
+	return new RE2(str, 'sgiu')
 }
 
 const TEMPLATE_START_CHARCODE = '{'.charCodeAt(0)
