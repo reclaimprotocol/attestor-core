@@ -8,3 +8,4 @@ browser/resources
 .env
 example-local
 .idea
+coverage
