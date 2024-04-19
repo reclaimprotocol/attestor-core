@@ -1,6 +1,11 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
 import httpProvider, { HTTPProviderParamsV2 } from '../providers/http-provider'
-import { extractHTMLElement, extractJSONValueIndex, matchRedactedStrings } from '../providers/http-provider/utils'
+import {
+	extractHTMLElement,
+	extractJSONValueIndex,
+	makeRegex,
+	matchRedactedStrings
+} from '../providers/http-provider/utils'
 import { hashProviderParams } from '../utils'
 
 jest.setTimeout(60_000)
@@ -20,6 +25,13 @@ describe('HTTP Provider Utils tests', () => {
 		expect(() => {
 			extractJSONValueIndex(('{"asdf": 1}'), '(alert(origin))')
 		}).toThrow('Eval [(expr)] prevented in JSONPath expression')
+	})
+
+	it('should not error on incorrect regex', () => {
+		expect(() => {
+			const regexp = makeRegex('(a+)+')
+			regexp.exec('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!')
+		}).not.toThrow()
 	})
 
 	it('should get redactions from chunked response', () => {

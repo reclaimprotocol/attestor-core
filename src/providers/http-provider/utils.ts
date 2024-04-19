@@ -13,6 +13,13 @@ import { ArraySlice } from '../../types'
 import { makeHttpResponseParser, REDACTION_CHAR_CODE } from '../../utils'
 import { HeaderMap, HTTPProviderParams, HTTPProviderParamsV2 } from './types'
 
+let RE2
+try {
+	RE2 = require('re2-wasm')
+} catch{
+	console.log('RE2 not found. Using standard regex')
+}
+
 export type JSONIndex = {
     start: number
     end: number
@@ -244,6 +251,10 @@ export function normaliseParamsToV2(params: HTTPProviderParams): HTTPProviderPar
 }
 
 export function makeRegex(str: string) {
+	if(RE2 !== undefined) {
+		return new RE2.RE2(str, 'sgiu')
+	}
+
 	return new RegExp(str, 'sgi')
 }
 
