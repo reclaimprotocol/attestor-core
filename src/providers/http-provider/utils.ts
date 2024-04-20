@@ -252,7 +252,11 @@ export function normaliseParamsToV2(params: HTTPProviderParams): HTTPProviderPar
 
 export function makeRegex(str: string) {
 	if(RE2 !== undefined) {
-		return new RE2.RE2(str, 'sgiu')
+		try {
+			return new RE2.RE2(str, 'sgiu')
+		} catch{
+			return new RegExp(str, 'sgi')
+		}
 	}
 
 	return new RegExp(str, 'sgi')
@@ -264,8 +268,6 @@ const TEMPLATE_END_CHARCODE = '}'.charCodeAt(0)
 /**
  * Try to match strings that contain templates like {{param}}
  * against redacted string that has *** instead of that param
- * @param param
- * @param str
  */
 export function matchRedactedStrings(templateString: Uint8Array, redactedString?: Uint8Array): boolean {
 
