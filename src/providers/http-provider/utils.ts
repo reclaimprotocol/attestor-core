@@ -1,3 +1,5 @@
+// noinspection ExceptionCaughtLocallyJS
+
 import {
 	ArrayExpression,
 	Expression,
@@ -16,6 +18,10 @@ import { HeaderMap, HTTPProviderParams, HTTPProviderParamsV2 } from './types'
 let RE2
 try {
 	RE2 = require('re2-wasm')
+	if(!Object.keys(RE2).length) {
+		RE2 = undefined
+		throw new Error()
+	}
 } catch{
 	console.log('RE2 not found. Using standard regex')
 }
@@ -252,11 +258,7 @@ export function normaliseParamsToV2(params: HTTPProviderParams): HTTPProviderPar
 
 export function makeRegex(str: string) {
 	if(RE2 !== undefined) {
-		try {
-			return new RE2.RE2(str, 'sgiu')
-		} catch{
-			return new RegExp(str, 'sgi')
-		}
+		return new RE2.RE2(str, 'sgiu')
 	}
 
 	return new RegExp(str, 'sgi')

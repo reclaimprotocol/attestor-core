@@ -29,8 +29,8 @@ describe('HTTP Provider Utils tests', () => {
 
 	it('should not error on incorrect regex', () => {
 		expect(() => {
-			const regexp = makeRegex('(a+)+')
-			regexp.exec('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!')
+			const regexp = makeRegex('([a-z]+)+$')
+			regexp.test('a'.repeat(31) + '\x00')
 		}).not.toThrow()
 	})
 
