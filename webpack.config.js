@@ -15,8 +15,7 @@ module.exports = {
 		extensions: ['.webpack.js', '.web.js', '.ts', '.js', '.json'],
 		alias: {
 			'jsdom': false,
-			'dotenv': false,
-			're2-wasm': false
+			'dotenv': false
 		},
 		fallback: {
 			"fs": false,

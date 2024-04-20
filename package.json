@@ -42,7 +42,6 @@
 		"nice-grpc-web": "^2.0.0",
 		"p-queue": "^6.0.0",
 		"protobufjs": "^7.2.5",
-		"re2-wasm": "^1.0.2",
 		"snarkjs": "^0.7.3"
 	},
 	"devDependencies": {
