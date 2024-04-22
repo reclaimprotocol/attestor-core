@@ -1,15 +1,26 @@
-import { config } from 'dotenv'
-config()
-
 import canonicalize from 'canonicalize'
+import { config } from 'dotenv'
 import { readFile } from 'fs/promises'
 import * as niceGrpc from 'nice-grpc'
-import { createGrpcWebClient, generateProviderReceipt, getTranscriptString, Logger, logger, proto, ProviderName, ProviderParams, providers, ProviderSecretParams } from '..'
+import {
+	createGrpcWebClient,
+	generateProviderReceipt,
+	getTranscriptString,
+	Logger,
+	logger,
+	proto,
+	ProviderName,
+	ProviderParams,
+	providers,
+	ProviderSecretParams
+} from '..'
+
+config()
 
 export type ProviderReceiptGenerationParams<P extends ProviderName> = {
-	name: P
-	params: ProviderParams<P>
-	secretParams: ProviderSecretParams<P>
+    name: P
+    params: ProviderParams<P>
+    secretParams: ProviderSecretParams<P>
 }
 
 const DEFAULT_WITNESS_HOST_PORT = 'https://reclaim-node.questbook.app'
@@ -29,8 +40,8 @@ export async function main<T extends ProviderName>(
 	}
 
 	const witnessHostPort = getCliArgument('witness')
-		|| DEFAULT_WITNESS_HOST_PORT
-	const client = await getWitnessClient(
+        || DEFAULT_WITNESS_HOST_PORT
+	const client = getWitnessClient(
 		witnessHostPort,
 		logger
 	)
@@ -48,8 +59,8 @@ export async function main<T extends ProviderName>(
 
 	try {
 		const res = await providers[paramsJson.name].assertValidProviderReceipt(
-			receipt!,
-			paramsJson.params,
+            receipt!,
+            paramsJson.params,
 		)
 		console.log(`receipt is valid for ${paramsJson.name} provider`)
 		console.log(`extracted params: ${canonicalize(Object.keys(res?.extractedParams).length > 0 ? res.extractedParams : undefined) ?? 'none'}`)
@@ -80,7 +91,7 @@ async function getInputParameters(): Promise<ProviderReceiptGenerationParams<any
 	for(const variable in process.env) {
 		fileContents = fileContents.replace(
 			`{{${variable}}}`,
-			process.env[variable]!
+            process.env[variable]!
 		)
 	}
 
@@ -96,20 +107,18 @@ function getCliArgument(arg: string) {
 	return process.argv[index + 1]
 }
 
-function getWitnessClient(url: string, logger: Logger) {
+export function getWitnessClient(url: string, logger: Logger) {
 	const parsedUrl = new URL(url)
 	if(
 		parsedUrl.protocol === 'grpcs:'
-		|| parsedUrl.protocol === 'grpc:'
+        || parsedUrl.protocol === 'grpc:'
 	) {
 		const address = `${parsedUrl.hostname}:${parsedUrl.port || 8001}`
 		const channel = niceGrpc.createChannel(address)
-		const client = niceGrpc.createClient(
+		return niceGrpc.createClient(
 			proto.ReclaimWitnessDefinition,
 			channel,
 		)
-
-		return client
 	}
 
 	return createGrpcWebClient(url, logger)

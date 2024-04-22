@@ -1,3 +1,5 @@
 extends: '@adiwajshing'
 parserOptions:
   project: ./tsconfig.lint.json
+rules:
+  '@typescript-eslint/no-explicit-any': 0
