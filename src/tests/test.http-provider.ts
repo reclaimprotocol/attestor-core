@@ -315,6 +315,24 @@ Content-Type: text/html; charset=utf-8\r
 		}).toThrow('Expected protocol: https, found: http:')
 	})
 
+	it('should throw on duplicate groups', () => {
+
+		expect(() => {
+			providers['http'].assertValidProviderReceipt(transcript, {
+				url: 'https://xargs.{{abc}}',
+				responseMatches: [{
+					type: 'regex',
+					value: '(?<abc>.)'
+				}],
+				responseRedactions: [],
+				method: 'GET',
+				paramValues: {
+					'abc': 'org'
+				}
+			})
+		}).toThrow('Duplicate parameter abc')
+	})
+
 	it('should throw on bad path', () => {
 
 		expect(() => {
