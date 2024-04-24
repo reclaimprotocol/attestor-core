@@ -150,6 +150,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 	},
 	getResponseRedactions(response, paramsAny) {
+		console.log(uint8ArrayToStr(response))
 		const res = parseHttpResponse(response)
 		// if the response is not 2xx, then we don't need
 		// to redact anything as the request itself failed
@@ -168,7 +169,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const params = newParams.newParams
 
 		const headerEndIndex = res.statusLineEndIndex!
-		const bodyStartIdx = res.bodyStartIndex!
+		const bodyStartIdx = res.bodyStartIndex ?? 0
 		if(bodyStartIdx < 4) {
 			throw new Error('Failed to find body')
 		}

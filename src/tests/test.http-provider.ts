@@ -1,3 +1,4 @@
+import { strToUint8Array } from '@reclaimprotocol/tls'
 import { ethers } from 'ethers'
 import { createClaim, generateProviderReceipt } from '../api-client'
 import { getContract } from '../beacon/smart-contract/utils'
@@ -101,6 +102,9 @@ describe('HTTP Provider tests', () => {
 				param2: 'Driscoll',
 				param3: 'title',
 				what: 'these'
+			},
+			headers: {
+				'user-agent': 'Mozilla/5.0',
 			}
 		}
 		const { receipt } = await generateProviderReceipt({
@@ -109,7 +113,8 @@ describe('HTTP Provider tests', () => {
 				cookieStr: '<cookie-str>',
 				paramValues: {
 					h: 'e',
-				}
+				},
+				authorisationHeader: 'abc'
 			},
 			params: params,
 			client,
@@ -121,4 +126,143 @@ describe('HTTP Provider tests', () => {
 		}).not.toThrow()
 	})
 
+	it('should throw on invalid URL', () => {
+		expect(() => {
+			const x = typeof providers['http'].hostPort === 'function' ? providers['http'].hostPort({
+				url: 'abc',
+				responseMatches: [],
+				responseRedactions: [],
+				method: 'GET'
+			}) : ''
+			console.log(x)
+		}).toThrow('Invalid URL')
+	})
+
+	it('should throw on invalid params', () => {
+		expect(() => {
+			providers['http'].areValidParams({ a: 'b' })
+		}).toThrow(/^params validation failed/)
+	})
+
+	it('should throw on invalid secret params', () => {
+		expect(() => {
+			providers['http'].createRequest({
+				cookieStr: undefined,
+				authorisationHeader: undefined,
+				headers: undefined
+			}, {
+				url: 'abc',
+				responseMatches: [],
+				responseRedactions: [],
+				method: 'GET'
+			})
+		}).toThrow('auth parameters are not set')
+	})
+
+
+	it('should throw on non 200', () => {
+		const res =
+            `HTTP/1.1 404 NOT FOUND\r
+Content-Length: 0\r
+Connection: close\r
+Content-Type: text/html; charset=utf-8\r
+\r
+`
+		expect(() => {
+			if(providers['http'].getResponseRedactions) {
+				providers['http'].getResponseRedactions(strToUint8Array(res), {
+					url: 'abc',
+					responseMatches: [],
+					responseRedactions: [],
+					method: 'GET'
+				})
+			}
+		}).toThrow('Provider returned error \"404 NOT FOUND\"')
+	})
+
+
+	it('should return empty redactions', () => {
+		const res =
+            `HTTP/1.1 200 OK\r
+Content-Length: 0\r
+Connection: close\r
+Content-Type: text/html; charset=utf-8\r
+\r
+`
+		const redactions = (providers['http'].getResponseRedactions) ?
+			providers['http'].getResponseRedactions(strToUint8Array(res), {
+				url: 'abc',
+				responseMatches: [],
+				responseRedactions: [],
+				method: 'GET'
+			})
+			: undefined
+		expect(redactions).toHaveLength(0)
+	})
+
+	it('should throw on empty body', () => {
+		const res =
+            `HTTP/1.1 200 OK\r
+Content-Length: 0\r
+Connection: close\r
+Content-Type: text/html; charset=utf-8\r
+\r
+`
+		expect(() => {
+			if(providers['http'].getResponseRedactions) {
+				providers['http'].getResponseRedactions(strToUint8Array(res), {
+					url: 'abc',
+					responseMatches: [],
+					responseRedactions: [{
+						regex: 'abc'
+					}],
+					method: 'GET'
+				})
+			}
+		}).toThrow('Failed to find body')
+	})
+
+	it('should throw on bad xpath', () => {
+		const res =
+            `HTTP/1.1 200 OK\r
+Content-Length: 1\r
+Connection: close\r
+Content-Type: text/html; charset=utf-8\r
+\r
+1`
+		expect(() => {
+			if(providers['http'].getResponseRedactions) {
+				providers['http'].getResponseRedactions(strToUint8Array(res), {
+					url: 'abc',
+					responseMatches: [],
+					responseRedactions: [{
+						xPath: 'abc'
+					}],
+					method: 'GET'
+				})
+			}
+		}).toThrow('Failed to find element: \"abc\"')
+	})
+
+	it('should throw on bad jsonPath', () => {
+		const res =
+            `HTTP/1.1 200 OK\r
+Content-Length: 1\r
+Connection: close\r
+Content-Type: text/html; charset=utf-8\r
+\r
+1`
+		expect(() => {
+			if(providers['http'].getResponseRedactions) {
+				providers['http'].getResponseRedactions(strToUint8Array(res), {
+					url: 'abc',
+					responseMatches: [],
+					responseRedactions: [{
+						jsonPath: 'abc'
+					}],
+					method: 'GET'
+				})
+			}
+		}).toThrow('jsonPath not found')
+	})
 })
