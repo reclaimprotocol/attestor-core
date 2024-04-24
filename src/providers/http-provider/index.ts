@@ -124,9 +124,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			data,
 			strToUint8Array(secHeadersStr)
 		)
-		if(tokenStartIndex < 0) {
-			throw new Error('Failed to find secret headers list in request')
-		}
 
 		const redactions = [
 			{
@@ -164,7 +161,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			return []
 		}
 
-		const newParams = substituteParamValues(rawParams)
+		const newParams = substituteParamValues(rawParams, undefined, true)
 		const params = newParams.newParams
 
 		const headerEndIndex = res.statusLineEndIndex!
@@ -196,17 +193,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 			if(rs.jsonPath) {
 				const { start, end } = extractJSONValueIndex(element, rs.jsonPath)
-				// if there's only json path used
-				if(elementIdx < 0) {
-					elementIdx = 0
-				}
-
-				if(start < 0) {
-					console.log('===RESPONSE===')
-					console.log(uint8ArrayToBinaryStr(res.body))
-					throw new Error('Failed to find element')
-				}
-
 				element = body.slice(elementIdx + start, elementIdx + end)
 				elementIdx += start
 				elementLength = end - start
@@ -266,7 +252,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	},
 	assertValidProviderReceipt(receipt, paramsAny) {
 		let extractedParams: { [_: string]: string } = {}
-		const newParams = substituteParamValues(normaliseParamsToV2(paramsAny))
+		const newParams = substituteParamValues(normaliseParamsToV2(paramsAny), undefined, true)
 		const params = newParams.newParams
 		extractedParams = { ...extractedParams, ...newParams.extractedValues }
 
@@ -437,7 +423,7 @@ type ReplacedParams = {
 
 const paramsRegex = /\{\{([^{}]+)}}/sgi
 
-function substituteParamValues(currentParams: HTTPProviderParamsV2, secretParams?: HTTPProviderSecretParams): {
+function substituteParamValues(currentParams: HTTPProviderParamsV2, secretParams?: HTTPProviderSecretParams, ignoreMissingBodyParams?: boolean): {
     newParams: HTTPProviderParamsV2
     extractedValues: { [_: string]: string }
     hiddenBodyParts: { index: number, length: number } []
@@ -458,7 +444,7 @@ function substituteParamValues(currentParams: HTTPProviderParamsV2, secretParams
 	let hiddenBodyParts: { index: number, length: number } [] = []
 	if(params.body) {
 		const strBody = typeof params.body === 'string' ? params.body : uint8ArrayToStr(params.body)
-		bodyParams = extractAndReplaceTemplateValues(strBody)
+		bodyParams = extractAndReplaceTemplateValues(strBody, ignoreMissingBodyParams)
 		if(bodyParams) {
 			params.body = bodyParams.newParam
 			extractedValues = { ...extractedValues, ...bodyParams.extractedValues }
@@ -508,7 +494,7 @@ function substituteParamValues(currentParams: HTTPProviderParamsV2, secretParams
 		hiddenBodyParts: hiddenBodyParts
 	}
 
-	function extractAndReplaceTemplateValues(param: string | undefined): ReplacedParams {
+	function extractAndReplaceTemplateValues(param: string | undefined, ignoreMissingParams?: boolean): ReplacedParams {
 
 		if(!param) {
 			return null
@@ -550,6 +536,10 @@ function substituteParamValues(currentParams: HTTPProviderParamsV2, secretParams
 
 				param = uint8ArrayToStr(binParam)
 
+			} else {
+				if(!(!!ignoreMissingParams)) {
+					throw new Error(`parameter's "${pn}" value not found in paramValues`)
+				}
 			}
 		})
 
@@ -587,28 +577,24 @@ function getGeoLocation(params: HTTPProviderParams) {
 }
 
 function getURL(params: HTTPProviderParams) {
-	if((params as HTTPProviderParamsV2)?.url) {
-		const v2Params = params as HTTPProviderParamsV2
-		let hostPort = v2Params?.url
-		const paramNames: Set<string> = new Set()
-		//extract param names
+	const v2Params = params as HTTPProviderParamsV2
+	let hostPort = v2Params?.url
+	const paramNames: Set<string> = new Set()
 
-		let match: RegExpExecArray | null = null
-		while(match = paramsRegex.exec(hostPort)) {
-			paramNames.add(match[1])
-		}
-
-		paramNames.forEach(pn => {
-			if(v2Params.paramValues && pn in v2Params.paramValues) {
-				hostPort = hostPort?.replaceAll(`{{${pn}}}`, v2Params.paramValues[pn].toString())
-			} else {
-				throw new Error(`parameter "${pn}" value not found in templateParams`)
-			}
-		})
-		return hostPort
+	//extract param names
+	let match: RegExpExecArray | null = null
+	while(match = paramsRegex.exec(hostPort)) {
+		paramNames.add(match[1])
 	}
 
-	return params.url
+	paramNames.forEach(pn => {
+		if(v2Params.paramValues && pn in v2Params.paramValues) {
+			hostPort = hostPort?.replaceAll(`{{${pn}}}`, v2Params.paramValues[pn].toString())
+		} else {
+			throw new Error(`parameter "${pn}" value not found in templateParams`)
+		}
+	})
+	return hostPort
 }
 
 
