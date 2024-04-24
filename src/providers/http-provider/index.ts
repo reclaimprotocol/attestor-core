@@ -150,7 +150,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 	},
 	getResponseRedactions(response, paramsAny) {
-		console.log(uint8ArrayToStr(response))
 		const res = parseHttpResponse(response)
 		// if the response is not 2xx, then we don't need
 		// to redact anything as the request itself failed
