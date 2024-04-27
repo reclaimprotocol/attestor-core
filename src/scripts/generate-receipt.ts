@@ -2,12 +2,12 @@ import canonicalize from 'canonicalize'
 import { config } from 'dotenv'
 import { readFile } from 'fs/promises'
 import * as niceGrpc from 'nice-grpc'
+import P from 'pino'
 import {
 	createGrpcWebClient,
 	generateProviderReceipt,
 	getTranscriptString,
 	Logger,
-	logger,
 	proto,
 	ProviderName,
 	ProviderParams,
@@ -24,6 +24,8 @@ export type ProviderReceiptGenerationParams<P extends ProviderName> = {
 }
 
 const DEFAULT_WITNESS_HOST_PORT = 'https://reclaim-node.questbook.app'
+const logger = P()
+logger.level = process.env.LOG_LEVEL || 'info'
 
 export async function main<T extends ProviderName>(
 	receiptParams?: ProviderReceiptGenerationParams<T>
