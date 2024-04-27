@@ -1,5 +1,5 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
-import { ethers } from 'ethers'
+import { utils, Wallet } from 'ethers'
 import { createClaim, generateProviderReceipt } from '../api-client'
 import { getContract } from '../beacon/smart-contract/utils'
 import { BeaconType } from '../proto/api'
@@ -49,27 +49,27 @@ describe('HTTP Provider tests', () => {
 				}
 			},
 			params: {
-				url: 'https://xargs.{{param1}}/',
+				url: 'https://example.{{param1}}/',
 				method: 'GET',
 				responseMatches: [{
 					type: 'regex',
-					value: '<title.*?(?<name>Aiken &amp; {{param2}} &amp; Webb)<\\/title>',
+					value: '<title.*?(?<domain>{{param2}} Domain)<\\/title>',
 				}],
 				responseRedactions: [{
 					xPath: './html/head/{{param3}}',
 				}],
 				paramValues: {
-					param1: 'org',
-					param2: 'Driscoll',
+					param1: 'com',
+					param2: 'Example',
 					param3: 'title'
 				}
 			},
 			secretParams: {
 				cookieStr: '<cookie-str>'
 			},
-			ownerPrivateKey: ethers.Wallet.createRandom().privateKey,
+			ownerPrivateKey: new Wallet(utils.randomBytes(32)).privateKey,
 		})
-		expect(resp.claimData.context).toContain('0x8d1a460a00b7f8596f380a34bc12b39aee4d8cbc90589c40133d3e96691e45d4')
+		expect(resp.claimData.context).toContain('0x3bfcf3bf17b83b9c37756d9becf87f76cad712304a23d3335f78e1cc96e83d1f')
 	})
 
 	it('should generate transcript', async() => {
@@ -79,29 +79,29 @@ describe('HTTP Provider tests', () => {
 			logger
 		)
 		const params: HTTPProviderParamsV2 = {
-			url: 'https://xargs.{{param1}}/',
+			url: 'https://example.{{param1}}/',
 			method: 'GET',
-			body: 't{{h}}st',
+			body: '{{h}}',
 			geoLocation: 'US',
 			responseMatches: [{
 				type: 'regex',
-				value: '<title.*?(?<name>Aiken &amp; {{param2}} &amp; Webb)<\\/title>',
+				value: '<title.*?(?<domain>{{param2}} Domain)<\\/title>',
 			},
 			{
 				type: 'contains',
-				value: 'who use {{what}} to learn',
+				value: 'This domain is for use in {{what}} examples in documents',
 			}
 			],
 			responseRedactions: [{
 				xPath: './html/head/{{param3}}',
 			}, {
-				xPath: '/html/body/div/div[2]/p[2]/text()'
+				xPath: '/html/body/div/p[1]/text()'
 			}],
 			paramValues: {
-				param1: 'org',
-				param2: 'Driscoll',
+				param1: 'com',
+				param2: 'Example',
 				param3: 'title',
-				what: 'these',
+				what: 'illustrative',
 			},
 			headers: {
 				'user-agent': 'Mozilla/5.0',
@@ -112,7 +112,7 @@ describe('HTTP Provider tests', () => {
 			secretParams: {
 				cookieStr: '<cookie-str>',
 				paramValues: {
-					h: 'e',
+					h: '',
 				},
 				authorisationHeader: 'abc'
 			},
