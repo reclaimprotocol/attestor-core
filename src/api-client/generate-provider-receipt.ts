@@ -140,6 +140,7 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 	onStep?.({ name: 'waiting-for-response' })
 
 	await waitForAllData
+	await apiClient.endTlsSession()
 
 	const startMs = Date.now()
 	const blocksToReveal = await apiClient.getBlocksToReveal(

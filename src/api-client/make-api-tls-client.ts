@@ -225,6 +225,17 @@ export const makeAPITLSClient = ({
 			await tls.end()
 		},
 		/**
+		 * Stops listening to the socket
+		 */
+		async endTlsSession() {
+			if(tls.hasEnded()) {
+				return
+			}
+
+			await tls.end()
+			logger.info('ended TLS session')
+		},
+		/**
 		 * Get the blocks with either the raw key to decrypt
 		 * or the ZK proof to verify the redacted data. These
 		 * can then be sent to the witness to verify the transcript
@@ -405,6 +416,11 @@ export const makeAPITLSClient = ({
 				block!.index = index
 			}
 		} catch(error) {
+			if(tls.hasEnded()) {
+				logger.info('live stream ended after TLS close')
+				return
+			}
+
 			if(!error.message.includes('aborted')) {
 				await tls.end(error)
 				throw error
