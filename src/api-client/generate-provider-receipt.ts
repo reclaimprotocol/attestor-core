@@ -122,7 +122,7 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 		if(
 			err instanceof ClientError
 			&& err.code === Status.FAILED_PRECONDITION
-			&& err.message.includes('is not active')
+			&& err.message.includes('session is closed')
 		) {
 			// wait for complete stream end when the session is closed
 			// mid-write, as this means the server could not process
@@ -140,6 +140,7 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 	onStep?.({ name: 'waiting-for-response' })
 
 	await waitForAllData
+	await apiClient.endTlsSession()
 
 	const startMs = Date.now()
 	const blocksToReveal = await apiClient.getBlocksToReveal(
