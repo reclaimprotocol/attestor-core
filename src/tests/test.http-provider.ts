@@ -74,7 +74,57 @@ describe('HTTP Provider tests', () => {
 		expect(resp.claimData.context).toContain('0x3bfcf3bf17b83b9c37756d9becf87f76cad712304a23d3335f78e1cc96e83d1f')
 	})
 
-	it('should generate transcript', async() => {
+	it('should generate receipt', async() => {
+		const DEFAULT_WITNESS_HOST_PORT = 'https://reclaim-node.questbook.app'
+		const client = getWitnessClient(
+			DEFAULT_WITNESS_HOST_PORT,
+			logger
+		)
+		const params: HTTPProviderParamsV2 = {
+			url: 'https://example.{{param1}}/',
+			method: 'GET',
+			geoLocation: 'US',
+			responseMatches: [{
+				type: 'regex',
+				value: '<title.*?(?<domain>{{param2}} Domain)<\\/title>',
+			},
+			{
+				type: 'contains',
+				value: 'This domain is for use in {{what}} examples in documents',
+			}
+			],
+			responseRedactions: [{
+				xPath: './html/head/{{param3}}',
+			}, {
+				xPath: '/html/body/div/p[1]/text()'
+			}],
+			paramValues: {
+				param1: 'com',
+				param2: 'Example',
+				param3: 'title',
+				what: 'illustrative',
+			},
+			headers: {
+				'user-agent': 'Mozilla/5.0',
+			}
+		}
+		const { receipt } = await generateProviderReceipt({
+			name: 'http',
+			secretParams: {
+				cookieStr: '<cookie-str>',
+				authorisationHeader: 'abc'
+			},
+			params: params,
+			client,
+			logger,
+		})
+		expect(receipt?.transcript).not.toBeNull()
+		await expect(async() => {
+			await providers['http'].assertValidProviderReceipt(receipt!, params)
+		}).not.toThrow()
+	})
+
+	it('should throw on zero body length', async() => {
 		const DEFAULT_WITNESS_HOST_PORT = 'https://reclaim-node.questbook.app'
 		const client = getWitnessClient(
 			DEFAULT_WITNESS_HOST_PORT,
@@ -123,9 +173,9 @@ describe('HTTP Provider tests', () => {
 			logger,
 		})
 		expect(receipt?.transcript).not.toBeNull()
-		expect(() => {
-			providers['http'].assertValidProviderReceipt(receipt!, params)
-		}).not.toThrow()
+		await expect(async() => {
+			await providers['http'].assertValidProviderReceipt(receipt!, params)
+		}).rejects.toThrow('request body mismatch')
 	})
 
 	it('should throw on invalid URL', () => {
