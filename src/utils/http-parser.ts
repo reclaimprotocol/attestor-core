@@ -322,8 +322,17 @@ export function getHttpRequestDataFromTranscript(receipt: TLSReceipt | Applicati
 			request.url = url
 			request.protocol = protocol
 		} else {
-			const [key, value] = line.split(': ')
-			request.headers[key.toLowerCase()] = value
+			let [key, value] = line.split(':')
+			key = key.toLowerCase().trim()
+			value = value?.trim()
+			const oldValue = request.headers[key]
+			if(typeof oldValue === 'string') {
+				request.headers[key] = [oldValue, value]
+			} else if(Array.isArray(oldValue)) {
+				oldValue.push(value)
+			} else {
+				request.headers[key] = value
+			}
 		}
 	}
 

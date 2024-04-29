@@ -302,9 +302,10 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error(`Missing "${OK_HTTP_HEADER}" header in response`)
 		}
 
-		if(req.headers['connection'] !== 'close') {
+		const connectionheader = req.headers['connection']
+		if(connectionheader !== 'close') {
 			logTranscript()
-			throw new Error('Connection header must be "close"')
+			throw new Error(`Connection header must be "close", got "${connectionheader}"`)
 		}
 
 
