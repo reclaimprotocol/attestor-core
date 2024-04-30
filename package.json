@@ -14,12 +14,7 @@
     "generate:proto": "sh ./src/scripts/generate-proto.sh",
     "generate:contracts-data": "sh ./src/scripts/contract-data-gen.sh",
     "verify:root-ca": "ts-node src/scripts/verify-root-ca.ts",
-    "generate:receipt": "ts-node src/scripts/generate-receipt.ts",
-    "example:one-mg": "ts-node src/scripts/generate-receipt.ts --json example/onemg-equal.json",
-    "example:facebook-data": "ts-node src/scripts/generate-receipt.ts --json example/facebook-data.json",
-    "example:scholar-citations": "ts-node src/scripts/generate-receipt.ts --json example/scholar-citations.json",
-    "example:pancard-number": "ts-node src/scripts/generate-receipt.ts --json example/pancard-number.json",
-    "example:insta-verifier": "ts-node src/scripts/generate-receipt.ts --json example/insta-verifier.json"
+    "generate:receipt": "ts-node src/scripts/generate-receipt.ts"
   },
   "files": [
     "lib/*"
