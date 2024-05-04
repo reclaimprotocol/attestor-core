@@ -1,8 +1,8 @@
-import { detectEnvironment } from '@reclaimprotocol/common-grpc-web-transport'
 import { CipherSuite, makeTLSClient, PACKET_TYPE, SUPPORTED_NAMED_CURVES, TLSConnectionOptions, TLSPresharedKey, TLSSessionTicket } from '@reclaimprotocol/tls'
 import { FinaliseSessionRequest_Block as BlockReveal, InitialiseSessionRequest, InitialiseSessionRequest_BeaconBasedProviderClaimRequest as BeaconBasedProviderRequest, PullFromSessionResponse, ReclaimWitnessClient, TranscriptMessageSenderType, WitnessVersion } from '../proto/api'
 import { ArraySlice, CompleteTLSPacket, Logger } from '../types'
 import { getBlocksToReveal, logger as MAIN_LOGGER, PrepareZKProofsBaseOpts, redactSlices } from '../utils'
+import { detectEnvironment } from '../utils/env'
 import { preparePacketsForReveal, PreparePacketsForRevealOpts } from '../utils/prepare-packets'
 
 export type BaseAPIClientOptions = {

@@ -1,16 +1,19 @@
 module.exports = {
-	'roots': [
+	preset: 'ts-jest',
+	testEnvironment: 'node',
+	roots: [
 		'<rootDir>/src'
 	],
-	modulePathIgnorePatterns: [
-		'<rootDir>/node_modules'
+	testPathIgnorePatterns: [
+		'/node_modules/'
 	],
-	'testMatch': [
-		'**/tests/test.*.+(ts|tsx|js)',
+	testMatch: [
+		'**/tests/test.*.+(ts|tsx)',
 	],
-	'transform': {
-		'^.+\\.(ts|tsx)$': 'ts-jest'
+	transform: {
+		'^.+\\.(js|ts|tsx)?$': 'ts-jest',
 	},
-	setupFiles: [
+	transformIgnorePatterns: [
+		'"node_modules/(?!p-queue/.*)"'
 	]
 }

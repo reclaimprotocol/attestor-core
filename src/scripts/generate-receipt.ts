@@ -7,7 +7,6 @@ import {
 	createGrpcWebClient,
 	generateProviderReceipt,
 	getTranscriptString,
-	Logger,
 	proto,
 	ProviderName,
 	ProviderParams,
@@ -43,10 +42,7 @@ export async function main<T extends ProviderName>(
 
 	const witnessHostPort = getCliArgument('witness')
         || DEFAULT_WITNESS_HOST_PORT
-	const client = getWitnessClient(
-		witnessHostPort,
-		logger
-	)
+	const client = getWitnessClient(witnessHostPort)
 
 	const { receipt } = await generateProviderReceipt({
 		name: paramsJson.name,
@@ -109,7 +105,7 @@ function getCliArgument(arg: string) {
 	return process.argv[index + 1]
 }
 
-export function getWitnessClient(url: string, logger: Logger) {
+export function getWitnessClient(url: string) {
 	const parsedUrl = new URL(url)
 	if(
 		parsedUrl.protocol === 'grpcs:'
@@ -123,7 +119,7 @@ export function getWitnessClient(url: string, logger: Logger) {
 		)
 	}
 
-	return createGrpcWebClient(url, logger)
+	return createGrpcWebClient(url)
 }
 
 if(require.main === module) {
