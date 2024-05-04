@@ -1,8 +1,7 @@
-import { CommonTransport } from '@reclaimprotocol/common-grpc-web-transport'
 import { areUint8ArraysEqual, CipherSuite, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 import { createChannel, createClient } from 'nice-grpc-web'
 import { ReclaimWitnessClient, ReclaimWitnessDefinition, TLSReceipt, TranscriptMessageSenderType } from '../proto/api'
-import { Logger, ProviderField } from '../types'
+import { ProviderField } from '../types'
 import { extractApplicationDataMsgsFromTranscript } from './http-parser'
 
 export function uint8ArrayToStr(arr: Uint8Array) {
@@ -29,19 +28,13 @@ export function getTranscriptString(receipt: TLSReceipt) {
 
 export const unixTimestampSeconds = () => Math.floor(Date.now() / 1000)
 
-export function createGrpcWebClient(url: string, logger: Logger): ReclaimWitnessClient {
-	const transportFactory = makeGrpcWebTransport(logger)
-	const grpcChannel = createChannel(url, transportFactory)
+export function createGrpcWebClient(url: string): ReclaimWitnessClient {
+	const grpcChannel = createChannel(url)
 	return createClient(
 		ReclaimWitnessDefinition,
 		grpcChannel,
 		{ }
 	)
-}
-
-export function makeGrpcWebTransport(logger?: Logger) {
-	logger = logger?.child({ module: 'grpc-web-transport' })
-	return CommonTransport({ logger })
 }
 
 /**

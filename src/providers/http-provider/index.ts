@@ -134,10 +134,12 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		if(newParams.hiddenBodyParts?.length > 0) {
 			for(const hiddenBodyPart of newParams.hiddenBodyParts) {
-				redactions.push({
-					fromIndex: headerStr.length + hiddenBodyPart.index,
-					toIndex: headerStr.length + hiddenBodyPart.index + hiddenBodyPart.length,
-				})
+				if(hiddenBodyPart.length) {
+					redactions.push({
+						fromIndex: headerStr.length + hiddenBodyPart.index,
+						toIndex: headerStr.length + hiddenBodyPart.index + hiddenBodyPart.length,
+					})
+				}
 			}
 		}
 

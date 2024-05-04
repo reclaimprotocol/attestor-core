@@ -76,10 +76,7 @@ describe('HTTP Provider tests', () => {
 
 	it('should generate receipt', async() => {
 		const DEFAULT_WITNESS_HOST_PORT = 'https://reclaim-node.questbook.app'
-		const client = getWitnessClient(
-			DEFAULT_WITNESS_HOST_PORT,
-			logger
-		)
+		const client = getWitnessClient(DEFAULT_WITNESS_HOST_PORT)
 		const params: HTTPProviderParamsV2 = {
 			url: 'https://example.{{param1}}/',
 			method: 'GET',
@@ -119,17 +116,14 @@ describe('HTTP Provider tests', () => {
 			logger,
 		})
 		expect(receipt?.transcript).not.toBeNull()
-		await expect(async() => {
+		expect(async() => {
 			await providers['http'].assertValidProviderReceipt(receipt!, params)
 		}).not.toThrow()
 	})
 
 	it('should throw on zero body length', async() => {
 		const DEFAULT_WITNESS_HOST_PORT = 'https://reclaim-node.questbook.app'
-		const client = getWitnessClient(
-			DEFAULT_WITNESS_HOST_PORT,
-			logger
-		)
+		const client = getWitnessClient(DEFAULT_WITNESS_HOST_PORT)
 		const params: HTTPProviderParamsV2 = {
 			url: 'https://example.{{param1}}/',
 			method: 'GET',

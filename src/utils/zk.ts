@@ -9,12 +9,12 @@ import {
 	verifyProof,
 	ZKOperator,
 } from '@reclaimprotocol/circom-symmetric-crypto'
-import { detectEnvironment } from '@reclaimprotocol/common-grpc-web-transport'
 import { CipherSuite, crypto } from '@reclaimprotocol/tls'
 import PQueue from 'p-queue'
 import { DEFAULT_REMOTE_ZK_PARAMS, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from '../config'
 import { FinaliseSessionRequest_Block as PacketToReveal, FinaliseSessionRequest_BlockRevealZk as ZKReveal, FinaliseSessionRequest_ZKProof as ZKProof } from '../proto/api'
 import { CompleteTLSPacket, Logger } from '../types'
+import { detectEnvironment } from './env'
 import { getPureCiphertext, getZkAlgorithmForCipherSuite } from './generics'
 import { logger as LOGGER } from './logger'
 import { isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from './redactions'

@@ -166,7 +166,7 @@ export async function createClaim<Name extends ProviderName>({
 			grpcWebUrl = grpcWebUrl.slice(0, -1)
 		}
 
-		const grpcClient = makeGrpcClient(grpcWebUrl, logger)
+		const grpcClient = makeGrpcClient(grpcWebUrl)
 		const {
 			claimData,
 			signature,
