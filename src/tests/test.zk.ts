@@ -127,7 +127,7 @@ describe('ZK Tests', () => {
 			}
 		]
 
-		const proofGenerator = makeZkProofGenerator({
+		const proofGenerator = await makeZkProofGenerator({
 			logger,
 			cipherSuite,
 		})
