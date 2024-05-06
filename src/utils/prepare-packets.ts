@@ -21,7 +21,7 @@ export async function preparePacketsForReveal(
 	{ onZkProgress, ...opts }: PreparePacketsForRevealOpts
 ): Promise<PacketToReveal[]> {
 	const packetsToReveal: PacketToReveal[] = []
-	const proofGenerator = makeZkProofGenerator(opts)
+	const proofGenerator = await makeZkProofGenerator(opts)
 
 	let zkPacketsDone = 0
 
