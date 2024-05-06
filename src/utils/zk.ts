@@ -10,7 +10,6 @@ import {
 	ZKOperator,
 } from '@reclaimprotocol/circom-symmetric-crypto'
 import { CipherSuite, crypto } from '@reclaimprotocol/tls'
-import PQueue from 'p-queue'
 import { DEFAULT_REMOTE_ZK_PARAMS, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from '../config'
 import { FinaliseSessionRequest_Block as PacketToReveal, FinaliseSessionRequest_BlockRevealZk as ZKReveal, FinaliseSessionRequest_ZKProof as ZKProof } from '../proto/api'
 import { CompleteTLSPacket, Logger } from '../types'
@@ -18,6 +17,7 @@ import { detectEnvironment } from './env'
 import { getPureCiphertext, getZkAlgorithmForCipherSuite } from './generics'
 import { logger as LOGGER } from './logger'
 import { isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from './redactions'
+
 
 type GenerateZKChunkProofOpts = {
 	key: Uint8Array
@@ -71,7 +71,7 @@ type ZKPacketToProve = {
 	proofsToGenerate: ZKProofToGenerate[]
 }
 
-export function makeZkProofGenerator(
+export async function makeZkProofGenerator(
 	{
 		zkOperators,
 		logger,
@@ -80,10 +80,13 @@ export function makeZkProofGenerator(
 		cipherSuite,
 	}: PrepareZKProofsOpts
 ) {
+
+	const { default: PQueue } = await import('p-queue')
 	const zkQueue = new PQueue({
 		concurrency: zkProofConcurrency,
 		autoStart: true,
 	})
+
 	const packetsToProve: ZKPacketToProve[] = []
 
 	logger = logger || LOGGER.child({ module: 'zk' })
