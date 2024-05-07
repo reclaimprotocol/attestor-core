@@ -8,6 +8,7 @@ import { providers } from '../providers'
 import { HTTPProviderParamsV2 } from '../providers/http-provider'
 import { getWitnessClient } from '../scripts/generate-receipt'
 import { BeaconState } from '../types'
+import { uint8ArrayToStr } from '../utils'
 
 jest.setTimeout(60_000)
 
@@ -579,5 +580,48 @@ Content-Type: text/html; charset=utf-8\r
 				method: 'GET'
 			})
 		}).toThrow('parameter\'s \"com\" value not found in paramValues and secret parameter\'s paramValues')
+	})
+
+	it('should replace params in body correctly', () => {
+		const params: HTTPProviderParamsV2 = {
+			url: 'https://example.{{param1}}/',
+			method: 'GET',
+			body: 'hello {{h}} {{a}} {{b}} world',
+			geoLocation: 'US',
+			responseMatches: [{
+				type: 'regex',
+				value: '<title.*?(?<domain>{{param2}} Domain)<\\/title>',
+			}],
+			responseRedactions: [{
+				xPath: './html/head/{{param3}}',
+			}, {
+				xPath: '/html/body/div/p[1]/text()'
+			}],
+			paramValues: {
+				param1: 'com',
+				param2: 'Example',
+				param3: 'title',
+				what: 'illustrative',
+				a:'{{b}}',
+				b:'a'
+			},
+			headers: {
+				'user-agent': 'Mozilla/5.0',
+			}
+		}
+		const secretParams = {
+			cookieStr: '<cookie-str>',
+			paramValues: {
+				h: 'crazy',
+			},
+			authorisationHeader: 'abc'
+		}
+		const req = providers['http'].createRequest(secretParams, params)
+
+		const reqText = uint8ArrayToStr(req.data as Uint8Array)
+		console.log(reqText)
+		expect(reqText).toContain('hello crazy {{b}} a world')
+		expect(req.redactions.length).toEqual(2)
+		expect(uint8ArrayToStr((req.data as Uint8Array).slice(req.redactions[1].fromIndex, req.redactions[1].toIndex))).toEqual('crazy')
 	})
 })

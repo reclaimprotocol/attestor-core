@@ -503,42 +503,25 @@ function substituteParamValues(currentParams: HTTPProviderParamsV2, secretParams
 			return null
 		}
 
-		const paramNames: Set<string> = new Set()
-		//extract param names
-
-		let match: RegExpExecArray | null = null
-		while(match = paramsRegex.exec(param)) {
-			paramNames.add(match[1])
-		}
-
+		//const paramNames: Set<string> = new Set()
 		const extractedValues: { [_: string]: string } = {}
 		const hiddenParts: { index: number, length: number }[] = []
-		paramNames.forEach(pn => {
-			if(params.paramValues && pn in params.paramValues) {
-				param = param?.replaceAll(`{{${pn}}}`, params.paramValues[pn])
-				extractedValues[pn] = params.paramValues[pn]
-			} else if(secretParams) {
 
-				//replace params with values from secretValues but record the new value position
-				let binParam = strToUint8Array(param!)
+
+		param = param.replace(paramsRegex, (_match, pn, offset) => {
+			if(params.paramValues && pn in params.paramValues) {
+				extractedValues[pn] = params.paramValues[pn]
+				return params.paramValues[pn]
+			} else if(secretParams) {
 				if(secretParams?.paramValues && pn in secretParams?.paramValues) {
-					let pos = -1
-					const binTemplate = strToUint8Array(`{{${pn}}}`)
-					const templateLen = binTemplate.length
-					const binParamValue = strToUint8Array(secretParams.paramValues[pn])
-					while((pos = findIndexInUint8Array(binParam, binTemplate)) >= 0) {
-						binParam = concatenateUint8Arrays([binParam.slice(0, pos), binParamValue, binParam.slice(pos + templateLen)])
-						hiddenParts.push({
-							index: pos,
-							length: binParamValue.length,
-						})
-					}
+					hiddenParts.push({
+						index: offset,
+						length: secretParams.paramValues[pn].length,
+					})
+					return secretParams.paramValues[pn]
 				} else {
 					throw new Error(`parameter's "${pn}" value not found in paramValues and secret parameter's paramValues`)
 				}
-
-				param = uint8ArrayToStr(binParam)
-
 			} else {
 				if(!(!!ignoreMissingParams)) {
 					throw new Error(`parameter's "${pn}" value not found in paramValues`)
