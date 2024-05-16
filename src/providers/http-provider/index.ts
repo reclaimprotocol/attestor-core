@@ -139,6 +139,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 						fromIndex: headerStr.length + hiddenBodyPart.index,
 						toIndex: headerStr.length + hiddenBodyPart.index + hiddenBodyPart.length,
 					})
+					console.log(uint8ArrayToStr(data.slice(headerStr.length + hiddenBodyPart.index, headerStr.length + hiddenBodyPart.index + hiddenBodyPart.length)))
+					console.log(' ')
 				}
 			}
 		}
@@ -508,16 +510,18 @@ function substituteParamValues(currentParams: HTTPProviderParamsV2, secretParams
 		const hiddenParts: { index: number, length: number }[] = []
 
 
-		param = param.replace(paramsRegex, (_match, pn, offset) => {
+		let totalOffset = 0
+		param = param.replace(paramsRegex, (match, pn, offset) => {
 			if(params.paramValues && pn in params.paramValues) {
 				extractedValues[pn] = params.paramValues[pn]
 				return params.paramValues[pn]
 			} else if(secretParams) {
 				if(secretParams?.paramValues && pn in secretParams?.paramValues) {
 					hiddenParts.push({
-						index: offset,
+						index: offset - totalOffset,
 						length: secretParams.paramValues[pn].length,
 					})
+					totalOffset -= secretParams.paramValues[pn].length - match.length
 					return secretParams.paramValues[pn]
 				} else {
 					throw new Error(`parameter's "${pn}" value not found in paramValues and secret parameter's paramValues`)
@@ -525,6 +529,8 @@ function substituteParamValues(currentParams: HTTPProviderParamsV2, secretParams
 			} else {
 				if(!(!!ignoreMissingParams)) {
 					throw new Error(`parameter's "${pn}" value not found in paramValues`)
+				} else {
+					return match
 				}
 			}
 		})
