@@ -139,8 +139,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 						fromIndex: headerStr.length + hiddenBodyPart.index,
 						toIndex: headerStr.length + hiddenBodyPart.index + hiddenBodyPart.length,
 					})
-					console.log(uint8ArrayToStr(data.slice(headerStr.length + hiddenBodyPart.index, headerStr.length + hiddenBodyPart.index + hiddenBodyPart.length)))
-					console.log(' ')
 				}
 			}
 		}
@@ -518,10 +516,10 @@ function substituteParamValues(currentParams: HTTPProviderParamsV2, secretParams
 			} else if(secretParams) {
 				if(secretParams?.paramValues && pn in secretParams?.paramValues) {
 					hiddenParts.push({
-						index: offset - totalOffset,
+						index: offset + totalOffset,
 						length: secretParams.paramValues[pn].length,
 					})
-					totalOffset -= secretParams.paramValues[pn].length - match.length
+					totalOffset += secretParams.paramValues[pn].length - match.length
 					return secretParams.paramValues[pn]
 				} else {
 					throw new Error(`parameter's "${pn}" value not found in paramValues and secret parameter's paramValues`)

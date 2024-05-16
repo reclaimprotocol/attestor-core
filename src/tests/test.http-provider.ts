@@ -586,7 +586,7 @@ Content-Type: text/html; charset=utf-8\r
 		const params: HTTPProviderParamsV2 = {
 			url: 'https://example.{{param1}}/',
 			method: 'GET',
-			body: 'hello {{h}} {{a}} {{b}} world',
+			body: 'hello {{h}} {{b}} {{h1h1h1h1h1h1h1}} {{h2}} {{a}} {{h1h1h1h1h1h1h1}} {{h}} {{a}} {{h2}} {{a}} {{b}} world',
 			geoLocation: 'US',
 			responseMatches: [{
 				type: 'regex',
@@ -603,7 +603,7 @@ Content-Type: text/html; charset=utf-8\r
 				param3: 'title',
 				what: 'illustrative',
 				a:'{{b}}',
-				b:'a'
+				b:'aaaaa'
 			},
 			headers: {
 				'user-agent': 'Mozilla/5.0',
@@ -613,6 +613,8 @@ Content-Type: text/html; charset=utf-8\r
 			cookieStr: '<cookie-str>',
 			paramValues: {
 				h: 'crazy',
+				h1h1h1h1h1h1h1: 'crazy1',
+				h2: 'crazy2',
 			},
 			authorisationHeader: 'abc'
 		}
@@ -620,8 +622,8 @@ Content-Type: text/html; charset=utf-8\r
 
 		const reqText = uint8ArrayToStr(req.data as Uint8Array)
 		console.log(reqText)
-		expect(reqText).toContain('hello crazy {{b}} a world')
-		expect(req.redactions.length).toEqual(2)
+		expect(reqText).toContain('hello crazy aaaaa crazy1 crazy2 {{b}} crazy1 crazy {{b}} crazy2 {{b}} aaaaa world')
+		expect(req.redactions.length).toEqual(7)
 		expect(uint8ArrayToStr((req.data as Uint8Array).slice(req.redactions[1].fromIndex, req.redactions[1].toIndex))).toEqual('crazy')
 	})
 })
