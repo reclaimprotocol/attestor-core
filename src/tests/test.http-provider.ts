@@ -621,9 +621,18 @@ Content-Type: text/html; charset=utf-8\r
 		const req = providers['http'].createRequest(secretParams, params)
 
 		const reqText = uint8ArrayToStr(req.data as Uint8Array)
-		console.log(reqText)
 		expect(reqText).toContain('hello crazy aaaaa crazy1 crazy2 {{b}} crazy1 crazy {{b}} crazy2 {{b}} aaaaa world')
 		expect(req.redactions.length).toEqual(7)
-		expect(uint8ArrayToStr((req.data as Uint8Array).slice(req.redactions[1].fromIndex, req.redactions[1].toIndex))).toEqual('crazy')
+		expect(getRedaction(0)).toEqual('Cookie: <cookie-str>\r\nAuthorization: abc')
+		expect(getRedaction(1)).toEqual('crazy')
+		expect(getRedaction(2)).toEqual('crazy1')
+		expect(getRedaction(3)).toEqual('crazy2')
+		expect(getRedaction(4)).toEqual('crazy1')
+		expect(getRedaction(5)).toEqual('crazy')
+		expect(getRedaction(6)).toEqual('crazy2')
+
+		function getRedaction(index: number) {
+			return uint8ArrayToStr((req.data as Uint8Array).slice(req.redactions[index].fromIndex, req.redactions[index].toIndex))
+		}
 	})
 })
