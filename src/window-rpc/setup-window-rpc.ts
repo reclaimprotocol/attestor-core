@@ -1,9 +1,10 @@
 import { createClaim } from '../api-client'
 import { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
-import { logger, ZKOperators } from '../utils'
+import { logger, setLogLevel, ZKOperators } from '../utils'
 import { CommunicationBridge, RPCCreateClaimOptions, RPCErrorResponse, RPCResponse, RPCWitnessClient, WindowRPCIncomingMsg, WindowRPCOutgoingMsg } from './types'
 import { getCurrentMemoryUsage } from './utils'
 import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator } from './window-rpc-zk'
+
 
 class RPCEvent extends Event {
 	constructor(public readonly data: WindowRPCIncomingMsg) {
@@ -96,6 +97,12 @@ export function setupWindowRpc() {
 				respond({
 					type: 'getCurrentMemoryUsageDone',
 					response: await getCurrentMemoryUsage(),
+				})
+				break
+			case 'setLogLevel':
+				respond({
+					type: 'setLogLevelDone',
+					response: setLogLevel(req.request.logLevel)
 				})
 				break
 			default:

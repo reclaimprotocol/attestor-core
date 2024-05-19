@@ -1,27 +1,16 @@
+import P from 'pino'
 import { Logger } from '../types'
 
-export const logger = makeLogger({ })
+const localLogger = P()
+export const logger = makeLogger(process.env.LOG_LEVEL || 'info')
 
-function jsonLog(level: keyof typeof logger, opts: { [_: string]: any } | undefined, ...data: any[]) {
-	if(opts) {
-		data.unshift(opts)
-	}
-
-	return console[level](...data)
+function makeLogger(level: string): Logger {
+	localLogger.level = level
+	return localLogger
 }
 
-function makeLogger(opts?: { [_: string]: any }): Logger {
-	if(!Object.keys(opts || {})) {
-		opts = undefined
-	}
-
-	return {
-		debug: (...data) => jsonLog('debug', opts, ...data),
-		info: (...data) => jsonLog('info', opts, ...data),
-		warn: (...data) => jsonLog('warn', opts, ...data),
-		error: (...data) => jsonLog('error', opts, ...data),
-		// trace logging off by default
-		trace: () => {},
-		child: opts2 => makeLogger({ ...opts, ...opts2 }),
-	}
+export function setLogLevel(level: keyof typeof logger) {
+	localLogger.level = level
+	return true
 }
+
