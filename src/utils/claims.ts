@@ -3,6 +3,7 @@ import canonicalize from 'canonicalize'
 import { utils } from 'ethers'
 import { HTTPProviderParamsV2 } from '../providers/http-provider'
 import { ClaimID, ClaimInfo, CompleteClaimData } from '../types'
+import { logger } from './logger'
 
 export function createSignDataForClaim(
 	data: CompleteClaimData
@@ -57,7 +58,7 @@ export function hashProviderParams(params: HTTPProviderParamsV2): string {
 	}
 
 	const serializedParams = canonicalize(filteredParams)!
-	console.log(`providerHash data: ${serializedParams}`)
+	logger.info(`providerHash data: ${serializedParams}`)
 	return utils.keccak256(
 		strToUint8Array(serializedParams)
 	).toLowerCase()
