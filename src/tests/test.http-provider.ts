@@ -1,5 +1,6 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
 import { utils, Wallet } from 'ethers'
+import P from 'pino'
 import { createClaim, generateProviderReceipt } from '../api-client'
 import { getContract } from '../beacon/smart-contract/utils'
 import { BeaconType } from '../proto/api'
@@ -10,6 +11,8 @@ import { BeaconState } from '../types'
 import { uint8ArrayToStr } from '../utils'
 
 jest.setTimeout(60_000)
+
+const logger = P()
 
 describe('HTTP Provider tests', () => {
 
@@ -66,7 +69,8 @@ describe('HTTP Provider tests', () => {
 			secretParams: {
 				cookieStr: '<cookie-str>'
 			},
-			ownerPrivateKey: new Wallet(utils.randomBytes(32)).privateKey
+			ownerPrivateKey: new Wallet(utils.randomBytes(32)).privateKey,
+			logger,
 		})
 		expect(resp.claimData.context).toContain('0x3bfcf3bf17b83b9c37756d9becf87f76cad712304a23d3335f78e1cc96e83d1f')
 	})
@@ -109,7 +113,8 @@ describe('HTTP Provider tests', () => {
 				authorisationHeader: 'abc'
 			},
 			params: params,
-			client
+			client,
+			logger,
 		})
 		expect(receipt?.transcript).not.toBeNull()
 		expect(async() => {
@@ -159,7 +164,8 @@ describe('HTTP Provider tests', () => {
 				authorisationHeader: 'abc'
 			},
 			params: params,
-			client
+			client,
+			logger,
 		})
 		expect(receipt?.transcript).not.toBeNull()
 		await expect(async() => {

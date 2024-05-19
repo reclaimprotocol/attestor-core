@@ -3,7 +3,6 @@ import type { createClaim, CreateClaimOptions } from '../api-client'
 import type { ProviderName } from '../providers'
 import type { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
 import type { CreateStep } from '../types'
-import { setLogLevel } from '../utils'
 
 type IdentifiedMessage = {
 	module: 'witness-sdk'
@@ -52,10 +51,6 @@ type ZKVerifyOpts = {
 	proof: { [key: string]: string } | string
 }
 
-type LogLevelOptions = {
-	logLevel: 'debug' | 'info' | 'warn' | 'error' | 'trace'
-}
-
 /**
  * Fns the app calls on the witness.
  * These are things done inside the witness
@@ -68,7 +63,6 @@ export type RPCWitnessClient = {
 		available: boolean
 		content: string
 	}>
-	setLogLevel(options: LogLevelOptions): ReturnType<typeof setLogLevel>
 }
 
 /**
@@ -110,7 +104,6 @@ export type WindowRPCIncomingMsg = (
 	| RPCRequest<RPCWitnessClient, 'extractHtmlElement'>
 	| RPCRequest<RPCWitnessClient, 'extractJSONValueIndex'>
 	| RPCRequest<RPCWitnessClient, 'getCurrentMemoryUsage'>
-	| RPCRequest<RPCWitnessClient, 'setLogLevel'>
 	| AsResponse<RPCResponse<RPCAppClient, 'zkProve'>>
 	| AsResponse<RPCResponse<RPCAppClient, 'zkVerify'>>
 	| AsResponse<RPCErrorResponse>
@@ -125,7 +118,6 @@ export type WindowRPCOutgoingMsg = (
 	| AsResponse<RPCResponse<RPCWitnessClient, 'extractHtmlElement'>>
 	| AsResponse<RPCResponse<RPCWitnessClient, 'extractJSONValueIndex'>>
 	| AsResponse<RPCResponse<RPCWitnessClient, 'getCurrentMemoryUsage'>>
-	| AsResponse<RPCResponse<RPCWitnessClient, 'setLogLevel'>>
 	| RPCRequest<RPCAppClient, 'zkProve'>
 	| RPCRequest<RPCAppClient, 'zkVerify'>
 	| (

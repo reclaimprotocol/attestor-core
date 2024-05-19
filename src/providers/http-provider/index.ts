@@ -6,7 +6,7 @@ import { ArraySlice, Provider } from '../../types'
 import {
 	extractApplicationDataMsgsFromTranscript,
 	findIndexInUint8Array,
-	getHttpRequestDataFromTranscript, logger,
+	getHttpRequestDataFromTranscript,
 	REDACTION_CHAR_CODE,
 	uint8ArrayToBinaryStr,
 	uint8ArrayToStr,
@@ -95,7 +95,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			: this.hostPort
 		const { pathname } = new URL(params.url)
 		const searchParams = params.url.includes('?') ? params.url.split('?')[1] : ''
-		logger.info({ url: params.url, path: pathname, query: searchParams.toString() })
+		console.log('Params URL:', params.url, 'Path:', pathname, 'Query:', searchParams.toString())
 		const body =
             params.body instanceof Uint8Array
             	? params.body
@@ -103,7 +103,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const contentLength = body.length
 		const reqLine = `${params.method} ${pathname}${searchParams?.length ? '?' + searchParams : ''} HTTP/1.1`
 		const secHeadersList = buildHeaders(secHeaders)
-		logger.info({ requestLine: reqLine })
+		console.log('Request line:', reqLine)
 		const httpReqHeaderStr = [
 			reqLine,
 			`Host: ${hostPort}`,
@@ -153,7 +153,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		// if the response is not 2xx, then we don't need
 		// to redact anything as the request itself failed
 		if(((res.statusCode / 100) >> 0) !== 2) {
-			logger.error({ response: uint8ArrayToBinaryStr(res.body) })
+			console.log('===RESPONSE===')
+			console.log(uint8ArrayToBinaryStr(res.body))
 			throw new Error(`Provider returned error "${res.statusCode} ${res.statusMessage}"`)
 		}
 
@@ -182,7 +183,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				element = extractHTMLElement(body, rs.xPath, !!rs.jsonPath)
 				const substr = findSubstringIgnoreLE(body, element)
 				if(substr.index < 0) {
-					logger.error({ response: uint8ArrayToBinaryStr(res.body) })
+					console.log('===RESPONSE===')
+					console.log(uint8ArrayToBinaryStr(res.body))
 					throw new Error(`Failed to find element: "${rs.xPath}"`)
 				}
 
@@ -203,7 +205,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				const elem = element || body
 				const match = regexp.exec(elem)
 				if(!match?.[0]) {
-					logger.error({ response: uint8ArrayToBinaryStr(res.body) })
+					console.log('===RESPONSE===')
+					console.log(uint8ArrayToBinaryStr(res.body))
 					throw new Error(
 						`regexp ${rs.regex} does not match found element '${elem}'`
 					)
@@ -265,7 +268,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const { protocol, hostname, pathname, port } = new URL(params.url)
 
 		if(protocol !== 'https:') {
-			logger.error('params URL: %s', params.url)
+			console.log('params URL:', params.url)
 			logTranscript()
 			throw new Error(`Expected protocol: https, found: ${protocol}`)
 		}
@@ -273,7 +276,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const searchParams = params.url.includes('?') ? params.url.split('?')[1] : ''
 		const expectedPath = pathname + (searchParams?.length ? '?' + searchParams : '')
 		if(req.url !== expectedPath) {
-			logger.error('params URL: %s', params.url)
+			console.log('params URL:', params.url)
 			logTranscript()
 			throw new Error(`Expected path: ${expectedPath}, found: ${req.url}`)
 		}
@@ -385,8 +388,10 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 			const clientTranscript = uint8ArrayToStr(concatenateUint8Arrays(clientMsgs))
 			const serverTranscript = uint8ArrayToStr(concatenateUint8Arrays(serverMsgs))
-
-			logger.error({ request: clientTranscript, response:serverTranscript })
+			console.log('====REQUEST=====')
+			console.log(clientTranscript)
+			console.log('====RESPONSE====')
+			console.log(serverTranscript)
 		}
 	},
 }

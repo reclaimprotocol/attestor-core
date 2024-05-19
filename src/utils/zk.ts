@@ -89,7 +89,7 @@ export async function makeZkProofGenerator(
 
 	const packetsToProve: ZKPacketToProve[] = []
 
-	logger = (logger || LOGGER).child({ module: 'zk' })
+	logger = logger || LOGGER.child({ module: 'zk' })
 	let zkChunksToProve = 0
 
 	return {
