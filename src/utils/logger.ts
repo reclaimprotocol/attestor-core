@@ -2,7 +2,7 @@ import P from 'pino'
 import { Logger } from '../types'
 
 const localLogger = P()
-export const logger = makeLogger(process.env.LOG_LEVEL || 'info')
+export const logger = makeLogger('info')
 
 function makeLogger(level: string): Logger {
 	localLogger.level = level
