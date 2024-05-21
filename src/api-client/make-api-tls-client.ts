@@ -124,8 +124,6 @@ export const makeAPITLSClient = ({
 					{
 						recordHeader: packet.header,
 						content: packet.content,
-						// deprecated, just there for compatibility
-						authenticationTag: new Uint8Array(0),
 					}
 				]
 			})

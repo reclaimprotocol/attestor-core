@@ -7,7 +7,7 @@ export type ServiceSignatureProvider = {
 	 * Returns public key in compressed (compact) format used in Reclaim RPC calls
 	 * @param privateKey corresponding private key in raw o hex form
 	 */
-	getPublicKey(privateKey: PrivateKey): Awaitable<Uint8Array>
+	getPublicKey(privateKey: PrivateKey): Uint8Array
 	/**
 	 * Returns address corresponding to the provided public key
 	 * @param publicKey raw o hex form, compressed or uncompressed

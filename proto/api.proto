@@ -21,6 +21,7 @@ enum WitnessVersion {
 	WITNESS_VERSION_UNKNOWN = 0;
 	WITNESS_VERSION_1_0_0 = 1;
 	WITNESS_VERSION_1_1_0 = 2;
+	WITNESS_VERSION_2_0_0 = 3;
 }
 
 enum TLSVersion {
@@ -35,11 +36,18 @@ enum BeaconType {
 	BEACON_TYPE_RECLAIM_TRUSTED = 2;
 }
 
+enum WitnessErrorCode {
+	// 0 should be treated as the absence of an error
+	WITNESS_ERROR_NO_ERROR = 0;
+	WITNESS_ERROR_INTERNAL = 1;
+	WITNESS_ERROR_BAD_REQUEST = 2;
+	WITNESS_ERROR_NOT_FOUND = 3;
+	WITNESS_ERROR_PROXY_ERROR = 4;
+}
+
 message TLSPacket {
 	bytes recordHeader = 1;
 	bytes content = 2;
-	/** @deprecated provide authenticationTag in 'content' */
-	bytes authenticationTag = 3;
 }
 
 message TranscriptMessage {
@@ -284,6 +292,224 @@ message FinaliseSessionResponse {
 	 * signature of `stringifyProviderClaimData(claimData)`
 	 */
 	bytes signature = 3;
+}
+
+message WitnessErrorData {
+	WitnessErrorCode code = 1;
+	string message = 2;
+	string data = 3;
+}
+
+message CreateTunnelRequest {
+	string host = 1;
+	uint32 port = 2;
+	/**
+	 * Geo location from which the request will be made.
+	 * Provide 2 letter ISO country code. Leave empty
+	 * if you don't want to use geo location.
+	 *
+	 * Geo location is implemented using an https proxy
+	 * eg. US, IN, GB, etc.
+	 */
+	string geoLocation = 3;
+	/**
+	 * Optionally provide the initial packet to send upon
+	 * connection establishment. Prevents the need to have
+	 * another round trip to send the first packet.
+	 */
+	TLSPacket initialPacket = 4;
+}
+
+message CreateTunnelResponse {
+	/** opaque ID assigned to the client for this request */
+	string id = 1;
+}
+
+message DisconnectTunnelRequest {
+	string id = 1;
+}
+
+message Empty {
+	// empty message
+}
+
+message TLSMessage {
+	/** ID of the tunnel where this message belongs */
+	string tunnelId = 1;
+	TLSPacket packet = 2;
+}
+
+message TLSTranscript {
+	/**
+	 * parameters supplied to establish the tunnel
+	 * & connect to the end server
+	 */
+	CreateTunnelRequest request = 1;
+	/** response received from the server */
+	CreateTunnelResponse response = 2;
+	/**
+	 * messages from the client & server
+	 * in the order they were sent/received
+	 */
+	repeated TranscriptMessage messages = 3;
+
+	message TranscriptMessage {
+		TranscriptMessageSenderType sender = 1;
+		TLSPacket packet = 2;
+	}
+}
+
+message ClaimConnectionRequest {
+	/**
+	 * ID of the tunnel whose transcript
+	 * contains the claim
+	 */
+	string tunnelId = 1;
+	/** Details of the claim */
+	BeaconBasedProviderClaimRequest claim = 2;
+	TLSTranscript transcript = 3;
+	repeated BlockReveal proofs = 4;
+	Signatures signatures = 5;
+
+	message Signatures {
+		/**
+		* signature of ClaimConnectionRequest
+		* with empty "signatures" field
+		*/
+		bytes requestSignature = 1;
+	}
+
+	message BlockReveal {
+		oneof reveal {
+			BlockRevealDirect directReveal = 4;
+			BlockRevealZk zkReveal = 5;
+		}
+		/**
+		 * index of the block in the transcript.
+		 * (0 indexed -- including msgs from client & server)
+		 */
+		uint32 index = 6;
+	}
+
+	// direct reveal of the block via the key & IV
+	// cipher (aes, chacha) for decryption
+	// selected based on `cipherSuite`
+	// in `FinaliseSessionRequest`
+	message BlockRevealDirect {
+		/** key for the block */
+		bytes key = 1;
+		/** IV for the block */
+		bytes iv = 2;
+		/**
+		 * used to generate IV in authenticated
+		 * cipher suites
+		 */
+		uint32 recordNumber = 3;
+	}
+
+	// partially or fully reveal the block via a zk proof
+	message BlockRevealZk {
+		repeated ZKProof proofs = 1;
+	}
+
+	message ZKProof {
+		/** JSON encoded snarkJS proof */
+		string proofJson = 1;
+		/** the decrypted ciphertext as output by the ZK proof */
+		bytes decryptedRedactedCiphertext = 2;
+		/** the plaintext that is fully or partially revealed */
+		bytes redactedPlaintext = 3;
+		/**
+		 * start of this specific ChaCha block
+		 * in the redactedPlaintext
+		 */
+		uint32 startIdx = 4;
+	}
+
+	message BeaconBasedProviderClaimRequest {
+		/** Epoch in which claim is being created */
+		uint32 epoch = 1;
+		BeaconIdentifier beacon = 2;
+		/**
+		 * When the claim is being created.
+		 * Cannot be more than 10 minutes in the past
+		 * or in the future at all
+		 */
+		uint32 timestampS = 3;
+		/** claim information to sign */
+		ProviderClaimInfo info = 4;
+	}
+}
+
+message ClaimConnectionResponse {
+	ClaimConnectionRequest claimRequest = 1;
+	oneof result {
+		ProviderClaimData claim = 2;
+		WitnessErrorData error = 3;
+	}
+	Signatures signatures = 4;
+
+	message Signatures {
+		/** 
+		* signature of `stringifyProviderClaimData(claim)`,
+		* if the claim was successful
+		*/
+		bytes claimSignature = 1;
+		/**
+		 * signature of the complete ClaimConnectionResponse
+		 * structure with empty "signatures" field
+		 */
+		bytes resultSignature = 2;
+	}
+}
+
+message InitRequest {
+	/** User ID */
+	string userId = 1;
+	/** Witness client version */
+	WitnessVersion clientVersion = 2;
+	/** Signature type used & expected by the user */
+	ServiceSignatureType signatureType = 3;
+}
+
+message ReclaimRPCMessage {
+	/**
+	 * RPC message ID
+	 * For responses, it should be the same as the request
+	 */
+	uint64 id = 1;
+
+	oneof message {
+		/**
+		 * Response to the init request.
+		 * The request must be sent in the WebSocket URL
+		 * as a query parameter.
+		 * `?initRequest=base64(proto(InitRequest))`
+		 * */
+		Empty initResponse = 2;
+		/**
+		 * Data representing an error in the witness's
+		 * connection to the server
+		 */
+		WitnessErrorData connectionTerminationAlert = 3;
+		/**
+		 * Data representing an error in the witness's
+		 * request to the server. Identify which request
+		 * using the `id` field.
+		 */
+		WitnessErrorData requestError = 4;
+		/** Request to connect to a server */
+		CreateTunnelRequest createTunnelRequest = 5;
+		CreateTunnelResponse createTunnelResponse = 6;
+		DisconnectTunnelRequest diconnectTunnelRequest = 7;
+		Empty disconnectTunnelResponse = 8;
+		TLSMessage tlsMessage = 9;
+		/**
+		 * Generate a claim from a particular connection
+		 */
+		ClaimConnectionRequest claimConnectionRequest = 10;
+		ClaimConnectionResponse claimConnectionResponse = 11;
+	}
 }
 
 service ReclaimWitness {
