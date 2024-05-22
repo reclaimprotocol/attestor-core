@@ -1,4 +1,4 @@
-import { ClaimConnectionRequest, CreateTunnelRequest, CreateTunnelResponse, DisconnectTunnelRequest, Empty, InitRequest, ReclaimRPCMessage, ServiceSignatureType, TLSMessage } from '../../proto/api'
+import { ClaimConnectionRequest, CreateTunnelRequest, DisconnectTunnelRequest, Empty, InitRequest, ReclaimRPCMessage, ServiceSignatureType, TunnelDisconnectEvent, TunnelMessage } from '../../proto/api'
 import type { Logger } from '../../types'
 import type { WitnessError } from '../../utils'
 
@@ -24,11 +24,11 @@ export type MakeWitnessClientOptions = {
  * in the received message.
  */
 export const REQUEST_RESPONSE_MATCHES = {
-	'createTunnelRequest': {
+	createTunnelRequest: {
 		data: CreateTunnelRequest,
 		response: {
 			type: 'createTunnelResponse',
-			data: CreateTunnelResponse
+			data: Empty
 		}
 	},
 	disconnectTunnelRequest: {
@@ -62,6 +62,7 @@ export type RPCResponseType<T extends RPCRequestType> = (
 )
 
 export type RPCRequest<T extends RPCRequestType> = {
+	requestId: ReclaimRPCMessage['id']
 	type: T
 	data: RPCRequestData<T>
 	respond(
@@ -81,7 +82,8 @@ export type RPCResponse<T extends RPCRequestType> = {
 export type RPCEventMap = {
 	'init-response': Empty
 	'connection-terminated': WitnessError
-	'tls-message': TLSMessage
+	'tunnel-message': TunnelMessage
+	'tunnel-disconnect-event': TunnelDisconnectEvent
 	'rpc-request': RPCRequest<RPCRequestType>
 	'rpc-response': RPCResponse<RPCRequestType>
 }
@@ -103,6 +105,10 @@ declare global {
 		 * by receiving an "init-response" message.
 		 */
 		initialised?: boolean
+		/**
+		 * Is the WebSocket connection open?
+		 */
+		isOpen: boolean
 		/**
 		 * Sends an RPC message to the server.
 		 * If the ID is not provided, it will be generated.
@@ -148,7 +154,7 @@ declare global {
 		 */
 		rpc<T extends RPCRequestType>(
 			type: T,
-			request: RPCRequestData<T>
+			request: Partial<RPCRequestData<T>>
 		): Promise<RPCResponseData<T>>
 		/**
 		 * Waits for the "init-response" event to be emitted,
@@ -157,3 +163,18 @@ declare global {
 		waitForInit(): Promise<void>
 	}
 }
+
+export type MakeTunnelBaseOpts<M, O> = O & {
+	logger?: Logger
+	onClose?(err?: Error): void
+	onMessage?(data: M): void
+}
+
+export type Tunnel<M> = {
+	write(data: M): void
+	close(err?: Error): void
+}
+
+export type MakeTunnelFn<M, O> = (opts: MakeTunnelBaseOpts<M, O>) => (
+	Tunnel<M> | Promise<Tunnel<M>>
+)

@@ -7,11 +7,11 @@
  * side to send and receive RPC messages.
  */
 import { strToUint8Array } from '@reclaimprotocol/tls'
+import EventEmitter from 'events'
 import { ReclaimRPCMessage } from '../../proto/api'
 import { WitnessError } from '../../utils'
 import { REQUEST_RESPONSE_MATCHES, RPCEvent, RPCRequestType, RPCResponseData } from '../types'
 import { generateRpcMessageId, makeRpcEvent } from './generics'
-import EventEmitter from 'events'
 
 if(typeof WebSocket !== 'undefined') {
 	// extend the WebSocket prototype
@@ -19,8 +19,14 @@ if(typeof WebSocket !== 'undefined') {
 }
 
 export async function extendWsPrototype(WS: typeof WebSocket) {
+	Object.defineProperty(WS.prototype, 'isOpen', {
+		get() {
+			return this.readyState === WebSocket.OPEN
+		}
+	})
+
 	WS.prototype.sendMessage = async function(msg) {
-		if(this.readyState !== WebSocket.OPEN) {
+		if(!this.isOpen) {
 			throw new Error('socket is not open')
 		}
 
@@ -42,7 +48,7 @@ export async function extendWsPrototype(WS: typeof WebSocket) {
 				? WitnessError.fromError(err)
 				: new WitnessError('WITNESS_ERROR_NO_ERROR', '')
 			this.dispatchRPCEvent('connection-terminated', witErr)
-			if(this.readyState === this.OPEN) {
+			if(this.isOpen) {
 				await this.sendMessage({
 					connectionTerminationAlert: witErr.toProto()
 				})
@@ -82,84 +88,6 @@ export async function extendWsPrototype(WS: typeof WebSocket) {
 				this.terminateConnection(err)
 			}
 		})
-
-		function messageHandler(this: WebSocket, data: unknown) {
-			// extract array buffer from WS data & decode proto
-			const buff = extractArrayBufferFromWsData(data)
-			const msg = ReclaimRPCMessage.decode(new Uint8Array(buff))
-			// handle connection termination alert
-			if(msg.connectionTerminationAlert?.code) {
-				const err = WitnessError.fromProto(
-					msg.connectionTerminationAlert
-				)
-				this.logger?.warn(
-					{ err },
-					'received connection termination alert'
-				)
-				this.dispatchRPCEvent('connection-terminated', err)
-				return
-			}
-
-			if(msg.initResponse) {
-				this.initialised = true
-				this.dispatchRPCEvent('init-response', {})
-				return
-			}
-
-			const rpcRequest = getRpcRequest(msg)
-			if(rpcRequest) {
-				if(
-					rpcRequest.direction === 'response'
-					&& rpcRequest.type === 'error'
-				) {
-					this.dispatchRPCEvent('rpc-response', {
-						id: msg.id,
-						error: WitnessError.fromProto(msg.requestError!)
-					})
-					return
-				}
-
-				const resType = REQUEST_RESPONSE_MATCHES[rpcRequest.type]
-					.response.type
-
-				if(rpcRequest.direction === 'response') {
-					this.dispatchRPCEvent('rpc-response', {
-						id: msg.id,
-						type: rpcRequest.type,
-						data: msg[resType]!
-					})
-					return
-				}
-
-				this.dispatchRPCEvent('rpc-request', {
-					type: rpcRequest.type,
-					data: msg[rpcRequest.type]!,
-					respond: (res) => {
-						if('code' in res) {
-							return this.sendMessage({
-								id: msg.id,
-								requestError: res.toProto()
-							})
-						}
-
-						return this
-							.sendMessage({ id: msg.id, [resType]: res })
-					},
-				})
-				return
-			}
-
-			if(msg.tlsMessage) {
-				this.dispatchRPCEvent('tls-message', msg.tlsMessage)
-				return
-			}
-
-			throw new WitnessError(
-				'WITNESS_ERROR_INTERNAL',
-				'unknown message type',
-				{ msg }
-			)
-		}
 	}
 
 	WS.prototype.dispatchRPCEvent = function(
@@ -211,7 +139,8 @@ export async function extendWsPrototype(WS: typeof WebSocket) {
 
 		await this.sendMessage({ id, [type]: request })
 
-		return await promise
+		const rslt = await promise
+		return rslt
 	}
 
 	WS.prototype.waitForInit = async function() {
@@ -219,7 +148,9 @@ export async function extendWsPrototype(WS: typeof WebSocket) {
 			return
 		}
 
-		if(this.readyState === WebSocket.CLOSED) {
+		// if neither open nor connecting, throw an error
+		// as we'll never receive the init response
+		if(!this.isOpen && this.readyState !== WebSocket.CONNECTING) {
 			throw new Error('socket is closed')
 		}
 
@@ -243,6 +174,101 @@ export async function extendWsPrototype(WS: typeof WebSocket) {
 			this.addEventListener('connection-terminated', rejectHandler)
 		})
 	}
+}
+
+function messageHandler(this: WebSocket, data: unknown) {
+	// extract array buffer from WS data & decode proto
+	const buff = extractArrayBufferFromWsData(data)
+	const msg = ReclaimRPCMessage.decode(new Uint8Array(buff))
+	// handle connection termination alert
+	if(msg.connectionTerminationAlert?.code) {
+		const err = WitnessError.fromProto(
+			msg.connectionTerminationAlert
+		)
+		this.logger?.warn(
+			{ err },
+			'received connection termination alert'
+		)
+		this.dispatchRPCEvent('connection-terminated', err)
+		return
+	}
+
+	if(msg.initResponse) {
+		this.initialised = true
+		this.dispatchRPCEvent('init-response', {})
+		return
+	}
+
+	const rpcRequest = getRpcRequest(msg)
+	if(rpcRequest) {
+		if(
+			rpcRequest.direction === 'response'
+			&& rpcRequest.type === 'error'
+		) {
+			this.dispatchRPCEvent('rpc-response', {
+				id: msg.id,
+				error: WitnessError.fromProto(msg.requestError!)
+			})
+			return
+		}
+
+		const resType = REQUEST_RESPONSE_MATCHES[rpcRequest.type]
+			.response.type
+
+		if(rpcRequest.direction === 'response') {
+			this.dispatchRPCEvent('rpc-response', {
+				id: msg.id,
+				type: rpcRequest.type,
+				data: msg[resType]!
+			})
+			return
+		}
+
+		this.dispatchRPCEvent('rpc-request', {
+			requestId: msg.id,
+			type: rpcRequest.type,
+			data: msg[rpcRequest.type]!,
+			respond: (res) => {
+				if(!this.isOpen) {
+					this.logger?.debug(
+						{ type: rpcRequest.type, res },
+						'connection closed before responding'
+					)
+					return
+				}
+
+				if('code' in res) {
+					return this.sendMessage({
+						id: msg.id,
+						requestError: res.toProto()
+					})
+				}
+
+				return this
+					.sendMessage({ id: msg.id, [resType]: res })
+			},
+		})
+		return
+	}
+
+	if(msg.tunnelMessage) {
+		this.dispatchRPCEvent('tunnel-message', msg.tunnelMessage)
+		return
+	}
+
+	if(msg.tunnelDisconnectEvent) {
+		this.dispatchRPCEvent(
+			'tunnel-disconnect-event',
+			msg.tunnelDisconnectEvent
+		)
+		return
+	}
+
+	throw new WitnessError(
+		'WITNESS_ERROR_INTERNAL',
+		'unknown message type',
+		{ msg }
+	)
 }
 
 function extractArrayBufferFromWsData(data: unknown): ArrayBuffer {
@@ -271,6 +297,10 @@ function getRpcRequest(msg: ReclaimRPCMessage) {
 	}
 
 	for(const key in msg) {
+		if(!msg[key]) {
+			continue
+		}
+
 		if(REQUEST_RESPONSE_MATCHES[key]) {
 			return {
 				direction: 'request' as const,

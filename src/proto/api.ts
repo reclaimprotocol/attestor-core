@@ -524,6 +524,12 @@ export interface WitnessErrorData {
 }
 
 export interface CreateTunnelRequest {
+  /**
+   * Assign a unique ID to the client for this tunnel
+   * request. This ID will be used to identify the tunnel
+   * to later send messages or disconnect the tunnel.
+   */
+  id: number;
   host: string;
   port: number;
   /**
@@ -540,26 +546,26 @@ export interface CreateTunnelRequest {
    * connection establishment. Prevents the need to have
    * another round trip to send the first packet.
    */
-  initialPacket: TLSPacket | undefined;
-}
-
-export interface CreateTunnelResponse {
-  /** opaque ID assigned to the client for this request */
-  id: string;
+  initialMessage: Uint8Array;
 }
 
 export interface DisconnectTunnelRequest {
-  id: string;
+  id: number;
 }
 
 /** empty message */
 export interface Empty {
 }
 
-export interface TLSMessage {
+export interface TunnelMessage {
   /** ID of the tunnel where this message belongs */
-  tunnelId: string;
-  packet: TLSPacket | undefined;
+  tunnelId: number;
+  message: Uint8Array;
+}
+
+export interface TunnelDisconnectEvent {
+  tunnelId: number;
+  error: WitnessErrorData | undefined;
 }
 
 export interface TLSTranscript {
@@ -569,10 +575,6 @@ export interface TLSTranscript {
    */
   request:
     | CreateTunnelRequest
-    | undefined;
-  /** response received from the server */
-  response:
-    | CreateTunnelResponse
     | undefined;
   /**
    * messages from the client & server
@@ -733,11 +735,25 @@ export interface ReclaimRPCMessage {
     | undefined;
   /** Request to connect to a server */
   createTunnelRequest?: CreateTunnelRequest | undefined;
-  createTunnelResponse?: CreateTunnelResponse | undefined;
-  diconnectTunnelRequest?: DisconnectTunnelRequest | undefined;
-  disconnectTunnelResponse?: Empty | undefined;
-  tlsMessage?:
-    | TLSMessage
+  createTunnelResponse?: Empty | undefined;
+  disconnectTunnelRequest?: DisconnectTunnelRequest | undefined;
+  disconnectTunnelResponse?:
+    | Empty
+    | undefined;
+  /**
+   * Message to send through a tunnel. Client can send
+   * this message to forward data to the server.
+   */
+  tunnelMessage?:
+    | TunnelMessage
+    | undefined;
+  /**
+   * Event indicating that a tunnel has been disconnected.
+   * The client should not send any more messages through
+   * this tunnel.
+   */
+  tunnelDisconnectEvent?:
+    | TunnelDisconnectEvent
     | undefined;
   /** Generate a claim from a particular connection */
   claimConnectionRequest?: ClaimConnectionRequest | undefined;
@@ -2998,22 +3014,25 @@ export const WitnessErrorData = {
 };
 
 function createBaseCreateTunnelRequest(): CreateTunnelRequest {
-  return { host: "", port: 0, geoLocation: "", initialPacket: undefined };
+  return { id: 0, host: "", port: 0, geoLocation: "", initialMessage: new Uint8Array(0) };
 }
 
 export const CreateTunnelRequest = {
   encode(message: CreateTunnelRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.id !== 0) {
+      writer.uint32(8).uint32(message.id);
+    }
     if (message.host !== "") {
-      writer.uint32(10).string(message.host);
+      writer.uint32(18).string(message.host);
     }
     if (message.port !== 0) {
-      writer.uint32(16).uint32(message.port);
+      writer.uint32(24).uint32(message.port);
     }
     if (message.geoLocation !== "") {
-      writer.uint32(26).string(message.geoLocation);
+      writer.uint32(34).string(message.geoLocation);
     }
-    if (message.initialPacket !== undefined) {
-      TLSPacket.encode(message.initialPacket, writer.uint32(34).fork()).ldelim();
+    if (message.initialMessage.length !== 0) {
+      writer.uint32(42).bytes(message.initialMessage);
     }
     return writer;
   },
@@ -3026,32 +3045,39 @@ export const CreateTunnelRequest = {
       const tag = reader.uint32();
       switch (tag >>> 3) {
         case 1:
-          if (tag !== 10) {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.id = reader.uint32();
+          continue;
+        case 2:
+          if (tag !== 18) {
             break;
           }
 
           message.host = reader.string();
           continue;
-        case 2:
-          if (tag !== 16) {
+        case 3:
+          if (tag !== 24) {
             break;
           }
 
           message.port = reader.uint32();
-          continue;
-        case 3:
-          if (tag !== 26) {
-            break;
-          }
-
-          message.geoLocation = reader.string();
           continue;
         case 4:
           if (tag !== 34) {
             break;
           }
 
-          message.initialPacket = TLSPacket.decode(reader, reader.uint32());
+          message.geoLocation = reader.string();
+          continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.initialMessage = reader.bytes();
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -3064,15 +3090,19 @@ export const CreateTunnelRequest = {
 
   fromJSON(object: any): CreateTunnelRequest {
     return {
+      id: isSet(object.id) ? globalThis.Number(object.id) : 0,
       host: isSet(object.host) ? globalThis.String(object.host) : "",
       port: isSet(object.port) ? globalThis.Number(object.port) : 0,
       geoLocation: isSet(object.geoLocation) ? globalThis.String(object.geoLocation) : "",
-      initialPacket: isSet(object.initialPacket) ? TLSPacket.fromJSON(object.initialPacket) : undefined,
+      initialMessage: isSet(object.initialMessage) ? bytesFromBase64(object.initialMessage) : new Uint8Array(0),
     };
   },
 
   toJSON(message: CreateTunnelRequest): unknown {
     const obj: any = {};
+    if (message.id !== 0) {
+      obj.id = Math.round(message.id);
+    }
     if (message.host !== "") {
       obj.host = message.host;
     }
@@ -3082,8 +3112,8 @@ export const CreateTunnelRequest = {
     if (message.geoLocation !== "") {
       obj.geoLocation = message.geoLocation;
     }
-    if (message.initialPacket !== undefined) {
-      obj.initialPacket = TLSPacket.toJSON(message.initialPacket);
+    if (message.initialMessage.length !== 0) {
+      obj.initialMessage = base64FromBytes(message.initialMessage);
     }
     return obj;
   },
@@ -3093,81 +3123,23 @@ export const CreateTunnelRequest = {
   },
   fromPartial(object: DeepPartial<CreateTunnelRequest>): CreateTunnelRequest {
     const message = createBaseCreateTunnelRequest();
+    message.id = object.id ?? 0;
     message.host = object.host ?? "";
     message.port = object.port ?? 0;
     message.geoLocation = object.geoLocation ?? "";
-    message.initialPacket = (object.initialPacket !== undefined && object.initialPacket !== null)
-      ? TLSPacket.fromPartial(object.initialPacket)
-      : undefined;
-    return message;
-  },
-};
-
-function createBaseCreateTunnelResponse(): CreateTunnelResponse {
-  return { id: "" };
-}
-
-export const CreateTunnelResponse = {
-  encode(message: CreateTunnelResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.id !== "") {
-      writer.uint32(10).string(message.id);
-    }
-    return writer;
-  },
-
-  decode(input: _m0.Reader | Uint8Array, length?: number): CreateTunnelResponse {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCreateTunnelResponse();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1:
-          if (tag !== 10) {
-            break;
-          }
-
-          message.id = reader.string();
-          continue;
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skipType(tag & 7);
-    }
-    return message;
-  },
-
-  fromJSON(object: any): CreateTunnelResponse {
-    return { id: isSet(object.id) ? globalThis.String(object.id) : "" };
-  },
-
-  toJSON(message: CreateTunnelResponse): unknown {
-    const obj: any = {};
-    if (message.id !== "") {
-      obj.id = message.id;
-    }
-    return obj;
-  },
-
-  create(base?: DeepPartial<CreateTunnelResponse>): CreateTunnelResponse {
-    return CreateTunnelResponse.fromPartial(base ?? {});
-  },
-  fromPartial(object: DeepPartial<CreateTunnelResponse>): CreateTunnelResponse {
-    const message = createBaseCreateTunnelResponse();
-    message.id = object.id ?? "";
+    message.initialMessage = object.initialMessage ?? new Uint8Array(0);
     return message;
   },
 };
 
 function createBaseDisconnectTunnelRequest(): DisconnectTunnelRequest {
-  return { id: "" };
+  return { id: 0 };
 }
 
 export const DisconnectTunnelRequest = {
   encode(message: DisconnectTunnelRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.id !== "") {
-      writer.uint32(10).string(message.id);
+    if (message.id !== 0) {
+      writer.uint32(8).uint32(message.id);
     }
     return writer;
   },
@@ -3180,11 +3152,11 @@ export const DisconnectTunnelRequest = {
       const tag = reader.uint32();
       switch (tag >>> 3) {
         case 1:
-          if (tag !== 10) {
+          if (tag !== 8) {
             break;
           }
 
-          message.id = reader.string();
+          message.id = reader.uint32();
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -3196,13 +3168,13 @@ export const DisconnectTunnelRequest = {
   },
 
   fromJSON(object: any): DisconnectTunnelRequest {
-    return { id: isSet(object.id) ? globalThis.String(object.id) : "" };
+    return { id: isSet(object.id) ? globalThis.Number(object.id) : 0 };
   },
 
   toJSON(message: DisconnectTunnelRequest): unknown {
     const obj: any = {};
-    if (message.id !== "") {
-      obj.id = message.id;
+    if (message.id !== 0) {
+      obj.id = Math.round(message.id);
     }
     return obj;
   },
@@ -3212,7 +3184,7 @@ export const DisconnectTunnelRequest = {
   },
   fromPartial(object: DeepPartial<DisconnectTunnelRequest>): DisconnectTunnelRequest {
     const message = createBaseDisconnectTunnelRequest();
-    message.id = object.id ?? "";
+    message.id = object.id ?? 0;
     return message;
   },
 };
@@ -3260,41 +3232,41 @@ export const Empty = {
   },
 };
 
-function createBaseTLSMessage(): TLSMessage {
-  return { tunnelId: "", packet: undefined };
+function createBaseTunnelMessage(): TunnelMessage {
+  return { tunnelId: 0, message: new Uint8Array(0) };
 }
 
-export const TLSMessage = {
-  encode(message: TLSMessage, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.tunnelId !== "") {
-      writer.uint32(10).string(message.tunnelId);
+export const TunnelMessage = {
+  encode(message: TunnelMessage, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.tunnelId !== 0) {
+      writer.uint32(8).uint32(message.tunnelId);
     }
-    if (message.packet !== undefined) {
-      TLSPacket.encode(message.packet, writer.uint32(18).fork()).ldelim();
+    if (message.message.length !== 0) {
+      writer.uint32(18).bytes(message.message);
     }
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): TLSMessage {
+  decode(input: _m0.Reader | Uint8Array, length?: number): TunnelMessage {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseTLSMessage();
+    const message = createBaseTunnelMessage();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
         case 1:
-          if (tag !== 10) {
+          if (tag !== 8) {
             break;
           }
 
-          message.tunnelId = reader.string();
+          message.tunnelId = reader.uint32();
           continue;
         case 2:
           if (tag !== 18) {
             break;
           }
 
-          message.packet = TLSPacket.decode(reader, reader.uint32());
+          message.message = reader.bytes();
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -3305,39 +3277,113 @@ export const TLSMessage = {
     return message;
   },
 
-  fromJSON(object: any): TLSMessage {
+  fromJSON(object: any): TunnelMessage {
     return {
-      tunnelId: isSet(object.tunnelId) ? globalThis.String(object.tunnelId) : "",
-      packet: isSet(object.packet) ? TLSPacket.fromJSON(object.packet) : undefined,
+      tunnelId: isSet(object.tunnelId) ? globalThis.Number(object.tunnelId) : 0,
+      message: isSet(object.message) ? bytesFromBase64(object.message) : new Uint8Array(0),
     };
   },
 
-  toJSON(message: TLSMessage): unknown {
+  toJSON(message: TunnelMessage): unknown {
     const obj: any = {};
-    if (message.tunnelId !== "") {
-      obj.tunnelId = message.tunnelId;
+    if (message.tunnelId !== 0) {
+      obj.tunnelId = Math.round(message.tunnelId);
     }
-    if (message.packet !== undefined) {
-      obj.packet = TLSPacket.toJSON(message.packet);
+    if (message.message.length !== 0) {
+      obj.message = base64FromBytes(message.message);
     }
     return obj;
   },
 
-  create(base?: DeepPartial<TLSMessage>): TLSMessage {
-    return TLSMessage.fromPartial(base ?? {});
+  create(base?: DeepPartial<TunnelMessage>): TunnelMessage {
+    return TunnelMessage.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<TLSMessage>): TLSMessage {
-    const message = createBaseTLSMessage();
-    message.tunnelId = object.tunnelId ?? "";
-    message.packet = (object.packet !== undefined && object.packet !== null)
-      ? TLSPacket.fromPartial(object.packet)
+  fromPartial(object: DeepPartial<TunnelMessage>): TunnelMessage {
+    const message = createBaseTunnelMessage();
+    message.tunnelId = object.tunnelId ?? 0;
+    message.message = object.message ?? new Uint8Array(0);
+    return message;
+  },
+};
+
+function createBaseTunnelDisconnectEvent(): TunnelDisconnectEvent {
+  return { tunnelId: 0, error: undefined };
+}
+
+export const TunnelDisconnectEvent = {
+  encode(message: TunnelDisconnectEvent, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.tunnelId !== 0) {
+      writer.uint32(8).uint32(message.tunnelId);
+    }
+    if (message.error !== undefined) {
+      WitnessErrorData.encode(message.error, writer.uint32(18).fork()).ldelim();
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): TunnelDisconnectEvent {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseTunnelDisconnectEvent();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.tunnelId = reader.uint32();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.error = WitnessErrorData.decode(reader, reader.uint32());
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): TunnelDisconnectEvent {
+    return {
+      tunnelId: isSet(object.tunnelId) ? globalThis.Number(object.tunnelId) : 0,
+      error: isSet(object.error) ? WitnessErrorData.fromJSON(object.error) : undefined,
+    };
+  },
+
+  toJSON(message: TunnelDisconnectEvent): unknown {
+    const obj: any = {};
+    if (message.tunnelId !== 0) {
+      obj.tunnelId = Math.round(message.tunnelId);
+    }
+    if (message.error !== undefined) {
+      obj.error = WitnessErrorData.toJSON(message.error);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<TunnelDisconnectEvent>): TunnelDisconnectEvent {
+    return TunnelDisconnectEvent.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<TunnelDisconnectEvent>): TunnelDisconnectEvent {
+    const message = createBaseTunnelDisconnectEvent();
+    message.tunnelId = object.tunnelId ?? 0;
+    message.error = (object.error !== undefined && object.error !== null)
+      ? WitnessErrorData.fromPartial(object.error)
       : undefined;
     return message;
   },
 };
 
 function createBaseTLSTranscript(): TLSTranscript {
-  return { request: undefined, response: undefined, messages: [] };
+  return { request: undefined, messages: [] };
 }
 
 export const TLSTranscript = {
@@ -3345,11 +3391,8 @@ export const TLSTranscript = {
     if (message.request !== undefined) {
       CreateTunnelRequest.encode(message.request, writer.uint32(10).fork()).ldelim();
     }
-    if (message.response !== undefined) {
-      CreateTunnelResponse.encode(message.response, writer.uint32(18).fork()).ldelim();
-    }
     for (const v of message.messages) {
-      TLSTranscript_TranscriptMessage.encode(v!, writer.uint32(26).fork()).ldelim();
+      TLSTranscript_TranscriptMessage.encode(v!, writer.uint32(18).fork()).ldelim();
     }
     return writer;
   },
@@ -3373,13 +3416,6 @@ export const TLSTranscript = {
             break;
           }
 
-          message.response = CreateTunnelResponse.decode(reader, reader.uint32());
-          continue;
-        case 3:
-          if (tag !== 26) {
-            break;
-          }
-
           message.messages.push(TLSTranscript_TranscriptMessage.decode(reader, reader.uint32()));
           continue;
       }
@@ -3394,7 +3430,6 @@ export const TLSTranscript = {
   fromJSON(object: any): TLSTranscript {
     return {
       request: isSet(object.request) ? CreateTunnelRequest.fromJSON(object.request) : undefined,
-      response: isSet(object.response) ? CreateTunnelResponse.fromJSON(object.response) : undefined,
       messages: globalThis.Array.isArray(object?.messages)
         ? object.messages.map((e: any) => TLSTranscript_TranscriptMessage.fromJSON(e))
         : [],
@@ -3405,9 +3440,6 @@ export const TLSTranscript = {
     const obj: any = {};
     if (message.request !== undefined) {
       obj.request = CreateTunnelRequest.toJSON(message.request);
-    }
-    if (message.response !== undefined) {
-      obj.response = CreateTunnelResponse.toJSON(message.response);
     }
     if (message.messages?.length) {
       obj.messages = message.messages.map((e) => TLSTranscript_TranscriptMessage.toJSON(e));
@@ -3422,9 +3454,6 @@ export const TLSTranscript = {
     const message = createBaseTLSTranscript();
     message.request = (object.request !== undefined && object.request !== null)
       ? CreateTunnelRequest.fromPartial(object.request)
-      : undefined;
-    message.response = (object.response !== undefined && object.response !== null)
-      ? CreateTunnelResponse.fromPartial(object.response)
       : undefined;
     message.messages = object.messages?.map((e) => TLSTranscript_TranscriptMessage.fromPartial(e)) || [];
     return message;
@@ -4451,9 +4480,10 @@ function createBaseReclaimRPCMessage(): ReclaimRPCMessage {
     requestError: undefined,
     createTunnelRequest: undefined,
     createTunnelResponse: undefined,
-    diconnectTunnelRequest: undefined,
+    disconnectTunnelRequest: undefined,
     disconnectTunnelResponse: undefined,
-    tlsMessage: undefined,
+    tunnelMessage: undefined,
+    tunnelDisconnectEvent: undefined,
     claimConnectionRequest: undefined,
     claimConnectionResponse: undefined,
   };
@@ -4477,22 +4507,25 @@ export const ReclaimRPCMessage = {
       CreateTunnelRequest.encode(message.createTunnelRequest, writer.uint32(42).fork()).ldelim();
     }
     if (message.createTunnelResponse !== undefined) {
-      CreateTunnelResponse.encode(message.createTunnelResponse, writer.uint32(50).fork()).ldelim();
+      Empty.encode(message.createTunnelResponse, writer.uint32(50).fork()).ldelim();
     }
-    if (message.diconnectTunnelRequest !== undefined) {
-      DisconnectTunnelRequest.encode(message.diconnectTunnelRequest, writer.uint32(58).fork()).ldelim();
+    if (message.disconnectTunnelRequest !== undefined) {
+      DisconnectTunnelRequest.encode(message.disconnectTunnelRequest, writer.uint32(58).fork()).ldelim();
     }
     if (message.disconnectTunnelResponse !== undefined) {
       Empty.encode(message.disconnectTunnelResponse, writer.uint32(66).fork()).ldelim();
     }
-    if (message.tlsMessage !== undefined) {
-      TLSMessage.encode(message.tlsMessage, writer.uint32(74).fork()).ldelim();
+    if (message.tunnelMessage !== undefined) {
+      TunnelMessage.encode(message.tunnelMessage, writer.uint32(74).fork()).ldelim();
+    }
+    if (message.tunnelDisconnectEvent !== undefined) {
+      TunnelDisconnectEvent.encode(message.tunnelDisconnectEvent, writer.uint32(82).fork()).ldelim();
     }
     if (message.claimConnectionRequest !== undefined) {
-      ClaimConnectionRequest.encode(message.claimConnectionRequest, writer.uint32(82).fork()).ldelim();
+      ClaimConnectionRequest.encode(message.claimConnectionRequest, writer.uint32(90).fork()).ldelim();
     }
     if (message.claimConnectionResponse !== undefined) {
-      ClaimConnectionResponse.encode(message.claimConnectionResponse, writer.uint32(90).fork()).ldelim();
+      ClaimConnectionResponse.encode(message.claimConnectionResponse, writer.uint32(98).fork()).ldelim();
     }
     return writer;
   },
@@ -4544,14 +4577,14 @@ export const ReclaimRPCMessage = {
             break;
           }
 
-          message.createTunnelResponse = CreateTunnelResponse.decode(reader, reader.uint32());
+          message.createTunnelResponse = Empty.decode(reader, reader.uint32());
           continue;
         case 7:
           if (tag !== 58) {
             break;
           }
 
-          message.diconnectTunnelRequest = DisconnectTunnelRequest.decode(reader, reader.uint32());
+          message.disconnectTunnelRequest = DisconnectTunnelRequest.decode(reader, reader.uint32());
           continue;
         case 8:
           if (tag !== 66) {
@@ -4565,17 +4598,24 @@ export const ReclaimRPCMessage = {
             break;
           }
 
-          message.tlsMessage = TLSMessage.decode(reader, reader.uint32());
+          message.tunnelMessage = TunnelMessage.decode(reader, reader.uint32());
           continue;
         case 10:
           if (tag !== 82) {
             break;
           }
 
-          message.claimConnectionRequest = ClaimConnectionRequest.decode(reader, reader.uint32());
+          message.tunnelDisconnectEvent = TunnelDisconnectEvent.decode(reader, reader.uint32());
           continue;
         case 11:
           if (tag !== 90) {
+            break;
+          }
+
+          message.claimConnectionRequest = ClaimConnectionRequest.decode(reader, reader.uint32());
+          continue;
+        case 12:
+          if (tag !== 98) {
             break;
           }
 
@@ -4602,15 +4642,18 @@ export const ReclaimRPCMessage = {
         ? CreateTunnelRequest.fromJSON(object.createTunnelRequest)
         : undefined,
       createTunnelResponse: isSet(object.createTunnelResponse)
-        ? CreateTunnelResponse.fromJSON(object.createTunnelResponse)
+        ? Empty.fromJSON(object.createTunnelResponse)
         : undefined,
-      diconnectTunnelRequest: isSet(object.diconnectTunnelRequest)
-        ? DisconnectTunnelRequest.fromJSON(object.diconnectTunnelRequest)
+      disconnectTunnelRequest: isSet(object.disconnectTunnelRequest)
+        ? DisconnectTunnelRequest.fromJSON(object.disconnectTunnelRequest)
         : undefined,
       disconnectTunnelResponse: isSet(object.disconnectTunnelResponse)
         ? Empty.fromJSON(object.disconnectTunnelResponse)
         : undefined,
-      tlsMessage: isSet(object.tlsMessage) ? TLSMessage.fromJSON(object.tlsMessage) : undefined,
+      tunnelMessage: isSet(object.tunnelMessage) ? TunnelMessage.fromJSON(object.tunnelMessage) : undefined,
+      tunnelDisconnectEvent: isSet(object.tunnelDisconnectEvent)
+        ? TunnelDisconnectEvent.fromJSON(object.tunnelDisconnectEvent)
+        : undefined,
       claimConnectionRequest: isSet(object.claimConnectionRequest)
         ? ClaimConnectionRequest.fromJSON(object.claimConnectionRequest)
         : undefined,
@@ -4638,16 +4681,19 @@ export const ReclaimRPCMessage = {
       obj.createTunnelRequest = CreateTunnelRequest.toJSON(message.createTunnelRequest);
     }
     if (message.createTunnelResponse !== undefined) {
-      obj.createTunnelResponse = CreateTunnelResponse.toJSON(message.createTunnelResponse);
+      obj.createTunnelResponse = Empty.toJSON(message.createTunnelResponse);
     }
-    if (message.diconnectTunnelRequest !== undefined) {
-      obj.diconnectTunnelRequest = DisconnectTunnelRequest.toJSON(message.diconnectTunnelRequest);
+    if (message.disconnectTunnelRequest !== undefined) {
+      obj.disconnectTunnelRequest = DisconnectTunnelRequest.toJSON(message.disconnectTunnelRequest);
     }
     if (message.disconnectTunnelResponse !== undefined) {
       obj.disconnectTunnelResponse = Empty.toJSON(message.disconnectTunnelResponse);
     }
-    if (message.tlsMessage !== undefined) {
-      obj.tlsMessage = TLSMessage.toJSON(message.tlsMessage);
+    if (message.tunnelMessage !== undefined) {
+      obj.tunnelMessage = TunnelMessage.toJSON(message.tunnelMessage);
+    }
+    if (message.tunnelDisconnectEvent !== undefined) {
+      obj.tunnelDisconnectEvent = TunnelDisconnectEvent.toJSON(message.tunnelDisconnectEvent);
     }
     if (message.claimConnectionRequest !== undefined) {
       obj.claimConnectionRequest = ClaimConnectionRequest.toJSON(message.claimConnectionRequest);
@@ -4678,19 +4724,23 @@ export const ReclaimRPCMessage = {
       ? CreateTunnelRequest.fromPartial(object.createTunnelRequest)
       : undefined;
     message.createTunnelResponse = (object.createTunnelResponse !== undefined && object.createTunnelResponse !== null)
-      ? CreateTunnelResponse.fromPartial(object.createTunnelResponse)
+      ? Empty.fromPartial(object.createTunnelResponse)
       : undefined;
-    message.diconnectTunnelRequest =
-      (object.diconnectTunnelRequest !== undefined && object.diconnectTunnelRequest !== null)
-        ? DisconnectTunnelRequest.fromPartial(object.diconnectTunnelRequest)
+    message.disconnectTunnelRequest =
+      (object.disconnectTunnelRequest !== undefined && object.disconnectTunnelRequest !== null)
+        ? DisconnectTunnelRequest.fromPartial(object.disconnectTunnelRequest)
         : undefined;
     message.disconnectTunnelResponse =
       (object.disconnectTunnelResponse !== undefined && object.disconnectTunnelResponse !== null)
         ? Empty.fromPartial(object.disconnectTunnelResponse)
         : undefined;
-    message.tlsMessage = (object.tlsMessage !== undefined && object.tlsMessage !== null)
-      ? TLSMessage.fromPartial(object.tlsMessage)
+    message.tunnelMessage = (object.tunnelMessage !== undefined && object.tunnelMessage !== null)
+      ? TunnelMessage.fromPartial(object.tunnelMessage)
       : undefined;
+    message.tunnelDisconnectEvent =
+      (object.tunnelDisconnectEvent !== undefined && object.tunnelDisconnectEvent !== null)
+        ? TunnelDisconnectEvent.fromPartial(object.tunnelDisconnectEvent)
+        : undefined;
     message.claimConnectionRequest =
       (object.claimConnectionRequest !== undefined && object.claimConnectionRequest !== null)
         ? ClaimConnectionRequest.fromPartial(object.claimConnectionRequest)

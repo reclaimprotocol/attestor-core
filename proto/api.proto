@@ -301,8 +301,14 @@ message WitnessErrorData {
 }
 
 message CreateTunnelRequest {
-	string host = 1;
-	uint32 port = 2;
+	/**
+	 * Assign a unique ID to the client for this tunnel
+	 * request. This ID will be used to identify the tunnel
+	 * to later send messages or disconnect the tunnel.
+	 */
+	uint32 id = 1;
+	string host = 2;
+	uint32 port = 3;
 	/**
 	 * Geo location from which the request will be made.
 	 * Provide 2 letter ISO country code. Leave empty
@@ -311,32 +317,32 @@ message CreateTunnelRequest {
 	 * Geo location is implemented using an https proxy
 	 * eg. US, IN, GB, etc.
 	 */
-	string geoLocation = 3;
+	string geoLocation = 4;
 	/**
 	 * Optionally provide the initial packet to send upon
 	 * connection establishment. Prevents the need to have
 	 * another round trip to send the first packet.
 	 */
-	TLSPacket initialPacket = 4;
-}
-
-message CreateTunnelResponse {
-	/** opaque ID assigned to the client for this request */
-	string id = 1;
+	bytes initialMessage = 5;
 }
 
 message DisconnectTunnelRequest {
-	string id = 1;
+	uint32 id = 1;
 }
 
 message Empty {
 	// empty message
 }
 
-message TLSMessage {
+message TunnelMessage {
 	/** ID of the tunnel where this message belongs */
-	string tunnelId = 1;
-	TLSPacket packet = 2;
+	uint32 tunnelId = 1;
+	bytes message = 2;
+}
+
+message TunnelDisconnectEvent {
+	uint32 tunnelId = 1;
+	WitnessErrorData error = 2;
 }
 
 message TLSTranscript {
@@ -345,13 +351,11 @@ message TLSTranscript {
 	 * & connect to the end server
 	 */
 	CreateTunnelRequest request = 1;
-	/** response received from the server */
-	CreateTunnelResponse response = 2;
 	/**
 	 * messages from the client & server
 	 * in the order they were sent/received
 	 */
-	repeated TranscriptMessage messages = 3;
+	repeated TranscriptMessage messages = 2;
 
 	message TranscriptMessage {
 		TranscriptMessageSenderType sender = 1;
@@ -500,15 +504,25 @@ message ReclaimRPCMessage {
 		WitnessErrorData requestError = 4;
 		/** Request to connect to a server */
 		CreateTunnelRequest createTunnelRequest = 5;
-		CreateTunnelResponse createTunnelResponse = 6;
-		DisconnectTunnelRequest diconnectTunnelRequest = 7;
+		Empty createTunnelResponse = 6;
+		DisconnectTunnelRequest disconnectTunnelRequest = 7;
 		Empty disconnectTunnelResponse = 8;
-		TLSMessage tlsMessage = 9;
+		/**
+		 * Message to send through a tunnel. Client can send
+		 * this message to forward data to the server.
+		 */
+		TunnelMessage tunnelMessage = 9;
+		/**
+		 * Event indicating that a tunnel has been disconnected.
+		 * The client should not send any more messages through
+		 * this tunnel.
+		 */
+		TunnelDisconnectEvent tunnelDisconnectEvent = 10;
 		/**
 		 * Generate a claim from a particular connection
 		 */
-		ClaimConnectionRequest claimConnectionRequest = 10;
-		ClaimConnectionResponse claimConnectionResponse = 11;
+		ClaimConnectionRequest claimConnectionRequest = 11;
+		ClaimConnectionResponse claimConnectionResponse = 12;
 	}
 }
 
