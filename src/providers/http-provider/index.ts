@@ -350,11 +350,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				const includes = res.includes(value)
 				if(includes === inv) {
 					logTranscript()
-
-					const trimmedStr =
-                            value.length > 100 ? value.slice(0, 100) + '...' : value
 					throw new Error(
-						`Invalid receipt. Response ${invert ? 'contains' : 'does not contain'} "${trimmedStr}"`
+						`Invalid receipt. Response ${invert ? 'contains' : 'does not contain'} "${value}"`
 					)
 				}
 
@@ -386,7 +383,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			const clientTranscript = uint8ArrayToStr(concatenateUint8Arrays(clientMsgs))
 			const serverTranscript = uint8ArrayToStr(concatenateUint8Arrays(serverMsgs))
 
-			logger.error({ request: clientTranscript, response:serverTranscript })
+			logger.error({ request: clientTranscript, response:serverTranscript, params:paramsAny })
 		}
 	},
 }
