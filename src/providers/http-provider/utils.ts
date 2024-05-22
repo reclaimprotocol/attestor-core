@@ -75,7 +75,7 @@ export function extractJSONValueIndex(json: string, jsonPath: string) {
 
 	const tree = parseScript('(' + json + ')', { range: true }) //wrap in parentheses for esprima to parse
 	if(tree.body[0] instanceof ExpressionStatement) {
-		if(tree.body[0].expression instanceof ObjectExpression) {
+		if(tree.body[0].expression instanceof ObjectExpression || tree.body[0].expression instanceof ArrayExpression) {
 			const index = traverse(tree.body[0].expression, '', pointers)
 			if(index) {
 				return {
