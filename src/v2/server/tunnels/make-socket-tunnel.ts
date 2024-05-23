@@ -1,12 +1,13 @@
-import { resolve } from 'dns'
+import { getServers, resolve, setServers } from 'dns'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import type { ConnectResponse } from 'https-proxy-agent/dist/parse-proxy-response'
 import { Socket } from 'net'
-import { CONNECTION_TIMEOUT_MS } from '../../config'
-import { CreateTunnelRequest } from '../../proto/api'
-import type { Logger } from '../../types'
-import { logger as LOGGER, WitnessError } from '../../utils'
-import type { MakeTunnelFn } from '../types'
+import { CONNECTION_TIMEOUT_MS, DNS_SERVERS } from '../../../config'
+import { CreateTunnelRequest } from '../../../proto/api'
+import type { Logger } from '../../../types'
+import { logger as LOGGER, WitnessError } from '../../../utils'
+import type { MakeTunnelFn } from '../../types'
+import { isValidCountryCode } from '../utils/iso'
 
 const HTTPS_PROXY_URL = process.env.HTTPS_PROXY_URL
 
@@ -83,7 +84,50 @@ export const makeTcpTunnel: MakeTunnelFn<Uint8Array, ExtraOpts> = async({
 	}
 }
 
-async function getSocket(
+setDnsServers()
+
+
+async function getSocket(opts: ExtraOpts, logger: Logger) {
+	try {
+		return await _getSocket(opts, logger)
+	} catch(err) {
+		// see if the proxy is blocking the connection
+		// due to their own arbitrary rules,
+		// if so -- we resolve hostname first &
+		// connect directly via address to
+		// avoid proxy knowing which host we're connecting to
+		if(
+			!(err instanceof WitnessError)
+			|| !err.message.includes('403')
+		) {
+			throw err
+		}
+
+		const addrs = await resolveHostnames(opts.host)
+		logger.info(
+			{ addrs, host: opts.host },
+			'failed to connect due to restricted IP, trying via raw addr'
+		)
+
+		for(const addr of addrs) {
+			try {
+				return await _getSocket(
+					{ ...opts, host: addr },
+					logger
+				)
+			} catch(err) {
+				logger.error(
+					{ addr, err },
+					'failed to connect to host'
+				)
+			}
+		}
+
+		throw err
+	}
+}
+
+async function _getSocket(
 	{
 		host,
 		port,
@@ -105,6 +149,13 @@ async function getSocket(
 		return socket
 	}
 
+	if(!isValidCountryCode(geoLocation)) {
+		throw WitnessError.badRequest(
+			`Geolocation "${geoLocation}" is invalid. Must be 2 letter ISO country code`,
+			{ geoLocation }
+		)
+	}
+
 	const agentUrl = HTTPS_PROXY_URL!.replace(
 		'{{geoLocation}}',
 		geoLocation?.toLowerCase() || ''
@@ -116,20 +167,12 @@ async function getSocket(
 		socket.once('proxyConnect', resolve)
 	})
 
-	// resolve hostname first to avoid proxy knowing
-	// which host we're connecting to
-	const addrs = await resolveHostnames(host)
-	logger.info(
-		{ addrs, host },
-		'resolved host for proxy connection'
-	)
-
 	const proxySocket = await agent.connect(
 		// ignore, because https-proxy-agent
 		// expects an http request object
 		// @ts-ignore
 		socket,
-		{ host: addrs[0], port, timeout: CONNECTION_TIMEOUT_MS }
+		{ host, port, timeout: CONNECTION_TIMEOUT_MS }
 	)
 
 	const res = await waitForProxyRes
@@ -171,4 +214,11 @@ async function resolveHostnames(hostname: string) {
 			}
 		})
 	})
+}
+
+function setDnsServers() {
+	setServers([
+		...DNS_SERVERS,
+		...getServers(),
+	])
 }

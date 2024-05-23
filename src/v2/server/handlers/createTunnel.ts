@@ -1,6 +1,6 @@
 import { WitnessError } from '../../../utils'
-import { makeTcpTunnel } from '../../tunnels/make-socket-tunnel'
 import { RPCHandler } from '../../types'
+import { makeTcpTunnel } from '../tunnels/make-socket-tunnel'
 import { getApm } from '../utils/apm'
 
 export const createTunnel: RPCHandler<'createTunnelRequest'> = async(
