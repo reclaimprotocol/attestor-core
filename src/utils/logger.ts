@@ -1,7 +1,7 @@
 import P from 'pino'
 import { Logger } from '../types'
 
-const localLogger = P()
+const localLogger = P({ redact:['secretParams[*]', 'ownerPrivateKey'] })
 export const logger = makeLogger('info')
 
 function makeLogger(level: string): Logger {
