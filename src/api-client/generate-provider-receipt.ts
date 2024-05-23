@@ -1,6 +1,6 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
 import { ClientError, Status } from 'nice-grpc-common'
-import { DEFAULT_PORT } from '../config'
+import { DEFAULT_HTTPS_PORT } from '../config'
 import { ProviderName, ProviderParams, providers, ProviderSecretParams } from '../providers'
 import { ProofGenerationStep } from '../types'
 import { getProviderValue, logger as MAIN_LOGGER, makeHttpResponseParser } from '../utils'
@@ -51,7 +51,7 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 	const resParser = makeHttpResponseParser()
 	const apiClient = makeAPITLSClient({
 		host,
-		port: port ? +port : DEFAULT_PORT,
+		port: port ? +port : DEFAULT_HTTPS_PORT,
 		geoLocation,
 		logger,
 		additionalConnectOpts,

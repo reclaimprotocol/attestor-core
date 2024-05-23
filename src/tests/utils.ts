@@ -7,3 +7,7 @@ export function delay(ms: number) {
 export function randomPrivateKey() {
 	return '0x' + randomBytes(32).toString('hex')
 }
+
+export function getRandomPort() {
+	return Math.floor(Math.random() * 5000 + 5000)
+}

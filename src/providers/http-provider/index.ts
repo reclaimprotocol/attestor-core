@@ -1,6 +1,6 @@
 import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
 import Ajv from 'ajv'
-import { DEFAULT_PORT, RECLAIM_USER_AGENT } from '../../config'
+import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { TranscriptMessageSenderType } from '../../proto/api'
 import { ArraySlice, Provider } from '../../types'
 import {
@@ -281,7 +281,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error(`Expected path: ${expectedPath}, found: ${req.url}`)
 		}
 
-		const expHostPort = `${hostname}:${port || DEFAULT_PORT}`
+		const expHostPort = `${hostname}:${port || DEFAULT_HTTPS_PORT}`
 		if(receipt.hostPort !== expHostPort) {
 			logTranscript()
 			throw new Error(

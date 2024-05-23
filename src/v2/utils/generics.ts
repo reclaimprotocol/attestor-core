@@ -7,6 +7,13 @@ export function generateRpcMessageId() {
 	).getUint32(0)
 }
 
+/**
+ * Random session ID for a WebSocket client.
+ */
+export function generateSessionId() {
+	return generateRpcMessageId()
+}
+
 export function makeRpcEvent<T extends RPCEventType>(
 	type: T,
 	data: RPCEventMap[T]

@@ -12,9 +12,14 @@ export const DEFAULT_BEACON_IDENTIFIER: BeaconIdentifier = {
 	id: RECLAIM_TRUSTED_WITNESS.id
 }
 
-export const DEFAULT_PORT = 443
+export const DEFAULT_HTTPS_PORT = 443
 
 export const DEFAULT_REMOTE_ZK_PARAMS = {
 	zkeyUrl: '/resources/{algorithm}/circuit_final.zkey',
 	circuitWasmUrl: '/resources/{algorithm}/circuit.wasm',
 }
+
+export const API_SERVER_PORT = 8001
+
+// 10s
+export const CONNECTION_TIMEOUT_MS = 10_000

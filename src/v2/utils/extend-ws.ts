@@ -181,7 +181,7 @@ function messageHandler(this: WebSocket, data: unknown) {
 	const buff = extractArrayBufferFromWsData(data)
 	const msg = ReclaimRPCMessage.decode(new Uint8Array(buff))
 	// handle connection termination alert
-	if(msg.connectionTerminationAlert?.code) {
+	if(msg.connectionTerminationAlert) {
 		const err = WitnessError.fromProto(
 			msg.connectionTerminationAlert
 		)

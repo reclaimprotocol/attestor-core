@@ -1,6 +1,7 @@
+import type { Transaction } from 'elastic-apm-node'
 import { ClaimConnectionRequest, CreateTunnelRequest, DisconnectTunnelRequest, Empty, InitRequest, ReclaimRPCMessage, ServiceSignatureType, TunnelDisconnectEvent, TunnelMessage } from '../../proto/api'
 import type { Logger } from '../../types'
-import type { WitnessError } from '../../utils'
+import type { WitnessError } from '../../utils/error'
 
 export type MakeWitnessClientOptions = {
 	/**
@@ -99,6 +100,12 @@ declare global {
 	interface WebSocket {
 		metadata: InitRequest
 
+		/**
+		 * Set of tunnels this client created. Only available
+		 * when WS is created by the server
+		 */
+		tunnels: { [id: TunnelMessage['tunnelId']]: Tunnel<Uint8Array> }
+
 		logger?: Logger
 		/**
 		 * Whether the WebSocket has been initialised
@@ -178,3 +185,14 @@ export type Tunnel<M> = {
 export type MakeTunnelFn<M, O> = (opts: MakeTunnelBaseOpts<M, O>) => (
 	Tunnel<M> | Promise<Tunnel<M>>
 )
+
+export type RPCHandlerMetadata = {
+	logger: Logger
+	tx?: Transaction
+	client: WebSocket
+}
+
+export type RPCHandler<R extends RPCRequestType> = (
+	data: RPCRequestData<R>,
+	ctx: RPCHandlerMetadata
+) => Promise<RPCResponseData<R>>

@@ -1,7 +1,7 @@
 import { makeTLSClient } from '@reclaimprotocol/tls'
 import { verifyCertificateChain } from '@reclaimprotocol/tls/lib/utils/parse-certificate'
 import { Socket } from 'net'
-import { DEFAULT_PORT } from '../config'
+import { DEFAULT_HTTPS_PORT } from '../config'
 import { logger } from '../utils'
 
 const hostPort = process.argv[2]
@@ -53,7 +53,7 @@ export async function main() {
 
 	logger.info(`connecting to ${hostPort}`)
 
-	socket.connect({ host, port: +(port || DEFAULT_PORT) })
+	socket.connect({ host, port: +(port || DEFAULT_HTTPS_PORT) })
 }
 
 main()
