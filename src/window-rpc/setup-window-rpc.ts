@@ -56,7 +56,7 @@ export function setupWindowRpc() {
 			}
 
 			logger.info(
-				{ req, origin: event.origin },
+				{ origin: event.origin },
 				'processing RPC request'
 			)
 
