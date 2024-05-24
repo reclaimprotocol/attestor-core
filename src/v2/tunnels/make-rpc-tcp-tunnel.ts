@@ -24,7 +24,7 @@ export const makeRpcTcpTunnel: MakeTunnelFn<Uint8Array, ExtraOpts> = async({
 
 	client.addEventListener('tunnel-message', onMessageListener)
 
-	await client.rpc('createTunnelRequest', request)
+	await client.rpc('createTunnel', request)
 	logger.trace('tunnel created')
 
 	return {
@@ -35,7 +35,7 @@ export const makeRpcTcpTunnel: MakeTunnelFn<Uint8Array, ExtraOpts> = async({
 		},
 		async close(err) {
 			client.removeEventListener('tls-message', onMessageListener)
-			await client.rpc('disconnectTunnelRequest', { id: tunnelId })
+			await client.rpc('disconnectTunnel', { id: tunnelId })
 			onClose?.(err)
 		}
 	}

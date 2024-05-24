@@ -1,8 +1,10 @@
-import { RPCHandler, RPCRequestType } from '../../types'
+import { RPCHandler, RPCType } from '../../types'
+import { claimTunnel } from './claimTunnel'
 import { createTunnel } from './createTunnel'
 import { disconnectTunnel } from './disconnectTunnel'
 
-export const HANDLERS: { [T in RPCRequestType]?: RPCHandler<T> } = {
-	createTunnelRequest: createTunnel,
-	disconnectTunnelRequest: disconnectTunnel
+export const HANDLERS: { [T in RPCType]: RPCHandler<T> } = {
+	createTunnel,
+	disconnectTunnel,
+	claimTunnel
 }

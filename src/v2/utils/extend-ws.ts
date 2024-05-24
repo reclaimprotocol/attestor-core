@@ -10,8 +10,8 @@ import { strToUint8Array } from '@reclaimprotocol/tls'
 import EventEmitter from 'events'
 import { ReclaimRPCMessage } from '../../proto/api'
 import { WitnessError } from '../../utils'
-import { REQUEST_RESPONSE_MATCHES, RPCEvent, RPCRequestType, RPCResponseData } from '../types'
-import { generateRpcMessageId, makeRpcEvent } from './generics'
+import { RPCEvent, RPCResponseData } from '../types'
+import { generateRpcMessageId, getRpcRequestType, getRpcResponseType, getRpcTypeFromKey, makeRpcEvent } from './generics'
 
 if(typeof WebSocket !== 'undefined') {
 	// extend the WebSocket prototype
@@ -143,7 +143,7 @@ export async function extendWsPrototype(WS: typeof WebSocket) {
 			this.addEventListener('rpc-response', handler)
 		})
 
-		await this.sendMessage({ id, [type]: request })
+		await this.sendMessage({ id, [getRpcRequestType(type)]: request })
 
 		const rslt = await promise
 		return rslt
@@ -218,9 +218,7 @@ function messageHandler(this: WebSocket, data: unknown) {
 			return
 		}
 
-		const resType = REQUEST_RESPONSE_MATCHES[rpcRequest.type]
-			.response.type
-
+		const resType = getRpcResponseType(rpcRequest.type)
 		if(rpcRequest.direction === 'response') {
 			this.dispatchRPCEvent('rpc-response', {
 				id: msg.id,
@@ -233,7 +231,7 @@ function messageHandler(this: WebSocket, data: unknown) {
 		this.dispatchRPCEvent('rpc-request', {
 			requestId: msg.id,
 			type: rpcRequest.type,
-			data: msg[rpcRequest.type]!,
+			data: msg[getRpcRequestType(rpcRequest.type)]!,
 			respond: (res) => {
 				if(!this.isOpen) {
 					this.logger?.debug(
@@ -307,20 +305,11 @@ function getRpcRequest(msg: ReclaimRPCMessage) {
 			continue
 		}
 
-		if(REQUEST_RESPONSE_MATCHES[key]) {
-			return {
-				direction: 'request' as const,
-				type: key as RPCRequestType
-			}
+		const rpcType = getRpcTypeFromKey(key)
+		if(!rpcType) {
+			continue
 		}
 
-		for(const [reqKey, value] of Object.entries(REQUEST_RESPONSE_MATCHES)) {
-			if(value.response.type === key) {
-				return {
-					direction: 'response' as const,
-					type: reqKey as RPCRequestType
-				}
-			}
-		}
+		return rpcType
 	}
 }

@@ -70,3 +70,42 @@ Let's look at an example flow:
 3. Upon receiving the `initResponse` message, the client can start sending RPC messages to the server. For eg. they could create a tunnel via `createTunnelRequest`
 
 Utility functions to help the WebSocket client & server encode & decode these messages are provided in `src/v2/utils/extend-ws.ts`.
+
+## Adding a new RPC
+
+1. add the request & response messages to `proto/api.proto` & then add them to the `ReclaimRPCMessage` message. For eg.
+   ```protobuf
+   message AbcdRequest {
+	   ...
+   }
+   message AbcdResponse {
+	   ...
+   }
+
+   message ReclaimRPCMessage {
+	   ...
+	   oneof message {
+		   ...
+		   AbcdRequest abcdRequest = 13;
+		   AbcdResponse abcdResponse = 14;
+	   }
+   }
+   ```
+
+   Note: if the RPC is `abcd`:
+	- The request message should be named `AbcdRequest` (pascal case)
+	- The response message should be named `AbcdResponse` (pascal case)
+	- The oneof field should be named `abcdRequest` & `abcdResponse` (camel case)
+2. Implement the handler for this RPC in the `src/v2/server/handlers` folder. Name the file `abcd.ts` and export the handler as `abcd`. (Of course, abcd should be replaced with the actual name of the RPC)
+	``` ts
+	export const abcd: RPCHandler<'abcdRequest'> = async(
+		{ },
+		// context to help with logging & other things
+		{ client, logger }
+	) => {
+		// throw errors here too if required, they'll be correctly
+		// serialized & sent back to the client
+		return {}
+	}
+	```
+3. Add handler to the `HANDLERS` object in `src/v2/server/handlers/index.ts`

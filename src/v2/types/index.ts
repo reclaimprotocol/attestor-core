@@ -1,5 +1,5 @@
 import type { Transaction } from 'elastic-apm-node'
-import { ClaimTunnelRequest, CreateTunnelRequest, DisconnectTunnelRequest, Empty, InitRequest, ReclaimRPCMessage, ServiceSignatureType, TunnelDisconnectEvent, TunnelMessage } from '../../proto/api'
+import { Empty, InitRequest, ReclaimRPCMessage, ServiceSignatureType, TunnelDisconnectEvent, TunnelMessage } from '../../proto/api'
 import type { Logger } from '../../types'
 import type { WitnessError } from '../../utils/error'
 
@@ -17,61 +17,27 @@ export type MakeWitnessClientOptions = {
 	logger?: Logger
 }
 
+// simple typescript type to extract all fields that end with the givens suffix
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+type ExtractPrefix<T, S extends string> = T extends `${infer _}${S}` ? _ : never
 
-/**
- * Match all request types to their corresponding response types,
- * this is a statically typed object -- so we can use this in the JS
- * to find the corresponding response object for a given request object
- * in the received message.
- */
-export const REQUEST_RESPONSE_MATCHES = {
-	createTunnelRequest: {
-		data: CreateTunnelRequest,
-		response: {
-			type: 'createTunnelResponse',
-			data: Empty
-		}
-	},
-	disconnectTunnelRequest: {
-		data: DisconnectTunnelRequest,
-		response: {
-			type: 'disconnectTunnelResponse',
-			data: Empty
-		}
-	},
-	claimTunnelRequest: {
-		data: ClaimTunnelRequest,
-		response: {
-			type: 'claimTunnelResponse',
-			data: ClaimTunnelRequest
-		}
-	}
-} as const
+export type RPCType = ExtractPrefix<keyof ReclaimRPCMessage, 'Request'>
 
-export type RPCRequestType = keyof typeof REQUEST_RESPONSE_MATCHES
+// extract all request & response types from the ReclaimRPCMessage type
+type RPCRequestType<T extends RPCType> = `${T}Request`
+type RPCResponseType<T extends RPCType> = `${T}Response`
+// data types for the request & response types
+export type RPCRequestData<T extends RPCType> = Exclude<ReclaimRPCMessage[RPCRequestType<T>], undefined>
+export type RPCResponseData<T extends RPCType> = Exclude<ReclaimRPCMessage[RPCResponseType<T>], undefined>
 
-export type RPCRequestData<T extends RPCRequestType> = (
-	ReturnType<(typeof REQUEST_RESPONSE_MATCHES)[T]['data']['create']>
-)
-
-export type RPCResponseData<T extends RPCRequestType> = (
-	ReturnType<(typeof REQUEST_RESPONSE_MATCHES)[T]['response']['data']['create']>
-)
-
-export type RPCResponseType<T extends RPCRequestType> = (
-	(typeof REQUEST_RESPONSE_MATCHES)[T]['response']['type']
-)
-
-export type RPCRequest<T extends RPCRequestType> = {
+export type RPCRequest<T extends RPCType> = {
 	requestId: ReclaimRPCMessage['id']
 	type: T
 	data: RPCRequestData<T>
-	respond(
-		res: RPCResponseData<T> | WitnessError
-	): void
+	respond(res: RPCResponseData<T> | WitnessError): void
 }
 
-export type RPCResponse<T extends RPCRequestType> = {
+export type RPCResponse<T extends RPCType> = {
 	id: ReclaimRPCMessage['id']
 	type: T
 	data: RPCResponseData<T>
@@ -85,8 +51,8 @@ export type RPCEventMap = {
 	'connection-terminated': WitnessError
 	'tunnel-message': TunnelMessage
 	'tunnel-disconnect-event': TunnelDisconnectEvent
-	'rpc-request': RPCRequest<RPCRequestType>
-	'rpc-response': RPCResponse<RPCRequestType>
+	'rpc-request': RPCRequest<RPCType>
+	'rpc-response': RPCResponse<RPCType>
 }
 
 export type RPCEventType = keyof RPCEventMap
@@ -159,7 +125,7 @@ declare global {
 		/**
 		 * Make an RPC request to the other end of the WebSocket.
 		 */
-		rpc<T extends RPCRequestType>(
+		rpc<T extends RPCType>(
 			type: T,
 			request: Partial<RPCRequestData<T>>
 		): Promise<RPCResponseData<T>>
@@ -192,7 +158,7 @@ export type RPCHandlerMetadata = {
 	client: WebSocket
 }
 
-export type RPCHandler<R extends RPCRequestType> = (
+export type RPCHandler<R extends RPCType> = (
 	data: RPCRequestData<R>,
 	ctx: RPCHandlerMetadata
 ) => Promise<RPCResponseData<R>>

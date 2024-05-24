@@ -3,7 +3,7 @@ import { RPCHandler } from '../../types'
 import { makeTcpTunnel } from '../tunnels/make-socket-tunnel'
 import { getApm } from '../utils/apm'
 
-export const createTunnel: RPCHandler<'createTunnelRequest'> = async(
+export const createTunnel: RPCHandler<'createTunnel'> = async(
 	{ id, initialMessage, ...opts },
 	{ tx, logger, client }
 ) => {

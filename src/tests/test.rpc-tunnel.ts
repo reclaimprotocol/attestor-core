@@ -65,7 +65,7 @@ describe('RPC Tunnel', () => {
 
 			let createReq: CreateTunnelRequest | undefined
 			ws?.addEventListener('rpc-request', ({ data }) => {
-				if(data.type !== 'createTunnelRequest') {
+				if(data.type !== 'createTunnel') {
 					return
 				}
 

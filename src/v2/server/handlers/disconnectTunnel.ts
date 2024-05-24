@@ -1,7 +1,7 @@
 import { WitnessError } from '../../../utils'
 import { RPCHandler } from '../../types'
 
-export const disconnectTunnel: RPCHandler<'disconnectTunnelRequest'> = async(
+export const disconnectTunnel: RPCHandler<'disconnectTunnel'> = async(
 	{ id },
 	{ client }
 ) => {

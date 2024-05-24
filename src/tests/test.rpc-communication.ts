@@ -107,7 +107,7 @@ describe('RPC Communication', () => {
 
 			await expect(
 				client.rpc(
-					'createTunnelRequest',
+					'createTunnel',
 					{
 						host: 'localhost',
 						port: 1234,
