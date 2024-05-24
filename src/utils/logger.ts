@@ -46,7 +46,7 @@ function getReplacer() {
 const properties = ['ownerPrivateKey', 'secretParams']
 const redactedText = '[REDACTED]'
 
-function redact(json) {
+export function redact(json) {
 	const isObject = isObjectProperty(json)
 
 	if(!isObject && !Array.isArray(json)) {

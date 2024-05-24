@@ -1,6 +1,6 @@
 import { createClaim } from '../api-client'
 import { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
-import { logger, setLogLevel, ZKOperators } from '../utils'
+import { logger, redact, setLogLevel, ZKOperators } from '../utils'
 import { CommunicationBridge, RPCCreateClaimOptions, RPCErrorResponse, RPCResponse, RPCWitnessClient, WindowRPCIncomingMsg, WindowRPCOutgoingMsg } from './types'
 import { getCurrentMemoryUsage } from './utils'
 import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator } from './window-rpc-zk'
@@ -21,6 +21,7 @@ export function setupWindowRpc() {
 	const windowMsgs = new EventTarget()
 
 	logger.info('window RPC setup')
+	logger.info(JSON.stringify(logger))
 
 	async function handleMessage(event: MessageEvent<any>) {
 		let id = ''
@@ -49,14 +50,14 @@ export function setupWindowRpc() {
 
 			if(!req.id) {
 				logger.warn(
-					{ req },
+					{ req:redact(req) },
 					'Window RPC request missing ID'
 				)
 				return
 			}
 
 			logger.info(
-				{ req, origin: event.origin },
+				{ req:redact(req), origin: event.origin },
 				'processing RPC request'
 			)
 
@@ -110,7 +111,7 @@ export function setupWindowRpc() {
 			}
 		} catch(err) {
 			logger.error(
-				{ err, data: event.data },
+				{ err, data: redact(event.data) },
 				'error in RPC'
 			)
 			respond({
