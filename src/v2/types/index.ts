@@ -1,5 +1,5 @@
 import type { Transaction } from 'elastic-apm-node'
-import { ClaimConnectionRequest, CreateTunnelRequest, DisconnectTunnelRequest, Empty, InitRequest, ReclaimRPCMessage, ServiceSignatureType, TunnelDisconnectEvent, TunnelMessage } from '../../proto/api'
+import { ClaimTunnelRequest, CreateTunnelRequest, DisconnectTunnelRequest, Empty, InitRequest, ReclaimRPCMessage, ServiceSignatureType, TunnelDisconnectEvent, TunnelMessage } from '../../proto/api'
 import type { Logger } from '../../types'
 import type { WitnessError } from '../../utils/error'
 
@@ -39,11 +39,11 @@ export const REQUEST_RESPONSE_MATCHES = {
 			data: Empty
 		}
 	},
-	claimConnectionRequest: {
-		data: ClaimConnectionRequest,
+	claimTunnelRequest: {
+		data: ClaimTunnelRequest,
 		response: {
-			type: 'claimConnectionResponse',
-			data: ClaimConnectionRequest
+			type: 'claimTunnelResponse',
+			data: ClaimTunnelRequest
 		}
 	}
 } as const

@@ -18,6 +18,12 @@ if(typeof WebSocket !== 'undefined') {
 	extendWsPrototype(WebSocket)
 }
 
+/**
+ * Extends the WebSocket class with additional functions to aid
+ * with the Reclaim RPC communication.
+ *
+ * @param WS - WebSocket class to extend
+ */
 export async function extendWsPrototype(WS: typeof WebSocket) {
 	Object.defineProperty(WS.prototype, 'isOpen', {
 		get() {

@@ -1,6 +1,12 @@
-# Reclaim Witness SDK
+# Reclaim Witness
 
-SDK for creating claims & verifying them using a Reclaim Witness server.
+Prove arbritrary claims about the internet with the Reclaim protocol.
+
+TLDR: The witness is a server that sits between the reclaim user & the internet. The client sends data to the internet via the witness. All this data is exchanged securely via the TLS protocol.
+We leverage some special properties of the TLS protocol along with zero-knowledge proofs to reveal only the necessary information to the witness.
+The witness then signs this data & sends it back to the client. The client can then use this signed data to prove the claim to anyone.
+
+This repository contains the witness server & the SDK to interact with it.
 
 ## Install
 
@@ -12,6 +18,10 @@ To run the SDK on React Native/Mobile, keep reading.
 `npm install git+https://github.com/reclaimprotocol/witness-sdk`
 
 **Note:** this approach is only advised for NodeJS projects or projects meant to run directly in a modern browser. For React Native or any solution running in a mobile app, keep reading.
+
+### Running your own witness
+
+1. Ensure you have an env file with at least the `PRIVATE_KEY` set.
 
 ## Usage
 

@@ -9,9 +9,10 @@ export const createTunnel: RPCHandler<'createTunnelRequest'> = async(
 ) => {
 	const apm = getApm()
 	const sessionTx = apm.startTransaction(
-		'tcp-tunnel-connect',
+		'tunnel',
 		{ childOf: tx }
 	) || undefined
+	sessionTx.addLabels({ tunnelId: id, ...opts })
 
 	if(client.tunnels[id]) {
 		throw WitnessError.badRequest(`Tunnel "${id}" already exists`)
@@ -38,8 +39,9 @@ export const createTunnel: RPCHandler<'createTunnelRequest'> = async(
 				if(err) {
 					apm.captureError(err, { parent: sessionTx })
 					tx?.setOutcome('failure')
-					tx?.end()
 				}
+
+				tx?.end()
 
 				client.sendMessage({
 					tunnelDisconnectEvent: {

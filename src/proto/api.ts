@@ -588,7 +588,7 @@ export interface TLSTranscript_TranscriptMessage {
   packet: TLSPacket | undefined;
 }
 
-export interface ClaimConnectionRequest {
+export interface ClaimTunnelRequest {
   /**
    * ID of the tunnel whose transcript
    * contains the claim
@@ -603,7 +603,7 @@ export interface ClaimConnectionRequest {
 
 export interface ClaimConnectionRequest_Signatures {
   /**
-   * signature of ClaimConnectionRequest
+   * signature of ClaimTunnelRequest
    * with empty "signatures" field
    */
   requestSignature: Uint8Array;
@@ -674,8 +674,8 @@ export interface ClaimConnectionRequest_BeaconBasedProviderClaimRequest {
   info: ProviderClaimInfo | undefined;
 }
 
-export interface ClaimConnectionResponse {
-  claimRequest: ClaimConnectionRequest | undefined;
+export interface ClaimTunnelResponse {
+  claimRequest: ClaimTunnelRequest | undefined;
   claim?: ProviderClaimData | undefined;
   error?: WitnessErrorData | undefined;
   signatures: ClaimConnectionResponse_Signatures | undefined;
@@ -688,7 +688,7 @@ export interface ClaimConnectionResponse_Signatures {
    */
   claimSignature: Uint8Array;
   /**
-   * signature of the complete ClaimConnectionResponse
+   * signature of the complete ClaimTunnelResponse
    * structure with empty "signatures" field
    */
   resultSignature: Uint8Array;
@@ -756,8 +756,8 @@ export interface ReclaimRPCMessage {
     | TunnelDisconnectEvent
     | undefined;
   /** Generate a claim from a particular connection */
-  claimConnectionRequest?: ClaimConnectionRequest | undefined;
-  claimConnectionResponse?: ClaimConnectionResponse | undefined;
+  claimTunnelRequest?: ClaimTunnelRequest | undefined;
+  claimTunnelResponse?: ClaimTunnelResponse | undefined;
 }
 
 function createBaseTLSPacket(): TLSPacket {
@@ -3536,12 +3536,12 @@ export const TLSTranscript_TranscriptMessage = {
   },
 };
 
-function createBaseClaimConnectionRequest(): ClaimConnectionRequest {
+function createBaseClaimConnectionRequest(): ClaimTunnelRequest {
   return { tunnelId: "", claim: undefined, transcript: undefined, proofs: [], signatures: undefined };
 }
 
-export const ClaimConnectionRequest = {
-  encode(message: ClaimConnectionRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+export const ClaimTunnelRequest = {
+  encode(message: ClaimTunnelRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.tunnelId !== "") {
       writer.uint32(10).string(message.tunnelId);
     }
@@ -3560,7 +3560,7 @@ export const ClaimConnectionRequest = {
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimConnectionRequest {
+  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimTunnelRequest {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
     const message = createBaseClaimConnectionRequest();
@@ -3611,7 +3611,7 @@ export const ClaimConnectionRequest = {
     return message;
   },
 
-  fromJSON(object: any): ClaimConnectionRequest {
+  fromJSON(object: any): ClaimTunnelRequest {
     return {
       tunnelId: isSet(object.tunnelId) ? globalThis.String(object.tunnelId) : "",
       claim: isSet(object.claim)
@@ -3625,7 +3625,7 @@ export const ClaimConnectionRequest = {
     };
   },
 
-  toJSON(message: ClaimConnectionRequest): unknown {
+  toJSON(message: ClaimTunnelRequest): unknown {
     const obj: any = {};
     if (message.tunnelId !== "") {
       obj.tunnelId = message.tunnelId;
@@ -3645,10 +3645,10 @@ export const ClaimConnectionRequest = {
     return obj;
   },
 
-  create(base?: DeepPartial<ClaimConnectionRequest>): ClaimConnectionRequest {
-    return ClaimConnectionRequest.fromPartial(base ?? {});
+  create(base?: DeepPartial<ClaimTunnelRequest>): ClaimTunnelRequest {
+    return ClaimTunnelRequest.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<ClaimConnectionRequest>): ClaimConnectionRequest {
+  fromPartial(object: DeepPartial<ClaimTunnelRequest>): ClaimTunnelRequest {
     const message = createBaseClaimConnectionRequest();
     message.tunnelId = object.tunnelId ?? "";
     message.claim = (object.claim !== undefined && object.claim !== null)
@@ -4197,14 +4197,14 @@ export const ClaimConnectionRequest_BeaconBasedProviderClaimRequest = {
   },
 };
 
-function createBaseClaimConnectionResponse(): ClaimConnectionResponse {
+function createBaseClaimConnectionResponse(): ClaimTunnelResponse {
   return { claimRequest: undefined, claim: undefined, error: undefined, signatures: undefined };
 }
 
-export const ClaimConnectionResponse = {
-  encode(message: ClaimConnectionResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+export const ClaimTunnelResponse = {
+  encode(message: ClaimTunnelResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.claimRequest !== undefined) {
-      ClaimConnectionRequest.encode(message.claimRequest, writer.uint32(10).fork()).ldelim();
+      ClaimTunnelRequest.encode(message.claimRequest, writer.uint32(10).fork()).ldelim();
     }
     if (message.claim !== undefined) {
       ProviderClaimData.encode(message.claim, writer.uint32(18).fork()).ldelim();
@@ -4218,7 +4218,7 @@ export const ClaimConnectionResponse = {
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimConnectionResponse {
+  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimTunnelResponse {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
     const message = createBaseClaimConnectionResponse();
@@ -4230,7 +4230,7 @@ export const ClaimConnectionResponse = {
             break;
           }
 
-          message.claimRequest = ClaimConnectionRequest.decode(reader, reader.uint32());
+          message.claimRequest = ClaimTunnelRequest.decode(reader, reader.uint32());
           continue;
         case 2:
           if (tag !== 18) {
@@ -4262,19 +4262,19 @@ export const ClaimConnectionResponse = {
     return message;
   },
 
-  fromJSON(object: any): ClaimConnectionResponse {
+  fromJSON(object: any): ClaimTunnelResponse {
     return {
-      claimRequest: isSet(object.claimRequest) ? ClaimConnectionRequest.fromJSON(object.claimRequest) : undefined,
+      claimRequest: isSet(object.claimRequest) ? ClaimTunnelRequest.fromJSON(object.claimRequest) : undefined,
       claim: isSet(object.claim) ? ProviderClaimData.fromJSON(object.claim) : undefined,
       error: isSet(object.error) ? WitnessErrorData.fromJSON(object.error) : undefined,
       signatures: isSet(object.signatures) ? ClaimConnectionResponse_Signatures.fromJSON(object.signatures) : undefined,
     };
   },
 
-  toJSON(message: ClaimConnectionResponse): unknown {
+  toJSON(message: ClaimTunnelResponse): unknown {
     const obj: any = {};
     if (message.claimRequest !== undefined) {
-      obj.claimRequest = ClaimConnectionRequest.toJSON(message.claimRequest);
+      obj.claimRequest = ClaimTunnelRequest.toJSON(message.claimRequest);
     }
     if (message.claim !== undefined) {
       obj.claim = ProviderClaimData.toJSON(message.claim);
@@ -4288,13 +4288,13 @@ export const ClaimConnectionResponse = {
     return obj;
   },
 
-  create(base?: DeepPartial<ClaimConnectionResponse>): ClaimConnectionResponse {
-    return ClaimConnectionResponse.fromPartial(base ?? {});
+  create(base?: DeepPartial<ClaimTunnelResponse>): ClaimTunnelResponse {
+    return ClaimTunnelResponse.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<ClaimConnectionResponse>): ClaimConnectionResponse {
+  fromPartial(object: DeepPartial<ClaimTunnelResponse>): ClaimTunnelResponse {
     const message = createBaseClaimConnectionResponse();
     message.claimRequest = (object.claimRequest !== undefined && object.claimRequest !== null)
-      ? ClaimConnectionRequest.fromPartial(object.claimRequest)
+      ? ClaimTunnelRequest.fromPartial(object.claimRequest)
       : undefined;
     message.claim = (object.claim !== undefined && object.claim !== null)
       ? ProviderClaimData.fromPartial(object.claim)
@@ -4484,8 +4484,8 @@ function createBaseReclaimRPCMessage(): ReclaimRPCMessage {
     disconnectTunnelResponse: undefined,
     tunnelMessage: undefined,
     tunnelDisconnectEvent: undefined,
-    claimConnectionRequest: undefined,
-    claimConnectionResponse: undefined,
+    claimTunnelRequest: undefined,
+    claimTunnelResponse: undefined,
   };
 }
 
@@ -4521,11 +4521,11 @@ export const ReclaimRPCMessage = {
     if (message.tunnelDisconnectEvent !== undefined) {
       TunnelDisconnectEvent.encode(message.tunnelDisconnectEvent, writer.uint32(82).fork()).ldelim();
     }
-    if (message.claimConnectionRequest !== undefined) {
-      ClaimConnectionRequest.encode(message.claimConnectionRequest, writer.uint32(90).fork()).ldelim();
+    if (message.claimTunnelRequest !== undefined) {
+      ClaimTunnelRequest.encode(message.claimTunnelRequest, writer.uint32(90).fork()).ldelim();
     }
-    if (message.claimConnectionResponse !== undefined) {
-      ClaimConnectionResponse.encode(message.claimConnectionResponse, writer.uint32(98).fork()).ldelim();
+    if (message.claimTunnelResponse !== undefined) {
+      ClaimTunnelResponse.encode(message.claimTunnelResponse, writer.uint32(98).fork()).ldelim();
     }
     return writer;
   },
@@ -4612,14 +4612,14 @@ export const ReclaimRPCMessage = {
             break;
           }
 
-          message.claimConnectionRequest = ClaimConnectionRequest.decode(reader, reader.uint32());
+          message.claimTunnelRequest = ClaimTunnelRequest.decode(reader, reader.uint32());
           continue;
         case 12:
           if (tag !== 98) {
             break;
           }
 
-          message.claimConnectionResponse = ClaimConnectionResponse.decode(reader, reader.uint32());
+          message.claimTunnelResponse = ClaimTunnelResponse.decode(reader, reader.uint32());
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -4654,11 +4654,11 @@ export const ReclaimRPCMessage = {
       tunnelDisconnectEvent: isSet(object.tunnelDisconnectEvent)
         ? TunnelDisconnectEvent.fromJSON(object.tunnelDisconnectEvent)
         : undefined,
-      claimConnectionRequest: isSet(object.claimConnectionRequest)
-        ? ClaimConnectionRequest.fromJSON(object.claimConnectionRequest)
+      claimTunnelRequest: isSet(object.claimTunnelRequest)
+        ? ClaimTunnelRequest.fromJSON(object.claimTunnelRequest)
         : undefined,
-      claimConnectionResponse: isSet(object.claimConnectionResponse)
-        ? ClaimConnectionResponse.fromJSON(object.claimConnectionResponse)
+      claimTunnelResponse: isSet(object.claimTunnelResponse)
+        ? ClaimTunnelResponse.fromJSON(object.claimTunnelResponse)
         : undefined,
     };
   },
@@ -4695,11 +4695,11 @@ export const ReclaimRPCMessage = {
     if (message.tunnelDisconnectEvent !== undefined) {
       obj.tunnelDisconnectEvent = TunnelDisconnectEvent.toJSON(message.tunnelDisconnectEvent);
     }
-    if (message.claimConnectionRequest !== undefined) {
-      obj.claimConnectionRequest = ClaimConnectionRequest.toJSON(message.claimConnectionRequest);
+    if (message.claimTunnelRequest !== undefined) {
+      obj.claimTunnelRequest = ClaimTunnelRequest.toJSON(message.claimTunnelRequest);
     }
-    if (message.claimConnectionResponse !== undefined) {
-      obj.claimConnectionResponse = ClaimConnectionResponse.toJSON(message.claimConnectionResponse);
+    if (message.claimTunnelResponse !== undefined) {
+      obj.claimTunnelResponse = ClaimTunnelResponse.toJSON(message.claimTunnelResponse);
     }
     return obj;
   },
@@ -4741,13 +4741,13 @@ export const ReclaimRPCMessage = {
       (object.tunnelDisconnectEvent !== undefined && object.tunnelDisconnectEvent !== null)
         ? TunnelDisconnectEvent.fromPartial(object.tunnelDisconnectEvent)
         : undefined;
-    message.claimConnectionRequest =
-      (object.claimConnectionRequest !== undefined && object.claimConnectionRequest !== null)
-        ? ClaimConnectionRequest.fromPartial(object.claimConnectionRequest)
+    message.claimTunnelRequest =
+      (object.claimTunnelRequest !== undefined && object.claimTunnelRequest !== null)
+        ? ClaimTunnelRequest.fromPartial(object.claimTunnelRequest)
         : undefined;
-    message.claimConnectionResponse =
-      (object.claimConnectionResponse !== undefined && object.claimConnectionResponse !== null)
-        ? ClaimConnectionResponse.fromPartial(object.claimConnectionResponse)
+    message.claimTunnelResponse =
+      (object.claimTunnelResponse !== undefined && object.claimTunnelResponse !== null)
+        ? ClaimTunnelResponse.fromPartial(object.claimTunnelResponse)
         : undefined;
     return message;
   },

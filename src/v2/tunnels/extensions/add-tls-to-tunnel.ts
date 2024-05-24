@@ -29,6 +29,11 @@ export const addTlsToTunnel = <O extends { request: Partial<CreateTunnelRequest>
 			},
 			onTlsEnd(err) {
 				onClose?.(err)
+				// once the TLS connection is closed, we no longer
+				// want to send `onClose` events back to the caller
+				// of this function.
+				onClose = undefined
+
 				tunnel.close(err)
 				handshakeReject?.(err)
 			},
