@@ -121,6 +121,6 @@ export function getPureCiphertext(
 export function getProviderValue<P, T>(params: P, fn: ProviderField<P, T>) {
 	return typeof fn === 'function'
 		// @ts-ignore
-		? fn(params)
+		? fn(params) as T
 		: fn
 }

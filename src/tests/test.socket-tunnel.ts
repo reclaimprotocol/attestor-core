@@ -4,9 +4,9 @@ import { makeTcpTunnel } from '../v2/server'
 
 const DEMO_GEO_LOCATIONS = ['in', 'us']
 
-describe('Geo Location Tests', () => {
+describe('Socket Tunnel', () => {
 
-	it.each(DEMO_GEO_LOCATIONS)('should generate a session using a geoLocation (%s)', async(geoLocation) => {
+	it.each([...DEMO_GEO_LOCATIONS, 'none'])('should generate a session using a geoLocation (%s)', async(geoLocation) => {
 		const resParser = makeHttpResponseParser()
 
 		let resolvePromise: (() => void) | undefined
@@ -15,7 +15,7 @@ describe('Geo Location Tests', () => {
 		const session = await makeTcpTunnel({
 			host: 'lumtest.com',
 			port: 80,
-			geoLocation,
+			geoLocation: geoLocation === 'none' ? '' : geoLocation,
 			onClose(err) {
 				rejectPromise?.(err || new Error('session closed'))
 			},
@@ -40,6 +40,10 @@ describe('Geo Location Tests', () => {
 		expect(resParser.res.statusCode).toBe(200)
 		const resBody = uint8ArrayToStr(resParser.res.body)
 		const resJson = JSON.parse(resBody)
+
+		if(geoLocation === 'none') {
+			return
+		}
 
 		expect(resJson.country).toBe(
 			geoLocation.toUpperCase()

@@ -1,4 +1,5 @@
-import { crypto, uint8ArrayToDataView } from '@reclaimprotocol/tls'
+import { crypto, PACKET_TYPE, strToUint8Array, TLSPacketContext, uint8ArrayToDataView } from '@reclaimprotocol/tls'
+import { ReclaimRPCMessage } from '../../proto/api'
 import { RPCEvent, RPCEventMap, RPCEventType, RPCType } from '../types'
 
 export function generateRpcMessageId() {
@@ -11,6 +12,13 @@ export function generateRpcMessageId() {
  * Random session ID for a WebSocket client.
  */
 export function generateSessionId() {
+	return generateRpcMessageId()
+}
+
+/**
+ * Random ID for a tunnel.
+ */
+export function generateTunnelId() {
 	return generateRpcMessageId()
 }
 
@@ -58,4 +66,63 @@ export function getRpcResponseType<T extends RPCType>(type: T) {
  */
 export function getRpcRequestType<T extends RPCType>(type: T) {
 	return `${type}Request` as const
+}
+
+export function isApplicationData(
+	packet: TLSPacketContext,
+	tlsVersion: string
+) {
+	return packet.type === 'ciphertext'
+		&& (
+			packet.contentType === 'APPLICATION_DATA'
+			|| (
+				packet.ciphertext[0] === PACKET_TYPE.WRAPPED_RECORD
+				&& tlsVersion === 'TLS1_2'
+			)
+		)
+}
+
+/**
+ * Convert the received data from a WS to a Uint8Array
+ */
+export function extractArrayBufferFromWsData(data: unknown): Uint8Array {
+	if(data instanceof ArrayBuffer) {
+		return new Uint8Array(data)
+	}
+
+	// uint8array/Buffer
+	if(typeof data === 'object' && data && 'buffer' in data) {
+		return data as Uint8Array
+	}
+
+	if(typeof data === 'string') {
+		return strToUint8Array(data)
+	}
+
+	throw new Error('unsupported data: ' + String(data))
+}
+
+/**
+ * Check if the RPC message is a request or a response.
+ */
+export function getRpcRequest(msg: ReclaimRPCMessage) {
+	if(msg.requestError) {
+		return {
+			direction: 'response' as const,
+			type: 'error' as const
+		}
+	}
+
+	for(const key in msg) {
+		if(!msg[key]) {
+			continue
+		}
+
+		const rpcType = getRpcTypeFromKey(key)
+		if(!rpcType) {
+			continue
+		}
+
+		return rpcType
+	}
 }

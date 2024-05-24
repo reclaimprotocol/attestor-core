@@ -345,74 +345,30 @@ message TunnelDisconnectEvent {
 	WitnessErrorData error = 2;
 }
 
-message TLSTranscript {
-	/**
-	 * parameters supplied to establish the tunnel
-	 * & connect to the end server
-	 */
-	CreateTunnelRequest request = 1;
-	/**
-	 * messages from the client & server
-	 * in the order they were sent/received
-	 */
-	repeated TranscriptMessage messages = 2;
-
-	message TranscriptMessage {
-		TranscriptMessageSenderType sender = 1;
-		TLSPacket packet = 2;
-	}
-}
-
-message ClaimTunnelRequest {
-	/**
-	 * ID of the tunnel whose transcript
-	 * contains the claim
-	 */
-	string tunnelId = 1;
-	/** Details of the claim */
-	BeaconBasedProviderClaimRequest claim = 2;
-	TLSTranscript transcript = 3;
-	repeated BlockReveal proofs = 4;
-	Signatures signatures = 5;
-
-	message Signatures {
-		/**
-		* signature of ClaimTunnelRequest
-		* with empty "signatures" field
-		*/
-		bytes requestSignature = 1;
+message MessageReveal {
+	oneof reveal {
+		// direct reveal of the block via the key & IV
+		// cipher (aes, chacha) for decryption
+		// selected based on `cipherSuite`
+		// determined by the server hello packet
+		MessageRevealDirect directReveal = 1;
+		// partially or fully reveal the block via a zk proof
+		MessageRevealZk zkReveal = 2;
 	}
 
-	message BlockReveal {
-		oneof reveal {
-			BlockRevealDirect directReveal = 4;
-			BlockRevealZk zkReveal = 5;
-		}
-		/**
-		 * index of the block in the transcript.
-		 * (0 indexed -- including msgs from client & server)
-		 */
-		uint32 index = 6;
-	}
-
-	// direct reveal of the block via the key & IV
-	// cipher (aes, chacha) for decryption
-	// selected based on `cipherSuite`
-	// in `FinaliseSessionRequest`
-	message BlockRevealDirect {
+	message MessageRevealDirect {
 		/** key for the block */
 		bytes key = 1;
 		/** IV for the block */
 		bytes iv = 2;
 		/**
-		 * used to generate IV in authenticated
-		 * cipher suites
-		 */
+		* used to generate IV in authenticated
+		* cipher suites
+		*/
 		uint32 recordNumber = 3;
 	}
 
-	// partially or fully reveal the block via a zk proof
-	message BlockRevealZk {
+	message MessageRevealZk {
 		repeated ZKProof proofs = 1;
 	}
 
@@ -424,29 +380,60 @@ message ClaimTunnelRequest {
 		/** the plaintext that is fully or partially revealed */
 		bytes redactedPlaintext = 3;
 		/**
-		 * start of this specific ChaCha block
-		 * in the redactedPlaintext
-		 */
+		* start of this specific ChaCha block
+		* in the redactedPlaintext
+		*/
 		uint32 startIdx = 4;
 	}
+}
 
-	message BeaconBasedProviderClaimRequest {
-		/** Epoch in which claim is being created */
-		uint32 epoch = 1;
-		BeaconIdentifier beacon = 2;
+message ClaimTunnelRequest {
+	/**
+	 * parameters supplied to establish the tunnel
+	 * & connect to the end server
+	 */
+	CreateTunnelRequest request = 1;
+	/**
+	 * Timestamp of the claim being made.
+	 * Cannot be more than 10 minutes in the past
+	 * or in the future
+	 */
+	uint32 timestampS = 2;
+	/** claim information to sign */
+	ProviderClaimInfo info = 3;
+	/**
+	 * messages from the client & server
+	 * in the order they were sent/received
+	 *
+	 * Attach a proof (if any) to each message
+	 * to reveal the contents of the message inside
+	 * 
+	 * The revealed messages should support the proving
+	 * of the claim as defined in the provider's implementation
+	 */
+	repeated TranscriptMessage transcript = 4;
+	Signatures signatures = 5;
+
+	message Signatures {
 		/**
-		 * When the claim is being created.
-		 * Cannot be more than 10 minutes in the past
-		 * or in the future at all
-		 */
-		uint32 timestampS = 3;
-		/** claim information to sign */
-		ProviderClaimInfo info = 4;
+		* signature of ClaimTunnelRequest
+		* with empty "signatures" field
+		*/
+		bytes requestSignature = 1;
+	}
+
+	message TranscriptMessage {
+		TranscriptMessageSenderType sender = 1;
+		bytes message = 2;
+		MessageReveal reveal = 3;
 	}
 }
 
 message ClaimTunnelResponse {
-	ClaimTunnelRequest claimRequest = 1;
+	/**
+	 * The original request that was made to claim the tunnel
+	 */
+	ClaimTunnelRequest request = 1;
 	oneof result {
 		ProviderClaimData claim = 2;
 		WitnessErrorData error = 3;

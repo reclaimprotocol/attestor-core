@@ -4,8 +4,8 @@ import { getBeacon } from '../beacon'
 import { DEFAULT_BEACON_IDENTIFIER } from '../config'
 import { InitialiseSessionRequest_BeaconBasedProviderClaimRequest as ProviderClaimRequest, ProviderClaimData } from '../proto/api'
 import { ProviderName, ProviderParams, providers, ProviderSecretParams } from '../providers'
-import { Beacon, CreateStep, Logger, WitnessData } from '../types'
-import { createGrpcWebClient, fetchWitnessListForClaim, getIdentifierFromClaimInfo, logger as LOGGER, makeOwnerProof, PrepareZKProofsBaseOpts, stringifyClaimParameters, unixTimestampSeconds } from '../utils'
+import { Beacon, CreateStep, Logger, PrepareZKProofsBaseOpts, WitnessData } from '../types'
+import { createGrpcWebClient, fetchWitnessListForClaim, getIdentifierFromClaimInfo, logger as LOGGER, makeOwnerProof, stringifyClaimParameters, unixTimestampSeconds } from '../utils'
 import { generateProviderReceipt } from './generate-provider-receipt'
 
 export type CreateClaimOptions<N extends ProviderName> = {

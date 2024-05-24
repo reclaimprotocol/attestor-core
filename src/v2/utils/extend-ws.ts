@@ -6,12 +6,11 @@
  * These functions can be used on the client & server
  * side to send and receive RPC messages.
  */
-import { strToUint8Array } from '@reclaimprotocol/tls'
 import EventEmitter from 'events'
 import { ReclaimRPCMessage } from '../../proto/api'
 import { WitnessError } from '../../utils'
 import { RPCEvent, RPCResponseData } from '../types'
-import { generateRpcMessageId, getRpcRequestType, getRpcResponseType, getRpcTypeFromKey, makeRpcEvent } from './generics'
+import { extractArrayBufferFromWsData, generateRpcMessageId, getRpcRequest, getRpcRequestType, getRpcResponseType, makeRpcEvent } from './generics'
 
 if(typeof WebSocket !== 'undefined') {
 	// extend the WebSocket prototype
@@ -185,7 +184,7 @@ export async function extendWsPrototype(WS: typeof WebSocket) {
 function messageHandler(this: WebSocket, data: unknown) {
 	// extract array buffer from WS data & decode proto
 	const buff = extractArrayBufferFromWsData(data)
-	const msg = ReclaimRPCMessage.decode(new Uint8Array(buff))
+	const msg = ReclaimRPCMessage.decode(buff)
 	// handle connection termination alert
 	if(msg.connectionTerminationAlert) {
 		const err = WitnessError.fromProto(
@@ -273,43 +272,4 @@ function messageHandler(this: WebSocket, data: unknown) {
 		'unknown message type',
 		{ msg }
 	)
-}
-
-function extractArrayBufferFromWsData(data: unknown): ArrayBuffer {
-	if(data instanceof ArrayBuffer) {
-		return data
-	}
-
-	// uint8array/Buffer
-	if(typeof data === 'object' && data && 'buffer' in data) {
-		return data.buffer as ArrayBuffer
-	}
-
-	if(typeof data === 'string') {
-		return strToUint8Array(data).buffer
-	}
-
-	throw new Error('unsupported data: ' + String(data))
-}
-
-function getRpcRequest(msg: ReclaimRPCMessage) {
-	if(msg.requestError) {
-		return {
-			direction: 'response' as const,
-			type: 'error' as const
-		}
-	}
-
-	for(const key in msg) {
-		if(!msg[key]) {
-			continue
-		}
-
-		const rpcType = getRpcTypeFromKey(key)
-		if(!rpcType) {
-			continue
-		}
-
-		return rpcType
-	}
 }

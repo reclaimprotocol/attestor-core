@@ -6,13 +6,13 @@ import { CONNECTION_TIMEOUT_MS, DNS_SERVERS } from '../../../config'
 import { CreateTunnelRequest } from '../../../proto/api'
 import type { Logger } from '../../../types'
 import { logger as LOGGER, WitnessError } from '../../../utils'
-import type { MakeTunnelFn } from '../../types'
+import type { MakeTunnelFn, Transcript } from '../../types'
 import { isValidCountryCode } from '../utils/iso'
 
 const HTTPS_PROXY_URL = process.env.HTTPS_PROXY_URL
 
 type ExtraOpts = Omit<CreateTunnelRequest, 'id' | 'initialMessage'>
-
+type TunnelOpts = { transcript: Transcript<Uint8Array> }
 /**
  * Builds a TCP tunnel to the given host and port.
  * If a geolocation is provided -- an HTTPS proxy is used
@@ -22,8 +22,10 @@ type ExtraOpts = Omit<CreateTunnelRequest, 'id' | 'initialMessage'>
  * host using the CONNECT method. Any data can be sent through
  * this tunnel to the end host.
  * https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/CONNECT
+ *
+ * The tunnel also retains a transcript of all messages sent and received.
  */
-export const makeTcpTunnel: MakeTunnelFn<Uint8Array, ExtraOpts> = async({
+export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TunnelOpts> = async({
 	host,
 	port,
 	geoLocation,
@@ -32,6 +34,7 @@ export const makeTcpTunnel: MakeTunnelFn<Uint8Array, ExtraOpts> = async({
 	onMessage,
 }) => {
 	const socket = await getSocket({ host, port, geoLocation }, logger)
+	const transcript: TunnelOpts['transcript'] = []
 
 	let connectTimeout: NodeJS.Timeout | undefined
 	try {
@@ -55,10 +58,15 @@ export const makeTcpTunnel: MakeTunnelFn<Uint8Array, ExtraOpts> = async({
 
 	socket.once('error', close)
 	socket.once('end', () => close(undefined))
-	socket.on('data', msg => onMessage?.(msg))
+	socket.on('data', message => {
+		onMessage?.(message)
+		transcript.push({ sender: 'client', message })
+	})
 
 	return {
+		transcript,
 		async write(data) {
+			transcript.push({ sender: 'server', message: data })
 			await new Promise<void>((resolve, reject) => {
 				socket.write(data, err => {
 					if(err) {
@@ -85,7 +93,6 @@ export const makeTcpTunnel: MakeTunnelFn<Uint8Array, ExtraOpts> = async({
 }
 
 setDnsServers()
-
 
 async function getSocket(opts: ExtraOpts, logger: Logger) {
 	try {

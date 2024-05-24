@@ -1,5 +1,4 @@
-import type { Logger as TLSLogger, TLSPacket, TLSPacketContext } from '@reclaimprotocol/tls'
-import { TranscriptMessageSenderType } from '../proto/api'
+import type { Logger as TLSLogger, TLSPacketContext } from '@reclaimprotocol/tls'
 
 /**
  * Represents a slice of any array or string
@@ -13,19 +12,15 @@ export type Logger = TLSLogger & {
 	child: (opts: { [_: string]: any }) => Logger
 }
 
-export type CompleteTLSPacket = {
-	packet: TLSPacket
-	ctx: TLSPacketContext
-	sender: TranscriptMessageSenderType
-	/** Index of packet recv from server */
-	index: number
-	/**
-	 * how to reveal the packet to the witness
-	 * "undefined" means "do not reveal this packet"
-	 */
-	reveal?: { type: 'complete' }
-		| {
-			type: 'zk'
-			redactedPlaintext: Uint8Array
-		}
+export type ZKRevealInfo = {
+	type: 'zk'
+	redactedPlaintext: Uint8Array
 }
+
+export type MessageRevealInfo = { type: 'complete' } | ZKRevealInfo
+
+export type CompleteTLSPacket = Exclude<TLSPacketContext, { type: 'plaintext' }>
+	| {
+		type: 'plaintext'
+		plaintext: Uint8Array
+	}

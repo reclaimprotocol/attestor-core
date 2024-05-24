@@ -568,66 +568,21 @@ export interface TunnelDisconnectEvent {
   error: WitnessErrorData | undefined;
 }
 
-export interface TLSTranscript {
+export interface MessageReveal {
   /**
-   * parameters supplied to establish the tunnel
-   * & connect to the end server
+   * direct reveal of the block via the key & IV
+   * cipher (aes, chacha) for decryption
+   * selected based on `cipherSuite`
+   * determined by the server hello packet
    */
-  request:
-    | CreateTunnelRequest
+  directReveal?:
+    | MessageReveal_MessageRevealDirect
     | undefined;
-  /**
-   * messages from the client & server
-   * in the order they were sent/received
-   */
-  messages: TLSTranscript_TranscriptMessage[];
+  /** partially or fully reveal the block via a zk proof */
+  zkReveal?: MessageReveal_MessageRevealZk | undefined;
 }
 
-export interface TLSTranscript_TranscriptMessage {
-  sender: TranscriptMessageSenderType;
-  packet: TLSPacket | undefined;
-}
-
-export interface ClaimTunnelRequest {
-  /**
-   * ID of the tunnel whose transcript
-   * contains the claim
-   */
-  tunnelId: string;
-  /** Details of the claim */
-  claim: ClaimConnectionRequest_BeaconBasedProviderClaimRequest | undefined;
-  transcript: TLSTranscript | undefined;
-  proofs: ClaimConnectionRequest_BlockReveal[];
-  signatures: ClaimConnectionRequest_Signatures | undefined;
-}
-
-export interface ClaimConnectionRequest_Signatures {
-  /**
-   * signature of ClaimTunnelRequest
-   * with empty "signatures" field
-   */
-  requestSignature: Uint8Array;
-}
-
-export interface ClaimConnectionRequest_BlockReveal {
-  directReveal?: ClaimConnectionRequest_BlockRevealDirect | undefined;
-  zkReveal?:
-    | ClaimConnectionRequest_BlockRevealZk
-    | undefined;
-  /**
-   * index of the block in the transcript.
-   * (0 indexed -- including msgs from client & server)
-   */
-  index: number;
-}
-
-/**
- * direct reveal of the block via the key & IV
- * cipher (aes, chacha) for decryption
- * selected based on `cipherSuite`
- * in `FinaliseSessionRequest`
- */
-export interface ClaimConnectionRequest_BlockRevealDirect {
+export interface MessageReveal_MessageRevealDirect {
   /** key for the block */
   key: Uint8Array;
   /** IV for the block */
@@ -639,12 +594,11 @@ export interface ClaimConnectionRequest_BlockRevealDirect {
   recordNumber: number;
 }
 
-/** partially or fully reveal the block via a zk proof */
-export interface ClaimConnectionRequest_BlockRevealZk {
-  proofs: ClaimConnectionRequest_ZKProof[];
+export interface MessageReveal_MessageRevealZk {
+  proofs: MessageReveal_ZKProof[];
 }
 
-export interface ClaimConnectionRequest_ZKProof {
+export interface MessageReveal_ZKProof {
   /** JSON encoded snarkJS proof */
   proofJson: string;
   /** the decrypted ciphertext as output by the ZK proof */
@@ -658,30 +612,60 @@ export interface ClaimConnectionRequest_ZKProof {
   startIdx: number;
 }
 
-export interface ClaimConnectionRequest_BeaconBasedProviderClaimRequest {
-  /** Epoch in which claim is being created */
-  epoch: number;
-  beacon:
-    | BeaconIdentifier
+export interface ClaimTunnelRequest {
+  /**
+   * parameters supplied to establish the tunnel
+   * & connect to the end server
+   */
+  request:
+    | CreateTunnelRequest
     | undefined;
   /**
-   * When the claim is being created.
+   * Timestamp of the claim being made.
    * Cannot be more than 10 minutes in the past
-   * or in the future at all
+   * or in the future
    */
   timestampS: number;
   /** claim information to sign */
-  info: ProviderClaimInfo | undefined;
+  info:
+    | ProviderClaimInfo
+    | undefined;
+  /**
+   * messages from the client & server
+   * in the order they were sent/received
+   *
+   * Attach a proof (if any) to each message
+   * to reveal the contents of the message inside
+   *
+   * The revealed messages should support the proving
+   * of the claim as defined in the provider's implementation
+   */
+  transcript: ClaimTunnelRequest_TranscriptMessage[];
+  signatures: ClaimTunnelRequest_Signatures | undefined;
+}
+
+export interface ClaimTunnelRequest_Signatures {
+  /**
+   * signature of ClaimTunnelRequest
+   * with empty "signatures" field
+   */
+  requestSignature: Uint8Array;
+}
+
+export interface ClaimTunnelRequest_TranscriptMessage {
+  sender: TranscriptMessageSenderType;
+  message: Uint8Array;
+  reveal: MessageReveal | undefined;
 }
 
 export interface ClaimTunnelResponse {
   claimRequest: ClaimTunnelRequest | undefined;
   claim?: ProviderClaimData | undefined;
   error?: WitnessErrorData | undefined;
-  signatures: ClaimConnectionResponse_Signatures | undefined;
+  signatures: ClaimTunnelResponse_Signatures | undefined;
 }
 
-export interface ClaimConnectionResponse_Signatures {
+export interface ClaimTunnelResponse_Signatures {
   /**
    * signature of `stringifyProviderClaimData(claim)`,
    * if the claim was successful
@@ -705,8 +689,11 @@ export interface InitRequest {
 
 export interface ReclaimRPCMessage {
   /**
-   * RPC message ID
-   * For responses, it should be the same as the request
+   * Per connection unique RPC message ID. Either party sending a
+   * duplicate ID will do nothing except confuse the other party.
+   *
+   * For response messages, the ID should be the same as the request
+   * to which it is responding.
    */
   id: number;
   /**
@@ -719,23 +706,27 @@ export interface ReclaimRPCMessage {
     | Empty
     | undefined;
   /**
-   * Data representing an error in the witness's
-   * connection to the server
+   * Data representing an error in the WebSocket connection.
+   * The party sending this message should close the connection
+   * immediately after sending this message.
    */
   connectionTerminationAlert?:
     | WitnessErrorData
     | undefined;
   /**
    * Data representing an error in the witness's
-   * request to the server. Identify which request
-   * using the `id` field.
+   * request to the server. This should be sent in case
+   * there was an error in processing the request.
    */
   requestError?:
     | WitnessErrorData
     | undefined;
-  /** Request to connect to a server */
+  /** Create a tunnel to the specified host & port. */
   createTunnelRequest?: CreateTunnelRequest | undefined;
-  createTunnelResponse?: Empty | undefined;
+  createTunnelResponse?:
+    | Empty
+    | undefined;
+  /** Disconnect a tunnel. */
   disconnectTunnelRequest?: DisconnectTunnelRequest | undefined;
   disconnectTunnelResponse?:
     | Empty
@@ -755,7 +746,10 @@ export interface ReclaimRPCMessage {
   tunnelDisconnectEvent?:
     | TunnelDisconnectEvent
     | undefined;
-  /** Generate a claim from a particular connection */
+  /**
+   * Using the transcript of a tunnel, make a claim.
+   * The tunnel must be disconnected before making a claim.
+   */
   claimTunnelRequest?: ClaimTunnelRequest | undefined;
   claimTunnelResponse?: ClaimTunnelResponse | undefined;
 }
@@ -3382,370 +3376,25 @@ export const TunnelDisconnectEvent = {
   },
 };
 
-function createBaseTLSTranscript(): TLSTranscript {
-  return { request: undefined, messages: [] };
+function createBaseMessageReveal(): MessageReveal {
+  return { directReveal: undefined, zkReveal: undefined };
 }
 
-export const TLSTranscript = {
-  encode(message: TLSTranscript, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.request !== undefined) {
-      CreateTunnelRequest.encode(message.request, writer.uint32(10).fork()).ldelim();
-    }
-    for (const v of message.messages) {
-      TLSTranscript_TranscriptMessage.encode(v!, writer.uint32(18).fork()).ldelim();
-    }
-    return writer;
-  },
-
-  decode(input: _m0.Reader | Uint8Array, length?: number): TLSTranscript {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseTLSTranscript();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1:
-          if (tag !== 10) {
-            break;
-          }
-
-          message.request = CreateTunnelRequest.decode(reader, reader.uint32());
-          continue;
-        case 2:
-          if (tag !== 18) {
-            break;
-          }
-
-          message.messages.push(TLSTranscript_TranscriptMessage.decode(reader, reader.uint32()));
-          continue;
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skipType(tag & 7);
-    }
-    return message;
-  },
-
-  fromJSON(object: any): TLSTranscript {
-    return {
-      request: isSet(object.request) ? CreateTunnelRequest.fromJSON(object.request) : undefined,
-      messages: globalThis.Array.isArray(object?.messages)
-        ? object.messages.map((e: any) => TLSTranscript_TranscriptMessage.fromJSON(e))
-        : [],
-    };
-  },
-
-  toJSON(message: TLSTranscript): unknown {
-    const obj: any = {};
-    if (message.request !== undefined) {
-      obj.request = CreateTunnelRequest.toJSON(message.request);
-    }
-    if (message.messages?.length) {
-      obj.messages = message.messages.map((e) => TLSTranscript_TranscriptMessage.toJSON(e));
-    }
-    return obj;
-  },
-
-  create(base?: DeepPartial<TLSTranscript>): TLSTranscript {
-    return TLSTranscript.fromPartial(base ?? {});
-  },
-  fromPartial(object: DeepPartial<TLSTranscript>): TLSTranscript {
-    const message = createBaseTLSTranscript();
-    message.request = (object.request !== undefined && object.request !== null)
-      ? CreateTunnelRequest.fromPartial(object.request)
-      : undefined;
-    message.messages = object.messages?.map((e) => TLSTranscript_TranscriptMessage.fromPartial(e)) || [];
-    return message;
-  },
-};
-
-function createBaseTLSTranscript_TranscriptMessage(): TLSTranscript_TranscriptMessage {
-  return { sender: 0, packet: undefined };
-}
-
-export const TLSTranscript_TranscriptMessage = {
-  encode(message: TLSTranscript_TranscriptMessage, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.sender !== 0) {
-      writer.uint32(8).int32(message.sender);
-    }
-    if (message.packet !== undefined) {
-      TLSPacket.encode(message.packet, writer.uint32(18).fork()).ldelim();
-    }
-    return writer;
-  },
-
-  decode(input: _m0.Reader | Uint8Array, length?: number): TLSTranscript_TranscriptMessage {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseTLSTranscript_TranscriptMessage();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1:
-          if (tag !== 8) {
-            break;
-          }
-
-          message.sender = reader.int32() as any;
-          continue;
-        case 2:
-          if (tag !== 18) {
-            break;
-          }
-
-          message.packet = TLSPacket.decode(reader, reader.uint32());
-          continue;
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skipType(tag & 7);
-    }
-    return message;
-  },
-
-  fromJSON(object: any): TLSTranscript_TranscriptMessage {
-    return {
-      sender: isSet(object.sender) ? transcriptMessageSenderTypeFromJSON(object.sender) : 0,
-      packet: isSet(object.packet) ? TLSPacket.fromJSON(object.packet) : undefined,
-    };
-  },
-
-  toJSON(message: TLSTranscript_TranscriptMessage): unknown {
-    const obj: any = {};
-    if (message.sender !== 0) {
-      obj.sender = transcriptMessageSenderTypeToJSON(message.sender);
-    }
-    if (message.packet !== undefined) {
-      obj.packet = TLSPacket.toJSON(message.packet);
-    }
-    return obj;
-  },
-
-  create(base?: DeepPartial<TLSTranscript_TranscriptMessage>): TLSTranscript_TranscriptMessage {
-    return TLSTranscript_TranscriptMessage.fromPartial(base ?? {});
-  },
-  fromPartial(object: DeepPartial<TLSTranscript_TranscriptMessage>): TLSTranscript_TranscriptMessage {
-    const message = createBaseTLSTranscript_TranscriptMessage();
-    message.sender = object.sender ?? 0;
-    message.packet = (object.packet !== undefined && object.packet !== null)
-      ? TLSPacket.fromPartial(object.packet)
-      : undefined;
-    return message;
-  },
-};
-
-function createBaseClaimConnectionRequest(): ClaimTunnelRequest {
-  return { tunnelId: "", claim: undefined, transcript: undefined, proofs: [], signatures: undefined };
-}
-
-export const ClaimTunnelRequest = {
-  encode(message: ClaimTunnelRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.tunnelId !== "") {
-      writer.uint32(10).string(message.tunnelId);
-    }
-    if (message.claim !== undefined) {
-      ClaimConnectionRequest_BeaconBasedProviderClaimRequest.encode(message.claim, writer.uint32(18).fork()).ldelim();
-    }
-    if (message.transcript !== undefined) {
-      TLSTranscript.encode(message.transcript, writer.uint32(26).fork()).ldelim();
-    }
-    for (const v of message.proofs) {
-      ClaimConnectionRequest_BlockReveal.encode(v!, writer.uint32(34).fork()).ldelim();
-    }
-    if (message.signatures !== undefined) {
-      ClaimConnectionRequest_Signatures.encode(message.signatures, writer.uint32(42).fork()).ldelim();
-    }
-    return writer;
-  },
-
-  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimTunnelRequest {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseClaimConnectionRequest();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1:
-          if (tag !== 10) {
-            break;
-          }
-
-          message.tunnelId = reader.string();
-          continue;
-        case 2:
-          if (tag !== 18) {
-            break;
-          }
-
-          message.claim = ClaimConnectionRequest_BeaconBasedProviderClaimRequest.decode(reader, reader.uint32());
-          continue;
-        case 3:
-          if (tag !== 26) {
-            break;
-          }
-
-          message.transcript = TLSTranscript.decode(reader, reader.uint32());
-          continue;
-        case 4:
-          if (tag !== 34) {
-            break;
-          }
-
-          message.proofs.push(ClaimConnectionRequest_BlockReveal.decode(reader, reader.uint32()));
-          continue;
-        case 5:
-          if (tag !== 42) {
-            break;
-          }
-
-          message.signatures = ClaimConnectionRequest_Signatures.decode(reader, reader.uint32());
-          continue;
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skipType(tag & 7);
-    }
-    return message;
-  },
-
-  fromJSON(object: any): ClaimTunnelRequest {
-    return {
-      tunnelId: isSet(object.tunnelId) ? globalThis.String(object.tunnelId) : "",
-      claim: isSet(object.claim)
-        ? ClaimConnectionRequest_BeaconBasedProviderClaimRequest.fromJSON(object.claim)
-        : undefined,
-      transcript: isSet(object.transcript) ? TLSTranscript.fromJSON(object.transcript) : undefined,
-      proofs: globalThis.Array.isArray(object?.proofs)
-        ? object.proofs.map((e: any) => ClaimConnectionRequest_BlockReveal.fromJSON(e))
-        : [],
-      signatures: isSet(object.signatures) ? ClaimConnectionRequest_Signatures.fromJSON(object.signatures) : undefined,
-    };
-  },
-
-  toJSON(message: ClaimTunnelRequest): unknown {
-    const obj: any = {};
-    if (message.tunnelId !== "") {
-      obj.tunnelId = message.tunnelId;
-    }
-    if (message.claim !== undefined) {
-      obj.claim = ClaimConnectionRequest_BeaconBasedProviderClaimRequest.toJSON(message.claim);
-    }
-    if (message.transcript !== undefined) {
-      obj.transcript = TLSTranscript.toJSON(message.transcript);
-    }
-    if (message.proofs?.length) {
-      obj.proofs = message.proofs.map((e) => ClaimConnectionRequest_BlockReveal.toJSON(e));
-    }
-    if (message.signatures !== undefined) {
-      obj.signatures = ClaimConnectionRequest_Signatures.toJSON(message.signatures);
-    }
-    return obj;
-  },
-
-  create(base?: DeepPartial<ClaimTunnelRequest>): ClaimTunnelRequest {
-    return ClaimTunnelRequest.fromPartial(base ?? {});
-  },
-  fromPartial(object: DeepPartial<ClaimTunnelRequest>): ClaimTunnelRequest {
-    const message = createBaseClaimConnectionRequest();
-    message.tunnelId = object.tunnelId ?? "";
-    message.claim = (object.claim !== undefined && object.claim !== null)
-      ? ClaimConnectionRequest_BeaconBasedProviderClaimRequest.fromPartial(object.claim)
-      : undefined;
-    message.transcript = (object.transcript !== undefined && object.transcript !== null)
-      ? TLSTranscript.fromPartial(object.transcript)
-      : undefined;
-    message.proofs = object.proofs?.map((e) => ClaimConnectionRequest_BlockReveal.fromPartial(e)) || [];
-    message.signatures = (object.signatures !== undefined && object.signatures !== null)
-      ? ClaimConnectionRequest_Signatures.fromPartial(object.signatures)
-      : undefined;
-    return message;
-  },
-};
-
-function createBaseClaimConnectionRequest_Signatures(): ClaimConnectionRequest_Signatures {
-  return { requestSignature: new Uint8Array(0) };
-}
-
-export const ClaimConnectionRequest_Signatures = {
-  encode(message: ClaimConnectionRequest_Signatures, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.requestSignature.length !== 0) {
-      writer.uint32(10).bytes(message.requestSignature);
-    }
-    return writer;
-  },
-
-  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimConnectionRequest_Signatures {
-    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
-    let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseClaimConnectionRequest_Signatures();
-    while (reader.pos < end) {
-      const tag = reader.uint32();
-      switch (tag >>> 3) {
-        case 1:
-          if (tag !== 10) {
-            break;
-          }
-
-          message.requestSignature = reader.bytes();
-          continue;
-      }
-      if ((tag & 7) === 4 || tag === 0) {
-        break;
-      }
-      reader.skipType(tag & 7);
-    }
-    return message;
-  },
-
-  fromJSON(object: any): ClaimConnectionRequest_Signatures {
-    return {
-      requestSignature: isSet(object.requestSignature) ? bytesFromBase64(object.requestSignature) : new Uint8Array(0),
-    };
-  },
-
-  toJSON(message: ClaimConnectionRequest_Signatures): unknown {
-    const obj: any = {};
-    if (message.requestSignature.length !== 0) {
-      obj.requestSignature = base64FromBytes(message.requestSignature);
-    }
-    return obj;
-  },
-
-  create(base?: DeepPartial<ClaimConnectionRequest_Signatures>): ClaimConnectionRequest_Signatures {
-    return ClaimConnectionRequest_Signatures.fromPartial(base ?? {});
-  },
-  fromPartial(object: DeepPartial<ClaimConnectionRequest_Signatures>): ClaimConnectionRequest_Signatures {
-    const message = createBaseClaimConnectionRequest_Signatures();
-    message.requestSignature = object.requestSignature ?? new Uint8Array(0);
-    return message;
-  },
-};
-
-function createBaseClaimConnectionRequest_BlockReveal(): ClaimConnectionRequest_BlockReveal {
-  return { directReveal: undefined, zkReveal: undefined, index: 0 };
-}
-
-export const ClaimConnectionRequest_BlockReveal = {
-  encode(message: ClaimConnectionRequest_BlockReveal, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+export const MessageReveal = {
+  encode(message: MessageReveal, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.directReveal !== undefined) {
-      ClaimConnectionRequest_BlockRevealDirect.encode(message.directReveal, writer.uint32(34).fork()).ldelim();
+      MessageReveal_MessageRevealDirect.encode(message.directReveal, writer.uint32(34).fork()).ldelim();
     }
     if (message.zkReveal !== undefined) {
-      ClaimConnectionRequest_BlockRevealZk.encode(message.zkReveal, writer.uint32(42).fork()).ldelim();
-    }
-    if (message.index !== 0) {
-      writer.uint32(48).uint32(message.index);
+      MessageReveal_MessageRevealZk.encode(message.zkReveal, writer.uint32(42).fork()).ldelim();
     }
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimConnectionRequest_BlockReveal {
+  decode(input: _m0.Reader | Uint8Array, length?: number): MessageReveal {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseClaimConnectionRequest_BlockReveal();
+    const message = createBaseMessageReveal();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -3754,21 +3403,14 @@ export const ClaimConnectionRequest_BlockReveal = {
             break;
           }
 
-          message.directReveal = ClaimConnectionRequest_BlockRevealDirect.decode(reader, reader.uint32());
+          message.directReveal = MessageReveal_MessageRevealDirect.decode(reader, reader.uint32());
           continue;
         case 5:
           if (tag !== 42) {
             break;
           }
 
-          message.zkReveal = ClaimConnectionRequest_BlockRevealZk.decode(reader, reader.uint32());
-          continue;
-        case 6:
-          if (tag !== 48) {
-            break;
-          }
-
-          message.index = reader.uint32();
+          message.zkReveal = MessageReveal_MessageRevealZk.decode(reader, reader.uint32());
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -3779,52 +3421,47 @@ export const ClaimConnectionRequest_BlockReveal = {
     return message;
   },
 
-  fromJSON(object: any): ClaimConnectionRequest_BlockReveal {
+  fromJSON(object: any): MessageReveal {
     return {
       directReveal: isSet(object.directReveal)
-        ? ClaimConnectionRequest_BlockRevealDirect.fromJSON(object.directReveal)
+        ? MessageReveal_MessageRevealDirect.fromJSON(object.directReveal)
         : undefined,
-      zkReveal: isSet(object.zkReveal) ? ClaimConnectionRequest_BlockRevealZk.fromJSON(object.zkReveal) : undefined,
-      index: isSet(object.index) ? globalThis.Number(object.index) : 0,
+      zkReveal: isSet(object.zkReveal) ? MessageReveal_MessageRevealZk.fromJSON(object.zkReveal) : undefined,
     };
   },
 
-  toJSON(message: ClaimConnectionRequest_BlockReveal): unknown {
+  toJSON(message: MessageReveal): unknown {
     const obj: any = {};
     if (message.directReveal !== undefined) {
-      obj.directReveal = ClaimConnectionRequest_BlockRevealDirect.toJSON(message.directReveal);
+      obj.directReveal = MessageReveal_MessageRevealDirect.toJSON(message.directReveal);
     }
     if (message.zkReveal !== undefined) {
-      obj.zkReveal = ClaimConnectionRequest_BlockRevealZk.toJSON(message.zkReveal);
-    }
-    if (message.index !== 0) {
-      obj.index = Math.round(message.index);
+      obj.zkReveal = MessageReveal_MessageRevealZk.toJSON(message.zkReveal);
     }
     return obj;
   },
 
-  create(base?: DeepPartial<ClaimConnectionRequest_BlockReveal>): ClaimConnectionRequest_BlockReveal {
-    return ClaimConnectionRequest_BlockReveal.fromPartial(base ?? {});
+  create(base?: DeepPartial<MessageReveal>): MessageReveal {
+    return MessageReveal.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<ClaimConnectionRequest_BlockReveal>): ClaimConnectionRequest_BlockReveal {
-    const message = createBaseClaimConnectionRequest_BlockReveal();
+  fromPartial(object: DeepPartial<MessageReveal>): MessageReveal {
+    const message = createBaseMessageReveal();
     message.directReveal = (object.directReveal !== undefined && object.directReveal !== null)
-      ? ClaimConnectionRequest_BlockRevealDirect.fromPartial(object.directReveal)
+      ? MessageReveal_MessageRevealDirect.fromPartial(object.directReveal)
       : undefined;
     message.zkReveal = (object.zkReveal !== undefined && object.zkReveal !== null)
-      ? ClaimConnectionRequest_BlockRevealZk.fromPartial(object.zkReveal)
+      ? MessageReveal_MessageRevealZk.fromPartial(object.zkReveal)
       : undefined;
-    message.index = object.index ?? 0;
     return message;
   },
 };
 
-function createBaseClaimConnectionRequest_BlockRevealDirect(): ClaimConnectionRequest_BlockRevealDirect {
+function createBaseMessageReveal_MessageRevealDirect(): MessageReveal_MessageRevealDirect {
   return { key: new Uint8Array(0), iv: new Uint8Array(0), recordNumber: 0 };
 }
 
-export const ClaimConnectionRequest_BlockRevealDirect = {
-  encode(message: ClaimConnectionRequest_BlockRevealDirect, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+export const MessageReveal_MessageRevealDirect = {
+  encode(message: MessageReveal_MessageRevealDirect, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.key.length !== 0) {
       writer.uint32(10).bytes(message.key);
     }
@@ -3837,10 +3474,10 @@ export const ClaimConnectionRequest_BlockRevealDirect = {
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimConnectionRequest_BlockRevealDirect {
+  decode(input: _m0.Reader | Uint8Array, length?: number): MessageReveal_MessageRevealDirect {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseClaimConnectionRequest_BlockRevealDirect();
+    const message = createBaseMessageReveal_MessageRevealDirect();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -3874,7 +3511,7 @@ export const ClaimConnectionRequest_BlockRevealDirect = {
     return message;
   },
 
-  fromJSON(object: any): ClaimConnectionRequest_BlockRevealDirect {
+  fromJSON(object: any): MessageReveal_MessageRevealDirect {
     return {
       key: isSet(object.key) ? bytesFromBase64(object.key) : new Uint8Array(0),
       iv: isSet(object.iv) ? bytesFromBase64(object.iv) : new Uint8Array(0),
@@ -3882,7 +3519,7 @@ export const ClaimConnectionRequest_BlockRevealDirect = {
     };
   },
 
-  toJSON(message: ClaimConnectionRequest_BlockRevealDirect): unknown {
+  toJSON(message: MessageReveal_MessageRevealDirect): unknown {
     const obj: any = {};
     if (message.key.length !== 0) {
       obj.key = base64FromBytes(message.key);
@@ -3896,11 +3533,11 @@ export const ClaimConnectionRequest_BlockRevealDirect = {
     return obj;
   },
 
-  create(base?: DeepPartial<ClaimConnectionRequest_BlockRevealDirect>): ClaimConnectionRequest_BlockRevealDirect {
-    return ClaimConnectionRequest_BlockRevealDirect.fromPartial(base ?? {});
+  create(base?: DeepPartial<MessageReveal_MessageRevealDirect>): MessageReveal_MessageRevealDirect {
+    return MessageReveal_MessageRevealDirect.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<ClaimConnectionRequest_BlockRevealDirect>): ClaimConnectionRequest_BlockRevealDirect {
-    const message = createBaseClaimConnectionRequest_BlockRevealDirect();
+  fromPartial(object: DeepPartial<MessageReveal_MessageRevealDirect>): MessageReveal_MessageRevealDirect {
+    const message = createBaseMessageReveal_MessageRevealDirect();
     message.key = object.key ?? new Uint8Array(0);
     message.iv = object.iv ?? new Uint8Array(0);
     message.recordNumber = object.recordNumber ?? 0;
@@ -3908,22 +3545,22 @@ export const ClaimConnectionRequest_BlockRevealDirect = {
   },
 };
 
-function createBaseClaimConnectionRequest_BlockRevealZk(): ClaimConnectionRequest_BlockRevealZk {
+function createBaseMessageReveal_MessageRevealZk(): MessageReveal_MessageRevealZk {
   return { proofs: [] };
 }
 
-export const ClaimConnectionRequest_BlockRevealZk = {
-  encode(message: ClaimConnectionRequest_BlockRevealZk, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+export const MessageReveal_MessageRevealZk = {
+  encode(message: MessageReveal_MessageRevealZk, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     for (const v of message.proofs) {
-      ClaimConnectionRequest_ZKProof.encode(v!, writer.uint32(10).fork()).ldelim();
+      MessageReveal_ZKProof.encode(v!, writer.uint32(10).fork()).ldelim();
     }
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimConnectionRequest_BlockRevealZk {
+  decode(input: _m0.Reader | Uint8Array, length?: number): MessageReveal_MessageRevealZk {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseClaimConnectionRequest_BlockRevealZk();
+    const message = createBaseMessageReveal_MessageRevealZk();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -3932,7 +3569,7 @@ export const ClaimConnectionRequest_BlockRevealZk = {
             break;
           }
 
-          message.proofs.push(ClaimConnectionRequest_ZKProof.decode(reader, reader.uint32()));
+          message.proofs.push(MessageReveal_ZKProof.decode(reader, reader.uint32()));
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -3943,33 +3580,33 @@ export const ClaimConnectionRequest_BlockRevealZk = {
     return message;
   },
 
-  fromJSON(object: any): ClaimConnectionRequest_BlockRevealZk {
+  fromJSON(object: any): MessageReveal_MessageRevealZk {
     return {
       proofs: globalThis.Array.isArray(object?.proofs)
-        ? object.proofs.map((e: any) => ClaimConnectionRequest_ZKProof.fromJSON(e))
+        ? object.proofs.map((e: any) => MessageReveal_ZKProof.fromJSON(e))
         : [],
     };
   },
 
-  toJSON(message: ClaimConnectionRequest_BlockRevealZk): unknown {
+  toJSON(message: MessageReveal_MessageRevealZk): unknown {
     const obj: any = {};
     if (message.proofs?.length) {
-      obj.proofs = message.proofs.map((e) => ClaimConnectionRequest_ZKProof.toJSON(e));
+      obj.proofs = message.proofs.map((e) => MessageReveal_ZKProof.toJSON(e));
     }
     return obj;
   },
 
-  create(base?: DeepPartial<ClaimConnectionRequest_BlockRevealZk>): ClaimConnectionRequest_BlockRevealZk {
-    return ClaimConnectionRequest_BlockRevealZk.fromPartial(base ?? {});
+  create(base?: DeepPartial<MessageReveal_MessageRevealZk>): MessageReveal_MessageRevealZk {
+    return MessageReveal_MessageRevealZk.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<ClaimConnectionRequest_BlockRevealZk>): ClaimConnectionRequest_BlockRevealZk {
-    const message = createBaseClaimConnectionRequest_BlockRevealZk();
-    message.proofs = object.proofs?.map((e) => ClaimConnectionRequest_ZKProof.fromPartial(e)) || [];
+  fromPartial(object: DeepPartial<MessageReveal_MessageRevealZk>): MessageReveal_MessageRevealZk {
+    const message = createBaseMessageReveal_MessageRevealZk();
+    message.proofs = object.proofs?.map((e) => MessageReveal_ZKProof.fromPartial(e)) || [];
     return message;
   },
 };
 
-function createBaseClaimConnectionRequest_ZKProof(): ClaimConnectionRequest_ZKProof {
+function createBaseMessageReveal_ZKProof(): MessageReveal_ZKProof {
   return {
     proofJson: "",
     decryptedRedactedCiphertext: new Uint8Array(0),
@@ -3978,8 +3615,8 @@ function createBaseClaimConnectionRequest_ZKProof(): ClaimConnectionRequest_ZKPr
   };
 }
 
-export const ClaimConnectionRequest_ZKProof = {
-  encode(message: ClaimConnectionRequest_ZKProof, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+export const MessageReveal_ZKProof = {
+  encode(message: MessageReveal_ZKProof, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.proofJson !== "") {
       writer.uint32(10).string(message.proofJson);
     }
@@ -3995,10 +3632,10 @@ export const ClaimConnectionRequest_ZKProof = {
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimConnectionRequest_ZKProof {
+  decode(input: _m0.Reader | Uint8Array, length?: number): MessageReveal_ZKProof {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseClaimConnectionRequest_ZKProof();
+    const message = createBaseMessageReveal_ZKProof();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -4039,7 +3676,7 @@ export const ClaimConnectionRequest_ZKProof = {
     return message;
   },
 
-  fromJSON(object: any): ClaimConnectionRequest_ZKProof {
+  fromJSON(object: any): MessageReveal_ZKProof {
     return {
       proofJson: isSet(object.proofJson) ? globalThis.String(object.proofJson) : "",
       decryptedRedactedCiphertext: isSet(object.decryptedRedactedCiphertext)
@@ -4052,7 +3689,7 @@ export const ClaimConnectionRequest_ZKProof = {
     };
   },
 
-  toJSON(message: ClaimConnectionRequest_ZKProof): unknown {
+  toJSON(message: MessageReveal_ZKProof): unknown {
     const obj: any = {};
     if (message.proofJson !== "") {
       obj.proofJson = message.proofJson;
@@ -4069,11 +3706,11 @@ export const ClaimConnectionRequest_ZKProof = {
     return obj;
   },
 
-  create(base?: DeepPartial<ClaimConnectionRequest_ZKProof>): ClaimConnectionRequest_ZKProof {
-    return ClaimConnectionRequest_ZKProof.fromPartial(base ?? {});
+  create(base?: DeepPartial<MessageReveal_ZKProof>): MessageReveal_ZKProof {
+    return MessageReveal_ZKProof.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<ClaimConnectionRequest_ZKProof>): ClaimConnectionRequest_ZKProof {
-    const message = createBaseClaimConnectionRequest_ZKProof();
+  fromPartial(object: DeepPartial<MessageReveal_ZKProof>): MessageReveal_ZKProof {
+    const message = createBaseMessageReveal_ZKProof();
     message.proofJson = object.proofJson ?? "";
     message.decryptedRedactedCiphertext = object.decryptedRedactedCiphertext ?? new Uint8Array(0);
     message.redactedPlaintext = object.redactedPlaintext ?? new Uint8Array(0);
@@ -4082,64 +3719,71 @@ export const ClaimConnectionRequest_ZKProof = {
   },
 };
 
-function createBaseClaimConnectionRequest_BeaconBasedProviderClaimRequest(): ClaimConnectionRequest_BeaconBasedProviderClaimRequest {
-  return { epoch: 0, beacon: undefined, timestampS: 0, info: undefined };
+function createBaseClaimTunnelRequest(): ClaimTunnelRequest {
+  return { request: undefined, timestampS: 0, info: undefined, transcript: [], signatures: undefined };
 }
 
-export const ClaimConnectionRequest_BeaconBasedProviderClaimRequest = {
-  encode(
-    message: ClaimConnectionRequest_BeaconBasedProviderClaimRequest,
-    writer: _m0.Writer = _m0.Writer.create(),
-  ): _m0.Writer {
-    if (message.epoch !== 0) {
-      writer.uint32(8).uint32(message.epoch);
-    }
-    if (message.beacon !== undefined) {
-      BeaconIdentifier.encode(message.beacon, writer.uint32(18).fork()).ldelim();
+export const ClaimTunnelRequest = {
+  encode(message: ClaimTunnelRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.request !== undefined) {
+      CreateTunnelRequest.encode(message.request, writer.uint32(10).fork()).ldelim();
     }
     if (message.timestampS !== 0) {
-      writer.uint32(24).uint32(message.timestampS);
+      writer.uint32(16).uint32(message.timestampS);
     }
     if (message.info !== undefined) {
-      ProviderClaimInfo.encode(message.info, writer.uint32(34).fork()).ldelim();
+      ProviderClaimInfo.encode(message.info, writer.uint32(26).fork()).ldelim();
+    }
+    for (const v of message.transcript) {
+      ClaimTunnelRequest_TranscriptMessage.encode(v!, writer.uint32(34).fork()).ldelim();
+    }
+    if (message.signatures !== undefined) {
+      ClaimTunnelRequest_Signatures.encode(message.signatures, writer.uint32(42).fork()).ldelim();
     }
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimConnectionRequest_BeaconBasedProviderClaimRequest {
+  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimTunnelRequest {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseClaimConnectionRequest_BeaconBasedProviderClaimRequest();
+    const message = createBaseClaimTunnelRequest();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
         case 1:
-          if (tag !== 8) {
+          if (tag !== 10) {
             break;
           }
 
-          message.epoch = reader.uint32();
+          message.request = CreateTunnelRequest.decode(reader, reader.uint32());
           continue;
         case 2:
-          if (tag !== 18) {
-            break;
-          }
-
-          message.beacon = BeaconIdentifier.decode(reader, reader.uint32());
-          continue;
-        case 3:
-          if (tag !== 24) {
+          if (tag !== 16) {
             break;
           }
 
           message.timestampS = reader.uint32();
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.info = ProviderClaimInfo.decode(reader, reader.uint32());
           continue;
         case 4:
           if (tag !== 34) {
             break;
           }
 
-          message.info = ProviderClaimInfo.decode(reader, reader.uint32());
+          message.transcript.push(ClaimTunnelRequest_TranscriptMessage.decode(reader, reader.uint32()));
+          continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.signatures = ClaimTunnelRequest_Signatures.decode(reader, reader.uint32());
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -4150,22 +3794,22 @@ export const ClaimConnectionRequest_BeaconBasedProviderClaimRequest = {
     return message;
   },
 
-  fromJSON(object: any): ClaimConnectionRequest_BeaconBasedProviderClaimRequest {
+  fromJSON(object: any): ClaimTunnelRequest {
     return {
-      epoch: isSet(object.epoch) ? globalThis.Number(object.epoch) : 0,
-      beacon: isSet(object.beacon) ? BeaconIdentifier.fromJSON(object.beacon) : undefined,
+      request: isSet(object.request) ? CreateTunnelRequest.fromJSON(object.request) : undefined,
       timestampS: isSet(object.timestampS) ? globalThis.Number(object.timestampS) : 0,
       info: isSet(object.info) ? ProviderClaimInfo.fromJSON(object.info) : undefined,
+      transcript: globalThis.Array.isArray(object?.transcript)
+        ? object.transcript.map((e: any) => ClaimTunnelRequest_TranscriptMessage.fromJSON(e))
+        : [],
+      signatures: isSet(object.signatures) ? ClaimTunnelRequest_Signatures.fromJSON(object.signatures) : undefined,
     };
   },
 
-  toJSON(message: ClaimConnectionRequest_BeaconBasedProviderClaimRequest): unknown {
+  toJSON(message: ClaimTunnelRequest): unknown {
     const obj: any = {};
-    if (message.epoch !== 0) {
-      obj.epoch = Math.round(message.epoch);
-    }
-    if (message.beacon !== undefined) {
-      obj.beacon = BeaconIdentifier.toJSON(message.beacon);
+    if (message.request !== undefined) {
+      obj.request = CreateTunnelRequest.toJSON(message.request);
     }
     if (message.timestampS !== 0) {
       obj.timestampS = Math.round(message.timestampS);
@@ -4173,31 +3817,186 @@ export const ClaimConnectionRequest_BeaconBasedProviderClaimRequest = {
     if (message.info !== undefined) {
       obj.info = ProviderClaimInfo.toJSON(message.info);
     }
+    if (message.transcript?.length) {
+      obj.transcript = message.transcript.map((e) => ClaimTunnelRequest_TranscriptMessage.toJSON(e));
+    }
+    if (message.signatures !== undefined) {
+      obj.signatures = ClaimTunnelRequest_Signatures.toJSON(message.signatures);
+    }
     return obj;
   },
 
-  create(
-    base?: DeepPartial<ClaimConnectionRequest_BeaconBasedProviderClaimRequest>,
-  ): ClaimConnectionRequest_BeaconBasedProviderClaimRequest {
-    return ClaimConnectionRequest_BeaconBasedProviderClaimRequest.fromPartial(base ?? {});
+  create(base?: DeepPartial<ClaimTunnelRequest>): ClaimTunnelRequest {
+    return ClaimTunnelRequest.fromPartial(base ?? {});
   },
-  fromPartial(
-    object: DeepPartial<ClaimConnectionRequest_BeaconBasedProviderClaimRequest>,
-  ): ClaimConnectionRequest_BeaconBasedProviderClaimRequest {
-    const message = createBaseClaimConnectionRequest_BeaconBasedProviderClaimRequest();
-    message.epoch = object.epoch ?? 0;
-    message.beacon = (object.beacon !== undefined && object.beacon !== null)
-      ? BeaconIdentifier.fromPartial(object.beacon)
+  fromPartial(object: DeepPartial<ClaimTunnelRequest>): ClaimTunnelRequest {
+    const message = createBaseClaimTunnelRequest();
+    message.request = (object.request !== undefined && object.request !== null)
+      ? CreateTunnelRequest.fromPartial(object.request)
       : undefined;
     message.timestampS = object.timestampS ?? 0;
     message.info = (object.info !== undefined && object.info !== null)
       ? ProviderClaimInfo.fromPartial(object.info)
       : undefined;
+    message.transcript = object.transcript?.map((e) => ClaimTunnelRequest_TranscriptMessage.fromPartial(e)) || [];
+    message.signatures = (object.signatures !== undefined && object.signatures !== null)
+      ? ClaimTunnelRequest_Signatures.fromPartial(object.signatures)
+      : undefined;
     return message;
   },
 };
 
-function createBaseClaimConnectionResponse(): ClaimTunnelResponse {
+function createBaseClaimTunnelRequest_Signatures(): ClaimTunnelRequest_Signatures {
+  return { requestSignature: new Uint8Array(0) };
+}
+
+export const ClaimTunnelRequest_Signatures = {
+  encode(message: ClaimTunnelRequest_Signatures, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.requestSignature.length !== 0) {
+      writer.uint32(10).bytes(message.requestSignature);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimTunnelRequest_Signatures {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseClaimTunnelRequest_Signatures();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.requestSignature = reader.bytes();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ClaimTunnelRequest_Signatures {
+    return {
+      requestSignature: isSet(object.requestSignature) ? bytesFromBase64(object.requestSignature) : new Uint8Array(0),
+    };
+  },
+
+  toJSON(message: ClaimTunnelRequest_Signatures): unknown {
+    const obj: any = {};
+    if (message.requestSignature.length !== 0) {
+      obj.requestSignature = base64FromBytes(message.requestSignature);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ClaimTunnelRequest_Signatures>): ClaimTunnelRequest_Signatures {
+    return ClaimTunnelRequest_Signatures.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ClaimTunnelRequest_Signatures>): ClaimTunnelRequest_Signatures {
+    const message = createBaseClaimTunnelRequest_Signatures();
+    message.requestSignature = object.requestSignature ?? new Uint8Array(0);
+    return message;
+  },
+};
+
+function createBaseClaimTunnelRequest_TranscriptMessage(): ClaimTunnelRequest_TranscriptMessage {
+  return { sender: 0, message: new Uint8Array(0), reveal: undefined };
+}
+
+export const ClaimTunnelRequest_TranscriptMessage = {
+  encode(message: ClaimTunnelRequest_TranscriptMessage, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.sender !== 0) {
+      writer.uint32(8).int32(message.sender);
+    }
+    if (message.message.length !== 0) {
+      writer.uint32(18).bytes(message.message);
+    }
+    if (message.reveal !== undefined) {
+      MessageReveal.encode(message.reveal, writer.uint32(26).fork()).ldelim();
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimTunnelRequest_TranscriptMessage {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseClaimTunnelRequest_TranscriptMessage();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.sender = reader.int32() as any;
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.message = reader.bytes();
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.reveal = MessageReveal.decode(reader, reader.uint32());
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ClaimTunnelRequest_TranscriptMessage {
+    return {
+      sender: isSet(object.sender) ? transcriptMessageSenderTypeFromJSON(object.sender) : 0,
+      message: isSet(object.message) ? bytesFromBase64(object.message) : new Uint8Array(0),
+      reveal: isSet(object.reveal) ? MessageReveal.fromJSON(object.reveal) : undefined,
+    };
+  },
+
+  toJSON(message: ClaimTunnelRequest_TranscriptMessage): unknown {
+    const obj: any = {};
+    if (message.sender !== 0) {
+      obj.sender = transcriptMessageSenderTypeToJSON(message.sender);
+    }
+    if (message.message.length !== 0) {
+      obj.message = base64FromBytes(message.message);
+    }
+    if (message.reveal !== undefined) {
+      obj.reveal = MessageReveal.toJSON(message.reveal);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ClaimTunnelRequest_TranscriptMessage>): ClaimTunnelRequest_TranscriptMessage {
+    return ClaimTunnelRequest_TranscriptMessage.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ClaimTunnelRequest_TranscriptMessage>): ClaimTunnelRequest_TranscriptMessage {
+    const message = createBaseClaimTunnelRequest_TranscriptMessage();
+    message.sender = object.sender ?? 0;
+    message.message = object.message ?? new Uint8Array(0);
+    message.reveal = (object.reveal !== undefined && object.reveal !== null)
+      ? MessageReveal.fromPartial(object.reveal)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseClaimTunnelResponse(): ClaimTunnelResponse {
   return { claimRequest: undefined, claim: undefined, error: undefined, signatures: undefined };
 }
 
@@ -4213,7 +4012,7 @@ export const ClaimTunnelResponse = {
       WitnessErrorData.encode(message.error, writer.uint32(26).fork()).ldelim();
     }
     if (message.signatures !== undefined) {
-      ClaimConnectionResponse_Signatures.encode(message.signatures, writer.uint32(34).fork()).ldelim();
+      ClaimTunnelResponse_Signatures.encode(message.signatures, writer.uint32(34).fork()).ldelim();
     }
     return writer;
   },
@@ -4221,7 +4020,7 @@ export const ClaimTunnelResponse = {
   decode(input: _m0.Reader | Uint8Array, length?: number): ClaimTunnelResponse {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseClaimConnectionResponse();
+    const message = createBaseClaimTunnelResponse();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -4251,7 +4050,7 @@ export const ClaimTunnelResponse = {
             break;
           }
 
-          message.signatures = ClaimConnectionResponse_Signatures.decode(reader, reader.uint32());
+          message.signatures = ClaimTunnelResponse_Signatures.decode(reader, reader.uint32());
           continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
@@ -4267,7 +4066,7 @@ export const ClaimTunnelResponse = {
       claimRequest: isSet(object.claimRequest) ? ClaimTunnelRequest.fromJSON(object.claimRequest) : undefined,
       claim: isSet(object.claim) ? ProviderClaimData.fromJSON(object.claim) : undefined,
       error: isSet(object.error) ? WitnessErrorData.fromJSON(object.error) : undefined,
-      signatures: isSet(object.signatures) ? ClaimConnectionResponse_Signatures.fromJSON(object.signatures) : undefined,
+      signatures: isSet(object.signatures) ? ClaimTunnelResponse_Signatures.fromJSON(object.signatures) : undefined,
     };
   },
 
@@ -4283,7 +4082,7 @@ export const ClaimTunnelResponse = {
       obj.error = WitnessErrorData.toJSON(message.error);
     }
     if (message.signatures !== undefined) {
-      obj.signatures = ClaimConnectionResponse_Signatures.toJSON(message.signatures);
+      obj.signatures = ClaimTunnelResponse_Signatures.toJSON(message.signatures);
     }
     return obj;
   },
@@ -4292,7 +4091,7 @@ export const ClaimTunnelResponse = {
     return ClaimTunnelResponse.fromPartial(base ?? {});
   },
   fromPartial(object: DeepPartial<ClaimTunnelResponse>): ClaimTunnelResponse {
-    const message = createBaseClaimConnectionResponse();
+    const message = createBaseClaimTunnelResponse();
     message.claimRequest = (object.claimRequest !== undefined && object.claimRequest !== null)
       ? ClaimTunnelRequest.fromPartial(object.claimRequest)
       : undefined;
@@ -4303,18 +4102,18 @@ export const ClaimTunnelResponse = {
       ? WitnessErrorData.fromPartial(object.error)
       : undefined;
     message.signatures = (object.signatures !== undefined && object.signatures !== null)
-      ? ClaimConnectionResponse_Signatures.fromPartial(object.signatures)
+      ? ClaimTunnelResponse_Signatures.fromPartial(object.signatures)
       : undefined;
     return message;
   },
 };
 
-function createBaseClaimConnectionResponse_Signatures(): ClaimConnectionResponse_Signatures {
+function createBaseClaimTunnelResponse_Signatures(): ClaimTunnelResponse_Signatures {
   return { claimSignature: new Uint8Array(0), resultSignature: new Uint8Array(0) };
 }
 
-export const ClaimConnectionResponse_Signatures = {
-  encode(message: ClaimConnectionResponse_Signatures, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+export const ClaimTunnelResponse_Signatures = {
+  encode(message: ClaimTunnelResponse_Signatures, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.claimSignature.length !== 0) {
       writer.uint32(10).bytes(message.claimSignature);
     }
@@ -4324,10 +4123,10 @@ export const ClaimConnectionResponse_Signatures = {
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimConnectionResponse_Signatures {
+  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimTunnelResponse_Signatures {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseClaimConnectionResponse_Signatures();
+    const message = createBaseClaimTunnelResponse_Signatures();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -4354,14 +4153,14 @@ export const ClaimConnectionResponse_Signatures = {
     return message;
   },
 
-  fromJSON(object: any): ClaimConnectionResponse_Signatures {
+  fromJSON(object: any): ClaimTunnelResponse_Signatures {
     return {
       claimSignature: isSet(object.claimSignature) ? bytesFromBase64(object.claimSignature) : new Uint8Array(0),
       resultSignature: isSet(object.resultSignature) ? bytesFromBase64(object.resultSignature) : new Uint8Array(0),
     };
   },
 
-  toJSON(message: ClaimConnectionResponse_Signatures): unknown {
+  toJSON(message: ClaimTunnelResponse_Signatures): unknown {
     const obj: any = {};
     if (message.claimSignature.length !== 0) {
       obj.claimSignature = base64FromBytes(message.claimSignature);
@@ -4372,11 +4171,11 @@ export const ClaimConnectionResponse_Signatures = {
     return obj;
   },
 
-  create(base?: DeepPartial<ClaimConnectionResponse_Signatures>): ClaimConnectionResponse_Signatures {
-    return ClaimConnectionResponse_Signatures.fromPartial(base ?? {});
+  create(base?: DeepPartial<ClaimTunnelResponse_Signatures>): ClaimTunnelResponse_Signatures {
+    return ClaimTunnelResponse_Signatures.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<ClaimConnectionResponse_Signatures>): ClaimConnectionResponse_Signatures {
-    const message = createBaseClaimConnectionResponse_Signatures();
+  fromPartial(object: DeepPartial<ClaimTunnelResponse_Signatures>): ClaimTunnelResponse_Signatures {
+    const message = createBaseClaimTunnelResponse_Signatures();
     message.claimSignature = object.claimSignature ?? new Uint8Array(0);
     message.resultSignature = object.resultSignature ?? new Uint8Array(0);
     return message;
@@ -4741,14 +4540,12 @@ export const ReclaimRPCMessage = {
       (object.tunnelDisconnectEvent !== undefined && object.tunnelDisconnectEvent !== null)
         ? TunnelDisconnectEvent.fromPartial(object.tunnelDisconnectEvent)
         : undefined;
-    message.claimTunnelRequest =
-      (object.claimTunnelRequest !== undefined && object.claimTunnelRequest !== null)
-        ? ClaimTunnelRequest.fromPartial(object.claimTunnelRequest)
-        : undefined;
-    message.claimTunnelResponse =
-      (object.claimTunnelResponse !== undefined && object.claimTunnelResponse !== null)
-        ? ClaimTunnelResponse.fromPartial(object.claimTunnelResponse)
-        : undefined;
+    message.claimTunnelRequest = (object.claimTunnelRequest !== undefined && object.claimTunnelRequest !== null)
+      ? ClaimTunnelRequest.fromPartial(object.claimTunnelRequest)
+      : undefined;
+    message.claimTunnelResponse = (object.claimTunnelResponse !== undefined && object.claimTunnelResponse !== null)
+      ? ClaimTunnelResponse.fromPartial(object.claimTunnelResponse)
+      : undefined;
     return message;
   },
 };

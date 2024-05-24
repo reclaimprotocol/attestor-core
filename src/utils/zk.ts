@@ -11,13 +11,12 @@ import {
 } from '@reclaimprotocol/circom-symmetric-crypto'
 import { CipherSuite, crypto } from '@reclaimprotocol/tls'
 import { DEFAULT_REMOTE_ZK_PARAMS, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from '../config'
-import { FinaliseSessionRequest_Block as PacketToReveal, FinaliseSessionRequest_BlockRevealZk as ZKReveal, FinaliseSessionRequest_ZKProof as ZKProof } from '../proto/api'
-import { CompleteTLSPacket, Logger } from '../types'
+import { FinaliseSessionRequest_BlockRevealZk as ZKReveal, FinaliseSessionRequest_ZKProof as ZKProof } from '../proto/api'
+import { CompleteTLSPacket, Logger, PrepareZKProofsBaseOpts, ZKOperators, ZKRevealInfo } from '../types'
 import { detectEnvironment } from './env'
 import { getPureCiphertext, getZkAlgorithmForCipherSuite } from './generics'
 import { logger as LOGGER } from './logger'
 import { isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from './redactions'
-
 
 type GenerateZKChunkProofOpts = {
 	key: Uint8Array
@@ -29,19 +28,6 @@ type GenerateZKChunkProofOpts = {
 	ciphertext: Uint8Array
 	redactedPlaintext: Uint8Array
 	offsetChunks: number
-}
-
-export type ZKOperators = { [E in EncryptionAlgorithm]?: ZKOperator }
-
-export type PrepareZKProofsBaseOpts = {
-	/** get ZK operator for specified algorithm */
-	zkOperators?: ZKOperators
-	/**
-	 * max number of ZK proofs to generate concurrently
-	 * @default 1
-	 */
-	zkProofConcurrency?: number
-	maxZkChunks?: number
 }
 
 type PrepareZKProofsOpts = {
@@ -66,7 +52,7 @@ type ZKProofToGenerate = {
 }
 
 type ZKPacketToProve = {
-	packet: CompleteTLSPacket
+	onGeneratedProofs(proofs: ZKProof[]): void
 	algorithm: EncryptionAlgorithm
 	proofsToGenerate: ZKProofToGenerate[]
 }
@@ -97,12 +83,12 @@ export async function makeZkProofGenerator(
 		 * Adds the given packet to the list of packets to
 		 * generate ZK proofs for.
 		 */
-		async addPacketToProve(packet: CompleteTLSPacket) {
-			if(packet.reveal?.type !== 'zk') {
-				throw new Error('only partial reveals are supported')
-			}
-
-			if(packet.ctx.type === 'plaintext') {
+		async addPacketToProve(
+			packet: CompleteTLSPacket,
+			reveal: ZKRevealInfo,
+			onGeneratedProofs: ZKPacketToProve['onGeneratedProofs']
+		) {
+			if(packet.type === 'plaintext') {
 				throw new Error('Cannot generate proof for plaintext')
 			}
 
@@ -115,17 +101,17 @@ export async function makeZkProofGenerator(
 			const alg = getZkAlgorithmForCipherSuite(cipherSuite)
 			const chunkSizeBytes = getChunkSizeBytes(alg)
 
-			const { redactedPlaintext } = packet.reveal
-			const key = await crypto.exportKey(packet.ctx.encKey)
-			const iv = packet.ctx.iv
+			const { redactedPlaintext } = reveal
+			const key = await crypto.exportKey(packet.encKey)
+			const iv = packet.iv
 			const ciphertext = getPureCiphertext(
-				packet.ctx.ciphertext,
+				packet.ciphertext,
 				cipherSuite
 			)
 
 			const chunks = Math.ceil(ciphertext.length / chunkSizeBytes)
 			const packetToProve: ZKPacketToProve = {
-				packet,
+				onGeneratedProofs,
 				algorithm: alg,
 				proofsToGenerate: [],
 			}
@@ -156,15 +142,11 @@ export async function makeZkProofGenerator(
 		},
 		async generateProofs(onChunkDone?: () => void) {
 			const start = Date.now()
-			const packetsToReveal: PacketToReveal[] = []
 			const tasks: Promise<void>[] = []
-			for(const { packet, algorithm, proofsToGenerate } of packetsToProve) {
-				const packetToReveal: PacketToReveal = {
-					index: packet.index,
-					directReveal: undefined,
-					zkReveal: { proofs: [] },
-					authTag: new Uint8Array(0)
-				}
+			for(const { onGeneratedProofs, algorithm, proofsToGenerate } of packetsToProve) {
+				const proofs: ZKProof[] = []
+
+				let proofsLeft = proofsToGenerate.length
 				for(const proofToGen of proofsToGenerate) {
 					tasks.push(
 						zkQueue.add(async() => {
@@ -174,12 +156,15 @@ export async function makeZkProofGenerator(
 							)
 
 							onChunkDone?.()
-							packetToReveal.zkReveal!.proofs.push(proof)
+							proofs.push(proof)
+
+							proofsLeft -= 1
+							if(proofsLeft === 0) {
+								onGeneratedProofs(proofs)
+							}
 						}, { throwOnTimeout: true })
 					)
 				}
-
-				packetsToReveal.push(packetToReveal)
 			}
 
 			await Promise.all(tasks)
@@ -200,8 +185,6 @@ export async function makeZkProofGenerator(
 			const alg = getZkAlgorithmForCipherSuite(cipherSuite)
 			const zkOperator = await getZkOperatorForAlgorithm(alg)
 			zkOperator.release?.()
-
-			return packetsToReveal
 		},
 	}
 

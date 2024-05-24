@@ -55,8 +55,11 @@ export interface Provider<
   additionalClientOptions?: TLSConnectionOptions
   /**
    * default redaction mode to use. If not specified,
-   * the default is 'key-update'. It's switched to 'zk'
-   * for TLS1.2 requests as TLS1.2 don't support key updates
+   * the default is 'key-update'.
+   *
+   * It's switched to 'zk' for TLS1.2 requests as TLS1.2
+   * don't support key updates
+   *
    * @default 'key-update'
    */
   writeRedactionMode?: ProviderField<Params, RedactionMode | undefined>

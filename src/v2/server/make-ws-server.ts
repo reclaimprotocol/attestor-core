@@ -41,6 +41,8 @@ function handleNewClient(ws: WebSocket, req: IncomingMessage) {
 	const bindSend = ws.send.bind(ws)
 	ws.send = promisify(bindSend)
 
+	logger.trace('new connection, validating...')
+
 	try {
 		ws.metadata = validateConnection(req)
 		logger.debug({ metadata: ws.metadata }, 'validated connection')
@@ -103,7 +105,17 @@ async function handleTunnelMessage(
 		return
 	}
 
-	await tunnel.write(message)
+	try {
+		await tunnel.write(message)
+	} catch(err) {
+		this.logger?.error(
+			{
+				err,
+				tunnelId,
+			},
+			'error writing to tunnel'
+		)
+	}
 }
 
 async function handleRpcRequest(
@@ -115,16 +127,9 @@ async function handleRpcRequest(
 		requestId
 	})
 	try {
-		const handler = HANDLERS[type]
-		if(!handler) {
-			throw new WitnessError(
-				'WITNESS_ERROR_INTERNAL',
-				'Not implemented'
-			)
-		}
-
 		logger.debug({ data }, 'handling RPC request')
 
+		const handler = HANDLERS[type]
 		const res = await handler(
 			data as any,
 			{

@@ -1,19 +1,26 @@
 import { concatenateUint8Arrays, makeTLSClient, TLSConnectionOptions } from '@reclaimprotocol/tls'
 import { CreateTunnelRequest } from '../../../proto/api'
-import { MakeTunnelFn, Tunnel } from '../../types'
+import { CompleteTLSPacket } from '../../../types'
+import { MakeTunnelFn, Transcript, Tunnel } from '../../types'
 
 type ExtraTLSOptions = {
 	tlsOpts: TLSConnectionOptions
+}
+
+type ExtraTLSTunnelData = {
+	transcript: Transcript<CompleteTLSPacket>
+	tls: ReturnType<typeof makeTLSClient>
 }
 
 /**
  * Adds TLS to an existing plaintext tunnel.
  */
 export const addTlsToTunnel = <O extends { request: Partial<CreateTunnelRequest> }>(
-	makePlaintextTunnel: MakeTunnelFn<Uint8Array, O>
-): MakeTunnelFn<Uint8Array, O & ExtraTLSOptions> => {
+	makePlaintextTunnel: MakeTunnelFn<O>
+): MakeTunnelFn<O & ExtraTLSOptions, ExtraTLSTunnelData> => {
 	return async({ onMessage, onClose, logger, request, tlsOpts, ...opts }) => {
-		let tunnel: Tunnel<Uint8Array>
+		const transcript: ExtraTLSTunnelData['transcript'] = []
+		let tunnel: Tunnel<{}>
 
 		let handshakeResolve: ((value: void) => void) | undefined
 		let handshakeReject: ((reason: any) => void) | undefined
@@ -37,7 +44,16 @@ export const addTlsToTunnel = <O extends { request: Partial<CreateTunnelRequest>
 				tunnel.close(err)
 				handshakeReject?.(err)
 			},
-			async write(packet) {
+			async write(packet, ctx) {
+				transcript.push({
+					sender: 'client',
+					message: ctx.type === 'plaintext'
+						? {
+							plaintext: packet.content,
+							type: 'plaintext',
+						}
+						: ctx
+				})
 				const message = concatenateUint8Arrays([
 					packet.header,
 					packet.content
@@ -53,7 +69,18 @@ export const addTlsToTunnel = <O extends { request: Partial<CreateTunnelRequest>
 				}
 
 				return tunnel.write(message)
-			}
+			},
+			onRead(packet, ctx) {
+				transcript.push({
+					sender: 'server',
+					message: ctx.type === 'plaintext'
+						? {
+							plaintext: packet.content,
+							type: 'plaintext',
+						}
+						: ctx
+				})
+			},
 		})
 
 		await tls.startHandshake()
@@ -66,6 +93,8 @@ export const addTlsToTunnel = <O extends { request: Partial<CreateTunnelRequest>
 		handshakeResolve = handshakeReject = undefined
 
 		return {
+			transcript,
+			tls,
 			write(data) {
 				return tls.write(data)
 			},
