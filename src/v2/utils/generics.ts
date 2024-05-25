@@ -1,5 +1,6 @@
-import { crypto, PACKET_TYPE, strToUint8Array, TLSPacketContext, uint8ArrayToDataView } from '@reclaimprotocol/tls'
+import { crypto, PACKET_TYPE, strToUint8Array, uint8ArrayToDataView } from '@reclaimprotocol/tls'
 import { ReclaimRPCMessage } from '../../proto/api'
+import { CompleteTLSPacket } from '../../types'
 import { RPCEvent, RPCEventMap, RPCEventType, RPCType } from '../types'
 
 export function generateRpcMessageId() {
@@ -69,14 +70,14 @@ export function getRpcRequestType<T extends RPCType>(type: T) {
 }
 
 export function isApplicationData(
-	packet: TLSPacketContext,
+	packet: CompleteTLSPacket,
 	tlsVersion: string
 ) {
 	return packet.type === 'ciphertext'
 		&& (
 			packet.contentType === 'APPLICATION_DATA'
 			|| (
-				packet.ciphertext[0] === PACKET_TYPE.WRAPPED_RECORD
+				packet.data[0] === PACKET_TYPE.WRAPPED_RECORD
 				&& tlsVersion === 'TLS1_2'
 			)
 		)

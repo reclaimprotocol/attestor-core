@@ -1,6 +1,6 @@
 import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
 import Ajv from 'ajv'
-import { RECLAIM_USER_AGENT } from '../../config'
+import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { ArraySlice, Provider } from '../../types'
 import {
 	findIndexInUint8Array,
@@ -31,14 +31,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	additionalClientOptions: {
 		applicationLayerProtocols: ['http/1.1'],
 	},
-	hostPort(params) {
-		const { host } = new URL(getURL(params))
-		if(!host) {
-			throw new Error('url is incorrect')
-		}
-
-		return host
-	},
+	hostPort: getHostPort,
 	writeRedactionMode(params) {
 		return ('writeRedactionMode' in params)
 			? params.writeRedactionMode
@@ -88,10 +81,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const newParams = substituteParamValues(normaliseParamsToV2(params), secretParams)
 		params = newParams.newParams
 
-		const hostPort = this.hostPort instanceof Function
-			? this.hostPort(params)
-			: this.hostPort
-		const { pathname } = new URL(params.url)
+		const url = new URL(params.url)
+		const { pathname } = url
 		const searchParams = params.url.includes('?') ? params.url.split('?')[1] : ''
 		console.log('Params URL:', params.url, 'Path:', pathname, 'Query:', searchParams.toString())
 		const body =
@@ -104,7 +95,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		console.log('Request line:', reqLine)
 		const httpReqHeaderStr = [
 			reqLine,
-			`Host: ${hostPort}`,
+			`Host: ${getHostHeaderString(url)}`,
 			`Content-Length: ${contentLength}`,
 			'Connection: close',
 			//no compression
@@ -148,14 +139,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 	},
 	getResponseRedactions(response, paramsAny) {
 		const res = parseHttpResponse(response)
-		// if the response is not 2xx, then we don't need
-		// to redact anything as the request itself failed
-		if(((res.statusCode / 100) >> 0) !== 2) {
-			console.log('===RESPONSE===')
-			console.log(uint8ArrayToBinaryStr(res.body))
-			throw new Error(`Provider returned error "${res.statusCode} ${res.statusMessage}"`)
-		}
-
 		const rawParams = normaliseParamsToV2(paramsAny)
 		if(!rawParams.responseRedactions?.length) {
 			return []
@@ -262,7 +245,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error(`Invalid method: ${req.method}`)
 		}
 
-		const { protocol, hostname, pathname } = new URL(params.url)
+		const url = new URL(params.url)
+		const { protocol, pathname } = url
 
 		if(protocol !== 'https:') {
 			console.log('params URL:', params.url)
@@ -278,20 +262,22 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error(`Expected path: ${expectedPath}, found: ${req.url}`)
 		}
 
-		if(req.headers.host !== hostname) {
+		const expectedHostStr = getHostHeaderString(url)
+		if(req.headers.host !== expectedHostStr) {
 			logTranscript()
-			throw new Error(`Expected host: ${hostname}, found: ${req.headers.host}`)
+			throw new Error(`Expected host: ${expectedHostStr}, found: ${req.headers.host}`)
 		}
 
 		const serverBlocks = receipt
 			.filter(s => s.sender === 'server')
 			.map((r) => r.message)
 			.filter(b => !b.every(b => b === REDACTION_CHAR_CODE)) // filter out fully redacted blocks
-
 		const res = Buffer.from(concatArrays(...serverBlocks)).toString()
 		if(!res.startsWith(OK_HTTP_HEADER)) {
 			logTranscript()
-			throw new Error(`Missing "${OK_HTTP_HEADER}" header in response`)
+			throw new Error(
+				`Response did not start with "${OK_HTTP_HEADER}"`
+			)
 		}
 
 		const connectionheader = req.headers['connection']
@@ -299,7 +285,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			logTranscript()
 			throw new Error(`Connection header must be "close", got "${connectionheader}"`)
 		}
-
 
 		const paramBody = params.body instanceof Uint8Array
 			? params.body
@@ -311,7 +296,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				throw new Error('request body mismatch')
 			}
 		}
-
 
 		for(const { type, value, invert } of params.responseMatches) {
 			const inv = Boolean(invert) // explicitly cast to boolean
@@ -407,6 +391,27 @@ export function findSubstringIgnoreLE(str: string, substr: string): { index: num
 	return { index: -1, length: -1 }
 }
 
+function getHostPort(params: HTTPProviderParams) {
+	const { host } = new URL(getURL(params))
+	if(!host) {
+		throw new Error('url is incorrect')
+	}
+
+	return host
+}
+
+/**
+ * Obtain the host header string from the URL.
+ * https://stackoverflow.com/a/3364396
+ */
+function getHostHeaderString(url: URL) {
+	const host = url.hostname
+	const port = url.port
+	return port && +port !== DEFAULT_HTTPS_PORT
+		? `${host}:${port}`
+		: host
+
+}
 
 type ReplacedParams = {
     newParam: string

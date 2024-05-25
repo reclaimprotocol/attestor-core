@@ -261,6 +261,7 @@ export async function decryptTranscript(
 					: 'server',
 				redacted,
 				message: plaintext,
+				recordHeader,
 				plaintextLength,
 			}
 		})

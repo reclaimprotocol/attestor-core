@@ -50,7 +50,9 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 		}
 	} catch(err) {
 		logger.error({ err }, 'invalid claim request')
-		res.error = WitnessError.fromError(err).toProto()
+		const witnessErr = WitnessError.fromError(err)
+		witnessErr.code = 'WITNESS_ERROR_INVALID_CLAIM'
+		res.error = witnessErr.toProto()
 	}
 
 	res.signatures = {

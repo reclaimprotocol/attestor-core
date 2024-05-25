@@ -32,6 +32,7 @@ export type IDecryptedTranscriptMessage = {
 	redacted: boolean
 	message: Uint8Array
 	plaintextLength: number
+	recordHeader: Uint8Array
 }
 
 export type IDecryptedTranscript = {

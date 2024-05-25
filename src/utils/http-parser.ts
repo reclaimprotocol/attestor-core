@@ -301,9 +301,16 @@ export function getHttpRequestDataFromTranscript(receipt: Transcript<Uint8Array>
 			request.url = url
 			request.protocol = protocol
 		} else {
-			let [key, value] = line.split(':')
-			key = key.toLowerCase().trim()
-			value = value?.trim()
+			let keyIdx = line.indexOf(':')
+			if(keyIdx === -1) {
+				keyIdx = line.length - 1
+			}
+
+			const key = line.slice(0, keyIdx)
+				.toLowerCase()
+				.trim()
+			const value = line.slice(keyIdx + 1)
+				.trim()
 			const oldValue = request.headers[key]
 			if(typeof oldValue === 'string') {
 				request.headers[key] = [oldValue, value]

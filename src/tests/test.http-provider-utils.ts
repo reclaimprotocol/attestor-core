@@ -1,4 +1,6 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
+import { deserialize, serialize } from 'v8'
+import { providers } from '../providers'
 import httpProvider, { HTTPProviderParamsV2 } from '../providers/http-provider'
 import {
 	extractHTMLElement,
@@ -6,11 +8,27 @@ import {
 	makeRegex,
 	matchRedactedStrings
 } from '../providers/http-provider/utils'
-import { hashProviderParams } from '../utils'
+import { getProviderValue, hashProviderParams, uint8ArrayToStr } from '../utils'
+import { Transcript } from '../v2'
 
 jest.setTimeout(60_000)
 
 describe('HTTP Provider Utils tests', () => {
+
+	const {
+		hostPort,
+		geoLocation,
+		getResponseRedactions,
+		createRequest,
+		areValidParams,
+		assertValidProviderReceipt
+	} = providers['http']
+
+	const transcript: Transcript<Uint8Array> = JSON.parse('[{"message":"KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKio=","sender":"server"},{"message":"KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKg==","sender":"server"},{"message":"KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioq","sender":"server"},{"message":"KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKg==","sender":"server"},{"message":"KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKio=","sender":"server"},{"message":"KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKio=","sender":"server"},{"message":"R0VUIC8gSFRUUC8xLjENCkhvc3Q6IHhhcmdzLm9yZw0KQ29udGVudC1MZW5ndGg6IDQNCkNvbm5lY3Rpb246IGNsb3NlDQpBY2NlcHQtRW5jb2Rpbmc6IGlkZW50aXR5DQp1c2VyLWFnZW50OiBNb3ppbGxhLzUuMA0K","sender":"client"},{"message":"KioqKio=","sender":"client"},{"message":"KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKg==","sender":"client"},{"message":"KioqKio=","sender":"client"},{"message":"DQoNCnQ=","sender":"client"},{"message":"KioqKio=","sender":"client"},{"message":"Kg==","sender":"client"},{"message":"KioqKio=","sender":"client"},{"message":"c3Q=","sender":"client"},{"message":"SFRUUC8xLjEgMjAwIE9LKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKg==","sender":"server"},{"message":"KioqKioqKioqKioqKioqKioqKioqKioqKioqKjx0aXRsZT5BaWtlbiAmYW1wOyBEcmlzY29sbCAmYW1wOyBXZWJiPC90aXRsZT4qKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqT25lIG9mIHRoZSBmZXcgZXhjZXB0aW9ucyBpcyBhIHNlcmllcyBvZiBkb2N1bWVudHMgdGhhdCBJJ3ZlIHdyaXR0ZW4KICAgIGJyZWFraW5nIGRvd24gY3J5cHRvZ3JhcGhpYyBhbmQgbmV0d29yayBwcm90b2NvbHMgYnl0ZS1ieS1ieXRlLiBJJ20KICAgIGFsd2F5cyBoZWFyaW5nIGZyb20gdGVhY2hlcnMsIHN0dWRlbnRzLCBhbmQgZmVsbG93IHNvZnR3YXJlIGRldmVsb3BlcnMKICAgIHdobyB1c2UgdGhlc2UgdG8gbGVhcm4sIHRvIGZpeCwgYW5kIHRvIHVuZGVyc3RhbmQuIEknbSB2ZXJ5IHByb3VkIG9mIHRoYXQuKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioq","sender":"server"},{"message":"Kio=","sender":"server"}]')
+		.map((x) => ({
+			...x,
+			message: Buffer.from(x.message, 'base64'),
+		}))
 
 	it('should parse xpath & JSON path', () => {
 		const json = extractHTMLElement(html, "//script[@data-component-name='Navbar']", true)
@@ -184,7 +202,477 @@ describe('HTTP Provider Utils tests', () => {
 		}
 	})
 
+
+	it('should throw on invalid URL', () => {
+		expect(
+			() => (
+				getProviderValue(
+					{
+						url: 'abc',
+						responseMatches: [],
+						responseRedactions: [],
+						method: 'GET'
+					},
+					hostPort
+				)
+			)
+		).toThrow('Invalid URL')
+	})
+
+	it('should throw on invalid params', () => {
+		expect(() => {
+			areValidParams({ a: 'b' })
+		}).toThrow(/^params validation failed/)
+	})
+
+	it('should throw on invalid secret params', () => {
+		expect(() => {
+			createRequest({
+				cookieStr: undefined,
+				authorisationHeader: undefined,
+				headers: undefined
+			}, {
+				url: 'abc',
+				responseMatches: [],
+				responseRedactions: [],
+				method: 'GET'
+			})
+		}).toThrow('auth parameters are not set')
+	})
+
+
+	it('should throw on non 200', () => {
+		const res =
+            `HTTP/1.1 404 NOT FOUND\r
+Content-Length: 0\r
+Connection: close\r
+Content-Type: text/html; charset=utf-8\r
+\r
+`
+		expect(() => {
+			if(getResponseRedactions) {
+				getResponseRedactions(strToUint8Array(res), {
+					url: 'abc',
+					responseMatches: [],
+					responseRedactions: [],
+					method: 'GET'
+				})
+			}
+		}).toThrow('Provider returned error \"404 NOT FOUND\"')
+	})
+
+
+	it('should return empty redactions', () => {
+		const res =
+            `HTTP/1.1 200 OK\r
+Content-Length: 0\r
+Connection: close\r
+Content-Type: text/html; charset=utf-8\r
+\r
+`
+		const redactions = (getResponseRedactions) ?
+			getResponseRedactions(strToUint8Array(res), {
+				url: 'abc',
+				responseMatches: [],
+				responseRedactions: [],
+				method: 'GET'
+			})
+			: undefined
+		expect(redactions).toHaveLength(0)
+	})
+
+	it('should throw on empty body', () => {
+		const res =
+            `HTTP/1.1 200 OK\r
+Content-Length: 0\r
+Connection: close\r
+Content-Type: text/html; charset=utf-8\r
+\r
+`
+		expect(() => {
+			if(getResponseRedactions) {
+				getResponseRedactions(strToUint8Array(res), {
+					url: 'abc',
+					responseMatches: [],
+					responseRedactions: [{
+						regex: 'abc'
+					}],
+					method: 'GET'
+				})
+			}
+		}).toThrow('Failed to find body')
+	})
+
+	it('should throw on bad xpath', () => {
+		const res =
+            `HTTP/1.1 200 OK\r
+Content-Length: 1\r
+Connection: close\r
+Content-Type: text/html; charset=utf-8\r
+\r
+1`
+		expect(() => {
+			if(getResponseRedactions) {
+				getResponseRedactions(strToUint8Array(res), {
+					url: 'abc',
+					responseMatches: [],
+					responseRedactions: [{
+						xPath: 'abc'
+					}],
+					method: 'GET'
+				})
+			}
+		}).toThrow('Failed to find element: \"abc\"')
+	})
+
+	it('should throw on bad jsonPath', () => {
+		const res =
+            `HTTP/1.1 200 OK\r
+Content-Length: 1\r
+Connection: close\r
+Content-Type: text/html; charset=utf-8\r
+\r
+1`
+		expect(() => {
+			if(getResponseRedactions) {
+				getResponseRedactions(strToUint8Array(res), {
+					url: 'abc',
+					responseMatches: [],
+					responseRedactions: [{
+						jsonPath: 'abc'
+					}],
+					method: 'GET'
+				})
+			}
+		}).toThrow('jsonPath not found')
+	})
+
+	it('should throw on bad regex', () => {
+		const res =
+            `HTTP/1.1 200 OK\r
+Content-Length: 1\r
+Connection: close\r
+Content-Type: text/html; charset=utf-8\r
+\r
+1`
+		expect(() => {
+			if(getResponseRedactions) {
+				getResponseRedactions(strToUint8Array(res), {
+					url: 'abc',
+					responseMatches: [],
+					responseRedactions: [{
+						regex: 'abc'
+					}],
+					method: 'GET'
+				})
+			}
+		}).toThrow('regexp abc does not match found element \'1\'')
+	})
+
+	it('should throw on bad method', () => {
+
+		expect(() => {
+			assertValidProviderReceipt(transcript, {
+				url: 'abc',
+				responseMatches: [],
+				responseRedactions: [],
+				method: 'POST'
+			})
+		}).toThrow('Invalid method: get')
+	})
+
+	it('should throw on bad protocol', () => {
+
+		expect(() => {
+			assertValidProviderReceipt(transcript, {
+				url: 'http://xargs.com',
+				responseMatches: [],
+				responseRedactions: [],
+				method: 'GET'
+			})
+		}).toThrow('Expected protocol: https, found: http:')
+	})
+
+	it('should throw on duplicate groups', () => {
+
+		expect(() => {
+			assertValidProviderReceipt(transcript, {
+				url: 'https://xargs.{{abc}}',
+				responseMatches: [{
+					type: 'regex',
+					value: '(?<abc>.)'
+				}],
+				responseRedactions: [],
+				method: 'GET',
+				paramValues: {
+					'abc': 'org'
+				}
+			})
+		}).toThrow('Duplicate parameter abc')
+	})
+
+	it('should throw on bad path', () => {
+
+		expect(() => {
+			assertValidProviderReceipt(transcript, {
+				url: 'https://xargs.com/abc',
+				responseMatches: [],
+				responseRedactions: [],
+				method: 'GET'
+			})
+		}).toThrow('Expected path: /abc, found: /')
+	})
+
+	it('should throw on bad host', () => {
+		expect(() => {
+			assertValidProviderReceipt(transcript, {
+				url: 'https://abc.com/',
+				responseMatches: [],
+				responseRedactions: [],
+				method: 'GET'
+			})
+		}).toThrow('Expected host: abc.com, found: xargs.org')
+	})
+
+	it('should throw on bad OK string', () => {
+		const temp = cloneObject(transcript)
+		// changes the status ("OK") text to something else
+		// it'll be in the first server response packet
+		const firstServerMsg = temp.find((x) => x.sender === 'server')!
+		firstServerMsg.message[0] = 32
+		expect(() => {
+			assertValidProviderReceipt(temp, {
+				url: 'https://xargs.org/',
+				responseMatches: [],
+				responseRedactions: [],
+				method: 'GET'
+			})
+		}).toThrow('Missing \"HTTP/1.1 200\" header in response')
+	})
+
+	it('should throw on bad close header', () => {
+		const temp = cloneObject(transcript)
+		const clientMsgWithClose = temp.find((x) => {
+			if(x.sender !== 'client') {
+				return false
+			}
+
+			return uint8ArrayToStr(x.message)
+				.includes('Connection: close')
+		})!
+		clientMsgWithClose.message[68] = 102
+		expect(() => {
+			assertValidProviderReceipt(temp, {
+				url: 'https://xargs.org/',
+				responseMatches: [],
+				responseRedactions: [],
+				method: 'GET'
+			})
+		}).toThrow('Connection header must be \"close\"')
+	})
+
+	it('should throw on bad body', () => {
+		expect(() => {
+			assertValidProviderReceipt(transcript, {
+				url: 'https://xargs.org/',
+				responseMatches: [],
+				responseRedactions: [],
+				method: 'GET',
+				body: 'abc'
+			})
+		}).toThrow('request body mismatch')
+	})
+
+	it('should throw on bad regex match', () => {
+		expect(() => {
+			assertValidProviderReceipt(transcript, {
+				url: 'https://xargs.org/',
+				responseMatches: [{
+					type: 'regex',
+					value: 'abc'
+				}],
+				responseRedactions: [],
+				method: 'GET',
+			})
+		}).toThrow('Invalid receipt. Regex \"abc\" didn\'t match')
+	})
+
+	it('should throw on bad contains match', () => {
+		expect(() => {
+			assertValidProviderReceipt(transcript, {
+				url: 'https://xargs.org/',
+				responseMatches: [{
+					type: 'contains',
+					value: 'abc'
+				}],
+				responseRedactions: [],
+				method: 'GET',
+			})
+		}).toThrow('Invalid receipt. Response does not contain \"abc\"')
+	})
+
+	it('should get geo', () => {
+		const geo = getProviderValue(
+			{
+				geoLocation: '{{geo}}',
+				paramValues: {
+					'geo': 'US'
+				}
+			} as unknown as HTTPProviderParamsV2,
+			geoLocation
+		)
+		expect(geo).toEqual('US')
+	})
+
+	it('should throw on bad geo param', () => {
+
+		expect(() => {
+			// @ts-ignore
+			geoLocation({
+				geoLocation: '{{geo}}',
+				paramValues: {
+					'geo1': 'US'
+				}
+			})
+		}).toThrow('parameter "geo" value not found in templateParams')
+	})
+
+	it('should return empty geo', () => {
+
+		expect(// @ts-ignore
+			geoLocation({
+				geoLocation: '',
+			})).toEqual(undefined)
+	})
+
+	it('should throw on bad param in url', () => {
+
+		expect(() => {
+			// @ts-ignore
+			return hostPort(
+				{
+					url: 'https://xargs.{{param1}}'
+				})
+		})
+			.toThrow('parameter "param1" value not found in templateParams')
+	})
+
+	it('should throw on bad url', () => {
+
+		expect(() => {
+			// @ts-ignore
+			hostPort(
+				{
+					url: 'file:///C:/path'
+				})
+		})
+			.toThrow('url is incorrect')
+	})
+
+	it('should throw on bad match type', () => {
+		expect(() => {
+			const params = {
+				url: 'https://xargs.org/',
+				responseMatches: [{
+					type: 'abc',
+					value: 'abc'
+				}],
+				responseRedactions: [],
+				method: 'GET',
+			}
+			// @ts-ignore
+			assertValidProviderReceipt(transcript, params)
+		}).toThrow('Invalid response match type abc')
+	})
+
+	it('should throw on no non present params', () => {
+		expect(() => {
+			assertValidProviderReceipt(transcript, {
+				url: 'https://xargs.{{org}}/',
+				responseMatches: [{
+					type: 'contains',
+					value: 'abc'
+				}],
+				responseRedactions: [],
+				method: 'GET',
+			})
+		}).toThrow('parameter\'s \"org\" value not found in paramValues')
+	})
+
+	it('should throw on non present secret params', () => {
+		expect(() => {
+			createRequest({
+				cookieStr: 'abc',
+
+			}, {
+				url: 'https://xargs.{{com}}',
+				responseMatches: [],
+				responseRedactions: [],
+				method: 'GET'
+			})
+		}).toThrow('parameter\'s \"com\" value not found in paramValues and secret parameter\'s paramValues')
+	})
+
+	it('should replace params in body correctly', () => {
+		const params: HTTPProviderParamsV2 = {
+			url: 'https://example.{{param1}}/',
+			method: 'GET',
+			body: 'hello {{h}} {{b}} {{h1h1h1h1h1h1h1}} {{h2}} {{a}} {{h1h1h1h1h1h1h1}} {{h}} {{a}} {{h2}} {{a}} {{b}} world',
+			geoLocation: 'US',
+			responseMatches: [{
+				type: 'regex',
+				value: '<title.*?(?<domain>{{param2}} Domain)<\\/title>',
+			}],
+			responseRedactions: [{
+				xPath: './html/head/{{param3}}',
+			}, {
+				xPath: '/html/body/div/p[1]/text()'
+			}],
+			paramValues: {
+				param1: 'com',
+				param2: 'Example',
+				param3: 'title',
+				what: 'illustrative',
+				a:'{{b}}',
+				b:'aaaaa'
+			},
+			headers: {
+				'user-agent': 'Mozilla/5.0',
+			}
+		}
+		const secretParams = {
+			cookieStr: '<cookie-str>',
+			paramValues: {
+				h: 'crazy',
+				h1h1h1h1h1h1h1: 'crazy1',
+				h2: 'crazy2',
+			},
+			authorisationHeader: 'abc'
+		}
+		const req = createRequest(secretParams, params)
+
+		const reqText = uint8ArrayToStr(req.data as Uint8Array)
+		expect(reqText).toContain('hello crazy aaaaa crazy1 crazy2 {{b}} crazy1 crazy {{b}} crazy2 {{b}} aaaaa world')
+		expect(req.redactions.length).toEqual(7)
+		expect(getRedaction(0)).toEqual('Cookie: <cookie-str>\r\nAuthorization: abc')
+		expect(getRedaction(1)).toEqual('crazy')
+		expect(getRedaction(2)).toEqual('crazy1')
+		expect(getRedaction(3)).toEqual('crazy2')
+		expect(getRedaction(4)).toEqual('crazy1')
+		expect(getRedaction(5)).toEqual('crazy')
+		expect(getRedaction(6)).toEqual('crazy2')
+
+		function getRedaction(index: number) {
+			return uint8ArrayToStr((req.data as Uint8Array).slice(req.redactions[index].fromIndex, req.redactions[index].toIndex))
+		}
+	})
 })
+
+function cloneObject<T>(obj: T): T {
+	// use node serialization to clone object
+	// to allow binary data to be cloned
+	return deserialize(serialize(obj))
+}
 
 const html = `
 <!DOCTYPE html><html class="home index"><head><title>Home | Bookface</title><script>window.RAILS_ENV = 'production';</script><script>var _rollbarConfig = {

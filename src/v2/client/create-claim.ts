@@ -31,7 +31,7 @@ export async function createClaim<N extends ProviderName>(
 
 	const hostPort = getProviderValue(params, provider.hostPort)
 	const geoLocation = getProviderValue(params, provider.geoLocation)
-	const redactionMode = getProviderValue(params, provider.writeRedactionMode)
+	let redactionMode = getProviderValue(params, provider.writeRedactionMode)
 	const [host, port] = hostPort.split(':')
 	const resParser = makeHttpResponseParser()
 	const revealMap = new Map<TLSPacketContext, MessageRevealInfo>()
@@ -85,6 +85,10 @@ export async function createClaim<N extends ProviderName>(
 		version: tlsVersion,
 		cipherSuite
 	} = tunnel.tls.getMetadata()
+	if(tlsVersion === 'TLS1_2' && redactionMode !== 'zk') {
+		redactionMode = 'zk'
+		logger.info('TLS1.2 detected, defaulting to zk redaction mode')
+	}
 
 	const {
 		redactions,

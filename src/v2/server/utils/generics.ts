@@ -1,5 +1,5 @@
 import { REDACTION_CHAR_CODE } from '@reclaimprotocol/circom-symmetric-crypto'
-import { CONTENT_TYPE_MAP, strToUint8Array } from '@reclaimprotocol/tls'
+import { CONTENT_TYPE_MAP, PACKET_TYPE, strToUint8Array } from '@reclaimprotocol/tls'
 import { ServiceSignatureType } from '../../../proto/api'
 import { SIGNATURES } from '../../../signatures'
 import { IDecryptedTranscript } from '../../../types'
@@ -58,8 +58,10 @@ export function extractApplicationDataFromTranscript(
 			}
 
 			message = m.message.slice(0, -1)
-		} else {
+		} else if(m.recordHeader[0] === PACKET_TYPE.WRAPPED_RECORD) {
 			message = m.message
+		} else {
+			continue
 		}
 
 		msgs.push({ message, sender: m.sender })
