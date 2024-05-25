@@ -28,3 +28,6 @@ export const DNS_SERVERS = [
 	'8.8.8.8',
 	'8.8.4.4'
 ]
+
+// 10m
+export const MAX_CLAIM_TIMESTAMP_DIFF_S = 10 * 60

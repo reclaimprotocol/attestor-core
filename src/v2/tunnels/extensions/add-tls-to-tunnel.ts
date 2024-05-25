@@ -45,19 +45,14 @@ export const addTlsToTunnel = <O extends { request: Partial<CreateTunnelRequest>
 				handshakeReject?.(err)
 			},
 			async write(packet, ctx) {
-				transcript.push({
-					sender: 'client',
-					message: ctx.type === 'plaintext'
-						? {
-							plaintext: packet.content,
-							type: 'plaintext',
-						}
-						: ctx
-				})
 				const message = concatenateUint8Arrays([
 					packet.header,
 					packet.content
 				])
+				transcript.push({
+					sender: 'client',
+					message: { ...ctx, data: message }
+				})
 
 				if(!tunnel) {
 					// sends the packet as the initial message
@@ -74,12 +69,19 @@ export const addTlsToTunnel = <O extends { request: Partial<CreateTunnelRequest>
 			onRead(packet, ctx) {
 				transcript.push({
 					sender: 'server',
-					message: ctx.type === 'plaintext'
-						? {
-							plaintext: packet.content,
-							type: 'plaintext',
-						}
-						: ctx
+					message: {
+						...ctx,
+						data: concatenateUint8Arrays([
+							packet.header,
+							// the TLS package sends us the decrypted
+							// content, so we need to get the orginal
+							// ciphertext received from the server
+							// as that's part of the true transcript.
+							ctx.type === 'ciphertext'
+								? ctx.ciphertext
+								: packet.content
+						])
+					}
 				})
 			},
 		})
@@ -117,7 +119,7 @@ export const addTlsToTunnel = <O extends { request: Partial<CreateTunnelRequest>
 				},
 			})
 
-			logger?.info('plaintext tunnel created')
+			logger?.debug('plaintext tunnel created')
 
 			return tunnel
 		}

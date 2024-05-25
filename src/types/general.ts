@@ -1,4 +1,4 @@
-import type { Logger as TLSLogger, TLSPacketContext } from '@reclaimprotocol/tls'
+import type { Logger as TLSLogger, TLSPacketContext, TLSProtocolVersion } from '@reclaimprotocol/tls'
 
 /**
  * Represents a slice of any array or string
@@ -19,8 +19,23 @@ export type ZKRevealInfo = {
 
 export type MessageRevealInfo = { type: 'complete' } | ZKRevealInfo
 
-export type CompleteTLSPacket = Exclude<TLSPacketContext, { type: 'plaintext' }>
-	| {
-		type: 'plaintext'
-		plaintext: Uint8Array
+export type CompleteTLSPacket = TLSPacketContext
+	& {
+		/**
+		 * Full data that was sent/recv across the wire
+		 */
+		data: Uint8Array
 	}
+
+export type IDecryptedTranscriptMessage = {
+	sender: 'client' | 'server'
+	redacted: boolean
+	message: Uint8Array
+	plaintextLength: number
+}
+
+export type IDecryptedTranscript = {
+	transcript: IDecryptedTranscriptMessage[]
+	tlsVersion: TLSProtocolVersion
+	hostname: string
+}

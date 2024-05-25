@@ -32,9 +32,7 @@ export async function preparePacketsForReveal(
 			sender: sender === 'client'
 				? TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
 				: TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER,
-			message: message.type === 'ciphertext'
-				? message.ciphertext
-				: message.plaintext,
+			message: message.data,
 			reveal: undefined,
 		}
 		transcript.push(msg)

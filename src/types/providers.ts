@@ -1,6 +1,7 @@
 import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
-import type { ProviderClaimData, TLSReceipt } from '../proto/api'
-import { WitnessData } from './beacon'
+import type { ProviderClaimData } from '../proto/api'
+import type { Transcript } from '../v2'
+import type { WitnessData } from './beacon'
 import type { ArraySlice } from './general'
 
 type CreateRequestResult = {
@@ -90,11 +91,11 @@ export interface Provider<
    * user is claiming to have
    *
    * This is run on the witness side.
-   * @param receipt the TLS receipt to verify
+   * @param receipt application data messages exchanged in the TLS session
    * @param params the parameters to verify the receipt against. Eg. `{"email": "abcd@gmail.com"}`
    * */
   assertValidProviderReceipt(
-    receipt: TLSReceipt,
+    receipt: Transcript<Uint8Array>,
     params: Params
   ): void | Promise<void> | { extractedParams: { [key: string]: string } }
 }

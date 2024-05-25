@@ -6,13 +6,12 @@ import { CONNECTION_TIMEOUT_MS, DNS_SERVERS } from '../../../config'
 import { CreateTunnelRequest } from '../../../proto/api'
 import type { Logger } from '../../../types'
 import { logger as LOGGER, WitnessError } from '../../../utils'
-import type { MakeTunnelFn, Transcript } from '../../types'
+import type { MakeTunnelFn, TCPSocketProperties } from '../../types'
 import { isValidCountryCode } from '../utils/iso'
 
 const HTTPS_PROXY_URL = process.env.HTTPS_PROXY_URL
 
 type ExtraOpts = Omit<CreateTunnelRequest, 'id' | 'initialMessage'>
-type TunnelOpts = { transcript: Transcript<Uint8Array> }
 /**
  * Builds a TCP tunnel to the given host and port.
  * If a geolocation is provided -- an HTTPS proxy is used
@@ -25,7 +24,7 @@ type TunnelOpts = { transcript: Transcript<Uint8Array> }
  *
  * The tunnel also retains a transcript of all messages sent and received.
  */
-export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TunnelOpts> = async({
+export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async({
 	host,
 	port,
 	geoLocation,
@@ -34,7 +33,7 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TunnelOpts> = async({
 	onMessage,
 }) => {
 	const socket = await getSocket({ host, port, geoLocation }, logger)
-	const transcript: TunnelOpts['transcript'] = []
+	const transcript: TCPSocketProperties['transcript'] = []
 
 	let connectTimeout: NodeJS.Timeout | undefined
 	try {
@@ -60,13 +59,14 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TunnelOpts> = async({
 	socket.once('end', () => close(undefined))
 	socket.on('data', message => {
 		onMessage?.(message)
-		transcript.push({ sender: 'client', message })
+		transcript.push({ sender: 'server', message })
 	})
 
 	return {
 		transcript,
+		createRequest: { host, port, geoLocation },
 		async write(data) {
-			transcript.push({ sender: 'server', message: data })
+			transcript.push({ sender: 'client', message: data })
 			await new Promise<void>((resolve, reject) => {
 				socket.write(data, err => {
 					if(err) {

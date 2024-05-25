@@ -125,6 +125,6 @@ export class WitnessClient extends WitnessSocket implements IWitnessClient {
 	}
 
 	createClaim<N extends ProviderName>(opts: CreateClaimOpts<N>) {
-		return createClaim.call(this, opts)
+		return createClaim.call(this, opts) as ReturnType<typeof createClaim<N>>
 	}
 }

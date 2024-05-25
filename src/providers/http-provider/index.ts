@@ -1,10 +1,8 @@
 import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
 import Ajv from 'ajv'
-import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '../../config'
-import { TranscriptMessageSenderType } from '../../proto/api'
+import { RECLAIM_USER_AGENT } from '../../config'
 import { ArraySlice, Provider } from '../../types'
 import {
-	extractApplicationDataMsgsFromTranscript,
 	findIndexInUint8Array,
 	getHttpRequestDataFromTranscript,
 	REDACTION_CHAR_CODE,
@@ -258,14 +256,13 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const params = newParams.newParams
 		extractedParams = { ...extractedParams, ...newParams.extractedValues }
 
-		const msgs = extractApplicationDataMsgsFromTranscript(receipt)
-		const req = getHttpRequestDataFromTranscript(msgs)
+		const req = getHttpRequestDataFromTranscript(receipt)
 		if(req.method !== params.method.toLowerCase()) {
 			logTranscript()
 			throw new Error(`Invalid method: ${req.method}`)
 		}
 
-		const { protocol, hostname, pathname, port } = new URL(params.url)
+		const { protocol, hostname, pathname } = new URL(params.url)
 
 		if(protocol !== 'https:') {
 			console.log('params URL:', params.url)
@@ -281,21 +278,14 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			throw new Error(`Expected path: ${expectedPath}, found: ${req.url}`)
 		}
 
-		const expHostPort = `${hostname}:${port || DEFAULT_HTTPS_PORT}`
-		if(receipt.hostPort !== expHostPort) {
-			logTranscript()
-			throw new Error(
-				`Expected hostPort: ${expHostPort}, found: ${receipt.hostPort}`
-			)
-		}
-
 		if(req.headers.host !== hostname) {
 			logTranscript()
 			throw new Error(`Expected host: ${hostname}, found: ${req.headers.host}`)
 		}
 
-		const serverBlocks = msgs.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER)
-			.map((r) => r.data)
+		const serverBlocks = receipt
+			.filter(s => s.sender === 'server')
+			.map((r) => r.message)
 			.filter(b => !b.every(b => b === REDACTION_CHAR_CODE)) // filter out fully redacted blocks
 
 		const res = Buffer.from(concatArrays(...serverBlocks)).toString()
@@ -383,8 +373,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		return { extractedParams: extractedParams }
 
 		function logTranscript() {
-			const clientMsgs = msgs.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT).map(m => m.data)
-			const serverMsgs = msgs.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER).map(m => m.data)
+			const clientMsgs = receipt.filter(s => s.sender === 'client').map(m => m.message)
+			const serverMsgs = receipt.filter(s => s.sender === 'server').map(m => m.message)
 
 			const clientTranscript = uint8ArrayToStr(concatenateUint8Arrays(clientMsgs))
 			const serverTranscript = uint8ArrayToStr(concatenateUint8Arrays(serverMsgs))

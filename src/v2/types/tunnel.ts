@@ -1,3 +1,4 @@
+import { CreateTunnelRequest } from '../../proto/api'
 import type { Logger } from '../../types'
 
 export type MakeTunnelBaseOpts<O> = O & {
@@ -19,3 +20,8 @@ export type Transcript<T> = {
 	sender: 'client' | 'server'
 	message: T
 }[]
+
+export type TCPSocketProperties = {
+	transcript: Transcript<Uint8Array>
+	createRequest: Pick<CreateTunnelRequest, 'host' | 'port' | 'geoLocation'>
+}

@@ -5,7 +5,15 @@ import { readFileSync } from 'fs'
 import { createServer } from 'https'
 import { logger } from '../utils'
 
-// TLS echo server
+/**
+ * Mock https server to test claim creation.
+ * It implements a GET /me endpoint that returns the email address
+ * of the user. A bearer token is expected in the Authorization header.
+ *
+ * The bearer token is expected to be the email address without the domain.
+ * Eg. to claim the email address "abcd@mock.com", the header
+ * should be "Authorization: Bearer abcd".
+ */
 export function createMockServer(port: number) {
 	const tlsSessionStore: Record<string, Buffer> = {}
 

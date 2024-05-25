@@ -2,6 +2,7 @@ import { concatenateUint8Arrays, CONTENT_TYPE_MAP, PACKET_TYPE, strToUint8Array 
 import type { IncomingHttpHeaders } from 'http'
 import { TLSReceipt, TLSVersion, TranscriptMessageSenderType } from '../proto/api'
 import { ArraySlice } from '../types'
+import { Transcript } from '../v2'
 import { findIndexInUint8Array, uint8ArrayToStr } from './generics'
 import { REDACTION_CHAR_CODE } from './redactions'
 
@@ -221,27 +222,6 @@ export function makeHttpResponseParser() {
 }
 
 /**
- * Extract the HTTP response from a TLS receipt transcript.
- * Will throw an error if the response is incomplete or redacted.
- * @returns the http response
- */
-export function getCompleteHttpResponseFromReceipt(receipt: TLSReceipt) {
-	const applMsgs = extractApplicationDataMsgsFromTranscript(receipt)
-		.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER)
-	const resParser = makeHttpResponseParser()
-	for(const { data } of applMsgs) {
-		resParser.onChunk(data)
-	}
-
-	resParser.streamEnded()
-	if(!resParser.res.complete) {
-		throw new Error('Server response is incomplete')
-	}
-
-	return resParser.res
-}
-
-/**
  * Finds all application data messages in a transcript
  * and returns them. Removes the "contentType" suffix from the message.
  * in TLS 1.3
@@ -292,14 +272,13 @@ export function extractApplicationDataMsgsFromTranscript(
  * @param receipt the transcript to read from or application messages if they were extracted beforehand
  * @returns the parsed HTTP request
  */
-export function getHttpRequestDataFromTranscript(receipt: TLSReceipt | ApplicationMessage[]) {
-	const applMsgs = Array.isArray(receipt) ? receipt : extractApplicationDataMsgsFromTranscript(receipt)
-	const clientMsgs = applMsgs
-		.filter(s => s.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT)
+export function getHttpRequestDataFromTranscript(receipt: Transcript<Uint8Array>) {
+	const clientMsgs = receipt
+		.filter(s => s.sender === 'client')
 
 	// if the first message is redacted, we can't parse it
 	// as we don't know what the request was
-	if(clientMsgs[0].data[0] === REDACTION_CHAR_CODE) {
+	if(clientMsgs[0].message[0] === REDACTION_CHAR_CODE) {
 		throw new Error('First client message request is redacted. Cannot parse')
 	}
 
@@ -309,7 +288,7 @@ export function getHttpRequestDataFromTranscript(receipt: TLSReceipt | Applicati
 		protocol: '',
 		headers: {}
 	}
-	let requestBuffer = concatenateUint8Arrays(clientMsgs.map(m => m.data))
+	let requestBuffer = concatenateUint8Arrays(clientMsgs.map(m => m.message))
 	// keep reading lines until we get to the end of the headers
 	for(let line = getLine(); typeof line !== 'undefined'; line = getLine()) {
 		if(line === '') {

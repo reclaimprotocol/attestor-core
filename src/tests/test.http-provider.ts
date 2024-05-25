@@ -16,7 +16,6 @@ const logger = P()
 
 describe('HTTP Provider tests', () => {
 
-
 	it('should create receipt', async() => {
 
 		const resp = await createClaim({

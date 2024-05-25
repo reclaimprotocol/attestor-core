@@ -63,6 +63,18 @@ export class WitnessServerSocket extends WitnessSocket implements IWitnessServer
 			}
 		})
 	}
+
+	getTunnel(tunnelId: number) {
+		const tunnel = this.tunnels[tunnelId]
+		if(!tunnel) {
+			throw new WitnessError(
+				'WITNESS_ERROR_NOT_FOUND',
+				`Tunnel "${tunnelId}" not found`
+			)
+		}
+
+		return tunnel
+	}
 }
 
 function validateConnection(req: IncomingMessage) {

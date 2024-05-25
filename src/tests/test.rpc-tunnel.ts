@@ -1,49 +1,24 @@
 import { TLSSocket } from 'tls'
-import { WebSocketServer } from 'ws'
-import { WebSocket } from 'ws'
 import { CreateTunnelRequest } from '../proto/api'
 import { logger } from '../utils'
 import { makeRpcTcpTunnel, makeRpcTlsTunnel, WitnessClient } from '../v2'
-import { makeWsServer } from '../v2/server'
-import { createMockServer } from './mock-provider-server'
-import { delay, getRandomPort, randomPrivateKey } from './utils'
+import { describeWithServer } from './describe-with-server'
+import { delay } from './utils'
 
-describe('RPC Tunnel', () => {
+describeWithServer('RPC Tunnel', opts => {
 
-	let wsServer: WebSocketServer
-	let wsServerUrl: string
+	const { mockHttpsServer, getClientOnServer } = opts
 
-	let privateKeyHex: string
 	let client: WitnessClient
-
-	const mockHttpsServer = createMockServer(1234)
-
-	beforeAll(async() => {
-		const wsServerPort = getRandomPort()
-		wsServer = await makeWsServer(wsServerPort)
-		wsServerUrl = `ws://localhost:${wsServerPort}`
-	})
-
-	afterAll(() => {
-		wsServer.close()
-		mockHttpsServer.server.close()
-	})
-
 	beforeEach(async() => {
-		privateKeyHex = randomPrivateKey()
-		client = new WitnessClient({
-			privateKeyHex,
-			logger: logger.child({ client: 1 }),
-			url: wsServerUrl
-		})
-		await client.waitForInit()
+		client = opts.client
 	})
 
 	afterEach(async() => {
 		await client.terminateConnection()
 	})
 
-	it.only('should connect to a server via RPC tunnel', async() => {
+	it('should connect to a server via RPC tunnel', async() => {
 		const tunnel = await makeRpcTcpTunnel({
 			request: {
 				id: 1,
@@ -54,7 +29,7 @@ describe('RPC Tunnel', () => {
 			logger,
 		})
 
-		const ws = getClientWSOnServer()
+		const ws = getClientOnServer()
 		const socketTunnel = ws?.tunnels[1]
 		expect(socketTunnel).toBeTruthy()
 
@@ -71,7 +46,7 @@ describe('RPC Tunnel', () => {
 
 	describe('TLS', () => {
 		it('should do a TLS handshake via RPC tunnel', async() => {
-			const ws = getClientWSOnServer()
+			const ws = getClientOnServer()
 
 			let createReq: CreateTunnelRequest | undefined
 			ws?.addEventListener('rpc-request', ({ data }) => {
@@ -160,13 +135,4 @@ describe('RPC Tunnel', () => {
 			})
 		})
 	})
-
-	function getClientWSOnServer() {
-		const serverSockets = [...wsServer.clients.values()] as WebSocket[]
-		return serverSockets
-			.find(s => (
-				s.serverSocket?.metadata.userId === client.metadata.userId
-			))
-			?.serverSocket
-	}
 })

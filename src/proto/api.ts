@@ -218,6 +218,7 @@ export enum WitnessErrorCode {
   WITNESS_ERROR_BAD_REQUEST = 2,
   WITNESS_ERROR_NOT_FOUND = 3,
   WITNESS_ERROR_PROXY_ERROR = 4,
+  WITNESS_ERROR_INVALID_CLAIM = 5,
   UNRECOGNIZED = -1,
 }
 
@@ -238,6 +239,9 @@ export function witnessErrorCodeFromJSON(object: any): WitnessErrorCode {
     case 4:
     case "WITNESS_ERROR_PROXY_ERROR":
       return WitnessErrorCode.WITNESS_ERROR_PROXY_ERROR;
+    case 5:
+    case "WITNESS_ERROR_INVALID_CLAIM":
+      return WitnessErrorCode.WITNESS_ERROR_INVALID_CLAIM;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -257,6 +261,8 @@ export function witnessErrorCodeToJSON(object: WitnessErrorCode): string {
       return "WITNESS_ERROR_NOT_FOUND";
     case WitnessErrorCode.WITNESS_ERROR_PROXY_ERROR:
       return "WITNESS_ERROR_PROXY_ERROR";
+    case WitnessErrorCode.WITNESS_ERROR_INVALID_CLAIM:
+      return "WITNESS_ERROR_INVALID_CLAIM";
     case WitnessErrorCode.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -659,7 +665,8 @@ export interface ClaimTunnelRequest_TranscriptMessage {
 }
 
 export interface ClaimTunnelResponse {
-  claimRequest: ClaimTunnelRequest | undefined;
+  /** The original request that was made to claim the tunnel */
+  request: ClaimTunnelRequest | undefined;
   claim?: ProviderClaimData | undefined;
   error?: WitnessErrorData | undefined;
   signatures: ClaimTunnelResponse_Signatures | undefined;
@@ -3383,10 +3390,10 @@ function createBaseMessageReveal(): MessageReveal {
 export const MessageReveal = {
   encode(message: MessageReveal, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.directReveal !== undefined) {
-      MessageReveal_MessageRevealDirect.encode(message.directReveal, writer.uint32(34).fork()).ldelim();
+      MessageReveal_MessageRevealDirect.encode(message.directReveal, writer.uint32(10).fork()).ldelim();
     }
     if (message.zkReveal !== undefined) {
-      MessageReveal_MessageRevealZk.encode(message.zkReveal, writer.uint32(42).fork()).ldelim();
+      MessageReveal_MessageRevealZk.encode(message.zkReveal, writer.uint32(18).fork()).ldelim();
     }
     return writer;
   },
@@ -3398,15 +3405,15 @@ export const MessageReveal = {
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
-        case 4:
-          if (tag !== 34) {
+        case 1:
+          if (tag !== 10) {
             break;
           }
 
           message.directReveal = MessageReveal_MessageRevealDirect.decode(reader, reader.uint32());
           continue;
-        case 5:
-          if (tag !== 42) {
+        case 2:
+          if (tag !== 18) {
             break;
           }
 
@@ -3997,13 +4004,13 @@ export const ClaimTunnelRequest_TranscriptMessage = {
 };
 
 function createBaseClaimTunnelResponse(): ClaimTunnelResponse {
-  return { claimRequest: undefined, claim: undefined, error: undefined, signatures: undefined };
+  return { request: undefined, claim: undefined, error: undefined, signatures: undefined };
 }
 
 export const ClaimTunnelResponse = {
   encode(message: ClaimTunnelResponse, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.claimRequest !== undefined) {
-      ClaimTunnelRequest.encode(message.claimRequest, writer.uint32(10).fork()).ldelim();
+    if (message.request !== undefined) {
+      ClaimTunnelRequest.encode(message.request, writer.uint32(10).fork()).ldelim();
     }
     if (message.claim !== undefined) {
       ProviderClaimData.encode(message.claim, writer.uint32(18).fork()).ldelim();
@@ -4029,7 +4036,7 @@ export const ClaimTunnelResponse = {
             break;
           }
 
-          message.claimRequest = ClaimTunnelRequest.decode(reader, reader.uint32());
+          message.request = ClaimTunnelRequest.decode(reader, reader.uint32());
           continue;
         case 2:
           if (tag !== 18) {
@@ -4063,7 +4070,7 @@ export const ClaimTunnelResponse = {
 
   fromJSON(object: any): ClaimTunnelResponse {
     return {
-      claimRequest: isSet(object.claimRequest) ? ClaimTunnelRequest.fromJSON(object.claimRequest) : undefined,
+      request: isSet(object.request) ? ClaimTunnelRequest.fromJSON(object.request) : undefined,
       claim: isSet(object.claim) ? ProviderClaimData.fromJSON(object.claim) : undefined,
       error: isSet(object.error) ? WitnessErrorData.fromJSON(object.error) : undefined,
       signatures: isSet(object.signatures) ? ClaimTunnelResponse_Signatures.fromJSON(object.signatures) : undefined,
@@ -4072,8 +4079,8 @@ export const ClaimTunnelResponse = {
 
   toJSON(message: ClaimTunnelResponse): unknown {
     const obj: any = {};
-    if (message.claimRequest !== undefined) {
-      obj.claimRequest = ClaimTunnelRequest.toJSON(message.claimRequest);
+    if (message.request !== undefined) {
+      obj.request = ClaimTunnelRequest.toJSON(message.request);
     }
     if (message.claim !== undefined) {
       obj.claim = ProviderClaimData.toJSON(message.claim);
@@ -4092,8 +4099,8 @@ export const ClaimTunnelResponse = {
   },
   fromPartial(object: DeepPartial<ClaimTunnelResponse>): ClaimTunnelResponse {
     const message = createBaseClaimTunnelResponse();
-    message.claimRequest = (object.claimRequest !== undefined && object.claimRequest !== null)
-      ? ClaimTunnelRequest.fromPartial(object.claimRequest)
+    message.request = (object.request !== undefined && object.request !== null)
+      ? ClaimTunnelRequest.fromPartial(object.request)
       : undefined;
     message.claim = (object.claim !== undefined && object.claim !== null)
       ? ProviderClaimData.fromPartial(object.claim)

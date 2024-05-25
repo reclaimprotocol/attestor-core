@@ -114,10 +114,10 @@ export async function createClaim<N extends ProviderName>(
 	onStep?.({ name: 'sending-request-data' })
 
 	try {
-		if(redactionMode === 'key-update') {
-			await writeRedactedWithKeyUpdate()
-		} else {
+		if(redactionMode === 'zk') {
 			await writeRedactedZk()
+		} else {
+			await writeRedactedWithKeyUpdate()
 		}
 
 		logger.info('wrote request to server')

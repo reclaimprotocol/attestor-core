@@ -2,7 +2,7 @@ import type { ClaimTunnelResponse, InitRequest, ReclaimRPCMessage, ServiceSignat
 import type { ProviderName, ProviderParams, ProviderSecretParams } from '../../providers'
 import type { Logger, PrepareZKProofsBaseOpts, ProofGenerationStep } from '../../types'
 import type { RPCEvent, RPCEventMap, RPCEventType, RPCRequestData, RPCResponseData, RPCType } from './rpc'
-import type { Tunnel } from './tunnel'
+import type { TCPSocketProperties, Tunnel } from './tunnel'
 
 export type WitnessClientOpts = {
 	/**
@@ -111,7 +111,13 @@ export declare class IWitnessServerSocket extends IWitnessSocket {
 	 * Set of tunnels this client created. Only available
 	 * when WS is created by the server
 	 */
-	tunnels: { [id: TunnelMessage['tunnelId']]: Tunnel<{}> }
+	tunnels: { [id: TunnelMessage['tunnelId']]: Tunnel<TCPSocketProperties> }
+
+	/**
+	 * Fetches a tunnel by its ID.
+	 * If the tunnel does not exist, it will throw an error.
+	 */
+	getTunnel(tunnelId: TunnelMessage['tunnelId']): Tunnel<TCPSocketProperties>
 }
 
 export declare class IWitnessClient extends IWitnessSocket {

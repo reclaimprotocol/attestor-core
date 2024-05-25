@@ -1,19 +1,11 @@
-import { WitnessError } from '../../../utils'
 import { RPCHandler } from '../../types'
 
 export const disconnectTunnel: RPCHandler<'disconnectTunnel'> = async(
 	{ id },
 	{ client }
 ) => {
-	const tunnel = client.tunnels[id]
-	if(!tunnel) {
-		throw new WitnessError(
-			'WITNESS_ERROR_NOT_FOUND',
-			`Tunnel "${id}" not found`
-		)
-	}
-
-	await tunnel?.close(new Error('Tunnel disconnected'))
+	const tunnel = client.getTunnel(id)
+	await tunnel.close(new Error('Tunnel disconnected'))
 
 	return {}
 }
