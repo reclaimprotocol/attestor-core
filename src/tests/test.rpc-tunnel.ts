@@ -1,8 +1,9 @@
 import { TLSSocket } from 'tls'
 import { WebSocketServer } from 'ws'
+import { WebSocket } from 'ws'
 import { CreateTunnelRequest } from '../proto/api'
 import { logger } from '../utils'
-import { makeReclaimClient, makeRpcTcpTunnel, makeRpcTlsTunnel } from '../v2'
+import { makeRpcTcpTunnel, makeRpcTlsTunnel, WitnessClient } from '../v2'
 import { makeWsServer } from '../v2/server'
 import { createMockServer } from './mock-provider-server'
 import { delay, getRandomPort, randomPrivateKey } from './utils'
@@ -13,7 +14,7 @@ describe('RPC Tunnel', () => {
 	let wsServerUrl: string
 
 	let privateKeyHex: string
-	let client: WebSocket
+	let client: WitnessClient
 
 	const mockHttpsServer = createMockServer(1234)
 
@@ -30,7 +31,7 @@ describe('RPC Tunnel', () => {
 
 	beforeEach(async() => {
 		privateKeyHex = randomPrivateKey()
-		client = makeReclaimClient({
+		client = new WitnessClient({
 			privateKeyHex,
 			logger: logger.child({ client: 1 }),
 			url: wsServerUrl
@@ -38,11 +39,11 @@ describe('RPC Tunnel', () => {
 		await client.waitForInit()
 	})
 
-	afterEach(() => {
-		client.close()
+	afterEach(async() => {
+		await client.terminateConnection()
 	})
 
-	it('should connect to a server via RPC tunnel', async() => {
+	it.only('should connect to a server via RPC tunnel', async() => {
 		const tunnel = await makeRpcTcpTunnel({
 			request: {
 				id: 1,
@@ -54,9 +55,18 @@ describe('RPC Tunnel', () => {
 		})
 
 		const ws = getClientWSOnServer()
-		expect(ws?.tunnels[1]).toBeTruthy()
+		const socketTunnel = ws?.tunnels[1]
+		expect(socketTunnel).toBeTruthy()
 
 		await tunnel.close()
+
+		// check that the server actually closed the tunnel
+		// upon our request
+		await expect(
+			socketTunnel?.write(Buffer.from('hello'))
+		).rejects.toMatchObject({
+			code: 'ERR_STREAM_WRITE_AFTER_END'
+		})
 	})
 
 	describe('TLS', () => {
@@ -152,11 +162,11 @@ describe('RPC Tunnel', () => {
 	})
 
 	function getClientWSOnServer() {
-		const serverSockets = [
-			...wsServer.clients.values()
-		] as unknown as WebSocket[]
-		return serverSockets.find(s => (
-			s.metadata.userId === client.metadata.userId
-		))
+		const serverSockets = [...wsServer.clients.values()] as WebSocket[]
+		return serverSockets
+			.find(s => (
+				s.serverSocket?.metadata.userId === client.metadata.userId
+			))
+			?.serverSocket
 	}
 })

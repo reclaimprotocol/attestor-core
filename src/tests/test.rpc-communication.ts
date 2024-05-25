@@ -1,7 +1,8 @@
 import { WebSocketServer } from 'ws'
+import { WebSocket } from 'ws'
 import { WitnessError } from '../utils'
 import { logger } from '../utils/logger'
-import { makeReclaimClient } from '../v2'
+import { WitnessClient } from '../v2'
 import { makeWsServer } from '../v2/server'
 import { getRandomPort, randomPrivateKey } from './utils'
 
@@ -11,7 +12,7 @@ describe('RPC Communication', () => {
 	let wsServerUrl: string
 
 	let privateKeyHex: string
-	let client: WebSocket
+	let client: WitnessClient
 
 	beforeAll(async() => {
 		const wsServerPort = getRandomPort()
@@ -25,7 +26,7 @@ describe('RPC Communication', () => {
 
 	beforeEach(() => {
 		privateKeyHex = randomPrivateKey()
-		client = makeReclaimClient({
+		client = new WitnessClient({
 			privateKeyHex,
 			logger: logger.child({ client: 1 }),
 			url: wsServerUrl
@@ -33,12 +34,12 @@ describe('RPC Communication', () => {
 	})
 
 	afterEach(() => {
-		client.close()
+		client.terminateConnection()
 	})
 
 	it('should successfully initialise a session', async() => {
 		await expect(client.waitForInit()).resolves.toBeUndefined()
-		expect(client.initialised).toBe(true)
+		expect(client.isInitialised).toBe(true)
 		// ensure the server has a client
 		expect(wsServer.clients.keys()).toBeTruthy()
 	})
@@ -51,9 +52,10 @@ describe('RPC Communication', () => {
 
 		it('should gracefully handle terminated connection', async() => {
 			client.terminateConnection()
-			client = makeReclaimClient({
+			client = new WitnessClient({
 				privateKeyHex,
 				logger,
+				// a URL without a WS server
 				url: 'ws://localhost:1234'
 			})
 			await expect(client.waitForInit()).rejects.toHaveProperty('code')
@@ -75,7 +77,7 @@ describe('RPC Communication', () => {
 			await ws.terminateConnection(err)
 			const recvErr = await waitForEnd
 			expect(recvErr).toEqual(err)
-			expect(client.readyState).not.toBe(WebSocket.OPEN)
+			expect(client.isOpen).not.toBe(WebSocket.OPEN)
 		})
 
 		it('should terminate connection to server', async() => {
@@ -98,11 +100,9 @@ describe('RPC Communication', () => {
 			)
 
 			const ws = getClientWSOnServer()!
-			// @ts-ignore
-			ws.removeAllListeners('rpc-request')
-
-			ws.addEventListener('rpc-request', data => {
-				data.data.respond(err)
+			ws.addEventListener('rpc-request', ev => {
+				ev.stopImmediatePropagation()
+				ev.data.respond(err)
 			})
 
 			await expect(
@@ -118,11 +118,11 @@ describe('RPC Communication', () => {
 	})
 
 	function getClientWSOnServer() {
-		const serverSockets = [
-			...wsServer.clients.values()
-		] as unknown as WebSocket[]
-		return serverSockets.find(s => (
-			s.metadata.userId === client.metadata.userId
-		))
+		const serverSockets = [...wsServer.clients.values()] as WebSocket[]
+		return serverSockets
+			.find(s => (
+				s.serverSocket?.metadata.userId === client.metadata.userId
+			))
+			?.serverSocket
 	}
 })

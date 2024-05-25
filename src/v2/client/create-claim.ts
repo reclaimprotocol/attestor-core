@@ -1,30 +1,32 @@
 import { strToUint8Array, TLSPacketContext } from '@reclaimprotocol/tls'
 import canonicalize from 'canonicalize'
-import { DEFAULT_HTTPS_PORT } from '../config'
-import { ClaimTunnelRequest } from '../proto/api'
-import { ProviderName, providers } from '../providers'
-import { MessageRevealInfo } from '../types'
-import { getBlocksToReveal, getProviderValue, makeHttpResponseParser, redactSlices, unixTimestampSeconds } from '../utils'
-import { preparePacketsForReveal } from '../utils/prepare-packets'
-import { makeRpcTlsTunnel } from './tunnels/make-rpc-tls-tunnel'
-import { generateTunnelId, isApplicationData } from './utils/generics'
-import { CreateClaimOpts } from './types'
+import { DEFAULT_HTTPS_PORT } from '../../config'
+import { ClaimTunnelRequest } from '../../proto/api'
+import { ProviderName, providers } from '../../providers'
+import { MessageRevealInfo } from '../../types'
+import { getBlocksToReveal, getProviderValue, makeHttpResponseParser, redactSlices, unixTimestampSeconds } from '../../utils'
+import { preparePacketsForReveal } from '../../utils/prepare-packets'
+import { makeRpcTlsTunnel } from '../tunnels/make-rpc-tls-tunnel'
+import { CreateClaimOpts, IWitnessClient } from '../types'
+import { generateTunnelId, isApplicationData } from '../utils/generics'
 
 type ServerAppDataPacket = {
 	plaintext: Uint8Array
 	message: TLSPacketContext
 }
 
-export async function createClaim<N extends ProviderName>({
-	name,
-	params,
-	secretParams,
-	logger,
-	client,
-	context,
-	onStep,
-	...zkOpts
-}: CreateClaimOpts<N>) {
+export async function createClaim<N extends ProviderName>(
+	this: IWitnessClient,
+	{
+		name,
+		params,
+		secretParams,
+		context,
+		onStep,
+		...zkOpts
+	}: CreateClaimOpts<N>
+) {
+	const logger = this.logger
 	const provider = providers[name]
 
 	const hostPort = getProviderValue(params, provider.hostPort)
@@ -56,7 +58,7 @@ export async function createClaim<N extends ProviderName>({
 	}
 	const tunnel = await makeRpcTlsTunnel({
 		tlsOpts: provider.additionalClientOptions || {},
-		client,
+		client: this,
 		logger,
 		request: createTunnelReq,
 		onMessage(data) {
@@ -153,10 +155,10 @@ export async function createClaim<N extends ProviderName>({
 
 	const claimTunnelBytes = ClaimTunnelRequest
 		.encode(claimTunnelReq).finish()
-	const requestSignature = await client.sign(claimTunnelBytes)
+	const requestSignature = await this.sign(claimTunnelBytes)
 	claimTunnelReq.signatures = { requestSignature }
 
-	const result = await client.rpc('claimTunnel', claimTunnelReq)
+	const result = await this.rpc('claimTunnel', claimTunnelReq)
 
 	return result
 

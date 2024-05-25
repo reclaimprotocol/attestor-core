@@ -1,12 +1,12 @@
 import { CreateTunnelRequest } from '../../proto/api'
 import { WitnessError } from '../../utils'
 import { logger as LOGGER } from '../../utils/logger'
-import { MakeTunnelFn, RPCEvent } from '../types'
+import { IWitnessClient, MakeTunnelFn, RPCEvent } from '../types'
 import { generateRpcMessageId } from '../utils/generics'
 
 type ExtraOpts = {
 	request: Partial<CreateTunnelRequest>
-	client: WebSocket
+	client: IWitnessClient
 }
 
 /**
@@ -26,6 +26,7 @@ export const makeRpcTcpTunnel: MakeTunnelFn<ExtraOpts> = async({
 
 	client.addEventListener('tunnel-message', onMessageListener)
 	client.addEventListener('tunnel-disconnect-event', onDisconnectListener)
+	client.addEventListener('connection-terminated', onConnectionTerminatedListener)
 
 	await client.rpc('createTunnel', request)
 	logger.trace('tunnel created')
@@ -37,9 +38,8 @@ export const makeRpcTcpTunnel: MakeTunnelFn<ExtraOpts> = async({
 			})
 		},
 		async close(err) {
-			client.removeEventListener('tls-message', onMessageListener)
+			onErrorRecv(err)
 			await client.rpc('disconnectTunnel', { id: tunnelId })
-			onClose?.(err)
 		}
 	}
 
@@ -56,12 +56,22 @@ export const makeRpcTcpTunnel: MakeTunnelFn<ExtraOpts> = async({
 			return
 		}
 
-		client.removeEventListener('tunnel-message', onMessageListener)
-		client.removeEventListener('tunnel-disconnect-event', onDisconnectListener)
-		onClose?.(
-			data.error
+		onErrorRecv(
+			data.error?.code
 				? WitnessError.fromProto(data.error)
 				: undefined
 		)
+	}
+
+	function onConnectionTerminatedListener({ data }: RPCEvent<'connection-terminated'>) {
+		onErrorRecv(data)
+	}
+
+	function onErrorRecv(error: Error | undefined) {
+		client.removeEventListener('tunnel-message', onMessageListener)
+		client.removeEventListener('tunnel-disconnect-event', onDisconnectListener)
+		client.removeEventListener('connection-terminated', onConnectionTerminatedListener)
+		onClose?.(error)
+		onClose = undefined
 	}
 }

@@ -89,6 +89,7 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TunnelOpts> = async({
 
 		socket.end()
 		onClose?.(error)
+		onClose = undefined
 	}
 }
 
@@ -105,7 +106,7 @@ async function getSocket(opts: ExtraOpts, logger: Logger) {
 		// avoid proxy knowing which host we're connecting to
 		if(
 			!(err instanceof WitnessError)
-			|| !err.message.includes('403')
+			|| err.data?.code !== 403
 		) {
 			throw err
 		}

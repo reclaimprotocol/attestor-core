@@ -58,6 +58,7 @@ export const addTlsToTunnel = <O extends { request: Partial<CreateTunnelRequest>
 					packet.header,
 					packet.content
 				])
+
 				if(!tunnel) {
 					// sends the packet as the initial message
 					// to the plaintext tunnel. Prevents another

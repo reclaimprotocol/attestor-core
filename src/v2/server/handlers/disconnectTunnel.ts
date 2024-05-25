@@ -13,7 +13,7 @@ export const disconnectTunnel: RPCHandler<'disconnectTunnel'> = async(
 		)
 	}
 
-	tunnel?.close(new Error('Tunnel disconnected'))
+	await tunnel?.close(new Error('Tunnel disconnected'))
 
 	return {}
 }
