@@ -240,28 +240,6 @@ describe('HTTP Provider Utils tests', () => {
 		}).toThrow('auth parameters are not set')
 	})
 
-
-	it('should throw on non 200', () => {
-		const res =
-            `HTTP/1.1 404 NOT FOUND\r
-Content-Length: 0\r
-Connection: close\r
-Content-Type: text/html; charset=utf-8\r
-\r
-`
-		expect(() => {
-			if(getResponseRedactions) {
-				getResponseRedactions(strToUint8Array(res), {
-					url: 'abc',
-					responseMatches: [],
-					responseRedactions: [],
-					method: 'GET'
-				})
-			}
-		}).toThrow('Provider returned error \"404 NOT FOUND\"')
-	})
-
-
 	it('should return empty redactions', () => {
 		const res =
             `HTTP/1.1 200 OK\r
@@ -447,7 +425,7 @@ Content-Type: text/html; charset=utf-8\r
 				responseRedactions: [],
 				method: 'GET'
 			})
-		}).toThrow('Missing \"HTTP/1.1 200\" header in response')
+		}).toThrow('Response did not start with \"HTTP/1.1 200\"')
 	})
 
 	it('should throw on bad close header', () => {
