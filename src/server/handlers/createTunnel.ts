@@ -4,7 +4,7 @@ import { makeTcpTunnel } from '../tunnels/make-tcp-tunnel'
 import { getApm } from '../utils/apm'
 
 export const createTunnel: RPCHandler<'createTunnel'> = async(
-	{ id, initialMessage, ...opts },
+	{ id, ...opts },
 	{ tx, logger, client }
 ) => {
 	const apm = getApm()
@@ -43,6 +43,10 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 
 				tx?.end()
 
+				if(!client.isOpen) {
+					return
+				}
+
 				client.sendMessage({
 					tunnelDisconnectEvent: {
 						tunnelId: id,
@@ -53,14 +57,16 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 							: undefined
 					}
 				})
+					.catch(err => {
+						logger.error(
+							{ err },
+							'failed to send tunnel disconnect event'
+						)
+					})
 			},
 		})
 
 		client.tunnels[id] = tunnel
-
-		if(initialMessage?.length) {
-			await tunnel.write(initialMessage)
-		}
 
 		return {}
 	} catch(err) {

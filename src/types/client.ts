@@ -1,4 +1,4 @@
-import type { ClaimTunnelResponse, InitRequest, ReclaimRPCMessage, ServiceSignatureType, TunnelMessage } from '../proto/api'
+import type { ClaimTunnelResponse, InitRequest, RPCMessage, RPCMessages, ServiceSignatureType, TunnelMessage } from '../proto/api'
 import type { Logger } from './general'
 import type { ProofGenerationStep, ProviderName, ProviderParams, ProviderSecretParams } from './providers'
 import type { RPCEvent, RPCEventMap, RPCEventType, RPCRequestData, RPCResponseData, RPCType } from './rpc'
@@ -7,16 +7,19 @@ import type { PrepareZKProofsBaseOpts } from './zk'
 
 export type WitnessClientOpts = {
 	/**
-	 * Private key in hex format,
-	 * prefixed with '0x'
+	 * Witness WS URL
 	 */
-	privateKeyHex: string
-
 	url: string | URL
 
 	signatureType?: ServiceSignatureType
 
 	logger?: Logger
+	/**
+	 * Initial messages to send to the server
+	 * in the query parameter used to establish
+	 * the connection.
+	 */
+	initMessages?: Partial<RPCMessage>[]
 }
 
 export type CreateClaimOpts<N extends ProviderName> = {
@@ -35,6 +38,11 @@ export type CreateClaimOpts<N extends ProviderName> = {
 	context?: { [key: string]: any }
 
 	onStep?(step: ProofGenerationStep): void
+	/**
+	 * Private key in hex format,
+	 * prefixed with '0x'
+	 */
+	ownerPrivateKey: string
 } & PrepareZKProofsBaseOpts
 
 /**
@@ -56,13 +64,13 @@ export declare class IWitnessSocket {
 	isInitialised: boolean
 
 	/**
-	 * Sends an RPC message to the server.
+	 * Sends RPC messages to the server in a single packet.
 	 * If the ID is not provided, it will be generated.
 	 *
 	 * Promisify the `send` method if using the `ws` package's
 	 * WebSocket implementation.
 	 */
-	sendMessage(msg: Partial<ReclaimRPCMessage>): Promise<void>
+	sendMessage(...msgs: Partial<RPCMessage>[]): Promise<RPCMessages>
 	/**
 	 * Sends a "terminateConnectionAlert" message to the server
 	 * with the specified error (if any), if the connection is
@@ -125,10 +133,13 @@ export declare class IWitnessClient extends IWitnessSocket {
 	constructor(opts: WitnessClientOpts)
 
 	/**
-	 * Sign some data with the private key of the client.
-	 * Only available on client-side WebSockets.
+	 * Waits for a particular message to come in.
+	 * If the connection is closed before the message is received,
+	 * the promise will reject.
 	 */
-	sign(data: Uint8Array): Promise<Uint8Array>
+	waitForResponse<T extends RPCType>(
+		id: number
+	): Promise<RPCResponseData<T>>
 	/**
 	 * Make an RPC request to the other end of the WebSocket.
 	 */

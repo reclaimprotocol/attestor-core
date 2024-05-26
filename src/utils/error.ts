@@ -5,7 +5,7 @@ import { WitnessErrorCode, WitnessErrorData } from '../proto/api'
  * or server. Provides a code, and optional data
  * to pass along with the error.
  */
-export class WitnessError implements Error {
+export class WitnessError extends Error {
 
 	readonly name = 'WitnessError'
 
@@ -13,7 +13,9 @@ export class WitnessError implements Error {
 		public code: keyof typeof WitnessErrorCode,
 		public message: string,
 		public data?: { [_: string]: any }
-	) {}
+	) {
+		super(message)
+	}
 
 	/**
 	 * Encodes the error as a WitnessErrorData

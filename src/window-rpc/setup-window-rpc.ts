@@ -22,6 +22,8 @@ export function setupWindowRpc() {
 
 	logger.info('window RPC setup')
 
+	let client = createClient()
+
 	async function handleMessage(event: MessageEvent<any>) {
 		let id = ''
 		let channel = ''
@@ -62,15 +64,19 @@ export function setupWindowRpc() {
 
 			switch (req.type) {
 			case 'createClaim':
-				const response = await createClaim({
+				const response = await client.createClaim({
 					...req.request,
 					zkOperators: getZkOperators(
 						req.request.zkOperatorMode
 					),
-					didUpdateCreateStep(step) {
+					onStep(step) {
 						sendMessage({
 							type: 'createClaimStep',
-							step,
+							step: {
+								name: 'witness-progress',
+								currentWitness: [],
+								step,
+							},
 							module: 'witness-sdk',
 							id: req.id,
 						})
@@ -84,7 +90,11 @@ export function setupWindowRpc() {
 			case 'extractHtmlElement':
 				respond({
 					type: 'extractHtmlElementDone',
-					response: extractHTMLElement(req.request.html, req.request.xpathExpression, req.request.contentsOnly),
+					response: extractHTMLElement(
+						req.request.html,
+						req.request.xpathExpression,
+						req.request.contentsOnly
+					),
 				})
 				break
 			case 'extractJSONValueIndex':
@@ -103,10 +113,7 @@ export function setupWindowRpc() {
 				break
 			}
 		} catch(err) {
-			logger.error(
-				{ err, data: event.data },
-				'error in RPC'
-			)
+			logger.error({ err, data: event.data }, 'error in RPC')
 			respond({
 				type: 'error',
 				data: {
@@ -179,5 +186,12 @@ export function setupWindowRpc() {
 				event.source!.postMessage(str)
 			}
 		}
+	}
+
+	function createClient() {
+		return new WitnessClient({
+			url: new URL(location.href),
+			logger,
+		})
 	}
 }

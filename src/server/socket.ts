@@ -1,53 +1,20 @@
 import { IncomingMessage } from 'http'
 import { promisify } from 'util'
 import { WebSocket as WS } from 'ws'
+import { handleMessage } from '../client/message-handler'
 import { WitnessSocket } from '../client/socket'
-import { InitRequest } from '../proto/api'
-import { SIGNATURES } from '../signatures'
-import { IWitnessServerSocket, Logger, RPCEvent } from '../types'
+import { IWitnessServerSocket, Logger, RPCEvent, RPCHandler } from '../types'
 import { generateSessionId, WitnessError } from '../utils'
+import { getInitialMessagesFromQuery } from './utils/generics'
 import { HANDLERS } from './handlers'
 
 export class WitnessServerSocket extends WitnessSocket implements IWitnessServerSocket {
 
 	tunnels: IWitnessServerSocket['tunnels'] = {}
 
-	constructor(socket: WS, req: IncomingMessage, logger: Logger) {
-		// promisify ws.send -- so the sendMessage method correctly
-		// awaits the send operation
-		const bindSend = socket.send.bind(socket)
-		socket.send = promisify(bindSend)
-
-		const sessionId = generateSessionId()
-		logger = logger.child({ sessionId })
-
-		logger.trace('new connection, validating...')
-
-		super(
-			socket as unknown as WebSocket,
-			{} as InitRequest,
-			logger
-		)
-
-		try {
-			this.metadata = validateConnection(req)
-			logger.debug(
-				{ metadata: this.metadata },
-				'validated connection'
-			)
-		} catch(err) {
-			logger.warn({ err }, 'failed to validate connection')
-			this.terminateConnection(
-				err instanceof WitnessError
-					? err
-					: WitnessError.badRequest(err.message)
-			)
-			return
-		}
-
-		this.isInitialised = true
-		this.sendMessage({ initResponse: {} })
-
+	private constructor(socket: WS, logger: Logger) {
+		// @ts-ignore
+		super(socket, {}, logger)
 		// handle RPC requests
 		this.addEventListener('rpc-request', handleRpcRequest.bind(this))
 		// forward packets to the appropriate tunnel
@@ -73,39 +40,55 @@ export class WitnessServerSocket extends WitnessSocket implements IWitnessServer
 
 		return tunnel
 	}
-}
 
-function validateConnection(req: IncomingMessage) {
-	const url = new URL(req.url!, 'http://localhost')
-	const initRequestB64 = url.searchParams.get('initRequest')
-	if(!initRequestB64) {
-		throw WitnessError.badRequest('initRequest is required')
+	static async acceptConnection(
+		socket: WS,
+		req: IncomingMessage,
+		logger: Logger
+	) {
+		// promisify ws.send -- so the sendMessage method correctly
+		// awaits the send operation
+		const bindSend = socket.send.bind(socket)
+		socket.send = promisify(bindSend)
+
+		const sessionId = generateSessionId()
+		logger = logger.child({ sessionId })
+
+		const client = new WitnessServerSocket(socket, logger)
+		try {
+			const initMsgs = getInitialMessagesFromQuery(req)
+			logger.trace(
+				{ initMsgs: initMsgs.length },
+				'new connection, validating...'
+			)
+			for(const msg of initMsgs) {
+				await handleMessage.call(client, msg)
+			}
+
+			logger.debug('connection accepted')
+		} catch(err) {
+			logger.error({ err }, 'error in new connection')
+			if(client.isOpen) {
+				client.terminateConnection(
+					err instanceof WitnessError
+						? err
+						: WitnessError.badRequest(err.message)
+				)
+			}
+
+			return
+		}
+
+		return client
 	}
-
-	const initRequestBytes = Buffer.from(initRequestB64, 'base64')
-	const initRequest = InitRequest.decode(initRequestBytes)
-	if(!SIGNATURES[initRequest.signatureType]) {
-		throw WitnessError.badRequest('Unsupported signature type')
-	}
-
-	if(initRequest.clientVersion <= 0) {
-		throw WitnessError.badRequest('Unsupported client version')
-	}
-
-	return initRequest
 }
 
 async function handleTunnelMessage(
 	this: IWitnessServerSocket,
 	{ data: { tunnelId, message } }: RPCEvent<'tunnel-message'>
 ) {
-	const tunnel = this.tunnels[tunnelId]
-	if(!tunnel) {
-		this.logger?.warn({ tunnelId }, 'tunnel not found')
-		return
-	}
-
 	try {
+		const tunnel = this.getTunnel(tunnelId)
 		await tunnel.write(message)
 	} catch(err) {
 		this.logger?.error(
@@ -129,15 +112,15 @@ async function handleRpcRequest(
 	try {
 		logger.debug({ data }, 'handling RPC request')
 
-		const handler = HANDLERS[type]
+		const handler = HANDLERS[type] as RPCHandler<typeof type>
 		const res = await handler(
-			data as any,
+			data,
 			{
 				client: this,
 				logger,
 			}
 		)
-		respond(res)
+		await respond(res)
 
 		logger.debug({ res }, 'handled RPC request')
 	} catch(err) {

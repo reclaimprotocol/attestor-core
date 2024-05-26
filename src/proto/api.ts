@@ -546,12 +546,6 @@ export interface CreateTunnelRequest {
    * eg. US, IN, GB, etc.
    */
   geoLocation: string;
-  /**
-   * Optionally provide the initial packet to send upon
-   * connection establishment. Prevents the need to have
-   * another round trip to send the first packet.
-   */
-  initialMessage: Uint8Array;
 }
 
 export interface DisconnectTunnelRequest {
@@ -626,6 +620,11 @@ export interface ClaimTunnelRequest {
     | CreateTunnelRequest
     | undefined;
   /**
+   * Owner of the claim. Must be the public key/address
+   * of the signatures
+   */
+  ownerId: string;
+  /**
    * Timestamp of the claim being made.
    * Cannot be more than 10 minutes in the past
    * or in the future
@@ -685,15 +684,13 @@ export interface ClaimTunnelResponse_Signatures {
 }
 
 export interface InitRequest {
-  /** User ID */
-  userId: string;
   /** Witness client version */
   clientVersion: WitnessVersion;
   /** Signature type used & expected by the user */
   signatureType: ServiceSignatureType;
 }
 
-export interface ReclaimRPCMessage {
+export interface RPCMessage {
   /**
    * Per connection unique RPC message ID. Either party sending a
    * duplicate ID will do nothing except confuse the other party.
@@ -702,12 +699,10 @@ export interface ReclaimRPCMessage {
    * to which it is responding.
    */
   id: number;
-  /**
-   * Response to the init request.
-   * The request must be sent in the WebSocket URL
-   * as a query parameter.
-   * `?initRequest=base64(proto(InitRequest))`
-   */
+  initRequest?:
+    | InitRequest
+    | undefined;
+  /** Response to the init request. */
   initResponse?:
     | Empty
     | undefined;
@@ -758,6 +753,10 @@ export interface ReclaimRPCMessage {
    */
   claimTunnelRequest?: ClaimTunnelRequest | undefined;
   claimTunnelResponse?: ClaimTunnelResponse | undefined;
+}
+
+export interface RPCMessages {
+  messages: RPCMessage[];
 }
 
 function createBaseTLSPacket(): TLSPacket {
@@ -3014,7 +3013,7 @@ export const WitnessErrorData = {
 };
 
 function createBaseCreateTunnelRequest(): CreateTunnelRequest {
-  return { id: 0, host: "", port: 0, geoLocation: "", initialMessage: new Uint8Array(0) };
+  return { id: 0, host: "", port: 0, geoLocation: "" };
 }
 
 export const CreateTunnelRequest = {
@@ -3030,9 +3029,6 @@ export const CreateTunnelRequest = {
     }
     if (message.geoLocation !== "") {
       writer.uint32(34).string(message.geoLocation);
-    }
-    if (message.initialMessage.length !== 0) {
-      writer.uint32(42).bytes(message.initialMessage);
     }
     return writer;
   },
@@ -3072,13 +3068,6 @@ export const CreateTunnelRequest = {
 
           message.geoLocation = reader.string();
           continue;
-        case 5:
-          if (tag !== 42) {
-            break;
-          }
-
-          message.initialMessage = reader.bytes();
-          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -3094,7 +3083,6 @@ export const CreateTunnelRequest = {
       host: isSet(object.host) ? globalThis.String(object.host) : "",
       port: isSet(object.port) ? globalThis.Number(object.port) : 0,
       geoLocation: isSet(object.geoLocation) ? globalThis.String(object.geoLocation) : "",
-      initialMessage: isSet(object.initialMessage) ? bytesFromBase64(object.initialMessage) : new Uint8Array(0),
     };
   },
 
@@ -3112,9 +3100,6 @@ export const CreateTunnelRequest = {
     if (message.geoLocation !== "") {
       obj.geoLocation = message.geoLocation;
     }
-    if (message.initialMessage.length !== 0) {
-      obj.initialMessage = base64FromBytes(message.initialMessage);
-    }
     return obj;
   },
 
@@ -3127,7 +3112,6 @@ export const CreateTunnelRequest = {
     message.host = object.host ?? "";
     message.port = object.port ?? 0;
     message.geoLocation = object.geoLocation ?? "";
-    message.initialMessage = object.initialMessage ?? new Uint8Array(0);
     return message;
   },
 };
@@ -3726,7 +3710,7 @@ export const MessageReveal_ZKProof = {
 };
 
 function createBaseClaimTunnelRequest(): ClaimTunnelRequest {
-  return { request: undefined, timestampS: 0, info: undefined, transcript: [], signatures: undefined };
+  return { request: undefined, ownerId: "", timestampS: 0, info: undefined, transcript: [], signatures: undefined };
 }
 
 export const ClaimTunnelRequest = {
@@ -3734,17 +3718,20 @@ export const ClaimTunnelRequest = {
     if (message.request !== undefined) {
       CreateTunnelRequest.encode(message.request, writer.uint32(10).fork()).ldelim();
     }
+    if (message.ownerId !== "") {
+      writer.uint32(18).string(message.ownerId);
+    }
     if (message.timestampS !== 0) {
-      writer.uint32(16).uint32(message.timestampS);
+      writer.uint32(24).uint32(message.timestampS);
     }
     if (message.info !== undefined) {
-      ProviderClaimInfo.encode(message.info, writer.uint32(26).fork()).ldelim();
+      ProviderClaimInfo.encode(message.info, writer.uint32(34).fork()).ldelim();
     }
     for (const v of message.transcript) {
-      ClaimTunnelRequest_TranscriptMessage.encode(v!, writer.uint32(34).fork()).ldelim();
+      ClaimTunnelRequest_TranscriptMessage.encode(v!, writer.uint32(42).fork()).ldelim();
     }
     if (message.signatures !== undefined) {
-      ClaimTunnelRequest_Signatures.encode(message.signatures, writer.uint32(42).fork()).ldelim();
+      ClaimTunnelRequest_Signatures.encode(message.signatures, writer.uint32(50).fork()).ldelim();
     }
     return writer;
   },
@@ -3764,28 +3751,35 @@ export const ClaimTunnelRequest = {
           message.request = CreateTunnelRequest.decode(reader, reader.uint32());
           continue;
         case 2:
-          if (tag !== 16) {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.ownerId = reader.string();
+          continue;
+        case 3:
+          if (tag !== 24) {
             break;
           }
 
           message.timestampS = reader.uint32();
-          continue;
-        case 3:
-          if (tag !== 26) {
-            break;
-          }
-
-          message.info = ProviderClaimInfo.decode(reader, reader.uint32());
           continue;
         case 4:
           if (tag !== 34) {
             break;
           }
 
-          message.transcript.push(ClaimTunnelRequest_TranscriptMessage.decode(reader, reader.uint32()));
+          message.info = ProviderClaimInfo.decode(reader, reader.uint32());
           continue;
         case 5:
           if (tag !== 42) {
+            break;
+          }
+
+          message.transcript.push(ClaimTunnelRequest_TranscriptMessage.decode(reader, reader.uint32()));
+          continue;
+        case 6:
+          if (tag !== 50) {
             break;
           }
 
@@ -3803,6 +3797,7 @@ export const ClaimTunnelRequest = {
   fromJSON(object: any): ClaimTunnelRequest {
     return {
       request: isSet(object.request) ? CreateTunnelRequest.fromJSON(object.request) : undefined,
+      ownerId: isSet(object.ownerId) ? globalThis.String(object.ownerId) : "",
       timestampS: isSet(object.timestampS) ? globalThis.Number(object.timestampS) : 0,
       info: isSet(object.info) ? ProviderClaimInfo.fromJSON(object.info) : undefined,
       transcript: globalThis.Array.isArray(object?.transcript)
@@ -3816,6 +3811,9 @@ export const ClaimTunnelRequest = {
     const obj: any = {};
     if (message.request !== undefined) {
       obj.request = CreateTunnelRequest.toJSON(message.request);
+    }
+    if (message.ownerId !== "") {
+      obj.ownerId = message.ownerId;
     }
     if (message.timestampS !== 0) {
       obj.timestampS = Math.round(message.timestampS);
@@ -3840,6 +3838,7 @@ export const ClaimTunnelRequest = {
     message.request = (object.request !== undefined && object.request !== null)
       ? CreateTunnelRequest.fromPartial(object.request)
       : undefined;
+    message.ownerId = object.ownerId ?? "";
     message.timestampS = object.timestampS ?? 0;
     message.info = (object.info !== undefined && object.info !== null)
       ? ProviderClaimInfo.fromPartial(object.info)
@@ -4189,14 +4188,11 @@ export const ClaimTunnelResponse_Signatures = {
 };
 
 function createBaseInitRequest(): InitRequest {
-  return { userId: "", clientVersion: 0, signatureType: 0 };
+  return { clientVersion: 0, signatureType: 0 };
 }
 
 export const InitRequest = {
   encode(message: InitRequest, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
-    if (message.userId !== "") {
-      writer.uint32(10).string(message.userId);
-    }
     if (message.clientVersion !== 0) {
       writer.uint32(16).int32(message.clientVersion);
     }
@@ -4213,13 +4209,6 @@ export const InitRequest = {
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
-        case 1:
-          if (tag !== 10) {
-            break;
-          }
-
-          message.userId = reader.string();
-          continue;
         case 2:
           if (tag !== 16) {
             break;
@@ -4245,7 +4234,6 @@ export const InitRequest = {
 
   fromJSON(object: any): InitRequest {
     return {
-      userId: isSet(object.userId) ? globalThis.String(object.userId) : "",
       clientVersion: isSet(object.clientVersion) ? witnessVersionFromJSON(object.clientVersion) : 0,
       signatureType: isSet(object.signatureType) ? serviceSignatureTypeFromJSON(object.signatureType) : 0,
     };
@@ -4253,9 +4241,6 @@ export const InitRequest = {
 
   toJSON(message: InitRequest): unknown {
     const obj: any = {};
-    if (message.userId !== "") {
-      obj.userId = message.userId;
-    }
     if (message.clientVersion !== 0) {
       obj.clientVersion = witnessVersionToJSON(message.clientVersion);
     }
@@ -4270,16 +4255,16 @@ export const InitRequest = {
   },
   fromPartial(object: DeepPartial<InitRequest>): InitRequest {
     const message = createBaseInitRequest();
-    message.userId = object.userId ?? "";
     message.clientVersion = object.clientVersion ?? 0;
     message.signatureType = object.signatureType ?? 0;
     return message;
   },
 };
 
-function createBaseReclaimRPCMessage(): ReclaimRPCMessage {
+function createBaseRPCMessage(): RPCMessage {
   return {
     id: 0,
+    initRequest: undefined,
     initResponse: undefined,
     connectionTerminationAlert: undefined,
     requestError: undefined,
@@ -4294,51 +4279,54 @@ function createBaseReclaimRPCMessage(): ReclaimRPCMessage {
   };
 }
 
-export const ReclaimRPCMessage = {
-  encode(message: ReclaimRPCMessage, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+export const RPCMessage = {
+  encode(message: RPCMessage, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.id !== 0) {
       writer.uint32(8).uint64(message.id);
     }
+    if (message.initRequest !== undefined) {
+      InitRequest.encode(message.initRequest, writer.uint32(18).fork()).ldelim();
+    }
     if (message.initResponse !== undefined) {
-      Empty.encode(message.initResponse, writer.uint32(18).fork()).ldelim();
+      Empty.encode(message.initResponse, writer.uint32(26).fork()).ldelim();
     }
     if (message.connectionTerminationAlert !== undefined) {
-      WitnessErrorData.encode(message.connectionTerminationAlert, writer.uint32(26).fork()).ldelim();
+      WitnessErrorData.encode(message.connectionTerminationAlert, writer.uint32(34).fork()).ldelim();
     }
     if (message.requestError !== undefined) {
-      WitnessErrorData.encode(message.requestError, writer.uint32(34).fork()).ldelim();
+      WitnessErrorData.encode(message.requestError, writer.uint32(42).fork()).ldelim();
     }
     if (message.createTunnelRequest !== undefined) {
-      CreateTunnelRequest.encode(message.createTunnelRequest, writer.uint32(42).fork()).ldelim();
+      CreateTunnelRequest.encode(message.createTunnelRequest, writer.uint32(50).fork()).ldelim();
     }
     if (message.createTunnelResponse !== undefined) {
-      Empty.encode(message.createTunnelResponse, writer.uint32(50).fork()).ldelim();
+      Empty.encode(message.createTunnelResponse, writer.uint32(58).fork()).ldelim();
     }
     if (message.disconnectTunnelRequest !== undefined) {
-      DisconnectTunnelRequest.encode(message.disconnectTunnelRequest, writer.uint32(58).fork()).ldelim();
+      DisconnectTunnelRequest.encode(message.disconnectTunnelRequest, writer.uint32(66).fork()).ldelim();
     }
     if (message.disconnectTunnelResponse !== undefined) {
-      Empty.encode(message.disconnectTunnelResponse, writer.uint32(66).fork()).ldelim();
+      Empty.encode(message.disconnectTunnelResponse, writer.uint32(74).fork()).ldelim();
     }
     if (message.tunnelMessage !== undefined) {
-      TunnelMessage.encode(message.tunnelMessage, writer.uint32(74).fork()).ldelim();
+      TunnelMessage.encode(message.tunnelMessage, writer.uint32(82).fork()).ldelim();
     }
     if (message.tunnelDisconnectEvent !== undefined) {
-      TunnelDisconnectEvent.encode(message.tunnelDisconnectEvent, writer.uint32(82).fork()).ldelim();
+      TunnelDisconnectEvent.encode(message.tunnelDisconnectEvent, writer.uint32(90).fork()).ldelim();
     }
     if (message.claimTunnelRequest !== undefined) {
-      ClaimTunnelRequest.encode(message.claimTunnelRequest, writer.uint32(90).fork()).ldelim();
+      ClaimTunnelRequest.encode(message.claimTunnelRequest, writer.uint32(98).fork()).ldelim();
     }
     if (message.claimTunnelResponse !== undefined) {
-      ClaimTunnelResponse.encode(message.claimTunnelResponse, writer.uint32(98).fork()).ldelim();
+      ClaimTunnelResponse.encode(message.claimTunnelResponse, writer.uint32(106).fork()).ldelim();
     }
     return writer;
   },
 
-  decode(input: _m0.Reader | Uint8Array, length?: number): ReclaimRPCMessage {
+  decode(input: _m0.Reader | Uint8Array, length?: number): RPCMessage {
     const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseReclaimRPCMessage();
+    const message = createBaseRPCMessage();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -4354,73 +4342,80 @@ export const ReclaimRPCMessage = {
             break;
           }
 
-          message.initResponse = Empty.decode(reader, reader.uint32());
+          message.initRequest = InitRequest.decode(reader, reader.uint32());
           continue;
         case 3:
           if (tag !== 26) {
             break;
           }
 
-          message.connectionTerminationAlert = WitnessErrorData.decode(reader, reader.uint32());
+          message.initResponse = Empty.decode(reader, reader.uint32());
           continue;
         case 4:
           if (tag !== 34) {
             break;
           }
 
-          message.requestError = WitnessErrorData.decode(reader, reader.uint32());
+          message.connectionTerminationAlert = WitnessErrorData.decode(reader, reader.uint32());
           continue;
         case 5:
           if (tag !== 42) {
             break;
           }
 
-          message.createTunnelRequest = CreateTunnelRequest.decode(reader, reader.uint32());
+          message.requestError = WitnessErrorData.decode(reader, reader.uint32());
           continue;
         case 6:
           if (tag !== 50) {
             break;
           }
 
-          message.createTunnelResponse = Empty.decode(reader, reader.uint32());
+          message.createTunnelRequest = CreateTunnelRequest.decode(reader, reader.uint32());
           continue;
         case 7:
           if (tag !== 58) {
             break;
           }
 
-          message.disconnectTunnelRequest = DisconnectTunnelRequest.decode(reader, reader.uint32());
+          message.createTunnelResponse = Empty.decode(reader, reader.uint32());
           continue;
         case 8:
           if (tag !== 66) {
             break;
           }
 
-          message.disconnectTunnelResponse = Empty.decode(reader, reader.uint32());
+          message.disconnectTunnelRequest = DisconnectTunnelRequest.decode(reader, reader.uint32());
           continue;
         case 9:
           if (tag !== 74) {
             break;
           }
 
-          message.tunnelMessage = TunnelMessage.decode(reader, reader.uint32());
+          message.disconnectTunnelResponse = Empty.decode(reader, reader.uint32());
           continue;
         case 10:
           if (tag !== 82) {
             break;
           }
 
-          message.tunnelDisconnectEvent = TunnelDisconnectEvent.decode(reader, reader.uint32());
+          message.tunnelMessage = TunnelMessage.decode(reader, reader.uint32());
           continue;
         case 11:
           if (tag !== 90) {
             break;
           }
 
-          message.claimTunnelRequest = ClaimTunnelRequest.decode(reader, reader.uint32());
+          message.tunnelDisconnectEvent = TunnelDisconnectEvent.decode(reader, reader.uint32());
           continue;
         case 12:
           if (tag !== 98) {
+            break;
+          }
+
+          message.claimTunnelRequest = ClaimTunnelRequest.decode(reader, reader.uint32());
+          continue;
+        case 13:
+          if (tag !== 106) {
             break;
           }
 
@@ -4435,9 +4430,10 @@ export const ReclaimRPCMessage = {
     return message;
   },
 
-  fromJSON(object: any): ReclaimRPCMessage {
+  fromJSON(object: any): RPCMessage {
     return {
       id: isSet(object.id) ? globalThis.Number(object.id) : 0,
+      initRequest: isSet(object.initRequest) ? InitRequest.fromJSON(object.initRequest) : undefined,
       initResponse: isSet(object.initResponse) ? Empty.fromJSON(object.initResponse) : undefined,
       connectionTerminationAlert: isSet(object.connectionTerminationAlert)
         ? WitnessErrorData.fromJSON(object.connectionTerminationAlert)
@@ -4468,10 +4464,13 @@ export const ReclaimRPCMessage = {
     };
   },
 
-  toJSON(message: ReclaimRPCMessage): unknown {
+  toJSON(message: RPCMessage): unknown {
     const obj: any = {};
     if (message.id !== 0) {
       obj.id = Math.round(message.id);
+    }
+    if (message.initRequest !== undefined) {
+      obj.initRequest = InitRequest.toJSON(message.initRequest);
     }
     if (message.initResponse !== undefined) {
       obj.initResponse = Empty.toJSON(message.initResponse);
@@ -4509,12 +4508,15 @@ export const ReclaimRPCMessage = {
     return obj;
   },
 
-  create(base?: DeepPartial<ReclaimRPCMessage>): ReclaimRPCMessage {
-    return ReclaimRPCMessage.fromPartial(base ?? {});
+  create(base?: DeepPartial<RPCMessage>): RPCMessage {
+    return RPCMessage.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<ReclaimRPCMessage>): ReclaimRPCMessage {
-    const message = createBaseReclaimRPCMessage();
+  fromPartial(object: DeepPartial<RPCMessage>): RPCMessage {
+    const message = createBaseRPCMessage();
     message.id = object.id ?? 0;
+    message.initRequest = (object.initRequest !== undefined && object.initRequest !== null)
+      ? InitRequest.fromPartial(object.initRequest)
+      : undefined;
     message.initResponse = (object.initResponse !== undefined && object.initResponse !== null)
       ? Empty.fromPartial(object.initResponse)
       : undefined;
@@ -4552,6 +4554,67 @@ export const ReclaimRPCMessage = {
     message.claimTunnelResponse = (object.claimTunnelResponse !== undefined && object.claimTunnelResponse !== null)
       ? ClaimTunnelResponse.fromPartial(object.claimTunnelResponse)
       : undefined;
+    return message;
+  },
+};
+
+function createBaseRPCMessages(): RPCMessages {
+  return { messages: [] };
+}
+
+export const RPCMessages = {
+  encode(message: RPCMessages, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    for (const v of message.messages) {
+      RPCMessage.encode(v!, writer.uint32(10).fork()).ldelim();
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): RPCMessages {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRPCMessages();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.messages.push(RPCMessage.decode(reader, reader.uint32()));
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): RPCMessages {
+    return {
+      messages: globalThis.Array.isArray(object?.messages)
+        ? object.messages.map((e: any) => RPCMessage.fromJSON(e))
+        : [],
+    };
+  },
+
+  toJSON(message: RPCMessages): unknown {
+    const obj: any = {};
+    if (message.messages?.length) {
+      obj.messages = message.messages.map((e) => RPCMessage.toJSON(e));
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<RPCMessages>): RPCMessages {
+    return RPCMessages.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<RPCMessages>): RPCMessages {
+    const message = createBaseRPCMessages();
+    message.messages = object.messages?.map((e) => RPCMessage.fromPartial(e)) || [];
     return message;
   },
 };

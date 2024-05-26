@@ -53,7 +53,6 @@ export async function main<T extends ProviderName>(
 	const client = new WitnessClient({
 		logger,
 		url: witnessHostPort,
-		privateKeyHex: PRIVATE_KEY_HEX
 	})
 
 	await client.waitForInit()
@@ -64,6 +63,7 @@ export async function main<T extends ProviderName>(
 		name: paramsJson.name,
 		secretParams: paramsJson.secretParams,
 		params: paramsJson.params,
+		ownerPrivateKey: PRIVATE_KEY_HEX,
 	})
 
 	const decTranscript = await decryptTranscript(

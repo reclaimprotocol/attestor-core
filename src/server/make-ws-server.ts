@@ -22,10 +22,11 @@ export async function makeWsServer(port = API_SERVER_PORT) {
 	return wss
 }
 
-function handleNewClient(ws: WebSocket, req: IncomingMessage) {
-	const client = new WitnessServerSocket(ws, req, LOGGER)
+async function handleNewClient(ws: WebSocket, req: IncomingMessage) {
+	const client = await WitnessServerSocket
+		.acceptConnection(ws, req, LOGGER)
 	// if initialisation fails, don't store the client
-	if(!client.isInitialised) {
+	if(!client) {
 		return
 	}
 

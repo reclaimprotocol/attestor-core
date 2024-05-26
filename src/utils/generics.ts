@@ -1,6 +1,6 @@
 import { REDACTION_CHAR_CODE } from '@reclaimprotocol/circom-symmetric-crypto'
 import { areUint8ArraysEqual, CipherSuite, CONTENT_TYPE_MAP, crypto, PACKET_TYPE, strToUint8Array, SUPPORTED_CIPHER_SUITE_MAP, uint8ArrayToDataView } from '@reclaimprotocol/tls'
-import { ReclaimRPCMessage } from '../proto/api'
+import { RPCMessage, RPCMessages } from '../proto/api'
 import { CompleteTLSPacket, IDecryptedTranscript, ProviderField, RPCEvent, RPCEventMap, RPCEventType, RPCType, Transcript } from '../types'
 
 const DEFAULT_REDACTION_DATA = new Uint8Array(4)
@@ -218,7 +218,7 @@ export function extractArrayBufferFromWsData(data: unknown): Uint8Array {
 /**
  * Check if the RPC message is a request or a response.
  */
-export function getRpcRequest(msg: ReclaimRPCMessage) {
+export function getRpcRequest(msg: RPCMessage) {
 	if(msg.requestError) {
 		return {
 			direction: 'response' as const,
@@ -282,4 +282,15 @@ export function extractApplicationDataFromTranscript(
 	}
 
 	return msgs
+}
+
+export function packRpcMessages(...msgs: Partial<RPCMessage>[]) {
+	return RPCMessages.create({
+		messages: msgs.map(msg => (
+			RPCMessage.create({
+				...msg,
+				id: msg.id || generateRpcMessageId()
+			})
+		))
+	})
 }

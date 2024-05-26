@@ -1,6 +1,6 @@
 import { strToUint8Array, uint8ArrayToStr } from '@reclaimprotocol/tls'
 import { makeTcpTunnel } from '../server'
-import { makeHttpResponseParser } from '../utils'
+import { logger, makeHttpResponseParser } from '../utils'
 
 const DEMO_GEO_LOCATIONS = ['in', 'us']
 
@@ -16,6 +16,7 @@ describe('Socket Tunnel', () => {
 			host: 'lumtest.com',
 			port: 80,
 			geoLocation: geoLocation === 'none' ? '' : geoLocation,
+			logger,
 			onClose(err) {
 				rejectPromise?.(err || new Error('session closed'))
 			},
@@ -56,6 +57,7 @@ describe('Socket Tunnel', () => {
 				host: 'lumtest.com',
 				port: 80,
 				geoLocation: 'xz',
+				logger,
 			})
 		).rejects.toMatchObject({
 			message: /failed with status code: 400/
@@ -67,6 +69,7 @@ describe('Socket Tunnel', () => {
 			host: 'servicos.acesso.gov.br',
 			port: 80,
 			geoLocation: 'US',
+			logger,
 		})
 
 		await session.close()

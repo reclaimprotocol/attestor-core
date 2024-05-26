@@ -51,6 +51,7 @@ describeWithServer('Claim Creation', opts => {
 			secretParams: {
 				authorisationHeader: `Bearer ${user}`
 			},
+			ownerPrivateKey: opts.privateKeyHex,
 		})
 
 		expect(result.error).toBeUndefined()
@@ -88,6 +89,7 @@ describeWithServer('Claim Creation', opts => {
 			secretParams: {
 				authorisationHeader: 'Fail'
 			},
+			ownerPrivateKey: opts.privateKeyHex,
 		})
 
 		expect(result.error).toBeTruthy()

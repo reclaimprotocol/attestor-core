@@ -14,6 +14,7 @@ type ServerOpts = {
 	client: WitnessClient
 	privateKeyHex: string
 	mockHttpsServer: ReturnType<typeof createMockServer>
+	serverUrl: string
 }
 
 /**
@@ -46,7 +47,6 @@ export const describeWithServer = (
 	beforeEach(async() => {
 		privateKeyHex = randomPrivateKey()
 		client = new WitnessClient({
-			privateKeyHex,
 			logger: logger.child({ client: 1 }),
 			url: wsServerUrl
 		})
@@ -65,15 +65,14 @@ export const describeWithServer = (
 		get privateKeyHex() {
 			return privateKeyHex
 		},
-		mockHttpsServer
+		get serverUrl() {
+			return wsServerUrl
+		},
+		mockHttpsServer,
 	})
 
 	function getClientOnServer() {
 		const serverSockets = [...wsServer.clients.values()] as WebSocket[]
-		return serverSockets
-			.find(s => (
-				s.serverSocket?.metadata.userId === client.metadata.userId
-			))
-			?.serverSocket
+		return serverSockets.at(-1)?.serverSocket
 	}
 })

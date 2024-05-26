@@ -1,11 +1,17 @@
-import { ReclaimRPCMessage } from '../proto/api'
+import { RPCMessage, RPCMessages } from '../proto/api'
 import { IWitnessSocket } from '../types'
 import { extractArrayBufferFromWsData, getRpcRequest, getRpcRequestType, getRpcResponseType, WitnessError } from '../utils'
 
-export function messageHandler(this: IWitnessSocket, data: unknown) {
+export async function wsMessageHandler(this: IWitnessSocket, data: unknown) {
 	// extract array buffer from WS data & decode proto
 	const buff = extractArrayBufferFromWsData(data)
-	const msg = ReclaimRPCMessage.decode(buff)
+	const { messages } = RPCMessages.decode(buff)
+	for(const msg of messages) {
+		await handleMessage.call(this, msg)
+	}
+}
+
+export function handleMessage(this: IWitnessSocket, msg: RPCMessage) {
 	// handle connection termination alert
 	if(msg.connectionTerminationAlert) {
 		const err = WitnessError.fromProto(
@@ -16,12 +22,6 @@ export function messageHandler(this: IWitnessSocket, data: unknown) {
 			'received connection termination alert'
 		)
 		this.dispatchRPCEvent('connection-terminated', err)
-		return
-	}
-
-	if(msg.initResponse) {
-		this.isInitialised = true
-		this.dispatchRPCEvent('init-response', {})
 		return
 	}
 
@@ -48,31 +48,49 @@ export function messageHandler(this: IWitnessSocket, data: unknown) {
 			return
 		}
 
-		this.dispatchRPCEvent('rpc-request', {
-			requestId: msg.id,
-			type: rpcRequest.type,
-			data: msg[getRpcRequestType(rpcRequest.type)]!,
-			respond: (res) => {
-				if(!this.isOpen) {
-					this.logger?.debug(
-						{ type: rpcRequest.type, res },
-						'connection closed before responding'
-					)
-					return
-				}
+		if(!this.isInitialised && rpcRequest.type !== 'init') {
+			this.logger.warn(
+				{ type: rpcRequest.type },
+				'RPC request received before initialisation'
+			)
+			this.sendMessage({
+				id: msg.id,
+				requestError: WitnessError
+					.badRequest('Initialise connection first')
+					.toProto()
+			})
+			return
+		}
 
-				if('code' in res) {
-					return this.sendMessage({
-						id: msg.id,
-						requestError: res.toProto()
-					})
-				}
+		return new Promise<void>((resolve, reject) => {
+			this.dispatchRPCEvent('rpc-request', {
+				requestId: msg.id,
+				type: rpcRequest.type,
+				data: msg[getRpcRequestType(rpcRequest.type)]!,
+				respond: (res) => {
+					if(!this.isOpen) {
+						this.logger?.debug(
+							{ type: rpcRequest.type, res },
+							'connection closed before responding'
+						)
+						reject(new Error('connection closed'))
+						return
+					}
 
-				return this
-					.sendMessage({ id: msg.id, [resType]: res })
-			},
+					if('code' in res) {
+						reject(res)
+						return this.sendMessage({
+							id: msg.id,
+							requestError: res.toProto()
+						})
+					}
+
+					resolve()
+					return this
+						.sendMessage({ id: msg.id, [resType]: res })
+				},
+			})
 		})
-		return
 	}
 
 	if(msg.tunnelMessage) {
@@ -88,9 +106,5 @@ export function messageHandler(this: IWitnessSocket, data: unknown) {
 		return
 	}
 
-	throw new WitnessError(
-		'WITNESS_ERROR_INTERNAL',
-		'unknown message type',
-		{ msg }
-	)
+	this.logger.warn({ msg }, 'unhandled message')
 }

@@ -1,5 +1,6 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
-import { ServiceSignatureType } from '../../proto/api'
+import { IncomingMessage } from 'http'
+import { RPCMessages, ServiceSignatureType } from '../../proto/api'
 import { SIGNATURES } from '../../signatures'
 import { WitnessError } from '../../utils'
 
@@ -37,4 +38,20 @@ export function niceParseJsonObject(data: string, key: string) {
 			`Invalid JSON in ${key}: ${e.message}`,
 		)
 	}
+}
+
+/**
+ * Extract any initial messages sent to the witness
+ * via the query string.
+ */
+export function getInitialMessagesFromQuery(req: IncomingMessage) {
+	const url = new URL(req.url!, 'http://localhost')
+	const messagesB64 = url.searchParams.get('messages')
+	if(!messagesB64?.length) {
+		return []
+	}
+
+	const msgsBytes = Buffer.from(messagesB64, 'base64')
+	const msgs = RPCMessages.decode(msgsBytes)
+	return msgs.messages
 }

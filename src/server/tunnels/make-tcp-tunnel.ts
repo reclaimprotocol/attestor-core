@@ -6,12 +6,14 @@ import { CONNECTION_TIMEOUT_MS, DNS_SERVERS } from '../../config'
 import { CreateTunnelRequest } from '../../proto/api'
 import type { Logger } from '../../types'
 import type { MakeTunnelFn, TCPSocketProperties } from '../../types'
-import { logger as LOGGER, WitnessError } from '../../utils'
+import { WitnessError } from '../../utils'
 import { isValidCountryCode } from '../utils/iso'
 
 const HTTPS_PROXY_URL = process.env.HTTPS_PROXY_URL
 
-type ExtraOpts = Omit<CreateTunnelRequest, 'id' | 'initialMessage'>
+type ExtraOpts = Omit<CreateTunnelRequest, 'id' | 'initialMessage'> & {
+	logger: Logger
+}
 /**
  * Builds a TCP tunnel to the given host and port.
  * If a geolocation is provided -- an HTTPS proxy is used
@@ -28,11 +30,11 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 	host,
 	port,
 	geoLocation,
-	logger = LOGGER,
+	logger,
 	onClose,
 	onMessage,
 }) => {
-	const socket = await getSocket({ host, port, geoLocation }, logger)
+	const socket = await getSocket({ host, port, geoLocation, logger })
 	const transcript: TCPSocketProperties['transcript'] = []
 
 	let connectTimeout: NodeJS.Timeout | undefined
@@ -87,7 +89,9 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 
 		logger.debug({ err: error }, 'closing socket')
 
-		socket.end()
+		socket.end(() => {
+			// Do nothing
+		})
 		onClose?.(error)
 		onClose = undefined
 	}
@@ -95,9 +99,10 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 
 setDnsServers()
 
-async function getSocket(opts: ExtraOpts, logger: Logger) {
+async function getSocket(opts: ExtraOpts) {
+	const { logger } = opts
 	try {
-		return await _getSocket(opts, logger)
+		return await _getSocket(opts)
 	} catch(err) {
 		// see if the proxy is blocking the connection
 		// due to their own arbitrary rules,
@@ -119,10 +124,7 @@ async function getSocket(opts: ExtraOpts, logger: Logger) {
 
 		for(const addr of addrs) {
 			try {
-				return await _getSocket(
-					{ ...opts, host: addr },
-					logger
-				)
+				return await _getSocket({ ...opts, host: addr })
 			} catch(err) {
 				logger.error(
 					{ addr, err },
@@ -139,9 +141,9 @@ async function _getSocket(
 	{
 		host,
 		port,
-		geoLocation
+		geoLocation,
+		logger
 	}: ExtraOpts,
-	logger: Logger
 ) {
 	const socket = new Socket()
 	if(geoLocation && !HTTPS_PROXY_URL) {

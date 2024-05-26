@@ -1,6 +1,5 @@
 import { TLSSocket } from 'tls'
 import { WitnessClient } from '../client'
-import { CreateTunnelRequest } from '../proto/api'
 import { makeRpcTcpTunnel } from '../tunnels/make-rpc-tcp-tunnel'
 import { makeRpcTlsTunnel } from '../tunnels/make-rpc-tls-tunnel'
 import { logger } from '../utils'
@@ -21,15 +20,18 @@ describeWithServer('RPC Tunnel', opts => {
 	})
 
 	it('should connect to a server via RPC tunnel', async() => {
-		const tunnel = await makeRpcTcpTunnel({
-			request: {
+		// setup tunnel for listening & then
+		// connect to it via RPC
+		const tunnel = await makeRpcTcpTunnel({ tunnelId: 1, client })
+		await client.rpc(
+			'createTunnel',
+			{
 				id: 1,
 				host: 'localhost',
 				port: 1234,
-			},
-			client,
-			logger,
-		})
+				geoLocation: ''
+			}
+		)
 
 		const ws = getClientOnServer()
 		const socketTunnel = ws?.tunnels[1]
@@ -49,16 +51,6 @@ describeWithServer('RPC Tunnel', opts => {
 	describe('TLS', () => {
 		it('should do a TLS handshake via RPC tunnel', async() => {
 			const ws = getClientOnServer()
-
-			let createReq: CreateTunnelRequest | undefined
-			ws?.addEventListener('rpc-request', ({ data }) => {
-				if(data.type !== 'createTunnel') {
-					return
-				}
-
-				createReq = data.data as CreateTunnelRequest
-			})
-
 			const tunnel = await makeRpcTlsTunnel({
 				request: {
 					id: 1,
@@ -68,17 +60,48 @@ describeWithServer('RPC Tunnel', opts => {
 				tlsOpts: {
 					verifyServerCertificate: false,
 				},
-				client,
-				logger,
+				logger: client.logger,
+				connect(initMessages) {
+					client.sendMessage(...initMessages)
+					// ensure that the client hello message
+					// was sent to the server along the
+					// "createTunnel" request -- that saves
+					// us a round-trip
+					expect(initMessages[1].tunnelMessage)
+						.toBeTruthy()
+					return client
+				},
 			})
 
 			expect(ws?.tunnels[1]).toBeTruthy()
-			// ensure that the client hello message
-			// was sent to the server via the createTunnelRequest
-			// -- which saves us a round trip
-			expect(createReq?.initialMessage).toBeTruthy()
 
 			await tunnel.close()
+		})
+
+		it('should setup a 0-RTT TLS connection', async() => {
+			let client2: WitnessClient | undefined
+			const tunnel = await makeRpcTlsTunnel({
+				request: {
+					id: 1,
+					host: 'localhost',
+					port: 1234,
+				},
+				tlsOpts: {
+					verifyServerCertificate: false,
+				},
+				logger: client.logger,
+				connect(initMessages) {
+					client2 = new WitnessClient({
+						url: opts.serverUrl,
+						logger: logger.child({ client: 2 }),
+						initMessages
+					})
+					return client2
+				},
+			})
+
+			await tunnel.close()
+			await client2?.terminateConnection()
 		})
 
 		it('should gracefully handle a TLS disconnection alert', async() => {
@@ -97,8 +120,11 @@ describeWithServer('RPC Tunnel', opts => {
 				tlsOpts: {
 					verifyServerCertificate: false,
 				},
-				client,
-				logger,
+				logger: client.logger,
+				connect(initMessages) {
+					client.sendMessage(...initMessages)
+					return client
+				},
 				onClose(err) {
 					closeResolve?.(err)
 				},
@@ -129,8 +155,37 @@ describeWithServer('RPC Tunnel', opts => {
 							'invalid-protocol'
 						]
 					},
-					client,
-					logger,
+					logger: client.logger,
+					connect(initMessages) {
+						client.sendMessage(...initMessages)
+						return client
+					},
+				})
+			).rejects.toMatchObject({
+				message: /NO_APPLICATION_PROTOCOL/
+			})
+		})
+
+		it('should handle tunnel creation errors', async() => {
+			await expect(
+				makeRpcTlsTunnel({
+					request: {
+						id: 1,
+						host: 'localhost',
+						port: 1234,
+						// invalid geo location
+						geoLocation: 'XZ'
+					},
+					tlsOpts: {
+						applicationLayerProtocols: [
+							'invalid-protocol'
+						]
+					},
+					logger: client.logger,
+					connect(initMessages) {
+						client.sendMessage(...initMessages)
+						return client
+					},
 				})
 			).rejects.toMatchObject({
 				message: /NO_APPLICATION_PROTOCOL/

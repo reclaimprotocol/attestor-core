@@ -1,7 +1,7 @@
-import { InitRequest, ReclaimRPCMessage } from '../proto/api'
+import { InitRequest, RPCMessage, RPCMessages } from '../proto/api'
 import { IWitnessSocket, Logger, RPCEvent, RPCEventMap } from '../types'
-import { generateRpcMessageId, makeRpcEvent, WitnessError } from '../utils'
-import { messageHandler } from './message-handler'
+import { makeRpcEvent, packRpcMessages, WitnessError } from '../utils'
+import { wsMessageHandler } from './message-handler'
 
 export class WitnessSocket implements IWitnessSocket {
 
@@ -33,12 +33,11 @@ export class WitnessSocket implements IWitnessSocket {
 			)
 		))
 
-		socket.addEventListener('message', ({ data }) => {
+		socket.addEventListener('message', async({ data }) => {
 			try {
-				messageHandler.call(this, data)
+				await wsMessageHandler.call(this, data)
 			} catch(err) {
-				this.logger?.error({ err }, 'error processing message')
-				this.terminateConnection(err)
+				this.logger.error({ err }, 'error processing message')
 			}
 		})
 	}
@@ -47,16 +46,17 @@ export class WitnessSocket implements IWitnessSocket {
 		return this.socket.readyState === WebSocket.OPEN
 	}
 
-	async sendMessage(msg: Partial<ReclaimRPCMessage>) {
+	async sendMessage(...msgs: Partial<RPCMessage>[]) {
 		if(!this.isOpen) {
 			throw new Error('socket is not open')
 		}
 
-		msg.id ||= generateRpcMessageId()
-		const bytes = ReclaimRPCMessage
-			.encode(ReclaimRPCMessage.create(msg))
-			.finish()
+		const msg = packRpcMessages(...msgs)
+		const bytes = RPCMessages.encode(msg).finish()
+
 		await this.socket.send(bytes)
+
+		return msg
 	}
 
 	dispatchRPCEvent<K extends keyof RPCEventMap>(type: K, data: RPCEventMap[K]) {

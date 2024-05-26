@@ -1,6 +1,5 @@
-import { concatenateUint8Arrays, CONTENT_TYPE_MAP, PACKET_TYPE, strToUint8Array } from '@reclaimprotocol/tls'
+import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
 import type { IncomingHttpHeaders } from 'http'
-import { TLSReceipt, TLSVersion, TranscriptMessageSenderType } from '../proto/api'
 import { ArraySlice, Transcript } from '../types'
 import { findIndexInUint8Array, uint8ArrayToStr } from './generics'
 import { REDACTION_CHAR_CODE } from './redactions'
@@ -38,13 +37,6 @@ type HttpResponse = {
     chunks?: ArraySlice[]
 }
 
-type ApplicationMessage = {
-    data: Uint8Array
-    sender: TranscriptMessageSenderType
-}
-
-const DEFAULT_REDACTION_DATA = new Uint8Array(4)
-	.fill(REDACTION_CHAR_CODE)
 const HTTP_HEADER_LINE_END = strToUint8Array('\r\n')
 
 /**
@@ -218,52 +210,6 @@ export function makeHttpResponseParser() {
 
 		return line
 	}
-}
-
-/**
- * Finds all application data messages in a transcript
- * and returns them. Removes the "contentType" suffix from the message.
- * in TLS 1.3
- */
-export function extractApplicationDataMsgsFromTranscript(
-	{ transcript, tlsVersion }: TLSReceipt,
-) {
-	const msgs: ApplicationMessage[] = []
-	for(const m of transcript) {
-		if(m.packetHeader[0] !== PACKET_TYPE.WRAPPED_RECORD) {
-			continue
-		}
-
-		let data: Uint8Array
-		// redacted msgs but with a valid packet header
-		// can be considered application data messages
-		if(m.redacted) {
-			if(!m.plaintextLength) {
-				data = DEFAULT_REDACTION_DATA
-			} else {
-				const len = tlsVersion === TLSVersion.TLS_VERSION_1_3
-				// remove content type suffix
-					? m.plaintextLength - 1
-					: m.plaintextLength
-				data = new Uint8Array(len)
-					.fill(REDACTION_CHAR_CODE)
-			}
-			// otherwise, we need to check the content type
-		} else if(tlsVersion === TLSVersion.TLS_VERSION_1_3) {
-			const contentType = m.message[m.message.length - 1]
-			if(contentType !== CONTENT_TYPE_MAP['APPLICATION_DATA']) {
-				continue
-			}
-
-			data = m.message.slice(0, -1)
-		} else {
-			data = m.message
-		}
-
-		msgs.push({ data, sender: m.senderType })
-	}
-
-	return msgs
 }
 
 /**

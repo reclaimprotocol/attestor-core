@@ -319,12 +319,6 @@ message CreateTunnelRequest {
 	 * eg. US, IN, GB, etc.
 	 */
 	string geoLocation = 4;
-	/**
-	 * Optionally provide the initial packet to send upon
-	 * connection establishment. Prevents the need to have
-	 * another round trip to send the first packet.
-	 */
-	bytes initialMessage = 5;
 }
 
 message DisconnectTunnelRequest {
@@ -395,13 +389,18 @@ message ClaimTunnelRequest {
 	 */
 	CreateTunnelRequest request = 1;
 	/**
+	 * Owner of the claim. Must be the public key/address
+	 * of the signatures
+	 */
+	string ownerId = 2;
+	/**
 	 * Timestamp of the claim being made.
 	 * Cannot be more than 10 minutes in the past
 	 * or in the future
 	 */
-	uint32 timestampS = 2;
+	uint32 timestampS = 3;
 	/** claim information to sign */
-	ProviderClaimInfo info = 3;
+	ProviderClaimInfo info = 4;
 	/**
 	 * messages from the client & server
 	 * in the order they were sent/received
@@ -412,8 +411,9 @@ message ClaimTunnelRequest {
 	 * The revealed messages should support the proving
 	 * of the claim as defined in the provider's implementation
 	 */
-	repeated TranscriptMessage transcript = 4;
-	Signatures signatures = 5;
+	repeated TranscriptMessage transcript = 5;
+
+	Signatures signatures = 6;
 
 	message Signatures {
 		/**
@@ -456,15 +456,13 @@ message ClaimTunnelResponse {
 }
 
 message InitRequest {
-	/** User ID */
-	string userId = 1;
 	/** Witness client version */
 	WitnessVersion clientVersion = 2;
 	/** Signature type used & expected by the user */
 	ServiceSignatureType signatureType = 3;
 }
 
-message ReclaimRPCMessage {
+message RPCMessage {
 	/**
 	 * Per connection unique RPC message ID. Either party sending a
 	 * duplicate ID will do nothing except confuse the other party.
@@ -475,51 +473,53 @@ message ReclaimRPCMessage {
 	uint64 id = 1;
 	// message must be one of the following
 	oneof message {
+		InitRequest initRequest = 2;
 		/**
 		 * Response to the init request.
-		 * The request must be sent in the WebSocket URL
-		 * as a query parameter.
-		 * `?initRequest=base64(proto(InitRequest))`
 		 * */
-		Empty initResponse = 2;
+		Empty initResponse = 3;
 		/**
 		 * Data representing an error in the WebSocket connection.
 		 * The party sending this message should close the connection
 		 * immediately after sending this message.
 		 */
-		WitnessErrorData connectionTerminationAlert = 3;
+		WitnessErrorData connectionTerminationAlert = 4;
 		/**
 		 * Data representing an error in the witness's
 		 * request to the server. This should be sent in case
 		 * there was an error in processing the request.
 		 */
-		WitnessErrorData requestError = 4;
+		WitnessErrorData requestError = 5;
 		/**
 		 * Create a tunnel to the specified host & port.
 		 */
-		CreateTunnelRequest createTunnelRequest = 5;
-		Empty createTunnelResponse = 6;
+		CreateTunnelRequest createTunnelRequest = 6;
+		Empty createTunnelResponse = 7;
 		/**
 		 * Disconnect a tunnel.
 		 */
-		DisconnectTunnelRequest disconnectTunnelRequest = 7;
-		Empty disconnectTunnelResponse = 8;
+		DisconnectTunnelRequest disconnectTunnelRequest = 8;
+		Empty disconnectTunnelResponse = 9;
 		/**
 		 * Message to send through a tunnel. Client can send
 		 * this message to forward data to the server.
 		 */
-		TunnelMessage tunnelMessage = 9;
+		TunnelMessage tunnelMessage = 10;
 		/**
 		 * Event indicating that a tunnel has been disconnected.
 		 * The client should not send any more messages through
 		 * this tunnel.
 		 */
-		TunnelDisconnectEvent tunnelDisconnectEvent = 10;
+		TunnelDisconnectEvent tunnelDisconnectEvent = 11;
 		/**
 		 * Using the transcript of a tunnel, make a claim.
 		 * The tunnel must be disconnected before making a claim.
 		 */
-		ClaimTunnelRequest claimTunnelRequest = 11;
-		ClaimTunnelResponse claimTunnelResponse = 12;
+		ClaimTunnelRequest claimTunnelRequest = 12;
+		ClaimTunnelResponse claimTunnelResponse = 13;
 	}
+}
+
+message RPCMessages {
+	repeated RPCMessage messages = 1;
 }

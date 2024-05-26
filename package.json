@@ -8,7 +8,7 @@
     "build:browser": "sh ./src/scripts/build-browser.sh",
     "start:browser": "serve browser -l 4000",
     "prepare": "npm run build",
-    "test": "NODE_ENV=test TZ=utc jest --forceExit --detectOpenHandles",
+    "test": "NODE_ENV=test TZ=utc jest --verbose --forceExit --detectOpenHandles",
     "lint": "eslint ./ --ext .js,.ts,.jsx,.tsx",
     "lint:fix": "eslint ./ --fix --ext .js,.ts,.jsx,.tsx",
     "generate:proto": "sh ./src/scripts/generate-proto.sh",

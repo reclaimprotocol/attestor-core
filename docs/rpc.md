@@ -23,7 +23,7 @@ The protocol we have is in essence gRPC with a few minor tweaks for our use case
 The protocol is defined in the `proto/api.proto` file. Each message in the RPC protocol is defined in a single protobuf message:
 
 ```protobuf
-message ReclaimRPCMessage {
+message RPCMessage {
 	/**
 	 * Per connection unique RPC message ID. Either party sending a
 	 * duplicate ID will do nothing except confuse the other party.
@@ -73,7 +73,7 @@ Utility functions to help the WebSocket client & server encode & decode these me
 
 ## Adding a new RPC
 
-1. add the request & response messages to `proto/api.proto` & then add them to the `ReclaimRPCMessage` message. For eg.
+1. add the request & response messages to `proto/api.proto` & then add them to the `RPCMessage` message. For eg.
    ```protobuf
    message AbcdRequest {
 	   ...
@@ -82,7 +82,7 @@ Utility functions to help the WebSocket client & server encode & decode these me
 	   ...
    }
 
-   message ReclaimRPCMessage {
+   message RPCMessage {
 	   ...
 	   oneof message {
 		   ...

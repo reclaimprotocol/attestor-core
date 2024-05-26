@@ -1,33 +1,31 @@
 import { CreateTunnelRequest } from '../proto/api'
 import { IWitnessClient, MakeTunnelFn, RPCEvent } from '../types'
-import { generateRpcMessageId, logger as LOGGER, WitnessError } from '../utils'
+import { WitnessError } from '../utils'
 
-type ExtraOpts = {
-	request: Partial<CreateTunnelRequest>
+export type TCPTunnelCreateOpts = {
+	/**
+	 * The tunnel ID to communicate with.
+	 */
+	tunnelId: CreateTunnelRequest['id']
 	client: IWitnessClient
 }
 
 /**
- * Makes a TCP tunnel to a remote server using the RPC protocol,
- * with the witness server acting as a proxy.
+ * Makes a tunnel communication wrapper for a TCP tunnel.
+ *
+ * It listens for messages and disconnect events from the server,
+ * and appropriately calls the `onMessage` and `onClose` callbacks.
  */
-export const makeRpcTcpTunnel: MakeTunnelFn<ExtraOpts> = async({
-	request,
-	logger = LOGGER.child({ tunnel: request.host }),
+export const makeRpcTcpTunnel: MakeTunnelFn<TCPTunnelCreateOpts> = ({
+	tunnelId,
 	client,
 	onClose,
 	onMessage,
 }) => {
-	logger.trace('creating tunnel')
-
-	const tunnelId = (request.id ||= generateRpcMessageId())
-
+	let closed = false
 	client.addEventListener('tunnel-message', onMessageListener)
 	client.addEventListener('tunnel-disconnect-event', onDisconnectListener)
 	client.addEventListener('connection-terminated', onConnectionTerminatedListener)
-
-	await client.rpc('createTunnel', request)
-	logger.trace('tunnel created')
 
 	return {
 		write(message) {
@@ -36,6 +34,10 @@ export const makeRpcTcpTunnel: MakeTunnelFn<ExtraOpts> = async({
 			})
 		},
 		async close(err) {
+			if(closed) {
+				return
+			}
+
 			onErrorRecv(err)
 			await client.rpc('disconnectTunnel', { id: tunnelId })
 		}
@@ -65,11 +67,14 @@ export const makeRpcTcpTunnel: MakeTunnelFn<ExtraOpts> = async({
 		onErrorRecv(data)
 	}
 
-	function onErrorRecv(error: Error | undefined) {
+	function onErrorRecv(err: Error | undefined) {
+		client.logger?.debug({ tunnelId, err }, 'TCP tunnel closed')
+
 		client.removeEventListener('tunnel-message', onMessageListener)
 		client.removeEventListener('tunnel-disconnect-event', onDisconnectListener)
 		client.removeEventListener('connection-terminated', onConnectionTerminatedListener)
-		onClose?.(error)
+		onClose?.(err)
 		onClose = undefined
+		closed = true
 	}
 }

@@ -1,37 +1,36 @@
-import type { Empty, ReclaimRPCMessage, TunnelDisconnectEvent, TunnelMessage } from '../proto/api'
+import type { Empty, RPCMessage, TunnelDisconnectEvent, TunnelMessage } from '../proto/api'
 import type { WitnessError } from '../utils/error'
 
 // simple typescript type to extract all fields that end with the givens suffix
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 type ExtractPrefix<T, S extends string> = T extends `${infer _}${S}` ? _ : never
 
-export type RPCType = ExtractPrefix<keyof ReclaimRPCMessage, 'Request'>
+export type RPCType = ExtractPrefix<keyof RPCMessage, 'Request'>
 
-// extract all request & response types from the ReclaimRPCMessage type
+// extract all request & response types from the RPCMessage type
 type RPCRequestType<T extends RPCType> = `${T}Request`
 type RPCResponseType<T extends RPCType> = `${T}Response`
 // data types for the request & response types
-export type RPCRequestData<T extends RPCType> = Exclude<ReclaimRPCMessage[RPCRequestType<T>], undefined>
-export type RPCResponseData<T extends RPCType> = Exclude<ReclaimRPCMessage[RPCResponseType<T>], undefined>
+export type RPCRequestData<T extends RPCType> = Exclude<RPCMessage[RPCRequestType<T>], undefined>
+export type RPCResponseData<T extends RPCType> = Exclude<RPCMessage[RPCResponseType<T>], undefined>
 
 export type RPCRequest<T extends RPCType> = {
-	requestId: ReclaimRPCMessage['id']
+	requestId: RPCMessage['id']
 	type: T
 	data: RPCRequestData<T>
 	respond(res: RPCResponseData<T> | WitnessError): void
 }
 
 export type RPCResponse<T extends RPCType> = {
-	id: ReclaimRPCMessage['id']
+	id: RPCMessage['id']
 	type: T
 	data: RPCResponseData<T>
 } | {
-	id: ReclaimRPCMessage['id']
+	id: RPCMessage['id']
 	error: WitnessError
 }
 
 export type RPCEventMap = {
-	'init-response': Empty
 	'connection-terminated': WitnessError
 	'tunnel-message': TunnelMessage
 	'tunnel-disconnect-event': TunnelDisconnectEvent

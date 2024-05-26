@@ -51,7 +51,7 @@ export async function assertValidClaimRequest(
 	const verified = await verifySig(
 		serialisedReq,
 		requestSignature,
-		metadata.userId
+		request.ownerId
 	)
 	if(!verified) {
 		throw new WitnessError(

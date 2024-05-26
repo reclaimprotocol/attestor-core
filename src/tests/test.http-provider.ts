@@ -27,6 +27,7 @@ describeWithServer('HTTP Provider', opts => {
 			secretParams: {
 				cookieStr: '<cookie-str>'
 			},
+			ownerPrivateKey: opts.privateKeyHex,
 		})
 		expect(resp.error).toBeUndefined()
 		expect(resp.claim?.context)
@@ -73,6 +74,7 @@ describeWithServer('HTTP Provider', opts => {
 				authorisationHeader: 'abc'
 			},
 			params: params,
+			ownerPrivateKey: opts.privateKeyHex,
 		})
 		expect(receipt?.error).toBeTruthy()
 		expect(receipt?.error?.message).toContain('request body mismatch')

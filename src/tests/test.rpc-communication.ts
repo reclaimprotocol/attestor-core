@@ -20,9 +20,8 @@ describeWithServer('RPC Communication', opts => {
 	})
 
 	it('should gracefully handle terminated connection during init', async() => {
-		client.terminateConnection()
+		await client.terminateConnection()
 		client = new WitnessClient({
-			privateKeyHex: opts.privateKeyHex,
 			logger,
 			// a URL without a WS server
 			url: 'ws://localhost:1234'

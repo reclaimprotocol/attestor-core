@@ -9,7 +9,7 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 	claimRequest,
 	{ logger, client }
 ) => {
-	const { request, timestampS } = claimRequest
+	const { request, ownerId, timestampS } = claimRequest
 	const tunnel = client.getTunnel(request?.id!)
 	// we throw an error for cases where the witness cannot prove
 	// the user's request is faulty. For eg. if the user sends a
@@ -41,7 +41,7 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 		res.claim = {
 			provider: info.provider,
 			parameters: info.parameters,
-			owner: client.metadata.userId,
+			owner: ownerId,
 			timestampS,
 			context: info.context,
 			identifier: getIdentifierFromClaimInfo(info),

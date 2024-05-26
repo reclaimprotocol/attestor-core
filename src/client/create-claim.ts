@@ -3,6 +3,7 @@ import canonicalize from 'canonicalize'
 import { DEFAULT_HTTPS_PORT } from '../config'
 import { ClaimTunnelRequest } from '../proto/api'
 import { ProviderName, providers } from '../providers'
+import { SIGNATURES } from '../signatures'
 import { makeRpcTlsTunnel } from '../tunnels/make-rpc-tls-tunnel'
 import { CreateClaimOpts, IWitnessClient, MessageRevealInfo } from '../types'
 import { generateTunnelId, getBlocksToReveal, getProviderValue, isApplicationData, makeHttpResponseParser, preparePacketsForReveal, redactSlices, unixTimestampSeconds } from '../utils'
@@ -20,6 +21,7 @@ export async function createClaim<N extends ProviderName>(
 		secretParams,
 		context,
 		onStep,
+		ownerPrivateKey,
 		...zkOpts
 	}: CreateClaimOpts<N>
 ) {
@@ -31,6 +33,9 @@ export async function createClaim<N extends ProviderName>(
 	let redactionMode = getProviderValue(params, provider.writeRedactionMode)
 	const [host, port] = hostPort.split(':')
 	const resParser = makeHttpResponseParser()
+	const signatureAlg = SIGNATURES[this.metadata.signatureType]
+	const ownerId = getAddress()
+
 	const revealMap = new Map<TLSPacketContext, MessageRevealInfo>()
 
 	const additionalClientOptions = {
@@ -53,9 +58,13 @@ export async function createClaim<N extends ProviderName>(
 		geoLocation,
 		id: generateTunnelId()
 	}
+
 	const tunnel = await makeRpcTlsTunnel({
 		tlsOpts: provider.additionalClientOptions || {},
-		client: this,
+		connect: (initMessages) => {
+			this.sendMessage(...initMessages)
+			return this
+		},
 		logger,
 		request: createTunnelReq,
 		onMessage(data) {
@@ -138,12 +147,15 @@ export async function createClaim<N extends ProviderName>(
 	await waitForAllData
 	await tunnel.close()
 
+	logger.info('got full response from server')
+
 	// now that we have the full transcript, we need
 	// to generate the ZK proofs & send them to the witness
 	// to verify & sign our claim
 	const claimTunnelReq = ClaimTunnelRequest.create({
 		request: createTunnelReq,
 		timestampS: unixTimestampSeconds(),
+		ownerId,
 		info: {
 			provider: name,
 			parameters: canonicalize(params)!,
@@ -156,7 +168,8 @@ export async function createClaim<N extends ProviderName>(
 
 	const claimTunnelBytes = ClaimTunnelRequest
 		.encode(claimTunnelReq).finish()
-	const requestSignature = await this.sign(claimTunnelBytes)
+	const requestSignature = await signatureAlg
+		.sign(claimTunnelBytes, ownerPrivateKey)
 	claimTunnelReq.signatures = { requestSignature }
 
 	const result = await this.rpc('claimTunnel', claimTunnelReq)
@@ -213,7 +226,9 @@ export async function createClaim<N extends ProviderName>(
 		}
 	}
 
-	function setRevealOfLastSentBlock(reveal: MessageRevealInfo | undefined) {
+	function setRevealOfLastSentBlock(
+		reveal: MessageRevealInfo | undefined
+	) {
 		const lastBlock = getLastBlock('client')
 		if(!lastBlock) {
 			return
@@ -352,5 +367,14 @@ export async function createClaim<N extends ProviderName>(
 		}
 
 		revealMap.delete(message)
+	}
+
+	function getAddress() {
+		const {
+			getAddress,
+			getPublicKey,
+		} = signatureAlg
+		const pubKey = getPublicKey(ownerPrivateKey)
+		return getAddress(pubKey)
 	}
 }
