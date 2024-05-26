@@ -1,7 +1,7 @@
 import { IncomingMessage } from 'http'
 import { WebSocket, WebSocketServer } from 'ws'
-import { API_SERVER_PORT } from '../../config'
-import { logger as LOGGER } from '../../utils'
+import { API_SERVER_PORT } from '../config'
+import { logger as LOGGER } from '../utils'
 import { WitnessServerSocket } from './socket'
 
 /**

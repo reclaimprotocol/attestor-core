@@ -1,8 +1,6 @@
-import { InitRequest, ReclaimRPCMessage } from '../../proto/api'
-import { Logger } from '../../types'
-import { WitnessError } from '../../utils'
-import { IWitnessSocket, RPCEvent, RPCEventMap } from '../types'
-import { generateRpcMessageId, makeRpcEvent } from '../utils/generics'
+import { InitRequest, ReclaimRPCMessage } from '../proto/api'
+import { IWitnessSocket, Logger, RPCEvent, RPCEventMap } from '../types'
+import { generateRpcMessageId, makeRpcEvent, WitnessError } from '../utils'
 import { messageHandler } from './message-handler'
 
 export class WitnessSocket implements IWitnessSocket {

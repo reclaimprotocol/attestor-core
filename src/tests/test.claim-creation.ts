@@ -1,10 +1,9 @@
 import { TLSProtocolVersion, uint8ArrayToStr } from '@reclaimprotocol/tls'
+import { WitnessClient } from '../client'
 import { WitnessErrorCode } from '../proto/api'
 import { providers } from '../providers'
-import { logger } from '../utils'
-import { WitnessClient } from '../v2'
-import { decryptTranscript } from '../v2/server'
-import { extractApplicationDataFromTranscript } from '../v2/server/utils/generics'
+import { decryptTranscript } from '../server'
+import { extractApplicationDataFromTranscript, logger } from '../utils'
 import { describeWithServer } from './describe-with-server'
 
 const TLS_VERSIONS: TLSProtocolVersion[] = [

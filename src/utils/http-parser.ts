@@ -1,8 +1,7 @@
 import { concatenateUint8Arrays, CONTENT_TYPE_MAP, PACKET_TYPE, strToUint8Array } from '@reclaimprotocol/tls'
 import type { IncomingHttpHeaders } from 'http'
 import { TLSReceipt, TLSVersion, TranscriptMessageSenderType } from '../proto/api'
-import { ArraySlice } from '../types'
-import { Transcript } from '../v2'
+import { ArraySlice, Transcript } from '../types'
 import { findIndexInUint8Array, uint8ArrayToStr } from './generics'
 import { REDACTION_CHAR_CODE } from './redactions'
 

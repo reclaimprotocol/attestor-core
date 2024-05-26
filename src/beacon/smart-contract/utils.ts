@@ -1,5 +1,5 @@
 import { ethers } from 'ethers'
-import { ServerError, Status } from 'nice-grpc-common'
+import { WitnessError } from '../../utils'
 import CONTRACTS_CONFIG from './config.json'
 import { Reclaim, Reclaim__factory as ReclaimFactory } from './types'
 
@@ -13,7 +13,8 @@ export function getContract(chainKey: string) {
 	if(!existingContractsMap[chainKey]) {
 		const contractData = CONTRACTS_CONFIG[chainKey as keyof typeof CONTRACTS_CONFIG]
 		if(!contractData) {
-			throw new ServerError(Status.INVALID_ARGUMENT, `Unsupported chain: "${chainKey}"`)
+			throw WitnessError
+				.badRequest(`Unsupported chain: "${chainKey}"`)
 		}
 
 		const rpcProvider = new ethers.providers.JsonRpcProvider(contractData.rpcUrl)

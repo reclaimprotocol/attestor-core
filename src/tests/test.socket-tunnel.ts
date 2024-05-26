@@ -1,6 +1,6 @@
 import { strToUint8Array, uint8ArrayToStr } from '@reclaimprotocol/tls'
+import { makeTcpTunnel } from '../server'
 import { makeHttpResponseParser } from '../utils'
-import { makeTcpTunnel } from '../v2/server'
 
 const DEMO_GEO_LOCATIONS = ['in', 'us']
 

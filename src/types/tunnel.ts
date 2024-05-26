@@ -1,5 +1,5 @@
-import { CreateTunnelRequest } from '../../proto/api'
-import type { Logger } from '../../types'
+import type { CreateTunnelRequest } from '../proto/api'
+import type { Logger } from '../types'
 
 export type MakeTunnelBaseOpts<O> = O & {
 	logger?: Logger

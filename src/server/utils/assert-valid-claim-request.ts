@@ -1,12 +1,11 @@
 import { areUint8ArraysEqual, concatenateUint8Arrays, crypto, decryptWrappedRecord, PACKET_TYPE, parseClientHello, parseServerHello, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 import canonicalize from 'canonicalize'
-import { ClaimTunnelRequest, InitRequest, ProviderClaimInfo, TranscriptMessageSenderType } from '../../../proto/api'
-import { providers } from '../../../providers'
-import { SIGNATURES } from '../../../signatures'
-import { IDecryptedTranscript, IDecryptedTranscriptMessage, Logger } from '../../../types'
-import { getPureCiphertext, hashProviderParams, verifyZkPacket, WitnessError } from '../../../utils'
-import { TCPSocketProperties, Transcript } from '../../types'
-import { extractApplicationDataFromTranscript, niceParseJsonObject } from './generics'
+import { ClaimTunnelRequest, InitRequest, ProviderClaimInfo, TranscriptMessageSenderType } from '../../proto/api'
+import { providers } from '../../providers'
+import { SIGNATURES } from '../../signatures'
+import { IDecryptedTranscript, IDecryptedTranscriptMessage, Logger, TCPSocketProperties, Transcript } from '../../types'
+import { extractApplicationDataFromTranscript, getPureCiphertext, hashProviderParams, verifyZkPacket, WitnessError } from '../../utils'
+import { niceParseJsonObject } from './generics'
 
 /**
  * Asserts that the claim request is valid.

@@ -1,8 +1,9 @@
-import type { ClaimTunnelResponse, InitRequest, ReclaimRPCMessage, ServiceSignatureType, TunnelMessage } from '../../proto/api'
-import type { ProviderName, ProviderParams, ProviderSecretParams } from '../../providers'
-import type { Logger, PrepareZKProofsBaseOpts, ProofGenerationStep } from '../../types'
+import type { ClaimTunnelResponse, InitRequest, ReclaimRPCMessage, ServiceSignatureType, TunnelMessage } from '../proto/api'
+import type { Logger } from './general'
+import type { ProofGenerationStep, ProviderName, ProviderParams, ProviderSecretParams } from './providers'
 import type { RPCEvent, RPCEventMap, RPCEventType, RPCRequestData, RPCResponseData, RPCType } from './rpc'
 import type { TCPSocketProperties, Tunnel } from './tunnel'
+import type { PrepareZKProofsBaseOpts } from './zk'
 
 export type WitnessClientOpts = {
 	/**

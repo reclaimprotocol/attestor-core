@@ -1,5 +1,5 @@
 import ElasticAPM, { Agent } from 'elastic-apm-node'
-import { logger } from '../../../utils/logger'
+import { logger } from '../../utils/logger'
 
 let apm: Agent | undefined
 

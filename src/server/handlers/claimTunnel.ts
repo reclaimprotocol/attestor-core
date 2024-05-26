@@ -1,7 +1,7 @@
-import { MAX_CLAIM_TIMESTAMP_DIFF_S } from '../../../config'
-import { ClaimTunnelResponse } from '../../../proto/api'
-import { getIdentifierFromClaimInfo, stringifyClaimParameters, unixTimestampSeconds, WitnessError } from '../../../utils'
+import { MAX_CLAIM_TIMESTAMP_DIFF_S } from '../../config'
+import { ClaimTunnelResponse } from '../../proto/api'
 import { RPCHandler } from '../../types'
+import { getIdentifierFromClaimInfo, stringifyClaimParameters, unixTimestampSeconds, WitnessError } from '../../utils'
 import { assertTranscriptsMatch, assertValidClaimRequest } from '../utils/assert-valid-claim-request'
 import { signAsWitness } from '../utils/generics'
 

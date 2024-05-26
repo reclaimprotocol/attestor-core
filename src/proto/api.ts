@@ -6,7 +6,6 @@
 
 /* eslint-disable */
 import Long from "long";
-import { type CallContext, type CallOptions } from "nice-grpc-common";
 import _m0 from "protobufjs/minimal";
 
 export const protobufPackage = "reclaim_witness";
@@ -4557,134 +4556,6 @@ export const ReclaimRPCMessage = {
   },
 };
 
-export type ReclaimWitnessDefinition = typeof ReclaimWitnessDefinition;
-export const ReclaimWitnessDefinition = {
-  name: "ReclaimWitness",
-  fullName: "reclaim_witness.ReclaimWitness",
-  methods: {
-    /** get the x25519 public key of the verifier that can be used to verify authenticity of receipts & credentials */
-    getVerifierPublicKey: {
-      name: "GetVerifierPublicKey",
-      requestType: GetVerifierPublicKeyRequest,
-      requestStream: false,
-      responseType: GetVerifierPublicKeyResponse,
-      responseStream: false,
-      options: {},
-    },
-    /** initialise a new TLS verification session with the verifier */
-    initialiseSession: {
-      name: "initialiseSession",
-      requestType: InitialiseSessionRequest,
-      requestStream: false,
-      responseType: InitialiseSessionResponse,
-      responseStream: false,
-      options: {},
-    },
-    /** push blocks to the session */
-    pushToSession: {
-      name: "PushToSession",
-      requestType: PushToSessionRequest,
-      requestStream: false,
-      responseType: PushToSessionResponse,
-      responseStream: false,
-      options: {},
-    },
-    /** listen to blocks from the session */
-    pullFromSession: {
-      name: "PullFromSession",
-      requestType: PullFromSessionRequest,
-      requestStream: false,
-      responseType: PullFromSessionResponse,
-      responseStream: true,
-      options: {},
-    },
-    /** cancel and destroy the session */
-    cancelSession: {
-      name: "CancelSession",
-      requestType: CancelSessionRequest,
-      requestStream: false,
-      responseType: CancelSessionResponse,
-      responseStream: false,
-      options: {},
-    },
-    /** finalise the session, and generate the receipt & provider signature */
-    finaliseSession: {
-      name: "FinaliseSession",
-      requestType: FinaliseSessionRequest,
-      requestStream: false,
-      responseType: FinaliseSessionResponse,
-      responseStream: false,
-      options: {},
-    },
-  },
-} as const;
-
-export interface ReclaimWitnessServiceImplementation<CallContextExt = {}> {
-  /** get the x25519 public key of the verifier that can be used to verify authenticity of receipts & credentials */
-  getVerifierPublicKey(
-    request: GetVerifierPublicKeyRequest,
-    context: CallContext & CallContextExt,
-  ): Promise<DeepPartial<GetVerifierPublicKeyResponse>>;
-  /** initialise a new TLS verification session with the verifier */
-  initialiseSession(
-    request: InitialiseSessionRequest,
-    context: CallContext & CallContextExt,
-  ): Promise<DeepPartial<InitialiseSessionResponse>>;
-  /** push blocks to the session */
-  pushToSession(
-    request: PushToSessionRequest,
-    context: CallContext & CallContextExt,
-  ): Promise<DeepPartial<PushToSessionResponse>>;
-  /** listen to blocks from the session */
-  pullFromSession(
-    request: PullFromSessionRequest,
-    context: CallContext & CallContextExt,
-  ): ServerStreamingMethodResult<DeepPartial<PullFromSessionResponse>>;
-  /** cancel and destroy the session */
-  cancelSession(
-    request: CancelSessionRequest,
-    context: CallContext & CallContextExt,
-  ): Promise<DeepPartial<CancelSessionResponse>>;
-  /** finalise the session, and generate the receipt & provider signature */
-  finaliseSession(
-    request: FinaliseSessionRequest,
-    context: CallContext & CallContextExt,
-  ): Promise<DeepPartial<FinaliseSessionResponse>>;
-}
-
-export interface ReclaimWitnessClient<CallOptionsExt = {}> {
-  /** get the x25519 public key of the verifier that can be used to verify authenticity of receipts & credentials */
-  getVerifierPublicKey(
-    request: DeepPartial<GetVerifierPublicKeyRequest>,
-    options?: CallOptions & CallOptionsExt,
-  ): Promise<GetVerifierPublicKeyResponse>;
-  /** initialise a new TLS verification session with the verifier */
-  initialiseSession(
-    request: DeepPartial<InitialiseSessionRequest>,
-    options?: CallOptions & CallOptionsExt,
-  ): Promise<InitialiseSessionResponse>;
-  /** push blocks to the session */
-  pushToSession(
-    request: DeepPartial<PushToSessionRequest>,
-    options?: CallOptions & CallOptionsExt,
-  ): Promise<PushToSessionResponse>;
-  /** listen to blocks from the session */
-  pullFromSession(
-    request: DeepPartial<PullFromSessionRequest>,
-    options?: CallOptions & CallOptionsExt,
-  ): AsyncIterable<PullFromSessionResponse>;
-  /** cancel and destroy the session */
-  cancelSession(
-    request: DeepPartial<CancelSessionRequest>,
-    options?: CallOptions & CallOptionsExt,
-  ): Promise<CancelSessionResponse>;
-  /** finalise the session, and generate the receipt & provider signature */
-  finaliseSession(
-    request: DeepPartial<FinaliseSessionRequest>,
-    options?: CallOptions & CallOptionsExt,
-  ): Promise<FinaliseSessionResponse>;
-}
-
 function bytesFromBase64(b64: string): Uint8Array {
   if ((globalThis as any).Buffer) {
     return Uint8Array.from(globalThis.Buffer.from(b64, "base64"));
@@ -4733,5 +4604,3 @@ if (_m0.util.Long !== Long) {
 function isSet(value: any): boolean {
   return value !== null && value !== undefined;
 }
-
-export type ServerStreamingMethodResult<Response> = { [Symbol.asyncIterator](): AsyncIterator<Response, void> };

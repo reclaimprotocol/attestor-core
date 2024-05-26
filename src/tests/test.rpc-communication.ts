@@ -1,7 +1,6 @@
 import { WebSocket } from 'ws'
-import { WitnessError } from '../utils'
-import { logger } from '../utils/logger'
-import { WitnessClient } from '../v2'
+import { WitnessClient } from '../client'
+import { logger, WitnessError } from '../utils'
 import { describeWithServer } from './describe-with-server'
 
 describeWithServer('RPC Communication', opts => {

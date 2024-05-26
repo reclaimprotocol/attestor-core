@@ -1,7 +1,8 @@
 import type { WebSocket, WebSocketServer } from 'ws'
+import { WitnessClient } from '../client'
+import { makeWsServer } from '../server'
+import { IWitnessServerSocket } from '../types'
 import { logger } from '../utils'
-import { IWitnessServerSocket, WitnessClient } from '../v2'
-import { makeWsServer } from '../v2/server'
 import { createMockServer } from './mock-provider-server'
 import { getRandomPort, randomPrivateKey } from './utils'
 

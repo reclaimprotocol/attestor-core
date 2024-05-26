@@ -1,8 +1,8 @@
 import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
 import type { ProviderClaimData } from '../proto/api'
-import type { Transcript } from '../v2'
 import type { WitnessData } from './beacon'
 import type { ArraySlice } from './general'
+import type { Transcript } from './tunnel'
 
 type CreateRequestResult = {
   /**

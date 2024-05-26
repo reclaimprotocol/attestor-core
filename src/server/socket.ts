@@ -1,13 +1,11 @@
 import { IncomingMessage } from 'http'
 import { promisify } from 'util'
 import { WebSocket as WS } from 'ws'
-import { InitRequest } from '../../proto/api'
-import { SIGNATURES } from '../../signatures'
-import { Logger } from '../../types'
-import { WitnessError } from '../../utils'
 import { WitnessSocket } from '../client/socket'
-import { IWitnessServerSocket, RPCEvent } from '../types'
-import { generateSessionId } from '../utils/generics'
+import { InitRequest } from '../proto/api'
+import { SIGNATURES } from '../signatures'
+import { IWitnessServerSocket, Logger, RPCEvent } from '../types'
+import { generateSessionId, WitnessError } from '../utils'
 import { HANDLERS } from './handlers'
 
 export class WitnessServerSocket extends WitnessSocket implements IWitnessServerSocket {

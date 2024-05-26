@@ -1,5 +1,5 @@
-import type { Empty, ReclaimRPCMessage, TunnelDisconnectEvent, TunnelMessage } from '../../proto/api'
-import type { WitnessError } from '../../utils/error'
+import type { Empty, ReclaimRPCMessage, TunnelDisconnectEvent, TunnelMessage } from '../proto/api'
+import type { WitnessError } from '../utils/error'
 
 // simple typescript type to extract all fields that end with the givens suffix
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

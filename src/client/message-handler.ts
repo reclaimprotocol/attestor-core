@@ -1,7 +1,6 @@
-import { ReclaimRPCMessage } from '../../proto/api'
-import { WitnessError } from '../../utils'
+import { ReclaimRPCMessage } from '../proto/api'
 import { IWitnessSocket } from '../types'
-import { extractArrayBufferFromWsData, getRpcRequest, getRpcRequestType, getRpcResponseType } from '../utils/generics'
+import { extractArrayBufferFromWsData, getRpcRequest, getRpcRequestType, getRpcResponseType, WitnessError } from '../utils'
 
 export function messageHandler(this: IWitnessSocket, data: unknown) {
 	// extract array buffer from WS data & decode proto

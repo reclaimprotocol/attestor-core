@@ -1,14 +1,11 @@
 import { strToUint8Array, TLSPacketContext } from '@reclaimprotocol/tls'
 import canonicalize from 'canonicalize'
-import { DEFAULT_HTTPS_PORT } from '../../config'
-import { ClaimTunnelRequest } from '../../proto/api'
-import { ProviderName, providers } from '../../providers'
-import { MessageRevealInfo } from '../../types'
-import { getBlocksToReveal, getProviderValue, makeHttpResponseParser, redactSlices, unixTimestampSeconds } from '../../utils'
-import { preparePacketsForReveal } from '../../utils/prepare-packets'
+import { DEFAULT_HTTPS_PORT } from '../config'
+import { ClaimTunnelRequest } from '../proto/api'
+import { ProviderName, providers } from '../providers'
 import { makeRpcTlsTunnel } from '../tunnels/make-rpc-tls-tunnel'
-import { CreateClaimOpts, IWitnessClient } from '../types'
-import { generateTunnelId, isApplicationData } from '../utils/generics'
+import { CreateClaimOpts, IWitnessClient, MessageRevealInfo } from '../types'
+import { generateTunnelId, getBlocksToReveal, getProviderValue, isApplicationData, makeHttpResponseParser, preparePacketsForReveal, redactSlices, unixTimestampSeconds } from '../utils'
 
 type ServerAppDataPacket = {
 	plaintext: Uint8Array

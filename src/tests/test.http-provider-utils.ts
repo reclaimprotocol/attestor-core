@@ -8,8 +8,8 @@ import {
 	makeRegex,
 	matchRedactedStrings
 } from '../providers/http-provider/utils'
+import { Transcript } from '../types'
 import { getProviderValue, hashProviderParams, uint8ArrayToStr } from '../utils'
-import { Transcript } from '../v2'
 
 jest.setTimeout(60_000)
 

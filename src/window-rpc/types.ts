@@ -1,7 +1,7 @@
 import type { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-symmetric-crypto'
-import type { createClaim, CreateClaimOptions } from '../api-client'
 import type { ProviderName } from '../providers'
 import type { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
+import type { CreateClaimOpts, IWitnessClient } from '../types'
 import type { CreateStep } from '../types'
 
 type IdentifiedMessage = {
@@ -15,7 +15,7 @@ type IdentifiedMessage = {
 	id: string
 }
 
-export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<CreateClaimOptions<N>, 'zkOperators'> & {
+export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<CreateClaimOpts<N>, 'zkOperators'> & {
 	/**
 	 * Specify the mode for the ZK operator,
 	 * 'default' -> will use the default ZK operator included in the SDK
@@ -56,7 +56,7 @@ type ZKVerifyOpts = {
  * These are things done inside the witness
  */
 export type RPCWitnessClient = {
-	createClaim(options: RPCCreateClaimOptions): ReturnType<typeof createClaim>
+	createClaim(options: RPCCreateClaimOptions): ReturnType<IWitnessClient['createClaim']>
 	extractHtmlElement(options: ExtractHTMLElementOptions): Promise<ReturnType<typeof extractHTMLElement>>
 	extractJSONValueIndex(options: ExtractJSONValueIndexOptions): Promise<ReturnType<typeof extractJSONValueIndex>>
 	getCurrentMemoryUsage(): Promise<{

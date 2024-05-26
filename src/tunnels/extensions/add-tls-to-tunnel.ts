@@ -1,7 +1,6 @@
 import { concatenateUint8Arrays, makeTLSClient, TLSConnectionOptions } from '@reclaimprotocol/tls'
-import { CreateTunnelRequest } from '../../../proto/api'
-import { CompleteTLSPacket } from '../../../types'
-import { MakeTunnelFn, Transcript, Tunnel } from '../../types'
+import { CreateTunnelRequest } from '../../proto/api'
+import { CompleteTLSPacket, MakeTunnelFn, Transcript, Tunnel } from '../../types'
 
 type ExtraTLSOptions = {
 	tlsOpts: TLSConnectionOptions

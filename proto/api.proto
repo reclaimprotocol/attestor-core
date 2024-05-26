@@ -523,19 +523,3 @@ message ReclaimRPCMessage {
 		ClaimTunnelResponse claimTunnelResponse = 12;
 	}
 }
-
-service ReclaimWitness {
-	/** get the x25519 public key of the verifier that can be used to verify authenticity of receipts & credentials */
-	rpc GetVerifierPublicKey(GetVerifierPublicKeyRequest) returns (GetVerifierPublicKeyResponse) {}
-	
-	/** initialise a new TLS verification session with the verifier */
-	rpc initialiseSession(InitialiseSessionRequest) returns (InitialiseSessionResponse);
-	/** push blocks to the session */
-	rpc PushToSession(PushToSessionRequest) returns (PushToSessionResponse);
-	/** listen to blocks from the session */
-	rpc PullFromSession(PullFromSessionRequest) returns (stream PullFromSessionResponse);
-	/** cancel and destroy the session */
-	rpc CancelSession(CancelSessionRequest) returns (CancelSessionResponse);
-	/** finalise the session, and generate the receipt & provider signature */
-	rpc FinaliseSession(FinaliseSessionRequest) returns (FinaliseSessionResponse);
-}

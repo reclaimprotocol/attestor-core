@@ -1,7 +1,9 @@
 import { TLSSocket } from 'tls'
+import { WitnessClient } from '../client'
 import { CreateTunnelRequest } from '../proto/api'
+import { makeRpcTcpTunnel } from '../tunnels/make-rpc-tcp-tunnel'
+import { makeRpcTlsTunnel } from '../tunnels/make-rpc-tls-tunnel'
 import { logger } from '../utils'
-import { makeRpcTcpTunnel, makeRpcTlsTunnel, WitnessClient } from '../v2'
 import { describeWithServer } from './describe-with-server'
 import { delay } from './utils'
 

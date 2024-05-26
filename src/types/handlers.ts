@@ -1,6 +1,6 @@
 import { Transaction } from 'elastic-apm-node'
-import { Logger } from '../../types'
 import { IWitnessServerSocket } from './client'
+import { Logger } from './general'
 import { RPCRequestData, RPCResponseData, RPCType } from './rpc'
 
 export type RPCHandlerMetadata = {

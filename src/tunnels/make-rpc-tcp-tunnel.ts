@@ -1,8 +1,6 @@
-import { CreateTunnelRequest } from '../../proto/api'
-import { WitnessError } from '../../utils'
-import { logger as LOGGER } from '../../utils/logger'
+import { CreateTunnelRequest } from '../proto/api'
 import { IWitnessClient, MakeTunnelFn, RPCEvent } from '../types'
-import { generateRpcMessageId } from '../utils/generics'
+import { generateRpcMessageId, logger as LOGGER, WitnessError } from '../utils'
 
 type ExtraOpts = {
 	request: Partial<CreateTunnelRequest>

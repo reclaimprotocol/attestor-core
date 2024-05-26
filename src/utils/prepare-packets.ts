@@ -1,7 +1,6 @@
 import { CipherSuite, concatenateUint8Arrays, crypto, TLSPacketContext } from '@reclaimprotocol/tls'
 import { ClaimTunnelRequest_TranscriptMessage as TranscriptMessage, TranscriptMessageSenderType } from '../proto/api'
-import { CompleteTLSPacket, Logger, MessageRevealInfo, PrepareZKProofsBaseOpts } from '../types'
-import { Transcript } from '../v2'
+import { CompleteTLSPacket, Logger, MessageRevealInfo, PrepareZKProofsBaseOpts, Transcript } from '../types'
 import { makeZkProofGenerator } from './zk'
 
 export type PreparePacketsForRevealOpts = {
