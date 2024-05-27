@@ -7,9 +7,10 @@ import { CreateTunnelRequest } from '../../proto/api'
 import type { Logger } from '../../types'
 import type { MakeTunnelFn, TCPSocketProperties } from '../../types'
 import { WitnessError } from '../../utils'
+import { getEnvVariable } from '../../utils/env'
 import { isValidCountryCode } from '../utils/iso'
 
-const HTTPS_PROXY_URL = process.env.HTTPS_PROXY_URL
+const HTTPS_PROXY_URL = getEnvVariable('HTTPS_PROXY_URL')
 
 type ExtraOpts = Omit<CreateTunnelRequest, 'id' | 'initialMessage'> & {
 	logger: Logger

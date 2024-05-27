@@ -3,8 +3,9 @@ import { IncomingMessage } from 'http'
 import { RPCMessages, ServiceSignatureType } from '../../proto/api'
 import { SIGNATURES } from '../../signatures'
 import { WitnessError } from '../../utils'
+import { getEnvVariable } from '../../utils/env'
 
-const PRIVATE_KEY = process.env.PRIVATE_KEY!
+const PRIVATE_KEY = getEnvVariable('PRIVATE_KEY')!
 
 /**
  * Sign using the witness's private key.

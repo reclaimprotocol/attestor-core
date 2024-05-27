@@ -1,17 +1,19 @@
 import { readFile } from 'fs/promises'
-import P from 'pino'
 import { WebSocketServer } from 'ws'
 import '../server/utils/config-env'
-import { decryptTranscript, createServer } from '../server'
+import { createServer, decryptTranscript } from '../server'
+import { getEnvVariable } from '../utils/env'
 import {
 	API_SERVER_PORT,
 	createClaimOnWitness,
 	getTranscriptString,
 	getWitnessClientFromPool,
+	logger,
 	ProviderName,
 	ProviderParams,
 	providers,
-	ProviderSecretParams } from '..'
+	ProviderSecretParams,
+} from '..'
 
 type ProviderReceiptGenerationParams<P extends ProviderName> = {
     name: P
@@ -20,12 +22,9 @@ type ProviderReceiptGenerationParams<P extends ProviderName> = {
 }
 
 const DEFAULT_WITNESS_HOST_PORT = 'https://reclaim-node.questbook.app'
-const PRIVATE_KEY_HEX = process.env.PRIVATE_KEY
+const PRIVATE_KEY_HEX = getEnvVariable('PRIVATE_KEY_HEX')
 	// demo private key
 	|| '0x0123788edad59d7c013cdc85e4372f350f828e2cec62d9a2de4560e69aec7f89'
-
-const logger = P()
-logger.level = process.env.LOG_LEVEL || 'info'
 
 export async function main<T extends ProviderName>(
 	receiptParams?: ProviderReceiptGenerationParams<T>

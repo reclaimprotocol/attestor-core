@@ -1,4 +1,5 @@
 import { config } from 'dotenv'
+import { getEnvVariable } from '../../utils/env'
 
-const nodeEnv = process.env.NODE_ENV || 'development'
+const nodeEnv = getEnvVariable('NODE_ENV') || 'development'
 config({ path: `.env.${nodeEnv}` })

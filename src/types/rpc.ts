@@ -1,4 +1,4 @@
-import type { Empty, RPCMessage, TunnelDisconnectEvent, TunnelMessage } from '../proto/api'
+import type { RPCMessage, TunnelDisconnectEvent, TunnelMessage } from '../proto/api'
 import type { WitnessError } from '../utils/error'
 
 // simple typescript type to extract all fields that end with the givens suffix

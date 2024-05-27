@@ -1,4 +1,5 @@
 import ElasticAPM, { Agent } from 'elastic-apm-node'
+import { getEnvVariable } from '../../utils/env'
 import { logger } from '../../utils/logger'
 
 let apm: Agent | undefined
@@ -12,7 +13,10 @@ let apm: Agent | undefined
  */
 export function getApm() {
 	if(!apm) {
-		const sampleRate = +(process.env.ELASTIC_APM_SAMPLE_RATE || '0.1')
+		const sampleRate = +(
+			getEnvVariable('ELASTIC_APM_SAMPLE_RATE')
+			|| '0.1'
+		)
 		apm = ElasticAPM.start({
 			serviceName: 'reclaim_witness',
 			serviceVersion: '2.0.0',

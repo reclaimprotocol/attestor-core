@@ -1,4 +1,4 @@
-import { EncryptionAlgorithm, ZKOperator } from "@reclaimprotocol/circom-symmetric-crypto"
+import { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-symmetric-crypto'
 
 export type ZKOperators = { [E in EncryptionAlgorithm]?: ZKOperator }
 
