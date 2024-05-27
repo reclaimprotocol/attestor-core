@@ -13,7 +13,7 @@ import { CipherSuite, crypto } from '@reclaimprotocol/tls'
 import { DEFAULT_REMOTE_ZK_PARAMS, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from '../config'
 import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof } from '../proto/api'
 import { CompleteTLSPacket, Logger, PrepareZKProofsBaseOpts, ZKOperators, ZKRevealInfo } from '../types'
-import { detectEnvironment } from './env'
+import { detectEnvironment, getEnvVariable } from './env'
 import { getPureCiphertext, getZkAlgorithmForCipherSuite } from './generics'
 import { logger as LOGGER } from './logger'
 import { isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from './redactions'
@@ -57,11 +57,16 @@ type ZKPacketToProve = {
 	proofsToGenerate: ZKProofToGenerate[]
 }
 
+const ZK_CONCURRENCY = +(
+	getEnvVariable('ZK_CONCURRENCY')
+	|| DEFAULT_ZK_CONCURRENCY
+)
+
 export async function makeZkProofGenerator(
 	{
 		zkOperators,
 		logger,
-		zkProofConcurrency = DEFAULT_ZK_CONCURRENCY,
+		zkProofConcurrency = ZK_CONCURRENCY,
 		maxZkChunks = MAX_ZK_CHUNKS,
 		cipherSuite,
 	}: PrepareZKProofsOpts
