@@ -5,16 +5,19 @@ import { ClaimTunnelRequest } from '../proto/api'
 import { ProviderName, providers } from '../providers'
 import { SIGNATURES } from '../signatures'
 import { makeRpcTlsTunnel } from '../tunnels/make-rpc-tls-tunnel'
-import { CreateClaimOpts, IWitnessClient, MessageRevealInfo } from '../types'
-import { generateTunnelId, getBlocksToReveal, getProviderValue, isApplicationData, makeHttpResponseParser, preparePacketsForReveal, redactSlices, unixTimestampSeconds } from '../utils'
+import { CreateClaimOnWitnessOpts, IWitnessClient, MessageRevealInfo } from '../types'
+import { generateTunnelId, getBlocksToReveal, getProviderValue, isApplicationData, logger as LOGGER, makeHttpResponseParser, preparePacketsForReveal, redactSlices, unixTimestampSeconds } from '../utils'
+import { getWitnessClientFromPool } from './witness-pool'
 
 type ServerAppDataPacket = {
 	plaintext: Uint8Array
 	message: TLSPacketContext
 }
 
-export async function createClaim<N extends ProviderName>(
-	this: IWitnessClient,
+/**
+ * Create a claim on a witness server
+ */
+export async function createClaimOnWitness<N extends ProviderName>(
 	{
 		name,
 		params,
@@ -22,19 +25,21 @@ export async function createClaim<N extends ProviderName>(
 		context,
 		onStep,
 		ownerPrivateKey,
+		client: clientInit,
+		logger: _logger,
 		...zkOpts
-	}: CreateClaimOpts<N>
+	}: CreateClaimOnWitnessOpts<N>
 ) {
-	const logger = this.logger
 	const provider = providers[name]
+	const logger = _logger
+		|| ('logger' in clientInit ? clientInit.logger : LOGGER)
 
 	const hostPort = getProviderValue(params, provider.hostPort)
 	const geoLocation = getProviderValue(params, provider.geoLocation)
 	let redactionMode = getProviderValue(params, provider.writeRedactionMode)
 	const [host, port] = hostPort.split(':')
 	const resParser = makeHttpResponseParser()
-	const signatureAlg = SIGNATURES[this.metadata.signatureType]
-	const ownerId = getAddress()
+	let client: IWitnessClient
 
 	const revealMap = new Map<TLSPacketContext, MessageRevealInfo>()
 
@@ -62,8 +67,19 @@ export async function createClaim<N extends ProviderName>(
 	const tunnel = await makeRpcTlsTunnel({
 		tlsOpts: provider.additionalClientOptions || {},
 		connect: (initMessages) => {
-			this.sendMessage(...initMessages)
-			return this
+			if('metadata' in clientInit) {
+				client = clientInit
+				client
+					.waitForInit()
+					.then(() => client.sendMessage(...initMessages))
+			} else {
+				client = getWitnessClientFromPool(
+					clientInit.url,
+					{ initMessages, logger }
+				)
+			}
+
+			return client
 		},
 		logger,
 		request: createTunnelReq,
@@ -149,17 +165,19 @@ export async function createClaim<N extends ProviderName>(
 
 	logger.info('got full response from server')
 
+	const signatureAlg = SIGNATURES[client!.metadata.signatureType]
+
 	// now that we have the full transcript, we need
 	// to generate the ZK proofs & send them to the witness
 	// to verify & sign our claim
 	const claimTunnelReq = ClaimTunnelRequest.create({
 		request: createTunnelReq,
-		timestampS: unixTimestampSeconds(),
-		ownerId,
-		info: {
+		data: {
 			provider: name,
 			parameters: canonicalize(params)!,
 			context: canonicalize(context)!,
+			timestampS: unixTimestampSeconds(),
+			owner: getAddress(),
 		},
 		transcript: await generateTranscript()
 	})
@@ -172,7 +190,7 @@ export async function createClaim<N extends ProviderName>(
 		.sign(claimTunnelBytes, ownerPrivateKey)
 	claimTunnelReq.signatures = { requestSignature }
 
-	const result = await this.rpc('claimTunnel', claimTunnelReq)
+	const result = await client!.rpc('claimTunnel', claimTunnelReq)
 
 	return result
 

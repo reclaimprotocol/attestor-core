@@ -290,7 +290,12 @@ export interface TranscriptMessage {
 export interface ProviderClaimData {
   provider: string;
   parameters: string;
+  /**
+   * Owner of the claim. Must be the public key/address
+   * of the signatures
+   */
   owner: string;
+  /** Timestamp of the claim being made. */
   timestampS: number;
   context: string;
   /**
@@ -611,6 +616,23 @@ export interface MessageReveal_ZKProof {
   startIdx: number;
 }
 
+export interface ClaimRequestData {
+  provider: string;
+  parameters: string;
+  /**
+   * Owner of the claim. Must be the public key/address
+   * of the signatures
+   */
+  owner: string;
+  /**
+   * Timestamp of the claim being made.
+   * Cannot be more than 10 minutes in the past
+   * or in the future
+   */
+  timestampS: number;
+  context: string;
+}
+
 export interface ClaimTunnelRequest {
   /**
    * parameters supplied to establish the tunnel
@@ -619,20 +641,9 @@ export interface ClaimTunnelRequest {
   request:
     | CreateTunnelRequest
     | undefined;
-  /**
-   * Owner of the claim. Must be the public key/address
-   * of the signatures
-   */
-  ownerId: string;
-  /**
-   * Timestamp of the claim being made.
-   * Cannot be more than 10 minutes in the past
-   * or in the future
-   */
-  timestampS: number;
-  /** claim information to sign */
-  info:
-    | ProviderClaimInfo
+  /** data describing the claim you want to prove */
+  data:
+    | ClaimRequestData
     | undefined;
   /**
    * messages from the client & server
@@ -3709,8 +3720,127 @@ export const MessageReveal_ZKProof = {
   },
 };
 
+function createBaseClaimRequestData(): ClaimRequestData {
+  return { provider: "", parameters: "", owner: "", timestampS: 0, context: "" };
+}
+
+export const ClaimRequestData = {
+  encode(message: ClaimRequestData, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.provider !== "") {
+      writer.uint32(10).string(message.provider);
+    }
+    if (message.parameters !== "") {
+      writer.uint32(18).string(message.parameters);
+    }
+    if (message.owner !== "") {
+      writer.uint32(26).string(message.owner);
+    }
+    if (message.timestampS !== 0) {
+      writer.uint32(32).uint32(message.timestampS);
+    }
+    if (message.context !== "") {
+      writer.uint32(42).string(message.context);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimRequestData {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseClaimRequestData();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.provider = reader.string();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.parameters = reader.string();
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.owner = reader.string();
+          continue;
+        case 4:
+          if (tag !== 32) {
+            break;
+          }
+
+          message.timestampS = reader.uint32();
+          continue;
+        case 5:
+          if (tag !== 42) {
+            break;
+          }
+
+          message.context = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ClaimRequestData {
+    return {
+      provider: isSet(object.provider) ? globalThis.String(object.provider) : "",
+      parameters: isSet(object.parameters) ? globalThis.String(object.parameters) : "",
+      owner: isSet(object.owner) ? globalThis.String(object.owner) : "",
+      timestampS: isSet(object.timestampS) ? globalThis.Number(object.timestampS) : 0,
+      context: isSet(object.context) ? globalThis.String(object.context) : "",
+    };
+  },
+
+  toJSON(message: ClaimRequestData): unknown {
+    const obj: any = {};
+    if (message.provider !== "") {
+      obj.provider = message.provider;
+    }
+    if (message.parameters !== "") {
+      obj.parameters = message.parameters;
+    }
+    if (message.owner !== "") {
+      obj.owner = message.owner;
+    }
+    if (message.timestampS !== 0) {
+      obj.timestampS = Math.round(message.timestampS);
+    }
+    if (message.context !== "") {
+      obj.context = message.context;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ClaimRequestData>): ClaimRequestData {
+    return ClaimRequestData.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ClaimRequestData>): ClaimRequestData {
+    const message = createBaseClaimRequestData();
+    message.provider = object.provider ?? "";
+    message.parameters = object.parameters ?? "";
+    message.owner = object.owner ?? "";
+    message.timestampS = object.timestampS ?? 0;
+    message.context = object.context ?? "";
+    return message;
+  },
+};
+
 function createBaseClaimTunnelRequest(): ClaimTunnelRequest {
-  return { request: undefined, ownerId: "", timestampS: 0, info: undefined, transcript: [], signatures: undefined };
+  return { request: undefined, data: undefined, transcript: [], signatures: undefined };
 }
 
 export const ClaimTunnelRequest = {
@@ -3718,20 +3848,14 @@ export const ClaimTunnelRequest = {
     if (message.request !== undefined) {
       CreateTunnelRequest.encode(message.request, writer.uint32(10).fork()).ldelim();
     }
-    if (message.ownerId !== "") {
-      writer.uint32(18).string(message.ownerId);
-    }
-    if (message.timestampS !== 0) {
-      writer.uint32(24).uint32(message.timestampS);
-    }
-    if (message.info !== undefined) {
-      ProviderClaimInfo.encode(message.info, writer.uint32(34).fork()).ldelim();
+    if (message.data !== undefined) {
+      ClaimRequestData.encode(message.data, writer.uint32(18).fork()).ldelim();
     }
     for (const v of message.transcript) {
-      ClaimTunnelRequest_TranscriptMessage.encode(v!, writer.uint32(42).fork()).ldelim();
+      ClaimTunnelRequest_TranscriptMessage.encode(v!, writer.uint32(26).fork()).ldelim();
     }
     if (message.signatures !== undefined) {
-      ClaimTunnelRequest_Signatures.encode(message.signatures, writer.uint32(50).fork()).ldelim();
+      ClaimTunnelRequest_Signatures.encode(message.signatures, writer.uint32(34).fork()).ldelim();
     }
     return writer;
   },
@@ -3755,31 +3879,17 @@ export const ClaimTunnelRequest = {
             break;
           }
 
-          message.ownerId = reader.string();
+          message.data = ClaimRequestData.decode(reader, reader.uint32());
           continue;
         case 3:
-          if (tag !== 24) {
-            break;
-          }
-
-          message.timestampS = reader.uint32();
-          continue;
-        case 4:
-          if (tag !== 34) {
-            break;
-          }
-
-          message.info = ProviderClaimInfo.decode(reader, reader.uint32());
-          continue;
-        case 5:
-          if (tag !== 42) {
+          if (tag !== 26) {
             break;
           }
 
           message.transcript.push(ClaimTunnelRequest_TranscriptMessage.decode(reader, reader.uint32()));
           continue;
-        case 6:
-          if (tag !== 50) {
+        case 4:
+          if (tag !== 34) {
             break;
           }
 
@@ -3797,9 +3907,7 @@ export const ClaimTunnelRequest = {
   fromJSON(object: any): ClaimTunnelRequest {
     return {
       request: isSet(object.request) ? CreateTunnelRequest.fromJSON(object.request) : undefined,
-      ownerId: isSet(object.ownerId) ? globalThis.String(object.ownerId) : "",
-      timestampS: isSet(object.timestampS) ? globalThis.Number(object.timestampS) : 0,
-      info: isSet(object.info) ? ProviderClaimInfo.fromJSON(object.info) : undefined,
+      data: isSet(object.data) ? ClaimRequestData.fromJSON(object.data) : undefined,
       transcript: globalThis.Array.isArray(object?.transcript)
         ? object.transcript.map((e: any) => ClaimTunnelRequest_TranscriptMessage.fromJSON(e))
         : [],
@@ -3812,14 +3920,8 @@ export const ClaimTunnelRequest = {
     if (message.request !== undefined) {
       obj.request = CreateTunnelRequest.toJSON(message.request);
     }
-    if (message.ownerId !== "") {
-      obj.ownerId = message.ownerId;
-    }
-    if (message.timestampS !== 0) {
-      obj.timestampS = Math.round(message.timestampS);
-    }
-    if (message.info !== undefined) {
-      obj.info = ProviderClaimInfo.toJSON(message.info);
+    if (message.data !== undefined) {
+      obj.data = ClaimRequestData.toJSON(message.data);
     }
     if (message.transcript?.length) {
       obj.transcript = message.transcript.map((e) => ClaimTunnelRequest_TranscriptMessage.toJSON(e));
@@ -3838,10 +3940,8 @@ export const ClaimTunnelRequest = {
     message.request = (object.request !== undefined && object.request !== null)
       ? CreateTunnelRequest.fromPartial(object.request)
       : undefined;
-    message.ownerId = object.ownerId ?? "";
-    message.timestampS = object.timestampS ?? 0;
-    message.info = (object.info !== undefined && object.info !== null)
-      ? ProviderClaimInfo.fromPartial(object.info)
+    message.data = (object.data !== undefined && object.data !== null)
+      ? ClaimRequestData.fromPartial(object.data)
       : undefined;
     message.transcript = object.transcript?.map((e) => ClaimTunnelRequest_TranscriptMessage.fromPartial(e)) || [];
     message.signatures = (object.signatures !== undefined && object.signatures !== null)

@@ -1,11 +1,9 @@
-import type { ClaimTunnelResponse, InitRequest, RPCMessage, RPCMessages, ServiceSignatureType, TunnelMessage } from '../proto/api'
+import type { InitRequest, RPCMessage, RPCMessages, ServiceSignatureType, TunnelMessage } from '../proto/api'
 import type { Logger } from './general'
-import type { ProofGenerationStep, ProviderName, ProviderParams, ProviderSecretParams } from './providers'
 import type { RPCEvent, RPCEventMap, RPCEventType, RPCRequestData, RPCResponseData, RPCType } from './rpc'
 import type { TCPSocketProperties, Tunnel } from './tunnel'
-import type { PrepareZKProofsBaseOpts } from './zk'
 
-export type WitnessClientOpts = {
+export type IWitnessClientCreateOpts = {
 	/**
 	 * Witness WS URL
 	 */
@@ -21,29 +19,6 @@ export type WitnessClientOpts = {
 	 */
 	initMessages?: Partial<RPCMessage>[]
 }
-
-export type CreateClaimOpts<N extends ProviderName> = {
-	/** name of the provider to generate signed receipt for */
-	name: N
-	/**
-	 * secrets that are used to make the API request;
-	 * not included in the receipt & cannot be viewed by anyone
-	 * outside this client
-	 */
-	secretParams: ProviderSecretParams<N>
-	params: ProviderParams<N>
-	/**
-	 * Some metadata context to be included in the claim
-	 */
-	context?: { [key: string]: any }
-
-	onStep?(step: ProofGenerationStep): void
-	/**
-	 * Private key in hex format,
-	 * prefixed with '0x'
-	 */
-	ownerPrivateKey: string
-} & PrepareZKProofsBaseOpts
 
 /**
  * Wrapper around a websocket, that provides methods
@@ -130,7 +105,7 @@ export declare class IWitnessServerSocket extends IWitnessSocket {
 }
 
 export declare class IWitnessClient extends IWitnessSocket {
-	constructor(opts: WitnessClientOpts)
+	constructor(opts: IWitnessClientCreateOpts)
 
 	/**
 	 * Waits for a particular message to come in.
@@ -148,14 +123,9 @@ export declare class IWitnessClient extends IWitnessSocket {
 		request: Partial<RPCRequestData<T>>
 	): Promise<RPCResponseData<T>>
 	/**
-	 * Waits for the "init-response" event to be emitted,
-	 * if already initialised, it will resolve immediately.
+	 * Waits for the "init" request to be responded to
 	 */
 	waitForInit(): Promise<void>
-
-	createClaim<N extends ProviderName>(
-		opts: CreateClaimOpts<N>
-	): Promise<ClaimTunnelResponse>
 }
 
 interface WebSocketWithServerSocket {

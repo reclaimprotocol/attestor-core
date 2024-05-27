@@ -26,10 +26,10 @@ export async function assertValidClaimRequest(
 	logger: Logger
 ) {
 	const {
-		info,
+		data,
 		signatures: { requestSignature } = {},
 	} = request
-	if(!info) {
+	if(!data) {
 		throw new WitnessError(
 			'WITNESS_ERROR_INVALID_CLAIM',
 			'No info provided on claim request'
@@ -51,7 +51,7 @@ export async function assertValidClaimRequest(
 	const verified = await verifySig(
 		serialisedReq,
 		requestSignature,
-		request.ownerId
+		data.owner
 	)
 	if(!verified) {
 		throw new WitnessError(
@@ -73,21 +73,21 @@ export async function assertValidClaimRequest(
 
 	// get all application data messages
 	const applData = extractApplicationDataFromTranscript(receipt)
-	const newInfo = await assertValidProviderTranscript(applData, info)
-	if(newInfo !== info) {
-		logger.info({ newInfo }, 'updated claim info')
+	const newData = await assertValidProviderTranscript(applData, data)
+	if(newData !== data) {
+		logger.info({ newData }, 'updated claim info')
 	}
 
-	return newInfo
+	return newData
 }
 
 /**
  * Verify that the transcript contains a valid claim
  * for the provider.
  */
-export async function assertValidProviderTranscript(
+export async function assertValidProviderTranscript<T extends ProviderClaimInfo>(
 	applData: Transcript<Uint8Array>,
-	info: ProviderClaimInfo,
+	info: T,
 ) {
 	const provider = providers[info.provider as keyof typeof providers]
 	if(!provider) {

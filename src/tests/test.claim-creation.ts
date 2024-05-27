@@ -1,5 +1,6 @@
 import { TLSProtocolVersion, uint8ArrayToStr } from '@reclaimprotocol/tls'
 import { WitnessClient } from '../client'
+import { createClaimOnWitness } from '../create-claim'
 import { WitnessErrorCode } from '../proto/api'
 import { providers } from '../providers'
 import { decryptTranscript } from '../server'
@@ -35,7 +36,7 @@ describeWithServer('Claim Creation', opts => {
 		}
 
 		const user = 'adhiraj'
-		const result = await client.createClaim({
+		const result = await createClaimOnWitness({
 			name: 'http',
 			params: {
 				url: 'https://localhost:1234/me',
@@ -52,6 +53,7 @@ describeWithServer('Claim Creation', opts => {
 				authorisationHeader: `Bearer ${user}`
 			},
 			ownerPrivateKey: opts.privateKeyHex,
+			client
 		})
 
 		expect(result.error).toBeUndefined()
@@ -73,7 +75,7 @@ describeWithServer('Claim Creation', opts => {
 	})
 
 	it('should not create a claim with invalid response', async() => {
-		const result = await client.createClaim({
+		const result = await createClaimOnWitness({
 			name: 'http',
 			params: {
 				url: 'https://localhost:1234/me',
@@ -90,6 +92,7 @@ describeWithServer('Claim Creation', opts => {
 				authorisationHeader: 'Fail'
 			},
 			ownerPrivateKey: opts.privateKeyHex,
+			client,
 		})
 
 		expect(result.error).toBeTruthy()

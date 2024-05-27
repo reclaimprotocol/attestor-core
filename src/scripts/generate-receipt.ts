@@ -5,13 +5,13 @@ import '../server/utils/config-env'
 import { decryptTranscript, makeWsServer } from '../server'
 import {
 	API_SERVER_PORT,
+	createClaimOnWitness,
 	getTranscriptString,
+	getWitnessClientFromPool,
 	ProviderName,
 	ProviderParams,
 	providers,
-	ProviderSecretParams,
-	WitnessClient
-} from '..'
+	ProviderSecretParams } from '..'
 
 type ProviderReceiptGenerationParams<P extends ProviderName> = {
     name: P
@@ -50,20 +50,15 @@ export async function main<T extends ProviderName>(
 		witnessHostPort = `ws://localhost:${API_SERVER_PORT}`
 	}
 
-	const client = new WitnessClient({
-		logger,
-		url: witnessHostPort,
-	})
-
-	await client.waitForInit()
-
 	console.log('connected, creating claim...')
 
-	const receipt = await client.createClaim({
+	const receipt = await createClaimOnWitness({
 		name: paramsJson.name,
 		secretParams: paramsJson.secretParams,
 		params: paramsJson.params,
 		ownerPrivateKey: PRIVATE_KEY_HEX,
+		client: { url: witnessHostPort },
+		logger,
 	})
 
 	const decTranscript = await decryptTranscript(
@@ -85,6 +80,7 @@ export async function main<T extends ProviderName>(
 		}
 	}
 
+	const client = getWitnessClientFromPool(witnessHostPort)
 	await client.terminateConnection()
 	server?.close()
 }

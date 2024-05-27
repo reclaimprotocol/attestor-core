@@ -1,3 +1,4 @@
+import { createClaimOnWitness } from '../create-claim'
 import { HTTPProviderParamsV2 } from '../providers/http-provider'
 import { describeWithServer } from './describe-with-server'
 
@@ -6,7 +7,7 @@ jest.setTimeout(60_000)
 describeWithServer('HTTP Provider', opts => {
 
 	it('should create claim with template params', async() => {
-		const resp = await opts.client.createClaim({
+		const resp = await createClaimOnWitness({
 			name: 'http',
 			params: {
 				url: 'https://example.{{param1}}/',
@@ -28,6 +29,7 @@ describeWithServer('HTTP Provider', opts => {
 				cookieStr: '<cookie-str>'
 			},
 			ownerPrivateKey: opts.privateKeyHex,
+			client: opts.client
 		})
 		expect(resp.error).toBeUndefined()
 		expect(resp.claim?.context)
@@ -64,7 +66,7 @@ describeWithServer('HTTP Provider', opts => {
 				'user-agent': 'Mozilla/5.0',
 			}
 		}
-		const receipt = await opts.client.createClaim({
+		const receipt = await createClaimOnWitness({
 			name: 'http',
 			secretParams: {
 				cookieStr: '<cookie-str>',
@@ -75,6 +77,7 @@ describeWithServer('HTTP Provider', opts => {
 			},
 			params: params,
 			ownerPrivateKey: opts.privateKeyHex,
+			client: opts.client,
 		})
 		expect(receipt?.error).toBeTruthy()
 		expect(receipt?.error?.message).toContain('request body mismatch')

@@ -9,7 +9,10 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 	claimRequest,
 	{ logger, client }
 ) => {
-	const { request, ownerId, timestampS } = claimRequest
+	const {
+		request,
+		data: { timestampS } = {},
+	} = claimRequest
 	const tunnel = client.getTunnel(request?.id!)
 	// we throw an error for cases where the witness cannot prove
 	// the user's request is faulty. For eg. if the user sends a
@@ -30,22 +33,22 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 	const res = ClaimTunnelResponse.create({ request: claimRequest })
 	try {
 		const now = unixTimestampSeconds()
-		if(Math.floor(timestampS - now) > MAX_CLAIM_TIMESTAMP_DIFF_S) {
+		if(Math.floor(timestampS! - now) > MAX_CLAIM_TIMESTAMP_DIFF_S) {
 			throw new WitnessError(
 				'WITNESS_ERROR_INVALID_CLAIM',
 				`Timestamp provided ${timestampS} is too far off. Current time is ${now}`
 			)
 		}
 
-		const info = await assertValidClaimRequest(claimRequest, client.metadata, logger)
+		const claim = await assertValidClaimRequest(
+			claimRequest,
+			client.metadata,
+			logger
+		)
 		res.claim = {
-			provider: info.provider,
-			parameters: info.parameters,
-			owner: ownerId,
-			timestampS,
-			context: info.context,
-			identifier: getIdentifierFromClaimInfo(info),
-			// hardcoding epoch for now
+			...claim,
+			identifier: getIdentifierFromClaimInfo(claim),
+			// hardcode for compatibility with V1 claims
 			epoch: 1
 		}
 	} catch(err) {

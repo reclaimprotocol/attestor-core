@@ -1,12 +1,15 @@
 import { base64 } from 'ethers/lib/utils'
 import { InitRequest, RPCMessages, ServiceSignatureType, WitnessVersion } from '../proto/api'
-import { ProviderName } from '../providers'
-import { CreateClaimOpts, IWitnessClient, RPCEvent, RPCRequestData, RPCResponseData, RPCType, WitnessClientOpts } from '../types'
+import { IWitnessClient, IWitnessClientCreateOpts, RPCEvent, RPCRequestData, RPCResponseData, RPCType } from '../types'
 import { getRpcRequestType, logger as LOGGER, packRpcMessages } from '../utils'
-import { createClaim } from './create-claim'
 import { WitnessSocket } from './socket'
 
 const VERSION = WitnessVersion.WITNESS_VERSION_2_0_0
+
+export const DEFAULT_METADATA: InitRequest = {
+	signatureType: ServiceSignatureType.SERVICE_SIGNATURE_TYPE_ETH,
+	clientVersion: VERSION
+}
 
 export class WitnessClient extends WitnessSocket implements IWitnessClient {
 
@@ -15,13 +18,10 @@ export class WitnessClient extends WitnessSocket implements IWitnessClient {
 	constructor({
 		url,
 		initMessages = [],
-		signatureType = ServiceSignatureType.SERVICE_SIGNATURE_TYPE_ETH,
+		signatureType = DEFAULT_METADATA.signatureType,
 		logger = LOGGER,
-	}: WitnessClientOpts) {
-		const initRequest: InitRequest = {
-			signatureType,
-			clientVersion: VERSION
-		}
+	}: IWitnessClientCreateOpts) {
+		const initRequest = { ...DEFAULT_METADATA, signatureType }
 		const msg = packRpcMessages({ initRequest }, ...initMessages)
 		const initRequestBytes = RPCMessages.encode(msg).finish()
 		const initRequestB64 = base64.encode(initRequestBytes)
@@ -52,6 +52,13 @@ export class WitnessClient extends WitnessSocket implements IWitnessClient {
 	}
 
 	waitForResponse<T extends RPCType>(id: number) {
+		if(
+			this.socket.readyState === WebSocket.CLOSED
+			|| this.socket.readyState === WebSocket.CLOSING
+		) {
+			throw new Error('Socket already closed')
+		}
+
 		// setup a promise to wait for the response
 		return new Promise<RPCResponseData<T>>((resolve, reject) => {
 			const handler = (event: RPCEvent<'rpc-response'>) => {
@@ -85,8 +92,4 @@ export class WitnessClient extends WitnessSocket implements IWitnessClient {
 	}
 
 	waitForInit = () => this.waitForInitPromise
-
-	createClaim<N extends ProviderName>(opts: CreateClaimOpts<N>) {
-		return createClaim.call(this, opts) as ReturnType<typeof createClaim<N>>
-	}
 }

@@ -68,7 +68,14 @@ message TranscriptMessage {
 message ProviderClaimData {
 	string provider = 1;
 	string parameters = 2;
+	/**
+	 * Owner of the claim. Must be the public key/address
+	 * of the signatures
+	 */
 	string owner = 3;
+	/**
+	 * Timestamp of the claim being made.
+	 */
 	uint32 timestampS = 4;
 	string context = 6;
 	/**
@@ -382,6 +389,23 @@ message MessageReveal {
 	}
 }
 
+message ClaimRequestData {
+	string provider = 1;
+	string parameters = 2;
+	/**
+	 * Owner of the claim. Must be the public key/address
+	 * of the signatures
+	 */
+	string owner = 3;
+	/**
+	 * Timestamp of the claim being made.
+	 * Cannot be more than 10 minutes in the past
+	 * or in the future
+	 */
+	uint32 timestampS = 4;
+	string context = 5;
+}
+
 message ClaimTunnelRequest {
 	/**
 	 * parameters supplied to establish the tunnel
@@ -389,18 +413,9 @@ message ClaimTunnelRequest {
 	 */
 	CreateTunnelRequest request = 1;
 	/**
-	 * Owner of the claim. Must be the public key/address
-	 * of the signatures
+	 * data describing the claim you want to prove
 	 */
-	string ownerId = 2;
-	/**
-	 * Timestamp of the claim being made.
-	 * Cannot be more than 10 minutes in the past
-	 * or in the future
-	 */
-	uint32 timestampS = 3;
-	/** claim information to sign */
-	ProviderClaimInfo info = 4;
+	ClaimRequestData data = 2;
 	/**
 	 * messages from the client & server
 	 * in the order they were sent/received
@@ -411,9 +426,9 @@ message ClaimTunnelRequest {
 	 * The revealed messages should support the proving
 	 * of the claim as defined in the provider's implementation
 	 */
-	repeated TranscriptMessage transcript = 5;
+	repeated TranscriptMessage transcript = 3;
 
-	Signatures signatures = 6;
+	Signatures signatures = 4;
 
 	message Signatures {
 		/**

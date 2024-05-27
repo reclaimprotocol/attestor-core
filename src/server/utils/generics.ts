@@ -21,6 +21,15 @@ export function signAsWitness(
 }
 
 /**
+ * Get the witness's address, from the PRIVATE_KEY env var.
+ */
+export function getWitnessAddress(scheme: ServiceSignatureType) {
+	const { getAddress, getPublicKey } = SIGNATURES[scheme]
+	const publicKey = getPublicKey(PRIVATE_KEY)
+	return getAddress(publicKey)
+}
+
+/**
  * Nice parse JSON with a key.
  * If the data is empty, returns an empty object.
  * And if the JSON is invalid, throws a bad request error,
