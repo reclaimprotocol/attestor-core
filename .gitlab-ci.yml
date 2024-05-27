@@ -8,6 +8,7 @@ test:
   # tests to work
   image: node:current-alpine
   script:
+    - git config --global url."https://git-push-pull:$GL_TOKEN@gitlab.reclaimprotocol.org".insteadOf "https://gitlab.reclaimprotocol.org"
     - npm i
     - npm run test
   only:
