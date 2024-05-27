@@ -1,17 +1,18 @@
 import { createClaimOnWitness } from '../create-claim'
 import { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
 import { ZKOperators } from '../types'
-import { logger, setLogLevel } from '../utils'
+import { makeLogger } from '../utils'
 import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from './types'
 import { getCurrentMemoryUsage, getWsApiUrlFromLocation } from './utils'
 import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator } from './window-rpc-zk'
 
-
-class RPCEvent extends Event {
+class WindowRPCEvent extends Event {
 	constructor(public readonly data: WindowRPCIncomingMsg) {
 		super('message')
 	}
 }
+
+let logger = makeLogger(true)
 
 /**
  * Sets up the current window to listen for RPC requests
@@ -33,9 +34,11 @@ export function setupWindowRpc() {
 				return
 			}
 
-			const req: WindowRPCIncomingMsg = typeof event.data === 'string'
-				? JSON.parse(event.data)
-				: event.data
+			const req: WindowRPCIncomingMsg = (
+				typeof event.data === 'string'
+					? JSON.parse(event.data)
+					: event.data
+			)
 			// ignore any messages not for us
 			if(req.module !== 'witness-sdk') {
 				return
@@ -44,7 +47,7 @@ export function setupWindowRpc() {
 			id = req.id
 			channel = req.channel || ''
 
-			windowMsgs.dispatchEvent(new RPCEvent(req))
+			windowMsgs.dispatchEvent(new WindowRPCEvent(req))
 			// ignore response messages
 			if(('isResponse' in req && req.isResponse)) {
 				return
@@ -99,7 +102,10 @@ export function setupWindowRpc() {
 			case 'extractJSONValueIndex':
 				respond({
 					type: 'extractJSONValueIndexDone',
-					response: extractJSONValueIndex(req.request.json, req.request.jsonPath),
+					response: extractJSONValueIndex(
+						req.request.json,
+						req.request.jsonPath
+					),
 				})
 				break
 			case 'getCurrentMemoryUsage':
@@ -109,9 +115,24 @@ export function setupWindowRpc() {
 				})
 				break
 			case 'setLogLevel':
+				logger = makeLogger(
+					true,
+					req.request.logLevel,
+					req.request.sendLogsToApp
+						? (level, message) => (
+							sendMessage({
+								type: 'log',
+								level,
+								message,
+								module: 'witness-sdk',
+								id: req.id,
+							})
+						)
+						: undefined
+				)
 				respond({
 					type: 'setLogLevelDone',
-					response: setLogLevel(req.request.logLevel)
+					response: undefined
 				})
 				break
 			default:
@@ -163,7 +184,7 @@ export function setupWindowRpc() {
 						)
 					}
 
-					function handle(msg: RPCEvent) {
+					function handle(msg: WindowRPCEvent) {
 						cb(msg.data)
 					}
 				},

@@ -2,7 +2,7 @@ import type { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-sy
 import type { ClaimTunnelResponse } from '../proto/api'
 import type { ProviderName } from '../providers'
 import type { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
-import type { CreateClaimOnWitnessOpts, ProofGenerationStep } from '../types'
+import type { CreateClaimOnWitnessOpts, LogLevel, ProofGenerationStep } from '../types'
 
 type IdentifiedMessage = {
 	module: 'witness-sdk'
@@ -52,7 +52,12 @@ type ZKVerifyOpts = {
 }
 
 type LogLevelOptions = {
-	logLevel: 'debug' | 'info' | 'warn' | 'error' | 'trace'
+	logLevel: LogLevel
+	/**
+	 * If true, log messages will be sent back to the app
+	 * via postMessage
+	 */
+	sendLogsToApp: boolean
 }
 
 /**
@@ -134,6 +139,13 @@ export type WindowRPCOutgoingMsg = (
 				name: 'witness-progress'
 				step: ProofGenerationStep
 			}
+		}
+	)
+	| (
+		{
+			type: 'log'
+			level: LogLevelOptions['logLevel']
+			message: object
 		}
 	)
 	| AsResponse<WindowRPCErrorResponse>

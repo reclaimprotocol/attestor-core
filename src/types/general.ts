@@ -12,6 +12,10 @@ export type Logger = TLSLogger & {
 	child: (opts: { [_: string]: any }) => Logger
 }
 
+export type LogLevel = 'debug' | 'info'
+	| 'warn' | 'error'
+	| 'trace' | 'fatal'
+
 export type ZKRevealInfo = {
 	type: 'zk'
 	redactedPlaintext: Uint8Array

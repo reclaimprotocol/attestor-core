@@ -1,17 +1,58 @@
-import P from 'pino'
+import P, { LoggerOptions } from 'pino'
+import type { LogLevel } from '../types'
 import { getEnvVariable } from './env'
 
-export const logger = P({
-	formatters: {
-		log: (line) => {
-			return redact(line)
-		},
-	}
-})
-logger.level = getEnvVariable('LOG_LEVEL') || 'info'
+const PII_PROPERTIES = ['ownerPrivateKey', 'secretParams']
+const redactedText = '[REDACTED]'
+const envLevel = getEnvVariable('LOG_LEVEL') as LogLevel
 
-export function setLogLevel(level: string) {
-	logger.level = level
+export const logger = makeLogger(false, envLevel)
+
+/**
+ * Creates a logger instance with optional redaction of PII.
+ * See PII_PROPERTIES for the list of properties that will be redacted.
+ *
+ * @param redactPii - whether to redact PII from logs
+ * @param level - the log level to use
+ * @param onLog - a callback to call when a log is written
+ */
+export function makeLogger(
+	redactPii: boolean,
+	level?: LogLevel,
+	onLog?: (level: LogLevel, log: any) => void
+) {
+	const opts: LoggerOptions = {}
+	if(redactPii) {
+		opts.formatters = { log: redact }
+		opts.serializers = { redact }
+		opts.browser = {
+			write: {
+				fatal: log => writeLog('fatal', log),
+				error: log => writeLog('error', log),
+				warn: log => writeLog('warn', log),
+				info: log => writeLog('info', log),
+				debug: log => writeLog('debug', log),
+				trace: log => writeLog('trace', log),
+			}
+		}
+	}
+
+	const logger = P(opts)
+	logger.level = level || 'info'
+
+	return logger
+
+	function writeLog(level: LogLevel, log: any) {
+		log = redact(log)
+		const { msg, ...obj } = log
+		if(console[level]) {
+			console[level](obj, msg)
+		} else {
+			console.log(obj, msg)
+		}
+
+		onLog?.(level, log)
+	}
 }
 
 function isObjectProperty(property) {
@@ -38,9 +79,6 @@ function getReplacer() {
 	}
 }
 
-const properties = ['ownerPrivateKey', 'secretParams']
-const redactedText = '[REDACTED]'
-
 export function redact(json) {
 	const isObject = isObjectProperty(json)
 
@@ -51,7 +89,7 @@ export function redact(json) {
 	const redacted = JSON.parse(JSON.stringify(json, getReplacer()))
 
 	for(const prop in redacted) {
-		if(properties.includes(prop)) {
+		if(PII_PROPERTIES.includes(prop)) {
 			redacted[prop] = redactedText
 		}
 
