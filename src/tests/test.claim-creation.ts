@@ -17,8 +17,10 @@ jest.setTimeout(15_000)
 describeWithServer('Claim Creation', opts => {
 
 	let client: WitnessClient
+	let claimUrl: string
 	beforeEach(() => {
 		client = opts.client
+		claimUrl = `https://localhost:${opts.mockhttpsServerPort}/me`
 
 		// we need to disable certificate verification
 		// for testing purposes
@@ -39,7 +41,7 @@ describeWithServer('Claim Creation', opts => {
 		const result = await createClaimOnWitness({
 			name: 'http',
 			params: {
-				url: 'https://localhost:1234/me',
+				url: claimUrl,
 				method: 'GET',
 				responseRedactions: [],
 				responseMatches: [
@@ -78,7 +80,7 @@ describeWithServer('Claim Creation', opts => {
 		const result = await createClaimOnWitness({
 			name: 'http',
 			params: {
-				url: 'https://localhost:1234/me',
+				url: claimUrl,
 				method: 'GET',
 				responseRedactions: [],
 				responseMatches: [

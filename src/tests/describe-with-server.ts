@@ -15,6 +15,7 @@ type ServerOpts = {
 	client: WitnessClient
 	privateKeyHex: string
 	mockHttpsServer: ReturnType<typeof createMockServer>
+	mockhttpsServerPort: number
 	serverUrl: string
 }
 
@@ -32,10 +33,12 @@ export const describeWithServer = (
 	let privateKeyHex: string
 	let client: WitnessClient
 
-	const mockHttpsServer = createMockServer(1234)
+	const wsServerPort = getRandomPort()
+	const httpsServerPort = getRandomPort()
+
+	const mockHttpsServer = createMockServer(httpsServerPort)
 
 	beforeAll(async() => {
-		const wsServerPort = getRandomPort()
 		wsServer = await createServer(wsServerPort)
 		wsServerUrl = `ws://localhost:${wsServerPort}${WS_PATHNAME}`
 	})
@@ -70,6 +73,7 @@ export const describeWithServer = (
 			return wsServerUrl
 		},
 		mockHttpsServer,
+		mockhttpsServerPort: httpsServerPort,
 	})
 
 	function getClientOnServer() {

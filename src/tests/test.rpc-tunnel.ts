@@ -28,7 +28,7 @@ describeWithServer('RPC Tunnel', opts => {
 			{
 				id: 1,
 				host: 'localhost',
-				port: 1234,
+				port: opts.mockhttpsServerPort,
 				geoLocation: ''
 			}
 		)
@@ -55,7 +55,7 @@ describeWithServer('RPC Tunnel', opts => {
 				request: {
 					id: 1,
 					host: 'localhost',
-					port: 1234,
+					port: opts.mockhttpsServerPort,
 				},
 				tlsOpts: {
 					verifyServerCertificate: false,
@@ -84,7 +84,7 @@ describeWithServer('RPC Tunnel', opts => {
 				request: {
 					id: 1,
 					host: 'localhost',
-					port: 1234,
+					port: opts.mockhttpsServerPort,
 				},
 				tlsOpts: {
 					verifyServerCertificate: false,
@@ -115,7 +115,7 @@ describeWithServer('RPC Tunnel', opts => {
 				request: {
 					id: 1,
 					host: 'localhost',
-					port: 1234,
+					port: opts.mockhttpsServerPort,
 				},
 				tlsOpts: {
 					verifyServerCertificate: false,
@@ -148,7 +148,7 @@ describeWithServer('RPC Tunnel', opts => {
 					request: {
 						id: 1,
 						host: 'localhost',
-						port: 1234,
+						port: opts.mockhttpsServerPort,
 					},
 					tlsOpts: {
 						applicationLayerProtocols: [
@@ -172,7 +172,7 @@ describeWithServer('RPC Tunnel', opts => {
 					request: {
 						id: 1,
 						host: 'localhost',
-						port: 1234,
+						port: opts.mockhttpsServerPort,
 						// invalid geo location
 						geoLocation: 'XZ'
 					},

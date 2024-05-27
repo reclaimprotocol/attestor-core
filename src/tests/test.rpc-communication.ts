@@ -24,7 +24,7 @@ describeWithServer('RPC Communication', opts => {
 		client = new WitnessClient({
 			logger,
 			// a URL without a WS server
-			url: 'ws://localhost:1234'
+			url: `ws://localhost:${opts.mockhttpsServerPort}`
 		})
 		await expect(client.waitForInit()).rejects.toHaveProperty('code')
 	})
@@ -78,7 +78,7 @@ describeWithServer('RPC Communication', opts => {
 				'createTunnel',
 				{
 					host: 'localhost',
-					port: 1234,
+					port: 9999,
 				}
 			)
 		).rejects.toMatchObject(err)
