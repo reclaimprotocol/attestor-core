@@ -7,8 +7,10 @@ test:
   # since we need node native WebSockets for
   # tests to work
   image: node:current-alpine
-  script:
+  before_script:
+    - apk add git
     - git config --global url."https://git-push-pull:$GL_TOKEN@gitlab.reclaimprotocol.org".insteadOf "https://gitlab.reclaimprotocol.org"
+  script:
     - npm i
     - npm run test
   only:
