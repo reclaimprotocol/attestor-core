@@ -24,12 +24,6 @@ enum WitnessVersion {
 	WITNESS_VERSION_2_0_0 = 3;
 }
 
-enum TLSVersion {
-	TLS_VERSION_UNKNOWN = 0;
-	TLS_VERSION_1_2 = 2;
-	TLS_VERSION_1_3 = 3;
-}
-
 enum BeaconType {
 	BEACON_TYPE_UNKNOWN = 0;
 	BEACON_TYPE_SMART_CONTRACT = 1;
@@ -44,25 +38,6 @@ enum WitnessErrorCode {
 	WITNESS_ERROR_NOT_FOUND = 3;
 	WITNESS_ERROR_PROXY_ERROR = 4;
 	WITNESS_ERROR_INVALID_CLAIM = 5;
-}
-
-message TLSPacket {
-	bytes recordHeader = 1;
-	bytes content = 2;
-}
-
-message TranscriptMessage {
-	TranscriptMessageSenderType senderType = 1;
-	bool redacted = 2;
-	/** if redacted, message is empty */
-	bytes message = 3;
-	bytes packetHeader = 4;
-	/**
-	 * Length of the plaintext. Only
-	 * available for cipher schemes that
-	 * don't have padding
-	 */
-	uint32 plaintextLength = 5;
 }
 
 message ProviderClaimData {
@@ -95,44 +70,6 @@ message ProviderClaimInfo {
 	string context = 6;
 }
 
-message TLSReceipt {
-	/** 
-	 * host concatenated with port with a colon (:)
-	 * eg. localhost:443
-	 */
-	string hostPort = 1;
-	/**
-	 * unix timestamp in seconds of the receipt completion
-	 */
-	uint32 timestampS = 2;
-	/** 
-	 * the transcript between the server & client
-	 * in the order they were received
-	 */
-	repeated TranscriptMessage transcript = 3;
-	/** sign(proto(TLSReceipt w/o signature)) */
-	bytes signature = 4;
-	/** the version of TLS used */
-	TLSVersion tlsVersion = 5;
-	/** 
-	 * Geo location from which the request was made.
-	 * 2 letter ISO country code. Empty if geo location
-	 * was not used.
-	 */
-	string geoLocation = 6;
-}
-
-message GetVerifierPublicKeyRequest {
-	ServiceSignatureType signatureType = 1;
-}
-
-message GetVerifierPublicKeyResponse {
-	/** public key of the verifier */
-	bytes publicKey = 1;
-	/** type of signature being used by the service */
-	ServiceSignatureType signatureType = 2;
-}
-
 message BeaconIdentifier {
 	/** 
 	 * type of beacon
@@ -143,163 +80,6 @@ message BeaconIdentifier {
 	 * For smart contract, it's the chain ID.
 	 */
 	string id = 2;
-}
-
-message InitialiseSessionRequest {
-	/** 
-	 * Use if you'd just like a signed receipt
-	 * for some custom purpose
-	 */
-	ReceiptGenerationRequest receiptGenerationRequest = 1;
-	/** beacon based version of ProviderClaimRequest */
-	BeaconBasedProviderClaimRequest beaconBasedProviderClaimRequest = 3;
-
-	message ReceiptGenerationRequest {
-		string host = 1;
-		uint32 port = 2;
-		/**
-		* Geo location from which the request will be made.
-		* Provide 2 letter ISO country code. Leave empty
-		* if you don't want to use geo location.
-		*
-		* Geo location is implemented using an https proxy
-		* eg. US, IN, GB, etc.
-		*/
-		string geoLocation = 3;
-	}
-
-	message BeaconBasedProviderClaimRequest {
-		/** Epoch in which claim is being created */
-		uint32 epoch = 1;
-		/**
-		 * When the claim is being created.
-		 * Cannot be more than 10 minutes in the past
-		 * or in the future at all
-		 */
-		uint32 timestampS = 2;
-		/** private information to sign */
-		ProviderClaimInfo info = 3;
-		/** proof of who is making the claim */
-		ClaimOwner ownerProof = 4;
-
-		BeaconIdentifier beacon = 5;
-	}
-
-	message ClaimOwner {
-		/** address of the owner */
-		string address = 1;
-		/**
-		 * signature of proto serialised epoch and info
-		 * with the private key
-		 */
-		bytes signature = 2;
-	}
-}
-
-message InitialiseSessionResponse {
-	/** opaque ID assigned to the client for this request */
-	string sessionId = 1;
-}
-
-message PushToSessionRequest {
-	/** opaque ID assigned to the client for this request */
-	string sessionId = 1;
-	/**
-	 * messages to push, specify in the order
-	 * to be sent to the server
-	 */
-	repeated TLSPacket messages = 2;
-}
-
-message PushToSessionResponse {
-	/** index of the packet in the server */
-	uint32 index = 1;
-}
-
-message PullFromSessionRequest {
-	/** opaque ID assigned to the client for this request */
-	string sessionId = 1;
-	/** indicate the version of the client */
-	WitnessVersion version = 2;
-}
-
-message PullFromSessionResponse {
-	/** messages pulled from the server */
-	TLSPacket message = 1;
-	/** index of the packet in the server */
-	uint32 index = 2;
-}
-
-message CancelSessionRequest {
-	string sessionId = 1;
-}
-
-message CancelSessionResponse {
-	// empty response
-}
-
-message FinaliseSessionRequest {
-	string sessionId = 1;
-	repeated Block revealBlocks = 2;
-
-	message Block {
-		/**
-		 * auth tag of the block to reveal
-		 * @deprecated specify block using index
-		 */
-		bytes authTag = 1;
-		BlockRevealDirect directReveal = 4;
-		BlockRevealZk zkReveal = 5;
-		/**
-		 * index of the block in the transcript.
-		 * (0 indexed -- including msgs from client & server)
-		 */
-		uint32 index = 6;
-	}
-
-	// direct reveal of the block via the key & IV
-	// cipher (aes, chacha) for decryption
-	// selected based on `cipherSuite`
-	// in `FinaliseSessionRequest`
-	message BlockRevealDirect {
-		/** key for the block */
-		bytes key = 1;
-		/** IV for the block */
-		bytes iv = 2;
-		/**
-		 * used to generate IV in authenticated
-		 * cipher suites
-		 */
-		uint32 recordNumber = 3;
-	}
-
-	// partially or fully reveal the block via a zk proof
-	message BlockRevealZk {
-		repeated ZKProof proofs = 1;
-	}
-
-	message ZKProof {
-		/** JSON encoded snarkJS proof */
-		string proofJson = 1;
-		/** the decrypted ciphertext as output by the ZK proof */
-		bytes decryptedRedactedCiphertext = 2;
-		/** the plaintext that is fully or partially revealed */
-		bytes redactedPlaintext = 3;
-		/**
-		 * start of this specific ChaCha block
-		 * in the redactedPlaintext
-		 */
-		uint32 startIdx = 4;
-	}
-}
-
-message FinaliseSessionResponse {
-	TLSReceipt receipt = 1;
-	ProviderClaimData claimData = 2;
-	/** 
-	 * signature of `stringifyProviderClaimData(claimData)`
-	 */
-	bytes signature = 3;
 }
 
 message WitnessErrorData {

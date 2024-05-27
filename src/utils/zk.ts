@@ -11,7 +11,7 @@ import {
 } from '@reclaimprotocol/circom-symmetric-crypto'
 import { CipherSuite, crypto } from '@reclaimprotocol/tls'
 import { DEFAULT_REMOTE_ZK_PARAMS, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from '../config'
-import { FinaliseSessionRequest_BlockRevealZk as ZKReveal, FinaliseSessionRequest_ZKProof as ZKProof } from '../proto/api'
+import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof } from '../proto/api'
 import { CompleteTLSPacket, Logger, PrepareZKProofsBaseOpts, ZKOperators, ZKRevealInfo } from '../types'
 import { detectEnvironment } from './env'
 import { getPureCiphertext, getZkAlgorithmForCipherSuite } from './generics'
