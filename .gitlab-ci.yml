@@ -3,6 +3,10 @@ stages:
   - deploy
 test:
   stage: test
+  # install latest version, min v22.0.0
+  # since we need node native WebSockets for
+  # tests to work
+  image: node:current-alpine
   script:
     - npm i
     - npm run test
