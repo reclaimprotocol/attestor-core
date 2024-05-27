@@ -1,10 +1,11 @@
 import { createClaimOnWitness } from '../create-claim'
 import { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
 import { ZKOperators } from '../types'
-import { logger } from '../utils'
+import { logger, setLogLevel } from '../utils'
 import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from './types'
 import { getCurrentMemoryUsage, getWsApiUrlFromLocation } from './utils'
 import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator } from './window-rpc-zk'
+
 
 class RPCEvent extends Event {
 	constructor(public readonly data: WindowRPCIncomingMsg) {
@@ -50,10 +51,7 @@ export function setupWindowRpc() {
 			}
 
 			if(!req.id) {
-				logger.warn(
-					{ req },
-					'Window RPC request missing ID'
-				)
+				logger.warn({ req }, 'Window RPC request missing ID')
 				return
 			}
 
@@ -108,6 +106,12 @@ export function setupWindowRpc() {
 				respond({
 					type: 'getCurrentMemoryUsageDone',
 					response: await getCurrentMemoryUsage(),
+				})
+				break
+			case 'setLogLevel':
+				respond({
+					type: 'setLogLevelDone',
+					response: setLogLevel(req.request.logLevel)
 				})
 				break
 			default:

@@ -51,6 +51,10 @@ type ZKVerifyOpts = {
 	proof: { [key: string]: string } | string
 }
 
+type LogLevelOptions = {
+	logLevel: 'debug' | 'info' | 'warn' | 'error' | 'trace'
+}
+
 /**
  * Fns the app calls on the witness.
  * These are things done inside the witness
@@ -63,6 +67,7 @@ export type WindowRPCClient = {
 		available: boolean
 		content: string
 	}>
+	setLogLevel(options: LogLevelOptions): Promise<void>
 }
 
 /**
@@ -104,6 +109,7 @@ export type WindowRPCIncomingMsg = (
 	| WindowRPCRequest<WindowRPCClient, 'extractHtmlElement'>
 	| WindowRPCRequest<WindowRPCClient, 'extractJSONValueIndex'>
 	| WindowRPCRequest<WindowRPCClient, 'getCurrentMemoryUsage'>
+	| WindowRPCRequest<WindowRPCClient, 'setLogLevel'>
 	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'zkProve'>>
 	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'zkVerify'>>
 	| AsResponse<WindowRPCErrorResponse>
@@ -118,6 +124,7 @@ export type WindowRPCOutgoingMsg = (
 	| AsResponse<WindowRPCResponse<WindowRPCClient, 'extractHtmlElement'>>
 	| AsResponse<WindowRPCResponse<WindowRPCClient, 'extractJSONValueIndex'>>
 	| AsResponse<WindowRPCResponse<WindowRPCClient, 'getCurrentMemoryUsage'>>
+	| AsResponse<WindowRPCResponse<WindowRPCClient, 'setLogLevel'>>
 	| WindowRPCRequest<WindowRPCAppClient, 'zkProve'>
 	| WindowRPCRequest<WindowRPCAppClient, 'zkVerify'>
 	| (

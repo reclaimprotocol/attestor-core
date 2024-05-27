@@ -4,7 +4,7 @@ import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { ArraySlice, Provider } from '../../types'
 import {
 	findIndexInUint8Array,
-	getHttpRequestDataFromTranscript,
+	getHttpRequestDataFromTranscript, logger,
 	REDACTION_CHAR_CODE,
 	uint8ArrayToBinaryStr,
 	uint8ArrayToStr,
@@ -84,7 +84,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const url = new URL(params.url)
 		const { pathname } = url
 		const searchParams = params.url.includes('?') ? params.url.split('?')[1] : ''
-		console.log('Params URL:', params.url, 'Path:', pathname, 'Query:', searchParams.toString())
+		logger.info({ url: params.url, path: pathname, query: searchParams.toString() })
 		const body =
             params.body instanceof Uint8Array
             	? params.body
@@ -92,7 +92,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const contentLength = body.length
 		const reqLine = `${params.method} ${pathname}${searchParams?.length ? '?' + searchParams : ''} HTTP/1.1`
 		const secHeadersList = buildHeaders(secHeaders)
-		console.log('Request line:', reqLine)
+		logger.info({ requestLine: reqLine })
 		const httpReqHeaderStr = [
 			reqLine,
 			`Host: ${getHostHeaderString(url)}`,
@@ -164,8 +164,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				element = extractHTMLElement(body, rs.xPath, !!rs.jsonPath)
 				const substr = findSubstringIgnoreLE(body, element)
 				if(substr.index < 0) {
-					console.log('===RESPONSE===')
-					console.log(uint8ArrayToBinaryStr(res.body))
+					logger.error({ response: uint8ArrayToBinaryStr(res.body) })
 					throw new Error(`Failed to find element: "${rs.xPath}"`)
 				}
 
@@ -186,8 +185,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				const elem = element || body
 				const match = regexp.exec(elem)
 				if(!match?.[0]) {
-					console.log('===RESPONSE===')
-					console.log(uint8ArrayToBinaryStr(res.body))
+					logger.error({ response: uint8ArrayToBinaryStr(res.body) })
 					throw new Error(
 						`regexp ${rs.regex} does not match found element '${elem}'`
 					)
@@ -249,7 +247,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const { protocol, pathname } = url
 
 		if(protocol !== 'https:') {
-			console.log('params URL:', params.url)
+			logger.error('params URL: %s', params.url)
 			logTranscript()
 			throw new Error(`Expected protocol: https, found: ${protocol}`)
 		}
@@ -257,7 +255,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		const searchParams = params.url.includes('?') ? params.url.split('?')[1] : ''
 		const expectedPath = pathname + (searchParams?.length ? '?' + searchParams : '')
 		if(req.url !== expectedPath) {
-			console.log('params URL:', params.url)
+			logger.error('params URL: %s', params.url)
 			logTranscript()
 			throw new Error(`Expected path: ${expectedPath}, found: ${req.url}`)
 		}
@@ -327,11 +325,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 				const includes = res.includes(value)
 				if(includes === inv) {
 					logTranscript()
-
-					const trimmedStr =
-                            value.length > 100 ? value.slice(0, 100) + '...' : value
 					throw new Error(
-						`Invalid receipt. Response ${invert ? 'contains' : 'does not contain'} "${trimmedStr}"`
+						`Invalid receipt. Response ${invert ? 'contains' : 'does not contain'} "${value}"`
 					)
 				}
 
@@ -362,10 +357,8 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 			const clientTranscript = uint8ArrayToStr(concatenateUint8Arrays(clientMsgs))
 			const serverTranscript = uint8ArrayToStr(concatenateUint8Arrays(serverMsgs))
-			console.log('====REQUEST=====')
-			console.log(clientTranscript)
-			console.log('====RESPONSE====')
-			console.log(serverTranscript)
+
+			logger.error({ request: clientTranscript, response:serverTranscript, params:paramsAny })
 		}
 	},
 }
