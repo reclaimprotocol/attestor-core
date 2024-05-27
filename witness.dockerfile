@@ -11,7 +11,7 @@ COPY ./package-lock.json /witness/
 # install our witness node
 WORKDIR /witness
 
-RUN npm i
+RUN npm i --ignore-scripts
 
 COPY ./ /witness
 
