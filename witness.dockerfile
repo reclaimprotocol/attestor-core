@@ -16,6 +16,7 @@ RUN npm i
 COPY ./ /witness
 
 RUN npm run build
+RUN npm run build:browser
 RUN npm prune --production
 
 CMD ["npm", "run", "start"]

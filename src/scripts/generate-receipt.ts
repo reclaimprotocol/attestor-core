@@ -2,7 +2,7 @@ import { readFile } from 'fs/promises'
 import P from 'pino'
 import { WebSocketServer } from 'ws'
 import '../server/utils/config-env'
-import { decryptTranscript, makeWsServer } from '../server'
+import { decryptTranscript, createServer } from '../server'
 import {
 	API_SERVER_PORT,
 	createClaimOnWitness,
@@ -46,7 +46,7 @@ export async function main<T extends ProviderName>(
 	let server: WebSocketServer | undefined
 	if(witnessHostPort === 'local') {
 		console.log('starting local witness server...')
-		server = await makeWsServer()
+		server = await createServer()
 		witnessHostPort = `ws://localhost:${API_SERVER_PORT}`
 	}
 

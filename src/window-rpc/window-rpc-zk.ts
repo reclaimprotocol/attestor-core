@@ -1,7 +1,7 @@
 import { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-symmetric-crypto'
 import { base64 } from 'ethers/lib/utils'
 import { logger, makeDefaultZkOperator } from '../utils'
-import { CommunicationBridge, RPCAppClient } from './types'
+import { CommunicationBridge, WindowRPCAppClient } from './types'
 import { generateRpcRequestId } from './utils'
 
 export const ALL_ENC_ALGORITHMS: EncryptionAlgorithm[] = [
@@ -59,11 +59,11 @@ export function makeWindowRpcZkOperator(
 		},
 	}
 
-	function waitForResponse<T extends keyof RPCAppClient>(
+	function waitForResponse<T extends keyof WindowRPCAppClient>(
 		type: T,
 		requestId: string
 	) {
-		type R = Awaited<ReturnType<RPCAppClient[T]>>
+		type R = Awaited<ReturnType<WindowRPCAppClient[T]>>
 		const returnType = `${type}Done` as const
 		return new Promise<R>((resolve, reject) => {
 			const cancel = bridge.onMessage(msg => {

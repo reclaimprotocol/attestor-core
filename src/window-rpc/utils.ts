@@ -1,3 +1,4 @@
+import { WS_PATHNAME } from '../config'
 
 // track memory usage
 export async function getCurrentMemoryUsage() {
@@ -35,4 +36,14 @@ export async function getCurrentMemoryUsage() {
 
 export function generateRpcRequestId() {
 	return Math.random().toString(36).slice(2)
+}
+
+/**
+ * The window RPC will be served from the same origin as the API server.
+ * so we can get the API server's origin from the location.
+ */
+export function getWsApiUrlFromLocation() {
+	const { host, protocol } = location
+	const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:'
+	return `${wsProtocol}//${host}${WS_PATHNAME}`
 }

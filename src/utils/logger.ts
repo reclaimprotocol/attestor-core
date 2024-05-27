@@ -1,4 +1,5 @@
 import P from 'pino'
+import { getEnvVariable } from './env'
 
 export const logger = P()
-logger.level = process.env.LOG_LEVEL || 'info'
+logger.level = getEnvVariable('LOG_LEVEL') || 'info'

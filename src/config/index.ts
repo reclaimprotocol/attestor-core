@@ -31,3 +31,7 @@ export const DNS_SERVERS = [
 
 // 10m
 export const MAX_CLAIM_TIMESTAMP_DIFF_S = 10 * 60
+
+export const WS_PATHNAME = '/ws'
+
+export const BROWSER_RPC_PATHNAME = '/browser-rpc'

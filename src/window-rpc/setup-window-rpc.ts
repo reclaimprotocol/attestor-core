@@ -1,9 +1,9 @@
-import { WitnessClient } from '../client'
+import { createClaimOnWitness } from '../create-claim'
 import { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
 import { ZKOperators } from '../types'
 import { logger } from '../utils'
-import { CommunicationBridge, RPCCreateClaimOptions, RPCErrorResponse, RPCResponse, RPCWitnessClient, WindowRPCIncomingMsg, WindowRPCOutgoingMsg } from './types'
-import { getCurrentMemoryUsage } from './utils'
+import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from './types'
+import { getCurrentMemoryUsage, getWsApiUrlFromLocation } from './utils'
 import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator } from './window-rpc-zk'
 
 class RPCEvent extends Event {
@@ -20,9 +20,9 @@ export function setupWindowRpc() {
 	window.addEventListener('message', handleMessage, false)
 	const windowMsgs = new EventTarget()
 
-	logger.info('window RPC setup')
+	const defaultWitnessUrl = getWsApiUrlFromLocation()
 
-	let client = createClient()
+	logger.info({ defaultWitnessUrl }, 'window RPC setup')
 
 	async function handleMessage(event: MessageEvent<any>) {
 		let id = ''
@@ -64,17 +64,18 @@ export function setupWindowRpc() {
 
 			switch (req.type) {
 			case 'createClaim':
-				const response = await client.createClaim({
+				const response = await createClaimOnWitness({
 					...req.request,
 					zkOperators: getZkOperators(
 						req.request.zkOperatorMode
 					),
+					client: { url: defaultWitnessUrl },
+					logger,
 					onStep(step) {
 						sendMessage({
 							type: 'createClaimStep',
 							step: {
 								name: 'witness-progress',
-								currentWitness: [],
 								step,
 							},
 							module: 'witness-sdk',
@@ -165,9 +166,9 @@ export function setupWindowRpc() {
 			}
 		}
 
-		function respond<K extends keyof RPCWitnessClient>(
-			data: RPCResponse<RPCWitnessClient, K>
-				| RPCErrorResponse
+		function respond<K extends keyof WindowRPCClient>(
+			data: WindowRPCResponse<WindowRPCClient, K>
+				| WindowRPCErrorResponse
 		) {
 			const res = {
 				...data,
@@ -186,12 +187,5 @@ export function setupWindowRpc() {
 				event.source!.postMessage(str)
 			}
 		}
-	}
-
-	function createClient() {
-		return new WitnessClient({
-			url: new URL(location.href),
-			logger,
-		})
 	}
 }

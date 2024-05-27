@@ -1,6 +1,7 @@
 import type { WebSocket, WebSocketServer } from 'ws'
 import { WitnessClient } from '../client'
-import { makeWsServer } from '../server'
+import { WS_PATHNAME } from '../config'
+import { createServer } from '../server'
 import { IWitnessServerSocket } from '../types'
 import { logger } from '../utils'
 import { createMockServer } from './mock-provider-server'
@@ -35,8 +36,8 @@ export const describeWithServer = (
 
 	beforeAll(async() => {
 		const wsServerPort = getRandomPort()
-		wsServer = await makeWsServer(wsServerPort)
-		wsServerUrl = `ws://localhost:${wsServerPort}`
+		wsServer = await createServer(wsServerPort)
+		wsServerUrl = `ws://localhost:${wsServerPort}${WS_PATHNAME}`
 	})
 
 	afterAll(() => {

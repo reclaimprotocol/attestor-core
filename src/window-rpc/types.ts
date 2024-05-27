@@ -1,8 +1,8 @@
 import type { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-symmetric-crypto'
+import type { ClaimTunnelResponse } from '../proto/api'
 import type { ProviderName } from '../providers'
 import type { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
-import type { CreateClaimOpts, IWitnessClient } from '../types'
-import type { CreateStep } from '../types'
+import type { CreateClaimOnWitnessOpts, ProofGenerationStep } from '../types'
 
 type IdentifiedMessage = {
 	module: 'witness-sdk'
@@ -15,7 +15,7 @@ type IdentifiedMessage = {
 	id: string
 }
 
-export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<CreateClaimOpts<N>, 'zkOperators'> & {
+export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<CreateClaimOnWitnessOpts<N>, 'zkOperators'> & {
 	/**
 	 * Specify the mode for the ZK operator,
 	 * 'default' -> will use the default ZK operator included in the SDK
@@ -55,8 +55,8 @@ type ZKVerifyOpts = {
  * Fns the app calls on the witness.
  * These are things done inside the witness
  */
-export type RPCWitnessClient = {
-	createClaim(options: RPCCreateClaimOptions): ReturnType<IWitnessClient['createClaim']>
+export type WindowRPCClient = {
+	createClaim(options: RPCCreateClaimOptions): Promise<ClaimTunnelResponse>
 	extractHtmlElement(options: ExtractHTMLElementOptions): Promise<ReturnType<typeof extractHTMLElement>>
 	extractJSONValueIndex(options: ExtractJSONValueIndexOptions): Promise<ReturnType<typeof extractJSONValueIndex>>
 	getCurrentMemoryUsage(): Promise<{
@@ -68,24 +68,24 @@ export type RPCWitnessClient = {
 /**
  * Fns the witness calls on the app
  */
-export type RPCAppClient = {
+export type WindowRPCAppClient = {
 	zkProve(opts: ZKProveOpts): ReturnType<ZKOperator['groth16Prove']>
 	zkVerify(opts: ZKVerifyOpts): ReturnType<ZKOperator['groth16Verify']>
 }
 
 type AnyRPCClient = { [_: string]: (opts: any) => any }
 
-export type RPCRequest<T extends AnyRPCClient, K extends keyof T> = {
+export type WindowRPCRequest<T extends AnyRPCClient, K extends keyof T> = {
 	type: K
 	request: Parameters<T[K]>[0]
 }
 
-export type RPCResponse<T extends AnyRPCClient, K extends (keyof T) & string> = {
+export type WindowRPCResponse<T extends AnyRPCClient, K extends (keyof T) & string> = {
 	type: `${K}Done`
 	response: Awaited<ReturnType<T[K]>>
 }
 
-export type RPCErrorResponse = {
+export type WindowRPCErrorResponse = {
 	type: 'error'
 	data: {
 		message: string
@@ -100,13 +100,13 @@ type AsResponse<T> = T & { isResponse: true }
  */
 // spread out each key because TS can't handle
 export type WindowRPCIncomingMsg = (
-	RPCRequest<RPCWitnessClient, 'createClaim'>
-	| RPCRequest<RPCWitnessClient, 'extractHtmlElement'>
-	| RPCRequest<RPCWitnessClient, 'extractJSONValueIndex'>
-	| RPCRequest<RPCWitnessClient, 'getCurrentMemoryUsage'>
-	| AsResponse<RPCResponse<RPCAppClient, 'zkProve'>>
-	| AsResponse<RPCResponse<RPCAppClient, 'zkVerify'>>
-	| AsResponse<RPCErrorResponse>
+	WindowRPCRequest<WindowRPCClient, 'createClaim'>
+	| WindowRPCRequest<WindowRPCClient, 'extractHtmlElement'>
+	| WindowRPCRequest<WindowRPCClient, 'extractJSONValueIndex'>
+	| WindowRPCRequest<WindowRPCClient, 'getCurrentMemoryUsage'>
+	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'zkProve'>>
+	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'zkVerify'>>
+	| AsResponse<WindowRPCErrorResponse>
 ) & IdentifiedMessage
 
 /**
@@ -114,19 +114,22 @@ export type WindowRPCIncomingMsg = (
  * the window/application containing the witness
  */
 export type WindowRPCOutgoingMsg = (
-	AsResponse<RPCResponse<RPCWitnessClient, 'createClaim'>>
-	| AsResponse<RPCResponse<RPCWitnessClient, 'extractHtmlElement'>>
-	| AsResponse<RPCResponse<RPCWitnessClient, 'extractJSONValueIndex'>>
-	| AsResponse<RPCResponse<RPCWitnessClient, 'getCurrentMemoryUsage'>>
-	| RPCRequest<RPCAppClient, 'zkProve'>
-	| RPCRequest<RPCAppClient, 'zkVerify'>
+	AsResponse<WindowRPCResponse<WindowRPCClient, 'createClaim'>>
+	| AsResponse<WindowRPCResponse<WindowRPCClient, 'extractHtmlElement'>>
+	| AsResponse<WindowRPCResponse<WindowRPCClient, 'extractJSONValueIndex'>>
+	| AsResponse<WindowRPCResponse<WindowRPCClient, 'getCurrentMemoryUsage'>>
+	| WindowRPCRequest<WindowRPCAppClient, 'zkProve'>
+	| WindowRPCRequest<WindowRPCAppClient, 'zkVerify'>
 	| (
 		{
 			type: 'createClaimStep'
-			step: CreateStep
+			step: {
+				name: 'witness-progress'
+				step: ProofGenerationStep
+			}
 		}
 	)
-	| AsResponse<RPCErrorResponse>
+	| AsResponse<WindowRPCErrorResponse>
 ) & IdentifiedMessage
 
 export type CommunicationBridge = {
