@@ -19,7 +19,7 @@ To run the SDK on React Native/Mobile, keep reading.
 
 `npm install git+https://gitlab.reclaimprotocol.org/reclaim-clients/witness-sdk`
 
-**Note:** this approach is only advised for NodeJS projects or projects meant to run directly in a modern browser. For React Native or any solution running in a mobile app, refer to our doc [here](docs/react-native.md).
+**Note:** this approach is only advised for NodeJS projects or projects meant to run directly in a modern browser. For React Native or any solution running in a mobile app, refer to our doc [here](docs/browser-rpc.md).
 
 ### Running your own witness
 
@@ -32,3 +32,5 @@ To run the SDK on React Native/Mobile, keep reading.
 We'd recommend you go through our documentation in the following order:
 1. [Problem Statement](docs/problem-statement.md): Understand the problem we're solving & whether this is the right solution for you.
 2. [Getting Started](docs/getting-started.md): Understand how to get started with the witness SDK & create your first claim.
+3. [Browser RPC/React Native](docs/browser-rpc.md): How to setup the witness SDK for environments like React Native or any other mobile app.
+4. 

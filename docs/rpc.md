@@ -61,11 +61,11 @@ message RPCMessages {
 }
 ```
 
-In practise, we use `RPCMessages` to send multiple messages in a single packet. This is super useful in helping reduce the number of round trips required to send multiple messages.
+In practise, we use `RPCMessages` to send multiple messages in a single packet. This is super useful in helping reduce the number of round trips, as we can stack many requests in a single packet.
 
 Let's look at an example flow:
 
-1. Client prepares the `InitRequest` message, and serialises in an `RPCMessages` packet.
+1. Client prepares the `InitRequest` message (which contains metadata about the witness version & signature scheme), and serialises in an `RPCMessages` packet.
 2. The aforementioned packet is then sent to the server initially with the WebSocket connection request in the query parameter. So, now our URL looks like `wss://server.com/ws?messages=<base64 encoded RPCMessages packet>`.
 	- Note: the `messages` query parameter is optional & can contain multiple messages. The advantage of this is that we can not only initialise the connection but also create a tunnel & send a TLS packet in the same request that establishes the connection. Thus, helping reduce multiple round trips to just 1.
 2. Now, the server parses the `messages` query parameter & validates it:
@@ -96,7 +96,7 @@ await client.rpc('createTunnel', {
 })
 ```
 
-### Adding a new RPC
+### Adding a new RPC Method
 
 1. add the request & response messages to `proto/api.proto` & then add them to the `RPCMessage` message. For eg.
    ```protobuf
@@ -130,6 +130,7 @@ await client.rpc('createTunnel', {
 	) => {
 		// throw errors here too if required, they'll be correctly
 		// serialized & sent back to the client
+		// if all goes well, return the response (AbcdResponse)
 		return {}
 	}
 	```

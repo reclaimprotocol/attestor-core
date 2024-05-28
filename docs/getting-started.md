@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide will help you get started with the Reclaim protocol on either the browser or NodeJS. For React Native & mobile devices, refer to our [React Native guide](docs/react-native.md).
+This guide will help you get started with the Reclaim protocol on either the browser or NodeJS. For React Native & mobile devices, refer to our [React Native guide](docs/browser-rpc.md).
 
 Once you've installed the SDK (see main readme), you can start creating claims.
 
