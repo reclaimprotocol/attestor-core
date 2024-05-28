@@ -13,6 +13,7 @@ import {
 	ProviderParams,
 	providers,
 	ProviderSecretParams,
+	WS_PATHNAME,
 } from '..'
 
 type ProviderReceiptGenerationParams<P extends ProviderName> = {
@@ -21,7 +22,7 @@ type ProviderReceiptGenerationParams<P extends ProviderName> = {
     secretParams: ProviderSecretParams<P>
 }
 
-const DEFAULT_WITNESS_HOST_PORT = 'https://reclaim-node.questbook.app'
+const DEFAULT_WITNESS_HOST_PORT = 'wss://witness.reclaimprotocol.org/ws'
 const PRIVATE_KEY_HEX = getEnvVariable('PRIVATE_KEY_HEX')
 	// demo private key
 	|| '0x0123788edad59d7c013cdc85e4372f350f828e2cec62d9a2de4560e69aec7f89'
@@ -46,10 +47,8 @@ export async function main<T extends ProviderName>(
 	if(witnessHostPort === 'local') {
 		console.log('starting local witness server...')
 		server = await createServer()
-		witnessHostPort = `ws://localhost:${API_SERVER_PORT}`
+		witnessHostPort = `ws://localhost:${API_SERVER_PORT}${WS_PATHNAME}`
 	}
-
-	console.log('connected, creating claim...')
 
 	const receipt = await createClaimOnWitness({
 		name: paramsJson.name,
