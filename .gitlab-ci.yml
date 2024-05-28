@@ -13,7 +13,12 @@ test:
     - npm i
     - npm run test
   only:
-    - v2
+    # only deploy if not a docs commit
+    # or a wip commit
+    variables:
+      - $CI_COMMIT_MESSAGE !~ /^wip/ && $CI_COMMIT_MESSAGE !~ /^docs/
+    refs:
+      - v2
 deploy:
   stage: deploy
   environment: production
@@ -22,11 +27,13 @@ deploy:
     - apt-get update -y
     - apt-get install zip -y
     - apt-get install awscli -y
-  rules:
+  only:
     # only deploy if not a docs commit
     # or a wip commit
-    - if: $CI_COMMIT_MESSAGE != /^wip/ && $CI_COMMIT_MESSAGE != /^docs/
-      when: always
+    variables:
+      - $CI_COMMIT_MESSAGE !~ /^wip/ && $CI_COMMIT_MESSAGE !~ /^docs/
+    refs:
+      - v2
   script:
     # copy prod env files in
     - echo -e "$WITNESS_ENV" > .env.production
@@ -48,5 +55,3 @@ deploy:
     - aws s3 cp $FILE s3://$BUCKET/$FILE
     - aws elasticbeanstalk create-application-version --application-name $APP_NAME --version-label $VERSION --source-bundle S3Bucket="$BUCKET",S3Key="$FILE"
     - aws elasticbeanstalk update-environment --application-name $APP_NAME --environment-name $ENV_NAME --version-label $VERSION
-  only:
-    - v2
