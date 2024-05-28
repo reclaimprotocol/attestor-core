@@ -16,7 +16,11 @@ The protocol we have is in essence gRPC with a few minor tweaks for our use case
 
 1. Well, we get bi-directional streaming for free. This is super useful for tunnels as we can send data in both directions. (Bidirectional streaming isn't well supported on gRPC-web)
 2. We can multiplex multiple streams over a single socket if needed.
-3. Instead of a WebSocket, it's possible to use any other transport like QUIC or HTTP/2 or even a regular TCP socket, but since WebSockets are widely supported on the web, we chose it.
+3. Another big reason is we get horizontal scaling for free.
+	- The nature of the protocol is such that we need to consistently send & receive data from the same server.
+	- If we were to use HTTP/2 or some other REST-like mechansim, we'd have to implement some sort of sticky session mechanism to ensure that the client always connects to the same server.
+	- This isn't required with WebSockets, as once a connection is established, it stays connected to the same server until it's closed.
+4. Of course -- instead of a WebSocket, it's possible to use any other transport like QUIC or HTTP/2 or even a regular TCP socket, but since WebSockets are widely supported on the web, we chose the same.
 
 ## Protocol
 
@@ -34,12 +38,7 @@ message RPCMessage {
 	uint64 id = 1;
 	// message must be one of the following
 	oneof message {
-		/**
-		 * Response to the init request.
-		 * The request must be sent in the WebSocket URL
-		 * as a query parameter.
-		 * `?initRequest=base64(proto(InitRequest))`
-		 * */
+		InitRequest initRequest = 1;
 		Empty initResponse = 2;
 		/**
 		 * Data representing an error in the WebSocket connection.
@@ -56,20 +55,29 @@ message RPCMessage {
 		/** Other RPCs ... */
 	}
 }
+
+message RPCMessages {
+	repeated RPCMessage messages = 1;
+}
 ```
+
+In practise, we use `RPCMessages` to send multiple messages in a single packet. This is super useful in helping reduce the number of round trips required to send multiple messages.
 
 Let's look at an example flow:
 
-1. Client connects to the WebSocket server via:
-   ```ts
-   const ws = new WebSocket("wss://some.witness.address?initRequest=base64(proto(InitRequest))")
-   ```
-2. Server checks the `initRequest` query parameter & validates it:
+1. Client prepares the `InitRequest` message, and serialises in an `RPCMessages` packet.
+2. The aforementioned packet is then sent to the server initially with the WebSocket connection request in the query parameter. So, now our URL looks like `wss://server.com/ws?messages=<base64 encoded RPCMessages packet>`.
+	- Note: the `messages` query parameter is optional & can contain multiple messages. The advantage of this is that we can not only initialise the connection but also create a tunnel & send a TLS packet in the same request that establishes the connection. Thus, helping reduce multiple round trips to just 1.
+2. Now, the server parses the `messages` query parameter & validates it:
 	- If successful, it sends an `initResponse` message back to the client.
-	- If unsuccessful, it sends a `connectionTerminationAlert` message back to the client.
-3. Upon receiving the `initResponse` message, the client can start sending RPC messages to the server. For eg. they could create a tunnel via `createTunnelRequest`
+	- Note: If the messages passed in the `messages` query param failed to process. The server shall send a `connectionTerminationAlert` message back to the client & close the connection.
 
-Utility functions to help the WebSocket client & server encode & decode these messages are provided in `src/v2/utils/extend-ws.ts`.
+## Implementation
+
+The implementation is broken down into 3 parts:
+1. [WitnessSocket](src/client/socket.ts): this is the base class that handles basic functions required on the client & server side -- such as sending & receiving messages, handling errors, etc.
+2. [WitnessClient](src/client/index.ts): this is the client implementation that extends `WitnessSocket` & adds functions to make RPC calls among other things.
+3. [`WitnessServerSocket`](src/server/socket.ts): this is the implementation of a client connected on the server side. It extends `WitnessSocket` and adds functions to store & manage tunnels created by the client.
 
 ## Adding a new RPC
 
