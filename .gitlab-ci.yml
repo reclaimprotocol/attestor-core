@@ -22,6 +22,11 @@ deploy:
     - apt-get update -y
     - apt-get install zip -y
     - apt-get install awscli -y
+  rules:
+    # only deploy if not a docs commit
+    # or a wip commit
+    - if: $CI_COMMIT_MESSAGE != /^wip/ && $CI_COMMIT_MESSAGE != /^docs/
+      when: always
   script:
     # copy prod env files in
     - echo -e "$WITNESS_ENV" > .env.production
