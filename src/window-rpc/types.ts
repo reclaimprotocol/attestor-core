@@ -1,8 +1,7 @@
 import type { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-symmetric-crypto'
-import type { ClaimTunnelResponse } from '../proto/api'
 import type { ProviderName } from '../providers'
 import type { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
-import type { CreateClaimOnWitnessOpts, LogLevel, ProofGenerationStep } from '../types'
+import type { CompleteClaimData, CreateClaimOnWitnessOpts, LogLevel, ProofGenerationStep, WitnessData } from '../types'
 
 type IdentifiedMessage = {
 	module: 'witness-sdk'
@@ -61,11 +60,21 @@ type LogLevelOptions = {
 }
 
 /**
+ * Legacy V1 create claim response
+ */
+export type CreateClaimResponse = {
+	identifier: string
+	claimData: CompleteClaimData
+	signatures: string[]
+	witnesses: WitnessData[]
+}
+
+/**
  * Fns the app calls on the witness.
  * These are things done inside the witness
  */
 export type WindowRPCClient = {
-	createClaim(options: RPCCreateClaimOptions): Promise<ClaimTunnelResponse>
+	createClaim(options: RPCCreateClaimOptions): Promise<CreateClaimResponse>
 	extractHtmlElement(options: ExtractHTMLElementOptions): Promise<ReturnType<typeof extractHTMLElement>>
 	extractJSONValueIndex(options: ExtractJSONValueIndexOptions): Promise<ReturnType<typeof extractJSONValueIndex>>
 	getCurrentMemoryUsage(): Promise<{

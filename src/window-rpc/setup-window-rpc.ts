@@ -3,7 +3,7 @@ import { extractHTMLElement, extractJSONValueIndex } from '../providers/http-pro
 import { ZKOperators } from '../types'
 import { makeLogger } from '../utils'
 import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from './types'
-import { getCurrentMemoryUsage, getWsApiUrlFromLocation } from './utils'
+import { getCurrentMemoryUsage, getWsApiUrlFromLocation, mapToCreateClaimResponse } from './utils'
 import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator } from './window-rpc-zk'
 
 class WindowRPCEvent extends Event {
@@ -65,7 +65,7 @@ export function setupWindowRpc() {
 
 			switch (req.type) {
 			case 'createClaim':
-				const response = await createClaimOnWitness({
+				const claimTunnelRes = await createClaimOnWitness({
 					...req.request,
 					zkOperators: getZkOperators(
 						req.request.zkOperatorMode
@@ -84,6 +84,9 @@ export function setupWindowRpc() {
 						})
 					},
 				})
+				const response = mapToCreateClaimResponse(
+					claimTunnelRes
+				)
 				respond({
 					type: 'createClaimDone',
 					response,

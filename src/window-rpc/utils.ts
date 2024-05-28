@@ -1,4 +1,8 @@
+import { ethers } from 'ethers'
 import { WS_PATHNAME } from '../config'
+import { ClaimTunnelResponse } from '../proto/api'
+import { getIdentifierFromClaimInfo, WitnessError } from '../utils'
+import { CreateClaimResponse } from './types'
 
 // track memory usage
 export async function getCurrentMemoryUsage() {
@@ -46,4 +50,28 @@ export function getWsApiUrlFromLocation() {
 	const { host, protocol } = location
 	const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:'
 	return `${wsProtocol}//${host}${WS_PATHNAME}`
+}
+
+export function mapToCreateClaimResponse(
+	res: ClaimTunnelResponse
+): CreateClaimResponse {
+	if(!res.claim) {
+		throw WitnessError.fromProto(res.error!)
+	}
+
+	return {
+		identifier: getIdentifierFromClaimInfo(res.claim),
+		claimData: res.claim,
+		witnesses: [
+			{
+				id: res.signatures!.witnessAddress,
+				url: getWsApiUrlFromLocation()
+			}
+		],
+		signatures: [
+			ethers.utils
+				.hexlify(res.signatures!.claimSignature)
+				.toLowerCase()
+		]
+	}
 }
