@@ -29,7 +29,6 @@ module.exports = {
 			"zlib": false,
 			"https": false,
 			"net": false,
-			"react-native-tcp-socket": false,
 			readline: false,
 			constants: false,
 			process: false,

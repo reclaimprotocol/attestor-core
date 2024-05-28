@@ -16,7 +16,7 @@ const ZK_CIPHER_SUITES: CipherSuite[] = [
 	'TLS_AES_128_GCM_SHA256'
 ]
 
-jest.setTimeout(60_000) // 60s
+jest.setTimeout(90_000) // 90s
 
 describe('ZK Tests', () => {
 

@@ -7,7 +7,6 @@ lib
 browser/resources
 .env
 .env.production
-.env.test
 example-local
 .idea
 coverage/
