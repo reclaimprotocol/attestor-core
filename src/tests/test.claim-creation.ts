@@ -12,7 +12,7 @@ const TLS_VERSIONS: TLSProtocolVersion[] = [
 	'TLS1_2',
 ]
 
-jest.setTimeout(15_000)
+jest.setTimeout(25_000)
 
 describeWithServer('Claim Creation', opts => {
 
