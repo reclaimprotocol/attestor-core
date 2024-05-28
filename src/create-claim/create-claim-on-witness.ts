@@ -1,12 +1,11 @@
 import { strToUint8Array, TLSPacketContext } from '@reclaimprotocol/tls'
-import canonicalize from 'canonicalize'
 import { DEFAULT_HTTPS_PORT } from '../config'
 import { ClaimTunnelRequest } from '../proto/api'
 import { ProviderName, providers } from '../providers'
 import { SIGNATURES } from '../signatures'
 import { makeRpcTlsTunnel } from '../tunnels/make-rpc-tls-tunnel'
 import { CreateClaimOnWitnessOpts, IWitnessClient, MessageRevealInfo } from '../types'
-import { generateTunnelId, getBlocksToReveal, getProviderValue, isApplicationData, logger as LOGGER, makeHttpResponseParser, preparePacketsForReveal, redactSlices, unixTimestampSeconds } from '../utils'
+import { canonicalStringify, generateTunnelId, getBlocksToReveal, getProviderValue, isApplicationData, logger as LOGGER, makeHttpResponseParser, preparePacketsForReveal, redactSlices, unixTimestampSeconds } from '../utils'
 import { getWitnessClientFromPool } from './witness-pool'
 
 type ServerAppDataPacket = {
@@ -174,8 +173,8 @@ export async function createClaimOnWitness<N extends ProviderName>(
 		request: createTunnelReq,
 		data: {
 			provider: name,
-			parameters: canonicalize(params)!,
-			context: canonicalize(context)!,
+			parameters: canonicalStringify(params),
+			context: canonicalStringify(context),
 			timestampS: unixTimestampSeconds(),
 			owner: getAddress(),
 		},
@@ -191,7 +190,6 @@ export async function createClaimOnWitness<N extends ProviderName>(
 	claimTunnelReq.signatures = { requestSignature }
 
 	const result = await client!.rpc('claimTunnel', claimTunnelReq)
-
 	return result
 
 	async function writeRedactedWithKeyUpdate() {

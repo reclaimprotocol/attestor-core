@@ -1,10 +1,9 @@
 import { areUint8ArraysEqual, concatenateUint8Arrays, crypto, decryptWrappedRecord, PACKET_TYPE, parseClientHello, parseServerHello, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
-import canonicalize from 'canonicalize'
 import { ClaimTunnelRequest, InitRequest, ProviderClaimInfo, TranscriptMessageSenderType } from '../../proto/api'
 import { providers } from '../../providers'
 import { SIGNATURES } from '../../signatures'
 import { IDecryptedTranscript, IDecryptedTranscriptMessage, Logger, TCPSocketProperties, Transcript } from '../../types'
-import { extractApplicationDataFromTranscript, getPureCiphertext, hashProviderParams, verifyZkPacket, WitnessError } from '../../utils'
+import { canonicalStringify, extractApplicationDataFromTranscript, getPureCiphertext, hashProviderParams, verifyZkPacket, WitnessError } from '../../utils'
 import { niceParseJsonObject } from './generics'
 
 /**
@@ -112,7 +111,7 @@ export async function assertValidProviderTranscript<T extends ProviderClaimInfo>
 	const newInfo = { ...info }
 	ctx.extractedParameters = extractedParams
 	ctx.providerHash = hashProviderParams(params)
-	newInfo.context = canonicalize(ctx) ?? ''
+	newInfo.context = canonicalStringify(ctx) ?? ''
 
 	return newInfo
 }

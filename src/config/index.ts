@@ -1,5 +1,5 @@
 import RECLAIM_TRUSTED_WITNESS from '../beacon/reclaim-trusted/config.json'
-import { type BeaconIdentifier, BeaconType } from '../proto/api'
+import { type BeaconIdentifier, BeaconType, InitRequest, ServiceSignatureType, WitnessVersion } from '../proto/api'
 
 export const MAX_ZK_CHUNKS = 40
 
@@ -35,3 +35,8 @@ export const MAX_CLAIM_TIMESTAMP_DIFF_S = 10 * 60
 export const WS_PATHNAME = '/ws'
 
 export const BROWSER_RPC_PATHNAME = '/browser-rpc'
+
+export const DEFAULT_METADATA: InitRequest = {
+	signatureType: ServiceSignatureType.SERVICE_SIGNATURE_TYPE_ETH,
+	clientVersion: WitnessVersion.WITNESS_VERSION_2_0_0
+}

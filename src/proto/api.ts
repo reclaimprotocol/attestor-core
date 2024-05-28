@@ -422,6 +422,8 @@ export interface ClaimTunnelResponse {
 }
 
 export interface ClaimTunnelResponse_Signatures {
+  /** Address of the witness that has signed the claim */
+  witnessAddress: string;
   /**
    * signature of `stringifyProviderClaimData(claim)`,
    * if the claim was successful
@@ -2102,16 +2104,19 @@ export const ClaimTunnelResponse = {
 };
 
 function createBaseClaimTunnelResponse_Signatures(): ClaimTunnelResponse_Signatures {
-  return { claimSignature: new Uint8Array(0), resultSignature: new Uint8Array(0) };
+  return { witnessAddress: "", claimSignature: new Uint8Array(0), resultSignature: new Uint8Array(0) };
 }
 
 export const ClaimTunnelResponse_Signatures = {
   encode(message: ClaimTunnelResponse_Signatures, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.witnessAddress !== "") {
+      writer.uint32(10).string(message.witnessAddress);
+    }
     if (message.claimSignature.length !== 0) {
-      writer.uint32(10).bytes(message.claimSignature);
+      writer.uint32(18).bytes(message.claimSignature);
     }
     if (message.resultSignature.length !== 0) {
-      writer.uint32(18).bytes(message.resultSignature);
+      writer.uint32(26).bytes(message.resultSignature);
     }
     return writer;
   },
@@ -2128,10 +2133,17 @@ export const ClaimTunnelResponse_Signatures = {
             break;
           }
 
-          message.claimSignature = reader.bytes();
+          message.witnessAddress = reader.string();
           continue;
         case 2:
           if (tag !== 18) {
+            break;
+          }
+
+          message.claimSignature = reader.bytes();
+          continue;
+        case 3:
+          if (tag !== 26) {
             break;
           }
 
@@ -2148,6 +2160,7 @@ export const ClaimTunnelResponse_Signatures = {
 
   fromJSON(object: any): ClaimTunnelResponse_Signatures {
     return {
+      witnessAddress: isSet(object.witnessAddress) ? globalThis.String(object.witnessAddress) : "",
       claimSignature: isSet(object.claimSignature) ? bytesFromBase64(object.claimSignature) : new Uint8Array(0),
       resultSignature: isSet(object.resultSignature) ? bytesFromBase64(object.resultSignature) : new Uint8Array(0),
     };
@@ -2155,6 +2168,9 @@ export const ClaimTunnelResponse_Signatures = {
 
   toJSON(message: ClaimTunnelResponse_Signatures): unknown {
     const obj: any = {};
+    if (message.witnessAddress !== "") {
+      obj.witnessAddress = message.witnessAddress;
+    }
     if (message.claimSignature.length !== 0) {
       obj.claimSignature = base64FromBytes(message.claimSignature);
     }
@@ -2169,6 +2185,7 @@ export const ClaimTunnelResponse_Signatures = {
   },
   fromPartial(object: DeepPartial<ClaimTunnelResponse_Signatures>): ClaimTunnelResponse_Signatures {
     const message = createBaseClaimTunnelResponse_Signatures();
+    message.witnessAddress = object.witnessAddress ?? "";
     message.claimSignature = object.claimSignature ?? new Uint8Array(0);
     message.resultSignature = object.resultSignature ?? new Uint8Array(0);
     return message;

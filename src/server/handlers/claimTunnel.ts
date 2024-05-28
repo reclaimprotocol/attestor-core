@@ -1,9 +1,9 @@
 import { MAX_CLAIM_TIMESTAMP_DIFF_S } from '../../config'
 import { ClaimTunnelResponse } from '../../proto/api'
 import { RPCHandler } from '../../types'
-import { getIdentifierFromClaimInfo, stringifyClaimParameters, unixTimestampSeconds, WitnessError } from '../../utils'
+import { createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds, WitnessError } from '../../utils'
 import { assertTranscriptsMatch, assertValidClaimRequest } from '../utils/assert-valid-claim-request'
-import { signAsWitness } from '../utils/generics'
+import { getWitnessAddress, signAsWitness } from '../utils/generics'
 
 export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 	claimRequest,
@@ -59,9 +59,12 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 	}
 
 	res.signatures = {
+		witnessAddress: await getWitnessAddress(
+			client.metadata.signatureType
+		),
 		claimSignature: res.claim
 			? await signAsWitness(
-				stringifyClaimParameters(res.claim),
+				createSignDataForClaim(res.claim),
 				client.metadata.signatureType
 			)
 			: new Uint8Array(),

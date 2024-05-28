@@ -87,6 +87,8 @@ export async function makeZkProofGenerator(
 		/**
 		 * Adds the given packet to the list of packets to
 		 * generate ZK proofs for.
+		 *
+		 * Call `generateProofs()` to finally generate the proofs
 		 */
 		async addPacketToProve(
 			packet: CompleteTLSPacket,
@@ -113,7 +115,6 @@ export async function makeZkProofGenerator(
 				packet.ciphertext,
 				cipherSuite
 			)
-
 			const chunks = Math.ceil(ciphertext.length / chunkSizeBytes)
 			const packetToProve: ZKPacketToProve = {
 				onGeneratedProofs,

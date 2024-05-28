@@ -4,7 +4,7 @@ import { createClaimOnWitness } from '../create-claim'
 import { WitnessErrorCode } from '../proto/api'
 import { providers } from '../providers'
 import { decryptTranscript } from '../server'
-import { extractApplicationDataFromTranscript, logger } from '../utils'
+import { assertValidClaimSignatures, extractApplicationDataFromTranscript, logger } from '../utils'
 import { describeWithServer } from './describe-with-server'
 
 const TLS_VERSIONS: TLSProtocolVersion[] = [
@@ -74,6 +74,10 @@ describeWithServer('Claim Creation', opts => {
 			.join('')
 		// ensure the secret authorisation header is not leaked
 		expect(requestData).not.toContain(user)
+
+		await expect(
+			assertValidClaimSignatures(result, client.metadata)
+		).resolves.toBeUndefined()
 	})
 
 	it('should not create a claim with invalid response', async() => {

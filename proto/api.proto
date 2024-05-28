@@ -237,16 +237,20 @@ message ClaimTunnelResponse {
 	Signatures signatures = 4;
 
 	message Signatures {
+		/**
+		 * Address of the witness that has signed the claim
+		 */
+		string witnessAddress = 1;
 		/** 
 		* signature of `stringifyProviderClaimData(claim)`,
 		* if the claim was successful
 		*/
-		bytes claimSignature = 1;
+		bytes claimSignature = 2;
 		/**
 		 * signature of the complete ClaimTunnelResponse
 		 * structure with empty "signatures" field
 		 */
-		bytes resultSignature = 2;
+		bytes resultSignature = 3;
 	}
 }
 

@@ -15,7 +15,7 @@
     "generate:proto": "sh ./src/scripts/generate-proto.sh",
     "generate:contracts-data": "sh ./src/scripts/contract-data-gen.sh",
     "verify:root-ca": "ts-node src/scripts/verify-root-ca.ts",
-    "generate:receipt": "ts-node src/scripts/generate-receipt.ts"
+    "create:claim": "ts-node src/scripts/generate-receipt.ts"
   },
   "files": [
     "lib/*"

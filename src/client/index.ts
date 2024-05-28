@@ -1,15 +1,9 @@
 import { base64 } from 'ethers/lib/utils'
-import { InitRequest, RPCMessages, ServiceSignatureType, WitnessVersion } from '../proto/api'
+import { DEFAULT_METADATA } from '../config'
+import { RPCMessages } from '../proto/api'
 import { IWitnessClient, IWitnessClientCreateOpts, RPCEvent, RPCRequestData, RPCResponseData, RPCType } from '../types'
 import { getRpcRequestType, logger as LOGGER, packRpcMessages } from '../utils'
 import { WitnessSocket } from './socket'
-
-const VERSION = WitnessVersion.WITNESS_VERSION_2_0_0
-
-export const DEFAULT_METADATA: InitRequest = {
-	signatureType: ServiceSignatureType.SERVICE_SIGNATURE_TYPE_ETH,
-	clientVersion: VERSION
-}
 
 export class WitnessClient extends WitnessSocket implements IWitnessClient {
 

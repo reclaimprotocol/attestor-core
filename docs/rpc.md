@@ -2,7 +2,7 @@
 
 We utilise a custom RPC protocol written on top of protobuf & execute this protocol over a WebSocket.
 
-## Why use protobuf?
+## Why protobuf?
 
 Protobuf is a binary serialization format that is both faster & more efficient than JSON. Plus, it is type-safe by design. This is super helpful, as the protocol deals with a lot of binary data like TLS packets & cryptographic signatures.
 
@@ -74,12 +74,29 @@ Let's look at an example flow:
 
 ## Implementation
 
-The implementation is broken down into 3 parts:
+The implementation is broken down into 3 layered parts:
 1. [WitnessSocket](src/client/socket.ts): this is the base class that handles basic functions required on the client & server side -- such as sending & receiving messages, handling errors, etc.
 2. [WitnessClient](src/client/index.ts): this is the client implementation that extends `WitnessSocket` & adds functions to make RPC calls among other things.
 3. [`WitnessServerSocket`](src/server/socket.ts): this is the implementation of a client connected on the server side. It extends `WitnessSocket` and adds functions to store & manage tunnels created by the client.
 
-## Adding a new RPC
+### Creating a Client
+
+``` ts
+import { WitnessClient } from '@reclaimprotocol/witness-sdk'
+
+const client = new WitnessClient({
+	url: 'wss://server.com/ws',
+})
+// wait for the connection to be successfully established
+await client.waitForInit()
+// now you can make RPC calls
+await client.rpc('createTunnel', {
+	host: 'example.com',
+	port: 443,
+})
+```
+
+### Adding a new RPC
 
 1. add the request & response messages to `proto/api.proto` & then add them to the `RPCMessage` message. For eg.
    ```protobuf
@@ -106,7 +123,7 @@ The implementation is broken down into 3 parts:
 	- The oneof field should be named `abcdRequest` & `abcdResponse` (camel case)
 2. Implement the handler for this RPC in the `src/v2/server/handlers` folder. Name the file `abcd.ts` and export the handler as `abcd`. (Of course, abcd should be replaced with the actual name of the RPC)
 	``` ts
-	export const abcd: RPCHandler<'abcdRequest'> = async(
+	export const abcd: RPCHandler<'abcd'> = async(
 		{ },
 		// context to help with logging & other things
 		{ client, logger }
@@ -116,4 +133,16 @@ The implementation is broken down into 3 parts:
 		return {}
 	}
 	```
-3. Add handler to the `HANDLERS` object in `src/v2/server/handlers/index.ts`
+3. Add handler to the `HANDLERS` object in `src/v2/server/handlers/index.ts`:
+	```ts
+	import { abcd } from './abcd'
+	export const HANDLERS = {
+		...
+		abcd,
+		...
+	}
+	```
+4. You can now call this RPC from the client using the `WitnessClient` class. For eg.
+	```ts
+	const response = await client.rpc('abcd', { ... })
+	```
