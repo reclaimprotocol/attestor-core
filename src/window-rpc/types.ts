@@ -74,13 +74,24 @@ export type CreateClaimResponse = {
  * These are things done inside the witness
  */
 export type WindowRPCClient = {
+	/**
+	 * Create a claim on the witness where the RPC SDK is hosted.
+	 */
 	createClaim(options: RPCCreateClaimOptions): Promise<CreateClaimResponse>
+	/**
+	 * Extract an HTML element from a string of HTML
+	 */
 	extractHtmlElement(options: ExtractHTMLElementOptions): Promise<ReturnType<typeof extractHTMLElement>>
 	extractJSONValueIndex(options: ExtractJSONValueIndexOptions): Promise<ReturnType<typeof extractJSONValueIndex>>
 	getCurrentMemoryUsage(): Promise<{
 		available: boolean
 		content: string
 	}>
+	/**
+	 * Set the log level for the witness,
+	 * optionally set "sendLogsToApp" to true to send logs
+	 * back to the app
+	 */
 	setLogLevel(options: LogLevelOptions): Promise<void>
 }
 
