@@ -1,5 +1,9 @@
 import { RedactionMode } from '../../types'
 
+/**
+ * @deprecated use HTTPProviderParamsV2
+ * instead
+ */
 type HTTPProviderParamsV1 = {
     /**
      * Any additional headers to be sent with the request
@@ -119,15 +123,17 @@ export type HTTPProviderParamsV2 = {
          */
         invert?: boolean
     }[]
-
     /**
      * Specify the geographical location from where
      * to proxy the request
      */
     geoLocation?: string
-
+    /**
+     * If the API doesn't perform well with the "key-update"
+     * method of redaction, you can switch to "zk" mode
+     * by setting this to "zk"
+     */
     writeRedactionMode?: RedactionMode
-
     /**
      * A map of parameter values which are user in form of {{param}} in URL, responseMatches, responseRedactions,
      * body, geolocation.
@@ -140,6 +146,10 @@ export type HTTPProviderParamsV2 = {
 export type HTTPProviderParams = HTTPProviderParamsV1
     | HTTPProviderParamsV2
 
+/**
+ * Secret parameters to be used with HTTP provider,
+ * none of the values in this object will be shown to the witness
+ */
 export type HTTPProviderSecretParams = {
     /** cookie string for authorisation. Will be redacted from witness */
     cookieStr?: string

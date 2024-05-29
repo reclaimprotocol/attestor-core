@@ -33,4 +33,4 @@ We'd recommend you go through our documentation in the following order:
 1. [Problem Statement](docs/problem-statement.md): Understand the problem we're solving & whether this is the right solution for you.
 2. [Getting Started](docs/getting-started.md): Understand how to get started with the witness SDK & create your first claim.
 3. [Browser RPC/React Native](docs/browser-rpc.md): How to setup the witness SDK for environments like React Native or any other mobile app.
-4. 
+4. [Provider](docs/provider.md): What is a provider in the Reclaim context, how to create one & details on the HTTP provider.

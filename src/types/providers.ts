@@ -92,7 +92,11 @@ export interface Provider<
    *
    * This is run on the witness side.
    * @param receipt application data messages exchanged in the TLS session
-   * @param params the parameters to verify the receipt against. Eg. `{"email": "abcd@gmail.com"}`
+   * @param params the parameters to verify the receipt against.
+   *  Eg. `{"email": "abcd@gmail.com"}`
+   * @returns sucessful verification or throws an error message.
+	 *  Optionally return parameters extracted from the receipt
+	 *  that will then be included in the claim context
    * */
   assertValidProviderReceipt(
     receipt: Transcript<Uint8Array>,
