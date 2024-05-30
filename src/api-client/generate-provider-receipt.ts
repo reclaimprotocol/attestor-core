@@ -34,17 +34,11 @@ export async function generateProviderReceipt<Name extends ProviderName>({
 	const hostPort = getProviderValue(params, provider.hostPort)
 	const geoLocation = getProviderValue(params, provider.geoLocation)
 	const redactionMode = getProviderValue(params, provider.writeRedactionMode)
+	const providerConnectOpts = getProviderValue(params, provider.additionalClientOptions)
 
 	additionalConnectOpts = {
-		...provider.additionalClientOptions || {},
+		...providerConnectOpts || {},
 		...additionalConnectOpts,
-	}
-
-	if(provider.additionalClientOptions?.rootCAs) {
-		additionalConnectOpts.rootCAs = [
-			...(additionalConnectOpts.rootCAs || [ ]),
-			...provider.additionalClientOptions.rootCAs,
-		]
 	}
 
 	const [host, port] = hostPort.split(':')

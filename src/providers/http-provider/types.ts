@@ -1,3 +1,4 @@
+import { TLSConnectionOptions } from '@reclaimprotocol/tls'
 import { RedactionMode } from '../../types'
 
 type HTTPProviderParamsV1 = {
@@ -135,6 +136,8 @@ export type HTTPProviderParamsV2 = {
      * This value will NOT be included in provider hash
      */
     paramValues?: { [_: string]: string }
+
+    additionalClientOptions?: TLSConnectionOptions
 }
 
 export type HTTPProviderParams = HTTPProviderParamsV1
@@ -172,6 +175,20 @@ export const paramsV2Schema = {
 		'body': { 'type': 'string', nullable: true },
 		'writeRedactionMode': { 'type': 'string', 'enum': ['zk', 'key-update'] },
 		'useZK': { 'type': 'boolean' },
+		'additionalClientOptions': {
+			'type': 'object',
+			'properties': {
+				'supportedProtocolVersions': {
+					'type': 'array',
+					'minItems': 1,
+					'uniqueItems': true,
+					'items':{
+						'type': 'string',
+						'enum': ['TLS1_2', 'TLS1_3']
+					}
+				},
+			}
+		},
 		'responseSelections': {
 			'type': 'array',
 			'minItems': 1,
