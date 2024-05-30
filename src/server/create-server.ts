@@ -4,14 +4,17 @@ import type { Duplex } from 'stream'
 import { WebSocket, WebSocketServer } from 'ws'
 import { API_SERVER_PORT, BROWSER_RPC_PATHNAME, WS_PATHNAME } from '../config'
 import { logger as LOGGER } from '../utils'
+import { getEnvVariable } from '../utils/env'
 import { WitnessServerSocket } from './socket'
+
+const PORT = +(getEnvVariable('PORT') || API_SERVER_PORT)
 
 /**
  * Creates the WebSocket API server,
  * creates a fileserver to serve the browser RPC client,
  * and listens on the given port.
  */
-export async function createServer(port = API_SERVER_PORT) {
+export async function createServer(port = PORT) {
 	const http = createHttpServer()
 	const serveBrowserRpc = serveStatic(
 		'browser',
