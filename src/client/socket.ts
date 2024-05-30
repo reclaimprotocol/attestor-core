@@ -43,7 +43,7 @@ export class WitnessSocket implements IWitnessSocket {
 	}
 
 	get isOpen() {
-		return this.socket.readyState === WebSocket.OPEN
+		return this.socket.readyState === this.socket.OPEN
 	}
 
 	async sendMessage(...msgs: Partial<RPCMessage>[]) {
@@ -74,7 +74,7 @@ export class WitnessSocket implements IWitnessSocket {
 
 	async terminateConnection(err?: Error) {
 		// connection already closed
-		if(this.socket.readyState === WebSocket.CLOSED) {
+		if(this.socket.readyState === this.socket.CLOSED) {
 			return
 		}
 
