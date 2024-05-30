@@ -177,7 +177,7 @@ message MessageReveal {
 		/** the plaintext that is fully or partially revealed */
 		bytes redactedPlaintext = 3;
 		/**
-		* start of this specific ChaCha block
+		* start of this specific block
 		* in the redactedPlaintext
 		*/
 		uint32 startIdx = 4;

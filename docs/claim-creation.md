@@ -272,6 +272,14 @@ Let's look at how this method works:
 	- The client & server now use `K2` to encrypt/decrypt messages.
 5. Note: one can publish `K1` to the witness, and so it can decrypt the messages using `K1`. However, the witness cannot decrypt messages encrypted with `K2` as it does not have access to `M'`.
 
+### Why we need separate keys for each chunk
+
+Post the TLS handshake, we have a set of symmetric keys that are used to encrypt/decrypt messages. These keys do not change during the connection (unless via a `KeyUpdate` message).
+
+This means that if we send the key for one chunk of data to the witness, it can decrypt all the data sent before & after that chunk.
+
+Moreover, the IV/nonce used to encrypt the messages does change but since the nonce is fairly straightforward to predict. This means that if the witness has access to the key for one chunk, it can predict the nonce for the next chunk & decrypt it.
+
 ### Transcript Matching
 
 The witness must match the transcript the user is claiming to have sent & received over the tunnel with the actual transcript it has stored.
