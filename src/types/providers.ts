@@ -53,7 +53,7 @@ export interface Provider<
   geoLocation?: ProviderField<Params, string | undefined>
 
   /** extra options to pass to the client like root CA certificates */
-  additionalClientOptions?: TLSConnectionOptions
+  additionalClientOptions?: ProviderField<Params, TLSConnectionOptions | undefined>
   /**
    * default redaction mode to use. If not specified,
    * the default is 'key-update'.

@@ -1,4 +1,4 @@
-import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
+import { concatenateUint8Arrays, strToUint8Array, TLSConnectionOptions } from '@reclaimprotocol/tls'
 import Ajv from 'ajv'
 import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { ArraySlice, Provider } from '../../types'
@@ -28,9 +28,6 @@ const ajv = new Ajv({ allErrors: true, strict: true, strictRequired: false })
 const validateParams = ajv.compile(paramsV2Schema)
 
 const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
-	additionalClientOptions: {
-		applicationLayerProtocols: ['http/1.1'],
-	},
 	hostPort: getHostPort,
 	writeRedactionMode(params) {
 		return ('writeRedactionMode' in params)
@@ -42,6 +39,22 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			? getGeoLocation(params)
 			: undefined
 	},
+
+	additionalClientOptions(params: HTTPProviderParams): TLSConnectionOptions {
+
+		let defaultOptions: TLSConnectionOptions = {
+			applicationLayerProtocols : ['http/1.1']
+		}
+		if('additionalClientOptions' in params) {
+			defaultOptions = {
+				...defaultOptions,
+				...params.additionalClientOptions
+			}
+		}
+
+		return defaultOptions
+	},
+
 	areValidParams(params): params is HTTPProviderParams {
 		const valid = validateParams(params)
 		if(!valid) {
