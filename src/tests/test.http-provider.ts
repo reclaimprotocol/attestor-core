@@ -1,10 +1,15 @@
 import { createClaimOnWitness } from '../create-claim'
 import { HTTPProviderParamsV2 } from '../providers/http-provider'
 import { describeWithServer } from './describe-with-server'
+import { verifyNoDirectRevealLeaks } from './utils'
 
 jest.setTimeout(60_000)
 
 describeWithServer('HTTP Provider', opts => {
+
+	afterEach(async() => {
+		await verifyNoDirectRevealLeaks()
+	})
 
 	it('should create claim with template params', async() => {
 		const resp = await createClaimOnWitness({

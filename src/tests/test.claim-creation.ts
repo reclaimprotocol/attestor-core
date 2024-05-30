@@ -6,6 +6,8 @@ import { providers } from '../providers'
 import { decryptTranscript } from '../server'
 import { assertValidClaimSignatures, extractApplicationDataFromTranscript, logger } from '../utils'
 import { describeWithServer } from './describe-with-server'
+import { SPY_PREPARER } from './mocks'
+import { verifyNoDirectRevealLeaks } from './utils'
 
 const TLS_VERSIONS: TLSProtocolVersion[] = [
 	'TLS1_3',
@@ -61,11 +63,11 @@ describeWithServer('Claim Creation', opts => {
 		expect(result.error).toBeUndefined()
 		expect(result.request?.transcript).toBeTruthy()
 
+		// decrypt the transcript and check we didn't accidentally
+		// leak our secrets in the application data
+		const transcript = result.request!.transcript
 		const applMsgs = extractApplicationDataFromTranscript(
-			await decryptTranscript(
-				result.request!.transcript,
-				logger
-			)
+			await decryptTranscript(transcript, logger)
 		)
 
 		const requestData = applMsgs
@@ -78,6 +80,13 @@ describeWithServer('Claim Creation', opts => {
 		await expect(
 			assertValidClaimSignatures(result, client.metadata)
 		).resolves.toBeUndefined()
+
+		// check all direct message reveals and
+		// ensure we've not accidentally re-used a key
+		// for multiple application data messages that
+		// were not meant to be revealed.
+		expect(SPY_PREPARER).toHaveBeenCalledTimes(1)
+		await verifyNoDirectRevealLeaks()
 	})
 
 	it('should not create a claim with invalid response', async() => {

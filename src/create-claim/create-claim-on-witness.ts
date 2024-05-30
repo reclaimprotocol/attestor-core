@@ -39,6 +39,7 @@ export async function createClaimOnWitness<N extends ProviderName>(
 	const [host, port] = hostPort.split(':')
 	const resParser = makeHttpResponseParser()
 	let client: IWitnessClient
+	let lastMsgRevealed = false
 
 	const revealMap = new Map<TLSPacketContext, MessageRevealInfo>()
 
@@ -227,8 +228,15 @@ export async function createClaimOnWitness<N extends ProviderName>(
 		)
 	}
 
+	/**
+	 * Write data to the tunnel, with the option to mark the packet
+	 * as revealable to the witness or not
+	 */
 	async function writeWithReveal(data: Uint8Array, reveal: boolean) {
-		if(!reveal) {
+		// if the reveal state has changed, update the traffic keys
+		// to not accidentally reveal a packet not meant to be revealed
+		// and vice versa
+		if(reveal !== lastMsgRevealed) {
 			await tunnel.tls.updateTrafficKeys()
 		}
 
@@ -236,10 +244,7 @@ export async function createClaimOnWitness<N extends ProviderName>(
 		// find the last packet sent by the client
 		// and mark it for reveal
 		setRevealOfLastSentBlock(reveal ? { type: 'complete' } : undefined)
-
-		if(!reveal) {
-			await tunnel.tls.updateTrafficKeys()
-		}
+		lastMsgRevealed = reveal
 	}
 
 	function setRevealOfLastSentBlock(

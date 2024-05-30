@@ -5,6 +5,7 @@ import { createServer } from '../server'
 import { IWitnessServerSocket } from '../types'
 import { logger } from '../utils'
 import { createMockServer } from './mock-provider-server'
+import { SPY_PREPARER } from './mocks'
 import { getRandomPort, randomPrivateKey } from './utils'
 
 type ServerOpts = {
@@ -49,6 +50,8 @@ export const describeWithServer = (
 	})
 
 	beforeEach(async() => {
+		SPY_PREPARER.mockClear()
+
 		privateKeyHex = randomPrivateKey()
 		client = new WitnessClient({
 			logger: logger.child({ client: 1 }),

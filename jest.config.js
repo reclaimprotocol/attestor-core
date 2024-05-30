@@ -15,5 +15,8 @@ module.exports = {
 	},
 	transformIgnorePatterns: [
 		'"node_modules/(?!p-queue/.*)"'
-	]
+	],
+	setupFiles: [
+		'./src/tests/mocks.ts',
+	],
 }
