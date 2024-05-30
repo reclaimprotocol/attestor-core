@@ -35,6 +35,10 @@ export async function createClaimOnWitness<N extends ProviderName>(
 
 	const hostPort = getProviderValue(params, provider.hostPort)
 	const geoLocation = getProviderValue(params, provider.geoLocation)
+	const providerTlsOpts = getProviderValue(
+		params,
+		provider.additionalClientOptions
+	)
 	let redactionMode = getProviderValue(params, provider.writeRedactionMode)
 	const [host, port] = hostPort.split(':')
 	const resParser = makeHttpResponseParser()
@@ -42,17 +46,6 @@ export async function createClaimOnWitness<N extends ProviderName>(
 	let lastMsgRevealed = false
 
 	const revealMap = new Map<TLSPacketContext, MessageRevealInfo>()
-
-	const additionalClientOptions = {
-		...provider.additionalClientOptions || {}
-	}
-
-	if(provider.additionalClientOptions?.rootCAs) {
-		additionalClientOptions.rootCAs = [
-			...(additionalClientOptions.rootCAs || [ ]),
-			...provider.additionalClientOptions.rootCAs,
-		]
-	}
 
 	onStep?.({ name: 'connecting' })
 
@@ -65,7 +58,7 @@ export async function createClaimOnWitness<N extends ProviderName>(
 	}
 
 	const tunnel = await makeRpcTlsTunnel({
-		tlsOpts: provider.additionalClientOptions || {},
+		tlsOpts: providerTlsOpts,
 		connect: (initMessages) => {
 			if('metadata' in clientInit) {
 				client = clientInit
