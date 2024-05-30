@@ -2,9 +2,7 @@
 
 This document describes the complete flow for creating a claim on a single witness.
 
-## Intro
-
-First a recap: Reclaim works by having a witness sit between the user & the internet. The user sends data to the internet via the witness. The witness signs this data & sends it back to the user. The user can then use this signed data to prove the claim to anyone. The protocol facilitates the redaction of sensitive information from the data sent to the witness as well using some TLS magic & zero-knowledge proofs. We'll go into the details of this later in the document.
+First, a recap: Reclaim works by having a witness sit between the user & the internet. The user sends data to the internet via the witness. The witness signs this data & sends it back to the user. The user can then use this signed data to prove the claim to anyone. The protocol facilitates the redaction of sensitive information from the data sent to the witness as well using some TLS magic & zero-knowledge proofs. We'll go into the details of this later in the document.
 
 Now, all the communication between the user & the witness is done via protobuf messages over a WebSocket connection. The full details of the protocol can be found in the [RPC protocol docs](/docs/rpc.md).
 
@@ -90,11 +88,11 @@ This entire process is facilitated by the [createClaimOnWitness](/src/create-cla
 	- The RpcTlsTunnel also stores all the messages sent & received over the tunnel including the symmetric keys used to encrypt/decrypt the messages. 
 		- These will be used later to prove to the witness that the data received from the end server is the same as the data sent to it
 	- Note: TLS is secure even when when passing data through the witness & another proxy. The user can send sensitive data to the end server without worrying about the witness snooping on it.
-5. Once the TLS handshake is complete, the user can start sending data to the end server. We call upon the provider's `createRequest` fn for this -- that returns the data to be sent as well as the redactions to make.
-6. Now, to be able to redact sensitive information from the data sent to the witness, the user must send the data in a specific way. We have two methods to handle this:
-	- Using the TLS Key Update method: This is the most efficient method & is the default method. More details on its security [here](#tls-key-update-method). However, it has a few pitfalls:
+5. Once the TLS handshake is complete, the user can start sending data to the end server. We call upon the provider's `createRequest` fn for this -- that returns the data to be sent & the redactions to make.
+6. Now, to actually redact sensitive information from the data sent to the witness, the user must send the data in a specific way. We have two methods to handle this:
+	- Using the TLS Key Update method: This is the most efficient method & is the default. More details on what it is [here](#tls-key-update-method). However, it has a few pitfalls:
 		- It only works with TLS 1.3
-		- Some poor implementations of TLS 1.3 might not support this feature
+		- Some poor implementations of TLS 1.3 might not support this feature -- causing the request to fail
 		- It only works to redact data sent from the user to the end server. It does not work for data sent from the end server to the user. (More on this later)
 
 		Let's look at how this method works. We'll use the example of accessing the Google People API as mentioned in the [problem statement](/docs/problem-statement.md).
@@ -145,11 +143,12 @@ This entire process is facilitated by the [createClaimOnWitness](/src/create-cla
 			lastMsgRevealed = reveal
 		}
 		```
-	- Using the ZKP method: This is the most powerful method, works with all versions of TLS, and also works on both the request and response side of things. However, it is orders of magnitude slower than the TLS Key Update method. Our ZK circuits can be found [here](https://gitlab.reclaimprotocol.org/reclaim/zk-symmetric-crypto).
+	- Using the ZKP method: This is the most powerful method, works with all versions of TLS, and also works on both the request and response side of things. However, it is orders of magnitude slower than the TLS Key Update method. Details on how this works can be found [here](/docs/zkp.md).
 7. Once the user has sent all the data they want to the end server, they shall wait for the response to complete. Once the response is complete, the user can close the tunnel & proceed to claim the tunnel. We utilise our own [HTTP response parser](src/utils/http-parser.ts) to parse the response & find the end of the response.
 8. Now that we have all the data sent & received over the tunnel, we can proceed to claim the tunnel. Before we do this, we must prepare the transcript of the data sent & received over the tunnel. This is done using the `generateTranscript` function.
 	- The first step is to find out which portions of the data received from the end server are to be revealed to the witness. This is done by the provider's `getResponseRedactions` function, which returns the indices of the data to be redacted.
-		- In the absence of this function, the entire response is revealed to the witness via a direct reveal.
+		- In the absence of this function, the entire response is revealed to the witness via a "direct reveal".
+	- We also reveal all handshake messages to the witness. This is done to ensure that the witness can verify the handshake was done correctly & no application data was sent before the handshake was complete.
 	- The transcript is a list of each message sent & received over the tunnel, with optionally data for the witness to see the plaintext of the message.
 	``` protobuf
 	message TranscriptMessage {
@@ -172,7 +171,29 @@ This entire process is facilitated by the [createClaimOnWitness](/src/create-cla
 		}
 	}
 	```
+9. Once the transcript is prepared, the user can proceed to claim the tunnel. This is done by sending a `claimTunnelRequest` message to the witness.
+	- This message contains the tunnel create request, the transcript of the tunnel with the reveals, and information about the claim to be made.
+	- This "claim information" is the same structure as the `ProviderClaimData` message mentioned earlier.
+	- Finally, the user will sign this claim using their private key & send it to the witness.
+	- It's all up to the witness now to verify the claim & sign it.
+10. Upon receiving `claimTunnelRequest`, the witness will:
+	- verify the tunnel indeed existed, and the host, port & geo-location match the original `createTunnelRequest` message.
+	- It'll then match the transcript the user is claiming to have sent & received over the tunnel with the actual transcript it has stored.
+	- So far, if there's an error in the claim -- the RPC will throw an error. However, if the claim validation fails in the later steps, the witness will send a signed `claimTunnelResponse` message with the error. This is because the claim validation failure is deterministic & any other third party can verify the same using the data sent by the user.
+11. Now, the witness verifies the claim using the [assertValidClaimRequest](/src/server/utils/assert-valid-claim-request.ts?ref_type=head#L22) function. This involves a few steps:
+	- Ensure the request was signed by the user
+	- Decrypt the transcript using the reveals provided by the user
+		- We'll also parse the client hello to verify the hostname matches the one in the `createTunnelRequest` message
+		- The server hello will be parsed as well, to find the TLS version & cipher suite used. This is important to determine what algorithm to use to decrypt the messages.
+	- Now, we'll extract all application data sent & received over the tunnel.
+	- We'll give this extracted data to the provider's `assertValidProviderReceipt` function.
+		- The success of this function means the claim is valid.
+		- The function can also return some parameters to be stored in the claim's context. These go into `context.extractedParameters` field
+12. Lastly, the witness signs the result of the `claimTunnelRequest` (success or failure) & sends it back to the user. This includes:
+	- the request sent by the user, the claim or error message, and the witness's own address/public key.
+	- If the claim was successful -- the witness will additionally sign just the claim data & send it back to the user. This is the proof the user can show to anyone to prove the claim. See the [appendix](#signing-and-verifying-a-claim) for more details.
 
+There you have it! The complete flow for creating a claim on a witness.
 
 ## Appendix
 
@@ -207,6 +228,8 @@ We chose those simple stringified format for the claim to be signed to make it e
 In the SDK, you can verify the claim using the `assertValidClaimSignatures` function. This function will verify the claim, the signature of the claim, the signature of the witness & the transcript of the claim.
 
 The above two functions are implemented [here](/src/utils/claims.ts).
+
+Note: the "signatures" can be done in any algorithm really. However, we use ETH signatures as the default in the SDK.
 
 ### Geo Location
 
@@ -248,3 +271,22 @@ Let's look at how this method works:
 	- Derive a new set of symmetric keys `K2 = H(M')` from `M'`.
 	- The client & server now use `K2` to encrypt/decrypt messages.
 5. Note: one can publish `K1` to the witness, and so it can decrypt the messages using `K1`. However, the witness cannot decrypt messages encrypted with `K2` as it does not have access to `M'`.
+
+### Transcript Matching
+
+The witness must match the transcript the user is claiming to have sent & received over the tunnel with the actual transcript it has stored.
+
+Now, there can be race conditions between the user & witness. The user may have sent a particular message before the witness had the chance to send back a message it received earlier.
+
+To handle such cases, we concatenate all the messages the client claims to have sent, and all the messages the witness saw the client send. We then compare these two strings. We also do the same for the messages received.
+
+This is done in the [assertTranscriptsMatch](/src/server/utils/assert-valid-claim-request.ts?ref_type=head#L124)
+
+### Application Data Extraction
+
+Extracting application data from the transcript can get a bit tricky, since some messages are encrypted, some are partially visible & others are fully visible. We use a simple algorithm to handle this:
+- All redacted messages are assumed to be application data, as it's not possible to verify the contents of the message. So we assume the worst.
+- The last byte of TLS 1.3 messages tells us the content type of the message. If it's `0x17`, it's application data.
+- The record header of all TLS1.2 application data messages is `0x17`, thus making it easy to identify application data.
+
+The implementation can be found [here](/src/utils/generics.ts?ref_type=head#L248).

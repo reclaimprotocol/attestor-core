@@ -123,11 +123,11 @@ However, if you'd like to test your provider with a remote witness, you can do s
    - Note any parameters specified by `{{*}}` will be replaced by the value of the environment variable with the same name. By default, the script will look for a `.env` file
 2. Run the receipt generation script with the JSON as input.
    ```sh
-	npm run generate:receipt -- --json google-login-params.json
+	npm run create:claim -- --json google-login-params.json
    ```
    This will use the default witness server to generate a receipt for the given provider. To use a custom witness server, use the `--witness` flag
    ```sh
-   	npm run generate:receipt -- --json google-login-params.json --witness ws://localhost:8080/ws
+   	npm run create:claim -- --json google-login-params.json --witness ws://localhost:8080/ws
    ```
 3. The script will output the receipt alongside whether the receipt contained a valid claim from the provider
 
@@ -233,7 +233,7 @@ The parameters of the request would be:
 
 Now, you may be wondering we've not actually specified the date of birth in the parameters. It's simply a regex that matches any date. So, how does the witness know what date to prove?
 
-This is where "extractedParams" come in. When the witness processes the transcript, it'll use the regex specified in the `responseMatches` to extract the date of birth from the response.
+This is where "extractedParameters" come in. When the witness processes the transcript, it'll use the regex specified in the `responseMatches` to extract the date of birth from the response.
 
 This date of birth will then be included in the `context` property of the claim. It'll be specified by the name of the regex group. In our case that was `dob`. In the absence of a named group -- the parameter will not be extracted. Read more on named regex groups [here](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions/Named_capturing_group)
 
@@ -243,7 +243,7 @@ Therefore, upon a successful claim -- the claim object will look like:
 	"provider": "http",
 	"parameters: "{\"url\":\"https://...",
 	"context": {
-		"extractedParams": {
+		"extractedParameters": {
 			"dob": "1999-01-01"
 		}
 	},
