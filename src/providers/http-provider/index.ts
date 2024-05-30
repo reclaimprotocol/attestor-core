@@ -362,7 +362,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		}
 
-		return { extractedParams: extractedParams }
+		return { extractedParameters: extractedParams }
 
 		function logTranscript() {
 			const clientMsgs = receipt.filter(s => s.sender === 'client').map(m => m.message)

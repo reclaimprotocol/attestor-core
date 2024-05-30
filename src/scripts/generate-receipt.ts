@@ -59,13 +59,6 @@ export async function main<T extends ProviderName>(
 		logger,
 	})
 
-	const decTranscript = await decryptTranscript(
-		receipt.request?.transcript!,
-		logger
-	)
-	const transcriptStr = getTranscriptString(decTranscript)
-	console.log('receipt:\n', transcriptStr)
-
 	if(receipt.error) {
 		console.error('claim creation failed:', receipt.error)
 	} else {
@@ -73,10 +66,17 @@ export async function main<T extends ProviderName>(
 			? JSON.parse(receipt.claim.context)
 			: {}
 		console.log(`receipt is valid for ${paramsJson.name} provider`)
-		if(ctx.extractedParams) {
-			console.log('extracted params:', ctx.extractedParams)
+		if(ctx.extractedParameters) {
+			console.log('extracted params:', ctx.extractedParameters)
 		}
 	}
+
+	const decTranscript = await decryptTranscript(
+		receipt.request?.transcript!,
+		logger
+	)
+	const transcriptStr = getTranscriptString(decTranscript)
+	console.log('receipt:\n', transcriptStr)
 
 	const client = getWitnessClientFromPool(witnessHostPort)
 	await client.terminateConnection()

@@ -21,8 +21,8 @@ export type IWitnessClientCreateOpts = {
 }
 
 /**
- * Wrapper around a websocket, that provides methods
- * to help with RPC communication.
+ * Base layer for the WebSocket connection on
+ * the client and server.
  */
 export declare class IWitnessSocket {
 	metadata: InitRequest

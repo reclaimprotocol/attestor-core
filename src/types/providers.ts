@@ -101,7 +101,7 @@ export interface Provider<
   assertValidProviderReceipt(
     receipt: Transcript<Uint8Array>,
     params: Params
-  ): void | Promise<void> | { extractedParams: { [key: string]: string } }
+  ): void | Promise<void> | { extractedParameters: { [key: string]: string } }
 }
 
 export type ProofGenerationStep =

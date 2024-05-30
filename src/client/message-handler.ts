@@ -18,7 +18,11 @@ export function handleMessage(this: IWitnessSocket, msg: RPCMessage) {
 			msg.connectionTerminationAlert
 		)
 		this.logger?.warn(
-			{ err },
+			{
+				err: err.code !== 'WITNESS_ERROR_NO_ERROR'
+					? err
+					: undefined
+			},
 			'received connection termination alert'
 		)
 		this.dispatchRPCEvent('connection-terminated', err)
