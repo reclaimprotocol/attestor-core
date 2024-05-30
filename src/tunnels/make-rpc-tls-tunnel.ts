@@ -9,7 +9,11 @@ type ExtraTLSOptions = {
 	request: Partial<CreateTunnelRequest>
 	logger: Logger
 	/**
-	 * Make a connection to the server with the given initial messages.
+	 * Either create a client with the given initMessages,
+	 * or simply send the messages to the server via an existing
+	 * client
+	 *
+	 * @returns the client that was used to send the messages
 	 */
 	connect(initMessages: Partial<RPCMessage>[]): IWitnessClient
 	tlsOpts?: TLSConnectionOptions

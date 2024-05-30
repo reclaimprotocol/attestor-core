@@ -241,8 +241,7 @@ export async function createClaimOnWitness<N extends ProviderName>(
 		}
 
 		await tunnel.write(data)
-		// find the last packet sent by the client
-		// and mark it for reveal
+		// now we mark the packet to be revealed to the witness
 		setRevealOfLastSentBlock(reveal ? { type: 'complete' } : undefined)
 		lastMsgRevealed = reveal
 	}

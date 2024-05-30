@@ -1,6 +1,8 @@
 # Reclaim RPC Protocol
 
-We utilise a custom RPC protocol written on top of protobuf & execute this protocol over a WebSocket.
+We utilise a custom RPC protocol for Reclaim written on top of protobuf. We execute this protocol over a WebSocket.
+
+You can find the protobuf definition [here](/proto/api.proto).
 
 ## Why protobuf?
 
@@ -46,6 +48,12 @@ message RPCMessage {
 		 * immediately after sending this message.
 		 */
 		WitnessErrorData connectionTerminationAlert = 3;
+		/**
+		 * Data representing an error in the witness's
+		 * request to the server. This should be sent in case
+		 * there was an error in processing the request.
+		 */
+		WitnessErrorData requestError = 5;
 		/**
 		 * Using the transcript of a tunnel, make a claim.
 		 * The tunnel must be disconnected before making a claim.
@@ -94,6 +102,31 @@ await client.rpc('createTunnel', {
 	host: 'example.com',
 	port: 443,
 })
+```
+
+1. At any point, the client or server can terminate the connection. This is done by sending an RPC message with the `connectionTerminationAlert` field set. 
+	- In such an event, all pending RPC calls will be rejected with the error message provided in the `connectionTerminationAlert` message
+2. Any error in executing an RPC call will be sent back to the client with the `requestError` field set. The ID of this message will be the same as the request message.
+
+### Available events
+
+Of course, the client emits events that you can listen to. These are laid out [here](src/types/rpc.ts?ref_type=heads#L33) & are fully typed up.
+
+``` ts
+// connection terminated event
+client.addEventListener('connection-terminated', (err) => {
+	console.error('error', err)
+})
+// you can also terminate the connection yourself
+// and optionally provide a reason
+client.terminateConnection(new Error('some reason'))
+
+// listen to messages on the tunnel
+client.addEventListener('tunnel-message', ({ data }) => {
+	console.log('recv msg on tunnel: ', data.tunnelId, data.data)
+})
+
+// ...
 ```
 
 ### Adding a new RPC Method

@@ -18,6 +18,8 @@ export function createSignDataForClaim(data: CompleteClaimData) {
 		: getIdentifierFromClaimInfo(data)
 	const lines = [
 		identifier,
+		// we lowercase the owner to ensure that the
+		// ETH addresses always serialize the same way
 		data.owner.toLowerCase(),
 		data.timestampS.toString(),
 		data.epoch.toString(),

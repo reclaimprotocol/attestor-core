@@ -255,3 +255,12 @@ Therefore, upon a successful claim -- the claim object will look like:
 And there you have it! You can now use this claim to prove the age of a person without revealing any other information.
 
 You can read the full types of the HTTP provider [here](/src/providers/http-provider/types.ts?ref_type=heads#L55)
+
+### Notable Considerations
+
+The HTTP provider handles other considerations when creating the request & parsing the response to prevent abuse, and false generation of claims. This list is not exhaustive, but some notable considerations include:
+
+1. `Connection: close` header is added to the request to prevent the server from keeping the connection open. This is done to prevent the user from sending multiple requests to the server & getting different responses, and perhaps using one of those responses to falsely generate a claim.
+	- The witness of course verifies the presence of this header in the transcript
+2. `Accept-Encoding: identity` header is added to the request to prevent the server from compressing the response. This is done because we can't correctly validate the response if it's compressed & redacted.
+3. Validation of the `Host` header in the request is done to ensure the request is being sent to the correct server.

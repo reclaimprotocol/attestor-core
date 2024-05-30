@@ -41,26 +41,41 @@ enum WitnessErrorCode {
 }
 
 message ProviderClaimData {
+	/**
+	 * Name of the provider to generate the
+	 * claim using.
+	 * @example "http"
+	 */
 	string provider = 1;
+	/**
+	 * Canonically JSON stringified parameters
+	 * of the claim, as specified by the provider.
+	 * @example '{"url":"https://example.com","method":"GET"}'
+	 */
 	string parameters = 2;
 	/**
 	 * Owner of the claim. Must be the public key/address
-	 * of the signatures
+	 * @example "0x1234..."
 	 */
 	string owner = 3;
 	/**
-	 * Timestamp of the claim being made.
+	 * Unix timestamp in seconds of the claim being made.
+	 * Cannot be more than 10 minutes in the past or future
 	 */
 	uint32 timestampS = 4;
+	/**
+	 * Any additional data you want to store with the claim.
+	 * Also expected to be a canonical JSON string.
+	 */
 	string context = 6;
 	/**
 	 * identifier of the claim;
 	 * Hash of (provider, parameters, context)
-	 *
-	 * This is different from the claimId returned
-	 * from the smart contract
 	 */
 	string identifier = 8;
+	/**
+	 * Legacy V1 Beacon epoch number
+	 */
 	uint32 epoch = 9;
 }
 
@@ -219,7 +234,9 @@ message ClaimTunnelRequest {
 	}
 
 	message TranscriptMessage {
+		/** client or server */
 		TranscriptMessageSenderType sender = 1;
+		/** packet data */
 		bytes message = 2;
 		MessageReveal reveal = 3;
 	}
