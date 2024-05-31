@@ -113,7 +113,14 @@ Alternatively, you can use the CLI to create a claim:
 npm run create:claim --json some-claim-params.json
 ```
 
-Where the JSON is a file containing the claim parameters. The JSON should look like this:
+Ensure you have an `.env.development` file with at least the `PRIVATE_KEY` set. See the [.env.sample](.env.sample) file to see all available options.
+
+To use a different environment file, you can specify it using:
+```sh
+NODE_ENV=production npm run create:claim ...
+```
+
+The JSON is a file containing the claim parameters. The JSON should look like this:
 
 ```json
 {
@@ -135,7 +142,7 @@ Where the JSON is a file containing the claim parameters. The JSON should look l
 }
 ```
 
-Examples can be found in the [examples](examples) directory.
+Examples can be found in the [examples](/example) directory.
 
 To connect to another witness, you can specify the `--witness` CLI flag:
 
