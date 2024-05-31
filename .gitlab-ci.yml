@@ -41,7 +41,7 @@ deploy:
     - sed -i 's/${GL_TOKEN}/'$GL_TOKEN'/g' docker-compose.yaml
     - export FILE=pkg-$(date +%s%N).zip
     - echo $FILE
-    - zip -r $FILE * -x '*.git*'
+    - zip -r $FILE * .* -x '*.git*'
     # authenticate w AWS
     - mkdir ~/.aws/
     - touch ~/.aws/credentials
