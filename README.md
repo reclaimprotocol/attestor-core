@@ -16,6 +16,8 @@ This repository contains **Typescript** implementation of the witness server & t
 
 **Note:** this approach is only advised for NodeJS projects or projects meant to run directly in a modern browser. For React Native or any solution running in a mobile app, refer to our doc [here](docs/browser-rpc.md).
 
+**For NodeJS:** We rely on the `WebSocket` implementation added in NodeJS v22.0.0 for the client side of things. So, in order to connect to a witness server from NodeJS, you'd need to install at least NodeJS v22.0.0.
+
 ## Running your own witness
 
 1. Of course, clone this repository.
