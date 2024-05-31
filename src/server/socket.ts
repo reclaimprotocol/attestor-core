@@ -113,13 +113,7 @@ async function handleRpcRequest(
 		logger.debug({ data }, 'handling RPC request')
 
 		const handler = HANDLERS[type] as RPCHandler<typeof type>
-		const res = await handler(
-			data,
-			{
-				client: this,
-				logger,
-			}
-		)
+		const res = await handler(data, { client: this, logger })
 		await respond(res)
 
 		logger.debug({ res }, 'handled RPC request')
