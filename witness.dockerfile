@@ -1,5 +1,6 @@
 FROM node:lts-alpine3.16
 
+# install git
 RUN apk update && apk upgrade && apk add git
 
 ARG GL_TOKEN

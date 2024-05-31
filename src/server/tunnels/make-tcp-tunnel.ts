@@ -1,4 +1,4 @@
-import { getServers, resolve, setServers } from 'dns'
+import { resolve, setServers } from 'dns'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import type { ConnectResponse } from 'https-proxy-agent/dist/parse-proxy-response'
 import { Socket } from 'net'
@@ -228,8 +228,5 @@ async function resolveHostnames(hostname: string) {
 }
 
 function setDnsServers() {
-	setServers([
-		...DNS_SERVERS,
-		...getServers(),
-	])
+	setServers(DNS_SERVERS)
 }

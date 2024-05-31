@@ -25,9 +25,8 @@ export const API_SERVER_PORT = 8001
 export const CONNECTION_TIMEOUT_MS = 10_000
 
 export const DNS_SERVERS = [
-	'2401:4900:50:9::290',
-	'2401:4900:50:9::280',
-	'fe80::1'
+	'8.8.8.8',
+	'8.8.4.4'
 ]
 
 // 10m
