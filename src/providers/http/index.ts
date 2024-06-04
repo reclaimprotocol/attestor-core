@@ -15,7 +15,6 @@ import {
 	extractJSONValueIndex,
 	makeRegex,
 	matchRedactedStrings,
-	normaliseParamsToV2,
 	parseHttpResponse,
 } from './utils'
 
@@ -76,7 +75,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			pubHeaders['User-Agent'] = RECLAIM_USER_AGENT
 		}
 
-		const newParams = substituteParamValues(normaliseParamsToV2(params), secretParams)
+		const newParams = substituteParamValues(params, secretParams)
 		params = newParams.newParams
 
 		const url = new URL(params.url)
@@ -135,9 +134,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			redactions: redactions,
 		}
 	},
-	getResponseRedactions(response, paramsAny) {
+	getResponseRedactions(response, rawParams) {
 		const res = parseHttpResponse(response)
-		const rawParams = normaliseParamsToV2(paramsAny)
 		if(!rawParams.responseRedactions?.length) {
 			return []
 		}
@@ -231,7 +229,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 	},
 	assertValidProviderReceipt(receipt, paramsAny) {
 		let extractedParams: { [_: string]: string } = {}
-		const newParams = substituteParamValues(normaliseParamsToV2(paramsAny), undefined, true)
+		const newParams = substituteParamValues(paramsAny, undefined, true)
 		const params = newParams.newParams
 		extractedParams = { ...extractedParams, ...newParams.extractedValues }
 

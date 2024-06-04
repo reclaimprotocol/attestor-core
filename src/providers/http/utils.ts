@@ -13,7 +13,6 @@ import * as jsdom from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
 import { ArraySlice, ProviderParams } from '../../types'
 import { makeHttpResponseParser, REDACTION_CHAR_CODE } from '../../utils'
-import { HTTPProviderParamsV1 } from './types'
 
 export type JSONIndex = {
     start: number
@@ -216,46 +215,6 @@ export function parseHttpResponse(buff: Uint8Array) {
 	parser.onChunk(buff)
 	parser.streamEnded()
 	return parser.res
-}
-
-export function normaliseParamsToV2(params: HTTPProviderParams | HTTPProviderParamsV1): HTTPProviderParams {
-	// is already v2
-	if('responseMatches' in params) {
-		return params
-	}
-
-	const matches: HTTPProviderParams['responseMatches'] = []
-	const redactions: HTTPProviderParams['responseRedactions'] = []
-	for(const rs of params.responseSelections) {
-		// if there is any response selection,
-		// map to a v2 response redaction
-
-		if(params.useZK) {
-			if((rs.xPath || rs.jsonPath)) {
-				redactions.push({
-					xPath: rs.xPath,
-					jsonPath: rs.jsonPath,
-				})
-			} else if(rs.responseMatch) {
-				// v1 only supported either a regex
-				// redaction or a json/xpath redaction
-				redactions.push({ regex: rs.responseMatch })
-			}
-		}
-
-		if(rs.responseMatch) {
-			matches.push({
-				type: 'regex',
-				value: rs.responseMatch
-			})
-		}
-	}
-
-	return {
-		...params,
-		responseMatches: matches,
-		responseRedactions: redactions
-	}
 }
 
 export function makeRegex(str: string) {
