@@ -67,6 +67,9 @@ export function setupWindowRpc() {
 			case 'createClaim':
 				const claimTunnelRes = await createClaimOnWitness({
 					...req.request,
+					context: req.request.context
+						? JSON.parse(req.request.context)
+						: undefined,
 					zkOperators: getZkOperators(
 						req.request.zkOperatorMode
 					),

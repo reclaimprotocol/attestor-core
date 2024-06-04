@@ -13,7 +13,7 @@ type IdentifiedMessage = {
 	id: string
 }
 
-export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<CreateClaimOnWitnessOpts<N>, 'zkOperators'> & {
+export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<CreateClaimOnWitnessOpts<N>, 'zkOperators' | 'context'> & {
 	/**
 	 * Specify the mode for the ZK operator,
 	 * 'default' -> will use the default ZK operator included in the SDK
@@ -22,6 +22,7 @@ export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<CreateCla
 	 * For eg. on React Native
 	 */
 	zkOperatorMode?: 'default' | 'rpc'
+	context?: string
 }
 
 type ExtractHTMLElementOptions = {
