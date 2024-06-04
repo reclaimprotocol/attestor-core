@@ -6,6 +6,7 @@ import { SIGNATURES } from '../signatures'
 import { makeRpcTlsTunnel } from '../tunnels/make-rpc-tls-tunnel'
 import { CreateClaimOnWitnessOpts, IWitnessClient, MessageRevealInfo, ProviderName } from '../types'
 import { canonicalStringify, generateTunnelId, getBlocksToReveal, getProviderValue, isApplicationData, logger as LOGGER, makeHttpResponseParser, preparePacketsForReveal, redactSlices, unixTimestampSeconds } from '../utils'
+import { getDefaultTlsOptions } from '../utils/tls'
 import { getWitnessClientFromPool } from './witness-pool'
 
 type ServerAppDataPacket = {
@@ -39,9 +40,16 @@ export async function createClaimOnWitness<N extends ProviderName>(
 		params,
 		provider.additionalClientOptions
 	)
+	const tlsOpts = {
+		...getDefaultTlsOptions(),
+		...providerTlsOpts,
+	}
+
 	let redactionMode = getProviderValue(params, provider.writeRedactionMode)
+
 	const [host, port] = hostPort.split(':')
 	const resParser = makeHttpResponseParser()
+
 	let client: IWitnessClient
 	let lastMsgRevealed = false
 
@@ -58,7 +66,7 @@ export async function createClaimOnWitness<N extends ProviderName>(
 	}
 
 	const tunnel = await makeRpcTlsTunnel({
-		tlsOpts: providerTlsOpts,
+		tlsOpts,
 		connect: (initMessages) => {
 			if('metadata' in clientInit) {
 				client = clientInit
