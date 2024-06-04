@@ -1,10 +1,10 @@
 import { strToUint8Array, TLSPacketContext } from '@reclaimprotocol/tls'
 import { DEFAULT_HTTPS_PORT } from '../config'
 import { ClaimTunnelRequest } from '../proto/api'
-import { ProviderName, providers } from '../providers'
+import { providers } from '../providers'
 import { SIGNATURES } from '../signatures'
 import { makeRpcTlsTunnel } from '../tunnels/make-rpc-tls-tunnel'
-import { CreateClaimOnWitnessOpts, IWitnessClient, MessageRevealInfo } from '../types'
+import { CreateClaimOnWitnessOpts, IWitnessClient, MessageRevealInfo, ProviderName } from '../types'
 import { canonicalStringify, generateTunnelId, getBlocksToReveal, getProviderValue, isApplicationData, logger as LOGGER, makeHttpResponseParser, preparePacketsForReveal, redactSlices, unixTimestampSeconds } from '../utils'
 import { getWitnessClientFromPool } from './witness-pool'
 

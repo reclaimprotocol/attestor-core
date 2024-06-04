@@ -1,15 +1,15 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
 import { deserialize, serialize } from 'v8'
 import { providers } from '../providers'
-import httpProvider, { HTTPProviderParamsV2 } from '../providers/http-provider'
+import httpProvider from '../providers/http'
 import {
 	extractHTMLElement,
 	extractJSONValueIndex,
 	makeRegex,
 	matchRedactedStrings
-} from '../providers/http-provider/utils'
-import { Transcript } from '../types'
-import { getProviderValue, hashProviderParams, uint8ArrayToStr } from '../utils'
+} from '../providers/http/utils'
+import { ProviderParams, Transcript } from '../types'
+import { assertValidateProviderParams, getProviderValue, hashProviderParams, uint8ArrayToStr } from '../utils'
 
 jest.setTimeout(60_000)
 
@@ -20,7 +20,6 @@ describe('HTTP Provider Utils tests', () => {
 		geoLocation,
 		getResponseRedactions,
 		createRequest,
-		areValidParams,
 		assertValidProviderReceipt
 	} = providers['http']
 
@@ -58,22 +57,22 @@ describe('HTTP Provider Utils tests', () => {
 			const redactions = provider.getResponseRedactions(chunkedResp, {
 				method: 'GET',
 				url: 'https://bookface.ycombinator.com/home',
-				'responseSelections': [
+				'responseMatches': [
+
+				],
+				'responseRedactions': [
 					{
 						'xPath': "//script[@id='js-react-on-rails-context']",
 						'jsonPath': '$.currentUser',
-						'responseMatch': '\\{"id":182853,.*?waas_admin.*?:{.*?}.*?:\\{.*?}.*?(?:full_name|first_name).*?}'
 					},
 					{
 						'xPath': "//script[@data-component-name='BookfaceCsrApp']",
 						'jsonPath': '$.hasBookface',
-						'responseMatch': '"hasBookface":true'
 					},
 					{
-						'responseMatch': 'code_version:\\s"[0-9a-f]{40}\\sruby'
+						'regex': 'code_version:\\s"[0-9a-f]{40}\\sruby'
 					}
 				],
-				useZK: true
 			})
 			expect(redactions).toEqual([
 				{
@@ -97,7 +96,7 @@ describe('HTTP Provider Utils tests', () => {
 
 	})
 	it('should hash provider params consistently', () => {
-		const params: HTTPProviderParamsV2 = {
+		const params: ProviderParams<'http'> = {
 			url: 'https://xargs.org/',
 			responseMatches: [
 				{
@@ -113,7 +112,7 @@ describe('HTTP Provider Utils tests', () => {
 		expect(hash).toEqual('0x98fde00dc9f1d88c5166c3b7c911957d52e8f57ea1143ec92aebf529c1e3acd3')
 
 
-		const paramsEx: HTTPProviderParamsV2 = {
+		const paramsEx: ProviderParams<'http'> = {
 			'geoLocation': '',
 			'url': 'https://www.linkedin.com/dashboard/',
 			'method': 'GET',
@@ -221,8 +220,8 @@ describe('HTTP Provider Utils tests', () => {
 
 	it('should throw on invalid params', () => {
 		expect(() => {
-			areValidParams({ a: 'b' })
-		}).toThrow(/^params validation failed/)
+			assertValidateProviderParams('http', { a: 'b', body: 2 })
+		}).toThrow(/^Params validation failed/)
 	})
 
 	it('should throw on invalid secret params', () => {
@@ -496,7 +495,7 @@ Content-Type: text/html; charset=utf-8\r
 				paramValues: {
 					'geo': 'US'
 				}
-			} as unknown as HTTPProviderParamsV2,
+			} as unknown as ProviderParams<'http'>,
 			geoLocation
 		)
 		expect(geo).toEqual('US')
@@ -592,7 +591,7 @@ Content-Type: text/html; charset=utf-8\r
 	})
 
 	it('should replace params in body correctly', () => {
-		const params: HTTPProviderParamsV2 = {
+		const params: ProviderParams<'http'> = {
 			url: 'https://example.{{param1}}/',
 			method: 'GET',
 			body: 'hello {{h}} {{b}} {{h1h1h1h1h1h1h1}} {{h2}} {{a}} {{h1h1h1h1h1h1h1}} {{h}} {{a}} {{h2}} {{a}} {{b}} world',

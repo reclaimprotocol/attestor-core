@@ -1,7 +1,6 @@
 import type { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-symmetric-crypto'
-import type { ProviderName } from '../providers'
-import type { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
-import type { CompleteClaimData, CreateClaimOnWitnessOpts, LogLevel, ProofGenerationStep, WitnessData } from '../types'
+import type { extractHTMLElement, extractJSONValueIndex } from '../providers/http/utils'
+import type { CompleteClaimData, CreateClaimOnWitnessOpts, LogLevel, ProofGenerationStep, ProviderName, WitnessData } from '../types'
 
 type IdentifiedMessage = {
 	module: 'witness-sdk'

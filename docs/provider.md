@@ -54,12 +54,6 @@ The library makes it fairly simple to add new providers for particular use cases
 		* @default 'key-update'
 		*/
 		writeRedactionMode?: ProviderField<Params, RedactionMode | undefined>
-		/**
-		* check the parameters are valid
-		* Run client & witness side, to verify the parameters
-		* are valid
-		* */
-		areValidParams(params: { [_: string]: unknown }): params is Params
 		/** generate the raw request to be sent to through the TLS receipt */
 		createRequest(
 			secretParams: SecretParams,

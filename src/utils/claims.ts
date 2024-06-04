@@ -3,9 +3,8 @@ import canonicalize from 'canonicalize'
 import { utils } from 'ethers'
 import { DEFAULT_METADATA } from '../config'
 import { ClaimTunnelResponse } from '../proto/api'
-import { HTTPProviderParamsV2 } from '../providers/http-provider'
 import { SIGNATURES } from '../signatures'
-import { ClaimID, ClaimInfo, CompleteClaimData } from '../types'
+import { ClaimID, ClaimInfo, CompleteClaimData, ProviderParams } from '../types'
 
 /**
  * Creates the standard string to sign for a claim.
@@ -122,7 +121,7 @@ export function canonicalStringify(params: { [key: string]: any } | undefined) {
 	return canonicalize(params) || ''
 }
 
-export function hashProviderParams(params: HTTPProviderParamsV2): string {
+export function hashProviderParams(params: ProviderParams<'http'>): string {
 	const filteredParams = {
 		url:params.url,
 		method:params.method,

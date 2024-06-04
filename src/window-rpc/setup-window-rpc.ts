@@ -1,5 +1,5 @@
 import { createClaimOnWitness } from '../create-claim'
-import { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
+import { extractHTMLElement, extractJSONValueIndex } from '../providers/http/utils'
 import { ZKOperators } from '../types'
 import { makeLogger } from '../utils'
 import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from './types'

@@ -3,6 +3,7 @@ import { WebSocketServer } from 'ws'
 import '../server/utils/config-env'
 import { createServer, decryptTranscript } from '../server'
 import { getEnvVariable } from '../utils/env'
+import { assertValidateProviderParams } from '../utils/validation'
 import {
 	API_SERVER_PORT,
 	createClaimOnWitness,
@@ -35,11 +36,7 @@ export async function main<T extends ProviderName>(
 		throw new Error(`Unknown provider "${paramsJson.name}"`)
 	}
 
-	if(
-		!providers[paramsJson.name].areValidParams(paramsJson.params)
-	) {
-		throw new Error(`Invalid parameters for provider "${paramsJson.name}"`)
-	}
+	assertValidateProviderParams<'http'>(paramsJson.name, paramsJson.params)
 
 	let witnessHostPort = getCliArgument('witness')
         || DEFAULT_WITNESS_HOST_PORT

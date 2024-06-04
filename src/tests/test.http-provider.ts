@@ -1,5 +1,5 @@
 import { createClaimOnWitness } from '../create-claim'
-import { HTTPProviderParamsV2 } from '../providers/http-provider'
+import { ProviderParams } from '../types'
 import { describeWithServer } from './describe-with-server'
 import { verifyNoDirectRevealLeaks } from './utils'
 
@@ -42,7 +42,7 @@ describeWithServer('HTTP Provider', opts => {
 	})
 
 	it('should throw on zero body length', async() => {
-		const params: HTTPProviderParamsV2 = {
+		const params: ProviderParams<'http'> = {
 			url: 'https://example.{{param1}}/',
 			method: 'GET',
 			body: '{{h}}',

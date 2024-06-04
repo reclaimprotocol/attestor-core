@@ -11,9 +11,16 @@ import {
 } from 'esprima-next'
 import * as jsdom from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
-import { ArraySlice } from '../../types'
+import { ArraySlice, ProviderParams } from '../../types'
 import { makeHttpResponseParser, REDACTION_CHAR_CODE } from '../../utils'
-import { HeaderMap, HTTPProviderParams, HTTPProviderParamsV2 } from './types'
+import { HTTPProviderParamsV1 } from './types'
+
+export type JSONIndex = {
+    start: number
+    end: number
+}
+
+type HTTPProviderParams = ProviderParams<'http'>
 
 let RE2
 try {
@@ -24,11 +31,6 @@ try {
 	}
 } catch{
 	console.log('RE2 not found. Using standard regex')
-}
-
-export type JSONIndex = {
-    start: number
-    end: number
 }
 
 // utilise JSDom on NodeJS, otherwise
@@ -173,10 +175,10 @@ function traverse(
 	return null
 }
 
-export function buildHeaders(input: HeaderMap) {
+export function buildHeaders(input: HTTPProviderParams['headers']) {
 	const headers: string[] = []
 
-	for(const [key, value] of Object.entries(input)) {
+	for(const [key, value] of Object.entries(input || {})) {
 		headers.push(`${key}: ${value}`)
 	}
 
@@ -216,14 +218,14 @@ export function parseHttpResponse(buff: Uint8Array) {
 	return parser.res
 }
 
-export function normaliseParamsToV2(params: HTTPProviderParams): HTTPProviderParamsV2 {
+export function normaliseParamsToV2(params: HTTPProviderParams | HTTPProviderParamsV1): HTTPProviderParams {
 	// is already v2
 	if('responseMatches' in params) {
 		return params
 	}
 
-	const matches: HTTPProviderParamsV2['responseMatches'] = []
-	const redactions: HTTPProviderParamsV2['responseRedactions'] = []
+	const matches: HTTPProviderParams['responseMatches'] = []
+	const redactions: HTTPProviderParams['responseRedactions'] = []
 	for(const rs of params.responseSelections) {
 		// if there is any response selection,
 		// map to a v2 response redaction

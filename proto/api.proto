@@ -40,6 +40,19 @@ enum WitnessErrorCode {
 	WITNESS_ERROR_INVALID_CLAIM = 5;
 }
 
+message ClaimContext {
+	/**
+	 * Extracted parameters from the TLS transcript
+	 * by the provider. Any parameters provided by the
+	 * user will be overwritten
+	 */
+	map<string, string> extractedParameters = 1;
+	/**
+	 * Provider hash. TODO: docs
+	 */
+	string providerHash = 2;
+}
+
 message ProviderClaimData {
 	/**
 	 * Name of the provider to generate the

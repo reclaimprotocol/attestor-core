@@ -2,8 +2,8 @@ import { areUint8ArraysEqual, concatenateUint8Arrays, crypto, decryptWrappedReco
 import { ClaimTunnelRequest, InitRequest, ProviderClaimInfo, TranscriptMessageSenderType } from '../../proto/api'
 import { providers } from '../../providers'
 import { SIGNATURES } from '../../signatures'
-import { IDecryptedTranscript, IDecryptedTranscriptMessage, Logger, TCPSocketProperties, Transcript } from '../../types'
-import { canonicalStringify, extractApplicationDataFromTranscript, getPureCiphertext, hashProviderParams, verifyZkPacket, WitnessError } from '../../utils'
+import { IDecryptedTranscript, IDecryptedTranscriptMessage, Logger, ProviderName, TCPSocketProperties, Transcript } from '../../types'
+import { assertValidateProviderParams, canonicalStringify, extractApplicationDataFromTranscript, getPureCiphertext, hashProviderParams, verifyZkPacket, WitnessError } from '../../utils'
 import { niceParseJsonObject } from './generics'
 
 /**
@@ -88,16 +88,20 @@ export async function assertValidProviderTranscript<T extends ProviderClaimInfo>
 	applData: Transcript<Uint8Array>,
 	info: T,
 ) {
-	const provider = providers[info.provider as keyof typeof providers]
+	const providerName = info.provider as ProviderName
+	const provider = providers[providerName]
 	if(!provider) {
 		throw new WitnessError(
 			'WITNESS_ERROR_INVALID_CLAIM',
-			`Unsupported provider: ${info.provider}`
+			`Unsupported provider: ${providerName}`
 		)
 	}
 
 	const params = niceParseJsonObject(info.parameters, 'params')
 	const ctx = niceParseJsonObject(info.context, 'context')
+
+	assertValidateProviderParams(providerName, params)
+
 	const rslt = await provider.assertValidProviderReceipt(
 		applData,
 		params

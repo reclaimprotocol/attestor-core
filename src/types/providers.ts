@@ -2,6 +2,7 @@ import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
 import type { ProviderClaimData } from '../proto/api'
 import type { WitnessData } from './beacon'
 import type { ArraySlice } from './general'
+import type { ProvidersConfig } from './providers.gen'
 import type { Transcript } from './tunnel'
 
 type CreateRequestResult = {
@@ -15,6 +16,12 @@ type CreateRequestResult = {
   data: Uint8Array | string
   redactions: ArraySlice[]
 }
+
+export type ProviderName = keyof ProvidersConfig
+
+export type ProviderParams<T extends ProviderName> = ProvidersConfig[T]['parameters']
+
+export type ProviderSecretParams<T extends ProviderName> = ProvidersConfig[T]['secretParameters']
 
 export type RedactionMode = 'key-update' | 'zk'
 
@@ -31,8 +38,9 @@ export type ProviderField<Params, T> = T | ((params: Params) => T)
  * These must be redacted in the request construction in "createRequest" & cannot be viewed by anyone
  */
 export interface Provider<
-  Params extends { [_: string]: unknown },
-  SecretParams
+  N extends ProviderName,
+  Params = ProviderParams<N>,
+  SecretParams = ProviderSecretParams<N>
 > {
   /**
    * host:port to connect to for this provider;
@@ -64,12 +72,6 @@ export interface Provider<
    * @default 'key-update'
    */
   writeRedactionMode?: ProviderField<Params, RedactionMode | undefined>
-  /**
-   * check the parameters are valid
-   * Run client & witness side, to verify the parameters
-   * are valid
-   * */
-  areValidParams(params: { [_: string]: unknown }): params is Params
   /** generate the raw request to be sent to through the TLS receipt */
   createRequest(
     secretParams: SecretParams,
@@ -166,9 +168,3 @@ export type CreateStep =
       claimData: ProviderClaimData
       signaturesDone: string[]
     };
-
-export {
-	ProviderName,
-	ProviderParams,
-	ProviderSecretParams,
-} from '../providers'

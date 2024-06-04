@@ -14,6 +14,7 @@
     "lint:fix": "eslint ./ --fix --ext .js,.ts,.jsx,.tsx",
     "generate:proto": "sh ./src/scripts/generate-proto.sh",
     "generate:contracts-data": "sh ./src/scripts/contract-data-gen.sh",
+    "generate:provider-types": "ts-node src/scripts/generate-provider-types.ts",
     "verify:root-ca": "ts-node src/scripts/verify-root-ca.ts",
     "create:claim": "ts-node src/scripts/generate-receipt.ts"
   },
@@ -36,8 +37,8 @@
     "https-proxy-agent": "^7.0.4",
     "jsdom": "^24.0.0",
     "jsonpath-plus": "^8.1.0",
-    "pino": "^9.0.0",
     "p-queue": "^8.0.1",
+    "pino": "^9.0.0",
     "protobufjs": "^7.2.6",
     "re2-wasm": "^1.0.2",
     "serve-static": "^1.15.0",
@@ -55,12 +56,14 @@
     "chance": "^1.1.11",
     "eslint": "^8.57.0",
     "jest": "^29.7.0",
+    "json-schema-to-typescript": "^14.0.5",
     "ts-jest": "^29.1.2",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "ts-proto": "^1.174.0",
     "typescript": "^5.0.0",
     "webpack": "^5.91.0",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^5.1.4",
+    "yaml": "^2.4.3"
   }
 }

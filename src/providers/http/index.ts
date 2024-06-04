@@ -1,7 +1,6 @@
 import { concatenateUint8Arrays, strToUint8Array, TLSConnectionOptions } from '@reclaimprotocol/tls'
-import Ajv from 'ajv'
 import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '../../config'
-import { ArraySlice, Provider } from '../../types'
+import { ArraySlice, Provider, ProviderParams, ProviderSecretParams } from '../../types'
 import {
 	findIndexInUint8Array,
 	getHttpRequestDataFromTranscript, logger,
@@ -9,7 +8,6 @@ import {
 	uint8ArrayToBinaryStr,
 	uint8ArrayToStr,
 } from '../../utils'
-import { HTTPProviderParams, HTTPProviderParamsV2, HTTPProviderSecretParams, paramsV2Schema } from './types'
 import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
@@ -21,13 +19,11 @@ import {
 	parseHttpResponse,
 } from './utils'
 
-export * from './types'
-
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
-const ajv = new Ajv({ allErrors: true, strict: true, strictRequired: false })
-const validateParams = ajv.compile(paramsV2Schema)
 
-const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
+type HTTPProviderParams = ProviderParams<'http'>
+
+const HTTP_PROVIDER: Provider<'http'> = {
 	hostPort: getHostPort,
 	writeRedactionMode(params) {
 		return ('writeRedactionMode' in params)
@@ -39,9 +35,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			? getGeoLocation(params)
 			: undefined
 	},
-
-	additionalClientOptions(params: HTTPProviderParams): TLSConnectionOptions {
-
+	additionalClientOptions(params): TLSConnectionOptions {
 		let defaultOptions: TLSConnectionOptions = {
 			applicationLayerProtocols : ['http/1.1']
 		}
@@ -53,15 +47,6 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 		}
 
 		return defaultOptions
-	},
-
-	areValidParams(params): params is HTTPProviderParams {
-		const valid = validateParams(params)
-		if(!valid) {
-			throw new Error(`params validation failed: ${JSON.stringify(validateParams.errors)}`)
-		}
-
-		return true
 	},
 	createRequest(secretParams, params) {
 		if(
@@ -168,7 +153,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 
 		const body = uint8ArrayToBinaryStr(res.body)
 		const reveals: ArraySlice[] = [{ fromIndex: 0, toIndex: headerEndIndex }]
-		for(const rs of params.responseRedactions) {
+		for(const rs of params.responseRedactions || []) {
 			let element = body
 			let elementIdx = 0
 			let elementLength = -1
@@ -308,7 +293,7 @@ const HTTP_PROVIDER: Provider<HTTPProviderParams, HTTPProviderSecretParams> = {
 			}
 		}
 
-		for(const { type, value, invert } of params.responseMatches) {
+		for(const { type, value, invert } of params.responseMatches || []) {
 			const inv = Boolean(invert) // explicitly cast to boolean
 
 			switch (type) {
@@ -397,7 +382,7 @@ export function findSubstringIgnoreLE(str: string, substr: string): { index: num
 	return { index: -1, length: -1 }
 }
 
-function getHostPort(params: HTTPProviderParams) {
+function getHostPort(params: ProviderParams<'http'>) {
 	const { host } = new URL(getURL(params))
 	if(!host) {
 		throw new Error('url is incorrect')
@@ -427,8 +412,12 @@ type ReplacedParams = {
 
 const paramsRegex = /\{\{([^{}]+)}}/sgi
 
-function substituteParamValues(currentParams: HTTPProviderParamsV2, secretParams?: HTTPProviderSecretParams, ignoreMissingBodyParams?: boolean): {
-    newParams: HTTPProviderParamsV2
+function substituteParamValues(
+	currentParams: HTTPProviderParams,
+	secretParams?: ProviderSecretParams<'http'>,
+	ignoreMissingBodyParams?: boolean
+): {
+    newParams: HTTPProviderParams
     extractedValues: { [_: string]: string }
     hiddenBodyParts: { index: number, length: number } []
 } {
@@ -542,11 +531,10 @@ function substituteParamValues(currentParams: HTTPProviderParamsV2, secretParams
 	}
 }
 
-function getGeoLocation(params: HTTPProviderParams) {
-	if((params as HTTPProviderParamsV2)?.geoLocation) {
-		const v2Params = params as HTTPProviderParamsV2
-		let geo = v2Params?.geoLocation!
+function getGeoLocation(v2Params: HTTPProviderParams) {
+	if(v2Params?.geoLocation) {
 		const paramNames: Set<string> = new Set()
+		let geo = v2Params.geoLocation
 		//extract param names
 
 		let match: RegExpExecArray | null = null
@@ -567,8 +555,7 @@ function getGeoLocation(params: HTTPProviderParams) {
 	return undefined
 }
 
-function getURL(params: HTTPProviderParams) {
-	const v2Params = params as HTTPProviderParamsV2
+function getURL(v2Params: HTTPProviderParams) {
 	let hostPort = v2Params?.url
 	const paramNames: Set<string> = new Set()
 
