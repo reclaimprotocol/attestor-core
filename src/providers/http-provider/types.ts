@@ -177,6 +177,7 @@ export const paramsV2Schema = {
 		'useZK': { 'type': 'boolean' },
 		'additionalClientOptions': {
 			'type': 'object',
+			nullable: true,
 			'properties': {
 				'supportedProtocolVersions': {
 					'type': 'array',
