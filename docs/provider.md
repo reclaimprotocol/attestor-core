@@ -7,7 +7,23 @@ For example, you could have a provider termed "google-login" that is configured 
 
 The library makes it fairly simple to add new providers for particular use cases. Here is how you can add your own:
 
-1. Any new provider must conform to the `Provider` interface
+1. Decide on a kebab case name for your provider. For example, if you're creating a provider to verify claims of ownership of google accounts, you could name it `google-login`
+2. Create two files in the [./provider-schemas](/provider-schemas) folder:
+	- `{provider-name}/parameters.yaml`: This file should contain the JSON schema for the parameters that the user will provide to the provider.
+   		- These parameters are used to make the request to the server & are publicly visible
+		- For example, in the case of the google-login provider, the parameters could be the email address of the user.
+		- The witness will use this schema to verify whether the parameters provided by the user are valid for the provider
+	- `{provider-name}/secret-parameters.yaml`: This file should contain the JSON schema for the secret parameters that the user will provide to the provider.
+   		- These parameters are used to authenticate the request to the server & are hidden from the witness
+		- For example, in the case of the google-login provider, the secret parameters could be the access token of the user.
+		- Presently, we don't validate the secret parameters on the client before sending them. Instead this schema is kept for future use, and to keep the types store consistent for the secret parameters & parameters
+
+	Note: for both schemas, the "title" property of the schema should be a PascalCase named string. Look at the [http provider](/provider-schemas/http) schemas for an example.
+3. Generate the types for the provider by running the following command:
+   ```sh
+   npm run generate:provider-types
+   ```
+4. Now, you'll need to write the code for this provider to create the request & validate the transcript. Now, any new provider must conform to the `Provider` interface.
    ```ts
 	/**
 	 * Generic interface for a provider that can be used to verify
@@ -20,8 +36,9 @@ The library makes it fairly simple to add new providers for particular use cases
 	* These must be redacted in the request construction in "createRequest" & cannot be viewed by anyone
 	*/
 	export interface Provider<
-		Params extends { [_: string]: unknown },
-		SecretParams
+	N extends ProviderName,
+	Params = ProviderParams<N>,
+	SecretParams = ProviderSecretParams<N>
 	> {
 		/**
 		* host:port to connect to for this provider;
@@ -94,7 +111,7 @@ The library makes it fairly simple to add new providers for particular use cases
 4. Finally, export this new application from `src/providers/index.ts`
 
 Example providers:
-- [HTTP](/src/providers/http-provider/index.ts)
+- [HTTP](/src/providers/http/index.ts)
 	- This is a generic provider that can be used to verify any HTTP request
 
 ## Testing a Provider with a Remote Witness
