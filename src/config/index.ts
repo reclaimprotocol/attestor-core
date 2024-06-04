@@ -14,9 +14,13 @@ export const DEFAULT_BEACON_IDENTIFIER: BeaconIdentifier = {
 
 export const DEFAULT_HTTPS_PORT = 443
 
+export const WS_PATHNAME = '/ws'
+
+export const BROWSER_RPC_PATHNAME = '/browser-rpc'
+
 export const DEFAULT_REMOTE_ZK_PARAMS = {
-	zkeyUrl: '/resources/{algorithm}/circuit_final.zkey',
-	circuitWasmUrl: '/resources/{algorithm}/circuit.wasm',
+	zkeyUrl: `${BROWSER_RPC_PATHNAME}/resources/{algorithm}/circuit_final.zkey`,
+	circuitWasmUrl: `${BROWSER_RPC_PATHNAME}/resources/{algorithm}/circuit.wasm`,
 }
 
 export const API_SERVER_PORT = 8001
@@ -31,10 +35,6 @@ export const DNS_SERVERS = [
 
 // 10m
 export const MAX_CLAIM_TIMESTAMP_DIFF_S = 10 * 60
-
-export const WS_PATHNAME = '/ws'
-
-export const BROWSER_RPC_PATHNAME = '/browser-rpc'
 
 export const DEFAULT_METADATA: InitRequest = {
 	signatureType: ServiceSignatureType.SERVICE_SIGNATURE_TYPE_ETH,
