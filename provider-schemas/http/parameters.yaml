@@ -23,7 +23,7 @@ properties:
     type: string
     nullable: true
     pattern: >-
-      ^[A-Z]{2}$
+      ^[A-Z]{0,2}$
     description: >-
       Specify the geographical location from where
       to proxy the request. 2-letter ISO country code
@@ -56,6 +56,7 @@ properties:
     description: >-
       Apply TLS configuration when creating the
       tunnel to the witness.
+    nullable: true
     properties:
       supportedProtocolVersions:
         type: array
