@@ -1,11 +1,8 @@
 import { areUint8ArraysEqual, CipherSuite, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
-import { retryMiddleware } from 'nice-grpc-client-middleware-retry'
-import { ClientError } from 'nice-grpc-common'
-import { createChannel, createClientFactory } from 'nice-grpc-web'
+import { createChannel, createClient } from 'nice-grpc-web'
 import { ReclaimWitnessClient, ReclaimWitnessDefinition, TLSReceipt, TranscriptMessageSenderType } from '../proto/api'
 import { ProviderField } from '../types'
 import { extractApplicationDataMsgsFromTranscript } from './http-parser'
-import { logger } from './logger'
 
 export function uint8ArrayToStr(arr: Uint8Array) {
 	return new TextDecoder().decode(arr)
@@ -32,31 +29,11 @@ export function getTranscriptString(receipt: TLSReceipt) {
 export const unixTimestampSeconds = () => Math.floor(Date.now() / 1000)
 
 export function createGrpcWebClient(url: string): ReclaimWitnessClient {
-	const clientFactory = createClientFactory().use(retryMiddleware)
 	const grpcChannel = createChannel(url)
-	return clientFactory.create(
+	return createClient(
 		ReclaimWitnessDefinition,
 		grpcChannel,
-		{ '*': {
-			retryMaxAttempts: 3,
-			retryMaxDelayMs:3000,
-			onRetryableError(error: ClientError, attempt: number, delayMs: number) {
-				logger.error(error, `Call failed (${attempt}), retrying in ${delayMs}ms`)
-			},
-		},
-		pullFromSession:{
-			retry:true
-		},
-		pushToSession:{
-			retry:true
-		},
-		initialiseSession:{
-			retry:true,
-		},
-		finaliseSession:{
-			retry:true
-		}, }
-
+		{ }
 	)
 }
 
