@@ -18,7 +18,7 @@ test:
     variables:
       - $CI_COMMIT_MESSAGE !~ /^wip/ && $CI_COMMIT_MESSAGE !~ /^docs/
     refs:
-      - v2
+      - main
 deploy:
   stage: deploy
   environment: production
@@ -33,7 +33,7 @@ deploy:
     variables:
       - $CI_COMMIT_MESSAGE !~ /^wip/ && $CI_COMMIT_MESSAGE !~ /^docs/
     refs:
-      - v2
+      - main
   script:
     # copy prod env files in
     - echo -e "$WITNESS_ENV" > .env.production
