@@ -500,6 +500,7 @@ function substituteParamValues(
 		param = param.replace(paramsRegex, (match, pn, offset) => {
 			if(params.paramValues && pn in params.paramValues) {
 				extractedValues[pn] = params.paramValues[pn]
+				totalOffset += params.paramValues[pn].length - match.length
 				return params.paramValues[pn]
 			} else if(secretParams) {
 				if(secretParams?.paramValues && pn in secretParams?.paramValues) {

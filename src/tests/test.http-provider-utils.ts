@@ -643,6 +643,50 @@ Content-Type: text/html; charset=utf-8\r
 			return uint8ArrayToStr((req.data as Uint8Array).slice(req.redactions[index].fromIndex, req.redactions[index].toIndex))
 		}
 	})
+
+	it('should replace params in body correctly case 2', () => {
+		const params: ProviderParams<'http'> = {
+			'body': '{"includeGroups":{{REQ_DAT}},"includeLogins":{{REQ_SECRET}},"includeVerificationStatus":false}',
+			'geoLocation': '',
+			'method': 'POST',
+			'paramValues': {
+				'REQ_DAT': 'false',
+				'username': 'testyreclaim'
+			},
+			'responseMatches': [
+				{
+					'type': 'contains',
+					'value': '"userName":"{{username}}"'
+				}
+			],
+			'responseRedactions': [
+				{
+					'jsonPath': '$.userName',
+					'regex': '"userName":"(.*)"',
+					'xPath': ''
+				}
+			],
+			'url': 'https://www.kaggle.com'
+		}
+		const secretParams = {
+			'paramValues': {
+				'REQ_SECRET': 'false'
+			},
+			authorisationHeader: 'abc'
+		}
+
+		const req = createRequest(secretParams, params)
+
+		const reqText = uint8ArrayToStr(req.data as Uint8Array)
+		expect(reqText).toContain('{\"includeGroups\":false,\"includeLogins\":false,\"includeVerificationStatus\":false}')
+		expect(req.redactions.length).toEqual(2)
+		expect(getRedaction(0)).toEqual('Authorization: abc')
+		expect(getRedaction(1)).toEqual('false')
+
+		function getRedaction(index: number) {
+			return uint8ArrayToStr((req.data as Uint8Array).slice(req.redactions[index].fromIndex, req.redactions[index].toIndex))
+		}
+	})
 })
 
 function cloneObject<T>(obj: T): T {
