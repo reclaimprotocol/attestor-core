@@ -1,16 +1,18 @@
-import { createClaim } from '../api-client'
-import { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
-import { logger, redact, setLogLevel, ZKOperators } from '../utils'
-import { CommunicationBridge, RPCCreateClaimOptions, RPCErrorResponse, RPCResponse, RPCWitnessClient, WindowRPCIncomingMsg, WindowRPCOutgoingMsg } from './types'
-import { getCurrentMemoryUsage } from './utils'
+import { createClaimOnWitness } from '../create-claim'
+import { extractHTMLElement, extractJSONValueIndex } from '../providers/http/utils'
+import { ZKOperators } from '../types'
+import { makeLogger } from '../utils'
+import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from './types'
+import { getCurrentMemoryUsage, getWsApiUrlFromLocation, mapToCreateClaimResponse } from './utils'
 import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator } from './window-rpc-zk'
 
-
-class RPCEvent extends Event {
+class WindowRPCEvent extends Event {
 	constructor(public readonly data: WindowRPCIncomingMsg) {
 		super('message')
 	}
 }
+
+let logger = makeLogger(true)
 
 /**
  * Sets up the current window to listen for RPC requests
@@ -20,8 +22,9 @@ export function setupWindowRpc() {
 	window.addEventListener('message', handleMessage, false)
 	const windowMsgs = new EventTarget()
 
-	logger.info('window RPC setup')
-	logger.info(JSON.stringify(logger))
+	const defaultWitnessUrl = getWsApiUrlFromLocation()
+
+	logger.info({ defaultWitnessUrl }, 'window RPC setup')
 
 	async function handleMessage(event: MessageEvent<any>) {
 		let id = ''
@@ -31,9 +34,11 @@ export function setupWindowRpc() {
 				return
 			}
 
-			const req: WindowRPCIncomingMsg = typeof event.data === 'string'
-				? JSON.parse(event.data)
-				: event.data
+			const req: WindowRPCIncomingMsg = (
+				typeof event.data === 'string'
+					? JSON.parse(event.data)
+					: event.data
+			)
 			// ignore any messages not for us
 			if(req.module !== 'witness-sdk') {
 				return
@@ -42,41 +47,49 @@ export function setupWindowRpc() {
 			id = req.id
 			channel = req.channel || ''
 
-			windowMsgs.dispatchEvent(new RPCEvent(req))
+			windowMsgs.dispatchEvent(new WindowRPCEvent(req))
 			// ignore response messages
 			if(('isResponse' in req && req.isResponse)) {
 				return
 			}
 
 			if(!req.id) {
-				logger.warn(
-					{ req:redact(req) },
-					'Window RPC request missing ID'
-				)
+				logger.warn({ req }, 'Window RPC request missing ID')
 				return
 			}
 
 			logger.info(
-				{ req:redact(req), origin: event.origin },
+				{ req, origin: event.origin },
 				'processing RPC request'
 			)
 
 			switch (req.type) {
 			case 'createClaim':
-				const response = await createClaim({
+				const claimTunnelRes = await createClaimOnWitness({
 					...req.request,
+					context: req.request.context
+						? JSON.parse(req.request.context)
+						: undefined,
 					zkOperators: getZkOperators(
 						req.request.zkOperatorMode
 					),
-					didUpdateCreateStep(step) {
+					client: { url: defaultWitnessUrl },
+					logger,
+					onStep(step) {
 						sendMessage({
 							type: 'createClaimStep',
-							step,
+							step: {
+								name: 'witness-progress',
+								step,
+							},
 							module: 'witness-sdk',
 							id: req.id,
 						})
 					},
 				})
+				const response = mapToCreateClaimResponse(
+					claimTunnelRes
+				)
 				respond({
 					type: 'createClaimDone',
 					response,
@@ -85,13 +98,20 @@ export function setupWindowRpc() {
 			case 'extractHtmlElement':
 				respond({
 					type: 'extractHtmlElementDone',
-					response: extractHTMLElement(req.request.html, req.request.xpathExpression, req.request.contentsOnly),
+					response: extractHTMLElement(
+						req.request.html,
+						req.request.xpathExpression,
+						req.request.contentsOnly
+					),
 				})
 				break
 			case 'extractJSONValueIndex':
 				respond({
 					type: 'extractJSONValueIndexDone',
-					response: extractJSONValueIndex(req.request.json, req.request.jsonPath),
+					response: extractJSONValueIndex(
+						req.request.json,
+						req.request.jsonPath
+					),
 				})
 				break
 			case 'getCurrentMemoryUsage':
@@ -101,19 +121,31 @@ export function setupWindowRpc() {
 				})
 				break
 			case 'setLogLevel':
+				logger = makeLogger(
+					true,
+					req.request.logLevel,
+					req.request.sendLogsToApp
+						? (level, message) => (
+							sendMessage({
+								type: 'log',
+								level,
+								message,
+								module: 'witness-sdk',
+								id: req.id,
+							})
+						)
+						: undefined
+				)
 				respond({
 					type: 'setLogLevelDone',
-					response: setLogLevel(req.request.logLevel)
+					response: undefined
 				})
 				break
 			default:
 				break
 			}
 		} catch(err) {
-			logger.error(
-				{ err, data: redact(event.data) },
-				'error in RPC'
-			)
+			logger.error({ err, data: event.data }, 'error in RPC')
 			respond({
 				type: 'error',
 				data: {
@@ -158,16 +190,16 @@ export function setupWindowRpc() {
 						)
 					}
 
-					function handle(msg: RPCEvent) {
+					function handle(msg: WindowRPCEvent) {
 						cb(msg.data)
 					}
 				},
 			}
 		}
 
-		function respond<K extends keyof RPCWitnessClient>(
-			data: RPCResponse<RPCWitnessClient, K>
-				| RPCErrorResponse
+		function respond<K extends keyof WindowRPCClient>(
+			data: WindowRPCResponse<WindowRPCClient, K>
+				| WindowRPCErrorResponse
 		) {
 			const res = {
 				...data,

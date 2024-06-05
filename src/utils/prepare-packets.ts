@@ -1,7 +1,7 @@
-import { CipherSuite, concatenateUint8Arrays, crypto } from '@reclaimprotocol/tls'
-import { FinaliseSessionRequest_Block as PacketToReveal } from '../proto/api'
-import { CompleteTLSPacket, Logger } from '../types'
-import { makeZkProofGenerator, PrepareZKProofsBaseOpts } from './zk'
+import { CipherSuite, concatenateUint8Arrays, crypto, TLSPacketContext } from '@reclaimprotocol/tls'
+import { ClaimTunnelRequest_TranscriptMessage as TranscriptMessage, TranscriptMessageSenderType } from '../proto/api'
+import { CompleteTLSPacket, Logger, MessageRevealInfo, PrepareZKProofsBaseOpts, Transcript } from '../types'
+import { makeZkProofGenerator } from './zk'
 
 export type PreparePacketsForRevealOpts = {
 	cipherSuite: CipherSuite
@@ -17,46 +17,54 @@ export type PreparePacketsForRevealOpts = {
  * according to the specified reveal type
  */
 export async function preparePacketsForReveal(
-	packets: CompleteTLSPacket[],
+	tlsTranscript: Transcript<CompleteTLSPacket>,
+	reveals: Map<TLSPacketContext, MessageRevealInfo>,
 	{ onZkProgress, ...opts }: PreparePacketsForRevealOpts
-): Promise<PacketToReveal[]> {
-	const packetsToReveal: PacketToReveal[] = []
+) {
+	const transcript: TranscriptMessage[] = []
 	const proofGenerator = await makeZkProofGenerator(opts)
 
 	let zkPacketsDone = 0
 
-	await Promise.all(packets.map(async(packet) => {
-		if(packet.ctx.type === 'plaintext') {
+	await Promise.all(tlsTranscript.map(async({ message, sender }) => {
+		const msg: TranscriptMessage = {
+			sender: sender === 'client'
+				? TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
+				: TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER,
+			message: message.data,
+			reveal: undefined,
+		}
+		transcript.push(msg)
+
+		const reveal = reveals.get(message)
+		if(!reveal || message.type === 'plaintext') {
 			return
 		}
 
-		switch (packet.reveal?.type) {
+		switch (reveal?.type) {
 		case 'complete':
-			packetsToReveal.push({
-				index: packet.index,
+			msg.reveal = {
 				directReveal: {
-					key: await crypto.exportKey(
-						packet.ctx.encKey
-					),
-					iv: packet.ctx.fixedIv,
-					recordNumber: packet.ctx.recordNumber,
+					key: await crypto.exportKey(message.encKey),
+					iv: message.fixedIv,
+					recordNumber: message.recordNumber,
 				},
-				zkReveal: undefined,
-				authTag: new Uint8Array(0)
-			})
+			}
 			break
 		case 'zk':
 			// the redacted section can be smaller than the actual
 			// plaintext encrypted, in case of TLS1.3 as it has a
 			// content type suffix
-			packet.reveal.redactedPlaintext = concatenateUint8Arrays([
-				packet.reveal.redactedPlaintext,
-				packet.ctx.plaintext.slice(
-					packet.reveal.redactedPlaintext.length
-				)
+			reveal.redactedPlaintext = concatenateUint8Arrays([
+				reveal.redactedPlaintext,
+				message.plaintext.slice(reveal.redactedPlaintext.length)
 			])
 
-			await proofGenerator.addPacketToProve(packet)
+			await proofGenerator.addPacketToProve(
+				message,
+				reveal,
+				proofs => (msg.reveal = { zkReveal: { proofs } })
+			)
 			break
 		default:
 			// no reveal
@@ -67,14 +75,12 @@ export async function preparePacketsForReveal(
 	const zkPacketsTotal = proofGenerator.getTotalChunksToProve()
 	onZkProgress?.(zkPacketsDone, zkPacketsTotal)
 
-	const zkProofs = await proofGenerator.generateProofs(
+	await proofGenerator.generateProofs(
 		() => {
 			zkPacketsDone += 1
 			onZkProgress?.(zkPacketsDone, zkPacketsTotal)
 		}
 	)
 
-	packetsToReveal.push(...zkProofs)
-
-	return packetsToReveal
+	return transcript
 }

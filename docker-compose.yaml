@@ -1,15 +1,18 @@
 version: "3.9"
 
 services:
-  app:
-    container_name: app
-    image: app
+  witness:
     build:
-      context: .
-      dockerfile: nginx/Dockerfile
-    restart: always
+      context: ./
+      # build only the backend dockerfile
+      # as it'll also build the witness
+      dockerfile: ./witness.dockerfile
+      args:
+        GL_TOKEN: ${GL_TOKEN}
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
-      - "8080:8080"
-    volumes:
-      - ./browser:/public
+      - 8001:8001
+    restart: on-failure
     

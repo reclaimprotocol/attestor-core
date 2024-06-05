@@ -1,19 +1,8 @@
-import httpProvider from './http-provider'
+import { Provider, ProviderName } from '../types'
+import http from './http'
 
-
-export const providers = {
-	http: httpProvider,
-
+export const providers: {
+	[T in ProviderName]: Provider<T>
+} = {
+	http,
 }
-
-export type ProviderName = keyof typeof providers
-
-type Provider<E extends ProviderName> = (typeof providers)[E]
-
-export type ProviderParams<E extends ProviderName> = Parameters<
-    Provider<E>['assertValidProviderReceipt']
->[1]
-
-export type ProviderSecretParams<E extends ProviderName> = Parameters<
-    Provider<E>['createRequest']
->[0]

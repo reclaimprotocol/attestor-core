@@ -1,0 +1,57 @@
+stages:
+  - test
+  - deploy
+test:
+  stage: test
+  # install latest version, min v22.0.0
+  # since we need node native WebSockets for
+  # tests to work
+  image: node:current
+  before_script:
+    - git config --global url."https://git-push-pull:$GL_TOKEN@gitlab.reclaimprotocol.org".insteadOf "https://gitlab.reclaimprotocol.org"
+  script:
+    - npm i
+    - npm run test
+  only:
+    # only deploy if not a docs commit
+    # or a wip commit
+    variables:
+      - $CI_COMMIT_MESSAGE !~ /^wip/ && $CI_COMMIT_MESSAGE !~ /^docs/
+    refs:
+      - v2
+deploy:
+  stage: deploy
+  environment: production
+  before_script:
+    - echo $0
+    - apt-get update -y
+    - apt-get install zip -y
+    - apt-get install awscli -y
+  only:
+    # only deploy if not a docs commit
+    # or a wip commit
+    variables:
+      - $CI_COMMIT_MESSAGE !~ /^wip/ && $CI_COMMIT_MESSAGE !~ /^docs/
+    refs:
+      - v2
+  script:
+    # copy prod env files in
+    - echo -e "$WITNESS_ENV" > .env.production
+    # copy in GL token into docker-compose
+    - sed -i 's/${GL_TOKEN}/'$GL_TOKEN'/g' docker-compose.yaml
+    - export FILE=pkg-$(date +%s%N).zip
+    - echo $FILE
+    - zip -r $FILE * .* -x '*.git*'
+    # authenticate w AWS
+    - mkdir ~/.aws/
+    - touch ~/.aws/credentials
+    - printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\n" "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
+    - touch ~/.aws/config
+    # deploy to AWS
+    - export BUCKET=elasticbeanstalk-ap-south-1-342772716647
+    - export APP_NAME=reclaim-protocol
+    - export ENV_NAME=witness
+    - export VERSION=$CI_COMMIT_SHORT_SHA
+    - aws s3 cp $FILE s3://$BUCKET/$FILE
+    - aws elasticbeanstalk create-application-version --application-name $APP_NAME --version-label $VERSION --source-bundle S3Bucket="$BUCKET",S3Key="$FILE"
+    - aws elasticbeanstalk update-environment --application-name $APP_NAME --environment-name $ENV_NAME --version-label $VERSION

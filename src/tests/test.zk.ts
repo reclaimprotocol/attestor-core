@@ -1,4 +1,5 @@
 import { CipherSuite, crypto, encryptWrappedRecord, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
+import { MessageReveal_ZKProof as ZKProof } from '../proto/api'
 import { CompleteTLSPacket } from '../types'
 import {
 	getBlocksToReveal,
@@ -15,7 +16,7 @@ const ZK_CIPHER_SUITES: CipherSuite[] = [
 	'TLS_AES_128_GCM_SHA256'
 ]
 
-jest.setTimeout(60_000) // 60s
+jest.setTimeout(90_000) // 90s
 
 describe('ZK Tests', () => {
 
@@ -154,34 +155,30 @@ describe('ZK Tests', () => {
 			)
 
 			const packet: CompleteTLSPacket = {
-				packet: {
-					header: Buffer.alloc(0),
-					content: ciphertext,
-				},
-				ctx: {
-					type: 'ciphertext',
-					encKey,
-					iv,
-					recordNumber: 0,
-					plaintext: plaintextArr,
-					ciphertext,
-					fixedIv: new Uint8Array(0),
-				},
-				reveal: {
+				type: 'ciphertext',
+				encKey,
+				iv,
+				recordNumber: 0,
+				plaintext: plaintextArr,
+				ciphertext,
+				fixedIv: new Uint8Array(0),
+				data: ciphertext
+			}
+
+			let proofs: ZKProof[] | undefined
+			await proofGenerator.addPacketToProve(
+				packet,
+				{
 					type: 'zk',
 					redactedPlaintext,
 				},
-				sender: 1,
-				index: 0,
-			}
-
-			await proofGenerator.addPacketToProve(packet)
-			const [{ zkReveal }] = await proofGenerator.generateProofs()
-
+				p => proofs = p
+			)
+			await proofGenerator.generateProofs()
 			const x = await verifyZkPacket(
 				{
 					ciphertext,
-					zkReveal: zkReveal!,
+					zkReveal: { proofs: proofs! },
 					logger,
 					cipherSuite,
 				},

@@ -1,10 +1,6 @@
 # /proto/buf.gen.yaml
 version: v1
 plugins:
-  - name: grpc
-    out: ../src/proto
-    opt: grpc_js
-    path: ../node_modules/grpc-tools/bin/grpc_node_plugin
   - name: ts
     out: ../src/proto
     strategy: all

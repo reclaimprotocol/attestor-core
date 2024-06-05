@@ -1,9 +1,6 @@
 import type { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-symmetric-crypto'
-import type { createClaim, CreateClaimOptions } from '../api-client'
-import type { ProviderName } from '../providers'
-import type { extractHTMLElement, extractJSONValueIndex } from '../providers/http-provider/utils'
-import type { CreateStep } from '../types'
-import { setLogLevel } from '../utils'
+import type { extractHTMLElement, extractJSONValueIndex } from '../providers/http/utils'
+import type { CompleteClaimData, CreateClaimOnWitnessOpts, LogLevel, ProofGenerationStep, ProviderName, WitnessData } from '../types'
 
 type IdentifiedMessage = {
 	module: 'witness-sdk'
@@ -16,7 +13,7 @@ type IdentifiedMessage = {
 	id: string
 }
 
-export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<CreateClaimOptions<N>, 'zkOperators'> & {
+export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<CreateClaimOnWitnessOpts<N>, 'zkOperators' | 'context'> & {
 	/**
 	 * Specify the mode for the ZK operator,
 	 * 'default' -> will use the default ZK operator included in the SDK
@@ -25,6 +22,7 @@ export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<CreateCla
 	 * For eg. on React Native
 	 */
 	zkOperatorMode?: 'default' | 'rpc'
+	context?: string
 }
 
 type ExtractHTMLElementOptions = {
@@ -53,45 +51,71 @@ type ZKVerifyOpts = {
 }
 
 type LogLevelOptions = {
-	logLevel: 'debug' | 'info' | 'warn' | 'error' | 'trace'
+	logLevel: LogLevel
+	/**
+	 * If true, log messages will be sent back to the app
+	 * via postMessage
+	 */
+	sendLogsToApp: boolean
+}
+
+/**
+ * Legacy V1 create claim response
+ */
+export type CreateClaimResponse = {
+	identifier: string
+	claimData: CompleteClaimData
+	signatures: string[]
+	witnesses: WitnessData[]
 }
 
 /**
  * Fns the app calls on the witness.
  * These are things done inside the witness
  */
-export type RPCWitnessClient = {
-	createClaim(options: RPCCreateClaimOptions): ReturnType<typeof createClaim>
+export type WindowRPCClient = {
+	/**
+	 * Create a claim on the witness where the RPC SDK is hosted.
+	 */
+	createClaim(options: RPCCreateClaimOptions): Promise<CreateClaimResponse>
+	/**
+	 * Extract an HTML element from a string of HTML
+	 */
 	extractHtmlElement(options: ExtractHTMLElementOptions): Promise<ReturnType<typeof extractHTMLElement>>
 	extractJSONValueIndex(options: ExtractJSONValueIndexOptions): Promise<ReturnType<typeof extractJSONValueIndex>>
 	getCurrentMemoryUsage(): Promise<{
 		available: boolean
 		content: string
 	}>
-	setLogLevel(options: LogLevelOptions): ReturnType<typeof setLogLevel>
+	/**
+	 * Set the log level for the witness,
+	 * optionally set "sendLogsToApp" to true to send logs
+	 * back to the app
+	 */
+	setLogLevel(options: LogLevelOptions): Promise<void>
 }
 
 /**
  * Fns the witness calls on the app
  */
-export type RPCAppClient = {
+export type WindowRPCAppClient = {
 	zkProve(opts: ZKProveOpts): ReturnType<ZKOperator['groth16Prove']>
 	zkVerify(opts: ZKVerifyOpts): ReturnType<ZKOperator['groth16Verify']>
 }
 
 type AnyRPCClient = { [_: string]: (opts: any) => any }
 
-export type RPCRequest<T extends AnyRPCClient, K extends keyof T> = {
+export type WindowRPCRequest<T extends AnyRPCClient, K extends keyof T> = {
 	type: K
 	request: Parameters<T[K]>[0]
 }
 
-export type RPCResponse<T extends AnyRPCClient, K extends (keyof T) & string> = {
+export type WindowRPCResponse<T extends AnyRPCClient, K extends (keyof T) & string> = {
 	type: `${K}Done`
 	response: Awaited<ReturnType<T[K]>>
 }
 
-export type RPCErrorResponse = {
+export type WindowRPCErrorResponse = {
 	type: 'error'
 	data: {
 		message: string
@@ -106,14 +130,14 @@ type AsResponse<T> = T & { isResponse: true }
  */
 // spread out each key because TS can't handle
 export type WindowRPCIncomingMsg = (
-	RPCRequest<RPCWitnessClient, 'createClaim'>
-	| RPCRequest<RPCWitnessClient, 'extractHtmlElement'>
-	| RPCRequest<RPCWitnessClient, 'extractJSONValueIndex'>
-	| RPCRequest<RPCWitnessClient, 'getCurrentMemoryUsage'>
-	| RPCRequest<RPCWitnessClient, 'setLogLevel'>
-	| AsResponse<RPCResponse<RPCAppClient, 'zkProve'>>
-	| AsResponse<RPCResponse<RPCAppClient, 'zkVerify'>>
-	| AsResponse<RPCErrorResponse>
+	WindowRPCRequest<WindowRPCClient, 'createClaim'>
+	| WindowRPCRequest<WindowRPCClient, 'extractHtmlElement'>
+	| WindowRPCRequest<WindowRPCClient, 'extractJSONValueIndex'>
+	| WindowRPCRequest<WindowRPCClient, 'getCurrentMemoryUsage'>
+	| WindowRPCRequest<WindowRPCClient, 'setLogLevel'>
+	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'zkProve'>>
+	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'zkVerify'>>
+	| AsResponse<WindowRPCErrorResponse>
 ) & IdentifiedMessage
 
 /**
@@ -121,20 +145,30 @@ export type WindowRPCIncomingMsg = (
  * the window/application containing the witness
  */
 export type WindowRPCOutgoingMsg = (
-	AsResponse<RPCResponse<RPCWitnessClient, 'createClaim'>>
-	| AsResponse<RPCResponse<RPCWitnessClient, 'extractHtmlElement'>>
-	| AsResponse<RPCResponse<RPCWitnessClient, 'extractJSONValueIndex'>>
-	| AsResponse<RPCResponse<RPCWitnessClient, 'getCurrentMemoryUsage'>>
-	| AsResponse<RPCResponse<RPCWitnessClient, 'setLogLevel'>>
-	| RPCRequest<RPCAppClient, 'zkProve'>
-	| RPCRequest<RPCAppClient, 'zkVerify'>
+	AsResponse<WindowRPCResponse<WindowRPCClient, 'createClaim'>>
+	| AsResponse<WindowRPCResponse<WindowRPCClient, 'extractHtmlElement'>>
+	| AsResponse<WindowRPCResponse<WindowRPCClient, 'extractJSONValueIndex'>>
+	| AsResponse<WindowRPCResponse<WindowRPCClient, 'getCurrentMemoryUsage'>>
+	| AsResponse<WindowRPCResponse<WindowRPCClient, 'setLogLevel'>>
+	| WindowRPCRequest<WindowRPCAppClient, 'zkProve'>
+	| WindowRPCRequest<WindowRPCAppClient, 'zkVerify'>
 	| (
 		{
 			type: 'createClaimStep'
-			step: CreateStep
+			step: {
+				name: 'witness-progress'
+				step: ProofGenerationStep
+			}
 		}
 	)
-	| AsResponse<RPCErrorResponse>
+	| (
+		{
+			type: 'log'
+			level: LogLevelOptions['logLevel']
+			message: object
+		}
+	)
+	| AsResponse<WindowRPCErrorResponse>
 ) & IdentifiedMessage
 
 export type CommunicationBridge = {

@@ -11,3 +11,11 @@ export function detectEnvironment(): TransportType {
 
 	return 'node'
 }
+
+export function getEnvVariable(name: string) {
+	if(typeof process === 'undefined') {
+		return undefined
+	}
+
+	return process?.env[name]
+}

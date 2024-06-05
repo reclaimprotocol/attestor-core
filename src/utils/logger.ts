@@ -1,27 +1,64 @@
-import P from 'pino'
-import { Logger } from '../types'
+import P, { LoggerOptions } from 'pino'
+import type { LogLevel } from '../types'
+import { getEnvVariable } from './env'
 
-const localLogger = P({ formatters: {
-	log: (line) => {
-		return redact(line)
-	},
-} })
+const PII_PROPERTIES = ['ownerPrivateKey', 'secretParams']
+const redactedText = '[REDACTED]'
+const envLevel = getEnvVariable('LOG_LEVEL') as LogLevel
 
+export const logger = makeLogger(false, envLevel)
 
-export const logger = makeLogger('info')
+/**
+ * Creates a logger instance with optional redaction of PII.
+ * See PII_PROPERTIES for the list of properties that will be redacted.
+ *
+ * @param redactPii - whether to redact PII from logs
+ * @param level - the log level to use
+ * @param onLog - a callback to call when a log is written
+ */
+export function makeLogger(
+	redactPii: boolean,
+	level?: LogLevel,
+	onLog?: (level: LogLevel, log: any) => void
+) {
+	const opts: LoggerOptions = {}
+	if(redactPii) {
+		opts.formatters = { log: redact }
+		opts.serializers = { redact }
+		opts.browser = {
+			write: {
+				fatal: log => writeLog('fatal', log),
+				error: log => writeLog('error', log),
+				warn: log => writeLog('warn', log),
+				info: log => writeLog('info', log),
+				debug: log => writeLog('debug', log),
+				trace: log => writeLog('trace', log),
+			}
+		}
+	}
 
-function makeLogger(level: string): Logger {
-	localLogger.level = level
-	return localLogger
-}
+	const logger = P(opts)
+	logger.level = level || 'info'
 
-export function setLogLevel(level: keyof typeof logger) {
-	localLogger.level = level
-	return true
+	return logger
+
+	function writeLog(level: LogLevel, log: any) {
+		log = redact(log)
+		const { msg, ...obj } = log
+		if(console[level]) {
+			console[level](obj, msg)
+		} else {
+			console.log(obj, msg)
+		}
+
+		onLog?.(level, log)
+	}
 }
 
 function isObjectProperty(property) {
-	return (typeof property) === 'object' && !Array.isArray(property) && property !== null
+	return (typeof property) === 'object'
+		&& !Array.isArray(property)
+		&& property !== null
 }
 
 function getReplacer() {
@@ -42,10 +79,6 @@ function getReplacer() {
 	}
 }
 
-
-const properties = ['ownerPrivateKey', 'secretParams']
-const redactedText = '[REDACTED]'
-
 export function redact(json) {
 	const isObject = isObjectProperty(json)
 
@@ -56,7 +89,7 @@ export function redact(json) {
 	const redacted = JSON.parse(JSON.stringify(json, getReplacer()))
 
 	for(const prop in redacted) {
-		if(properties.includes(prop)) {
+		if(PII_PROPERTIES.includes(prop)) {
 			redacted[prop] = redactedText
 		}
 

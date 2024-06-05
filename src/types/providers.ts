@@ -1,7 +1,9 @@
 import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
-import type { ProviderClaimData, TLSReceipt } from '../proto/api'
-import { WitnessData } from './beacon'
+import type { ProviderClaimData } from '../proto/api'
+import type { WitnessData } from './beacon'
 import type { ArraySlice } from './general'
+import type { ProvidersConfig } from './providers.gen'
+import type { Transcript } from './tunnel'
 
 type CreateRequestResult = {
   /**
@@ -14,6 +16,12 @@ type CreateRequestResult = {
   data: Uint8Array | string
   redactions: ArraySlice[]
 }
+
+export type ProviderName = keyof ProvidersConfig
+
+export type ProviderParams<T extends ProviderName> = ProvidersConfig[T]['parameters']
+
+export type ProviderSecretParams<T extends ProviderName> = ProvidersConfig[T]['secretParameters']
 
 export type RedactionMode = 'key-update' | 'zk'
 
@@ -30,8 +38,9 @@ export type ProviderField<Params, T> = T | ((params: Params) => T)
  * These must be redacted in the request construction in "createRequest" & cannot be viewed by anyone
  */
 export interface Provider<
-  Params extends { [_: string]: unknown },
-  SecretParams
+  N extends ProviderName,
+  Params = ProviderParams<N>,
+  SecretParams = ProviderSecretParams<N>
 > {
   /**
    * host:port to connect to for this provider;
@@ -55,17 +64,14 @@ export interface Provider<
   additionalClientOptions?: ProviderField<Params, TLSConnectionOptions | undefined>
   /**
    * default redaction mode to use. If not specified,
-   * the default is 'key-update'. It's switched to 'zk'
-   * for TLS1.2 requests as TLS1.2 don't support key updates
+   * the default is 'key-update'.
+   *
+   * It's switched to 'zk' for TLS1.2 requests as TLS1.2
+   * don't support key updates
+   *
    * @default 'key-update'
    */
   writeRedactionMode?: ProviderField<Params, RedactionMode | undefined>
-  /**
-   * check the parameters are valid
-   * Run client & witness side, to verify the parameters
-   * are valid
-   * */
-  areValidParams(params: { [_: string]: unknown }): params is Params
   /** generate the raw request to be sent to through the TLS receipt */
   createRequest(
     secretParams: SecretParams,
@@ -87,13 +93,17 @@ export interface Provider<
    * user is claiming to have
    *
    * This is run on the witness side.
-   * @param receipt the TLS receipt to verify
-   * @param params the parameters to verify the receipt against. Eg. `{"email": "abcd@gmail.com"}`
+   * @param receipt application data messages exchanged in the TLS session
+   * @param params the parameters to verify the receipt against.
+   *  Eg. `{"email": "abcd@gmail.com"}`
+   * @returns sucessful verification or throws an error message.
+	 *  Optionally return parameters extracted from the receipt
+	 *  that will then be included in the claim context
    * */
   assertValidProviderReceipt(
-    receipt: TLSReceipt,
+    receipt: Transcript<Uint8Array>,
     params: Params
-  ): void | Promise<void> | { extractedParams: { [key: string]: string } }
+  ): void | Promise<void> | { extractedParameters: { [key: string]: string } }
 }
 
 export type ProofGenerationStep =
@@ -158,9 +168,3 @@ export type CreateStep =
       claimData: ProviderClaimData
       signaturesDone: string[]
     };
-
-export {
-	ProviderName,
-	ProviderParams,
-	ProviderSecretParams,
-} from '../providers'

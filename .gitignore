@@ -6,6 +6,7 @@ lib
 *.LICENSE.txt
 browser/resources
 .env
+.env.production
 example-local
 .idea
 coverage/

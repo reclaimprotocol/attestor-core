@@ -1,8 +1,5 @@
 import { strToUint8Array, uint8ArrayToDataView } from '@reclaimprotocol/tls'
 import { ethers } from 'ethers'
-import {
-	InitialiseSessionRequest_BeaconBasedProviderClaimRequest as ClaimRequest,
-} from '../proto/api'
 import { SelectedServiceSignature } from '../signatures'
 import { Beacon, BeaconState, ClaimInfo, WitnessData } from '../types'
 import { getIdentifierFromClaimInfo } from './claims'
@@ -66,43 +63,6 @@ export async function getWitnessIdFromPrivateKey(privateKey: string) {
 	const pubKey = await SelectedServiceSignature.getPublicKey(privateKey)
 	const id = await SelectedServiceSignature.getAddress(pubKey)
 	return id
-}
-
-export async function makeOwnerProof(
-	request: ClaimRequest,
-	privateKey: string
-) {
-	const serialised = ClaimRequest
-		.encode({ ...request, ownerProof: undefined })
-		.finish()
-	const signature = await SelectedServiceSignature.sign(
-		serialised,
-		privateKey
-	)
-	const address = await SelectedServiceSignature.getAddress(
-		await SelectedServiceSignature
-			.getPublicKey(privateKey)
-	)
-	return { signature, address }
-}
-
-/**
- * Verify that the person who is wanting to claim
- * actually is making the claim
- */
-export async function assertValidClaimOwner(request: ClaimRequest) {
-	const { ownerProof } = request
-	const serialised = ClaimRequest
-		.encode({ ...request, ownerProof: undefined })
-		.finish()
-	const verified = await SelectedServiceSignature.verify(
-		serialised,
-		ownerProof!.signature,
-		ownerProof!.address
-	)
-	if(!verified) {
-		throw new Error('Invalid claim owner signature')
-	}
 }
 
 export function makeBeaconCacheable(beacon: Beacon): Beacon {

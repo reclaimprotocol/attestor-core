@@ -1,21 +1,20 @@
-import { areUint8ArraysEqual, CipherSuite, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
-import { createChannel, createClient } from 'nice-grpc-web'
-import { ReclaimWitnessClient, ReclaimWitnessDefinition, TLSReceipt, TranscriptMessageSenderType } from '../proto/api'
-import { ProviderField } from '../types'
-import { extractApplicationDataMsgsFromTranscript } from './http-parser'
+import { REDACTION_CHAR_CODE } from '@reclaimprotocol/circom-symmetric-crypto'
+import { areUint8ArraysEqual, CipherSuite, CONTENT_TYPE_MAP, crypto, PACKET_TYPE, strToUint8Array, SUPPORTED_CIPHER_SUITE_MAP, uint8ArrayToDataView } from '@reclaimprotocol/tls'
+import { RPCMessage, RPCMessages } from '../proto/api'
+import { CompleteTLSPacket, IDecryptedTranscript, ProviderField, RPCEvent, RPCEventMap, RPCEventType, RPCType, Transcript } from '../types'
+
+const DEFAULT_REDACTION_DATA = new Uint8Array(4)
+	.fill(REDACTION_CHAR_CODE)
 
 export function uint8ArrayToStr(arr: Uint8Array) {
 	return new TextDecoder().decode(arr)
 }
 
-export function getTranscriptString(receipt: TLSReceipt) {
-	const applMsgs = extractApplicationDataMsgsFromTranscript(receipt)
+export function getTranscriptString(receipt: IDecryptedTranscript) {
+	const applMsgs = extractApplicationDataFromTranscript(receipt)
 	const strList: string[] = []
-	for(const msg of applMsgs) {
-		const sender = msg.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
-			? 'client'
-			: 'server'
-		const content = uint8ArrayToStr(msg.data)
+	for(const { message, sender } of applMsgs) {
+		const content = uint8ArrayToStr(message)
 		if(strList[strList.length - 1]?.startsWith(sender)) {
 			strList[strList.length - 1] += content
 		} else {
@@ -27,15 +26,6 @@ export function getTranscriptString(receipt: TLSReceipt) {
 }
 
 export const unixTimestampSeconds = () => Math.floor(Date.now() / 1000)
-
-export function createGrpcWebClient(url: string): ReclaimWitnessClient {
-	const grpcChannel = createChannel(url)
-	return createClient(
-		ReclaimWitnessDefinition,
-		grpcChannel,
-		{ }
-	)
-}
 
 /**
  * Find index of needle in haystack
@@ -121,6 +111,186 @@ export function getPureCiphertext(
 export function getProviderValue<P, T>(params: P, fn: ProviderField<P, T>) {
 	return typeof fn === 'function'
 		// @ts-ignore
-		? fn(params)
+		? fn(params) as T
 		: fn
+}
+
+export function generateRpcMessageId() {
+	return uint8ArrayToDataView(
+		crypto.randomBytes(8)
+	).getUint32(0)
+}
+
+/**
+ * Random session ID for a WebSocket client.
+ */
+export function generateSessionId() {
+	return generateRpcMessageId()
+}
+
+/**
+ * Random ID for a tunnel.
+ */
+export function generateTunnelId() {
+	return generateRpcMessageId()
+}
+
+export function makeRpcEvent<T extends RPCEventType>(
+	type: T,
+	data: RPCEventMap[T]
+) {
+	const ev = new Event(type) as RPCEvent<T>
+	ev.data = data
+	return ev
+}
+
+/**
+ * Get the RPC type from the key.
+ * For eg. "claimTunnelRequest" ->
+ * 	{ type: 'claimTunnel', direction: 'request' }
+ */
+export function getRpcTypeFromKey(key: string) {
+	if(key.endsWith('Request')) {
+		return {
+			type: key.slice(0, -7) as RPCType,
+			direction: 'request' as const
+		}
+	}
+
+	if(key.endsWith('Response')) {
+		return {
+			type: key.slice(0, -8) as RPCType,
+			direction: 'response' as const
+		}
+	}
+}
+
+/**
+ * Get the RPC response type from the RPC type.
+ * For eg. "claimTunnel" -> "claimTunnelResponse"
+ */
+export function getRpcResponseType<T extends RPCType>(type: T) {
+	return `${type}Response` as const
+}
+
+/**
+ * Get the RPC request type from the RPC type.
+ * For eg. "claimTunnel" -> "claimTunnelRequest"
+ */
+export function getRpcRequestType<T extends RPCType>(type: T) {
+	return `${type}Request` as const
+}
+
+export function isApplicationData(
+	packet: CompleteTLSPacket,
+	tlsVersion: string
+) {
+	return packet.type === 'ciphertext'
+		&& (
+			packet.contentType === 'APPLICATION_DATA'
+			|| (
+				packet.data[0] === PACKET_TYPE.WRAPPED_RECORD
+				&& tlsVersion === 'TLS1_2'
+			)
+		)
+}
+
+/**
+ * Convert the received data from a WS to a Uint8Array
+ */
+export function extractArrayBufferFromWsData(data: unknown): Uint8Array {
+	if(data instanceof ArrayBuffer) {
+		return new Uint8Array(data)
+	}
+
+	// uint8array/Buffer
+	if(typeof data === 'object' && data && 'buffer' in data) {
+		return data as Uint8Array
+	}
+
+	if(typeof data === 'string') {
+		return strToUint8Array(data)
+	}
+
+	throw new Error('unsupported data: ' + String(data))
+}
+
+/**
+ * Check if the RPC message is a request or a response.
+ */
+export function getRpcRequest(msg: RPCMessage) {
+	if(msg.requestError) {
+		return {
+			direction: 'response' as const,
+			type: 'error' as const
+		}
+	}
+
+	for(const key in msg) {
+		if(!msg[key]) {
+			continue
+		}
+
+		const rpcType = getRpcTypeFromKey(key)
+		if(!rpcType) {
+			continue
+		}
+
+		return rpcType
+	}
+}
+
+/**
+ * Finds all application data messages in a transcript
+ * and returns them. Removes the "contentType" suffix from the message.
+ * in TLS 1.3
+ */
+export function extractApplicationDataFromTranscript(
+	{ transcript, tlsVersion }: IDecryptedTranscript,
+) {
+	const msgs: Transcript<Uint8Array> = []
+	for(const m of transcript) {
+		let message: Uint8Array
+		// redacted msgs but with a valid packet header
+		// can be considered application data messages
+		if(m.redacted) {
+			if(!m.plaintextLength) {
+				message = DEFAULT_REDACTION_DATA
+			} else {
+				const len = tlsVersion === 'TLS1_3'
+					// remove content type suffix
+					? m.plaintextLength - 1
+					: m.plaintextLength
+				message = new Uint8Array(len)
+					.fill(REDACTION_CHAR_CODE)
+			}
+			// otherwise, we need to check the content type
+		} else if(tlsVersion === 'TLS1_3') {
+			const contentType = m.message[m.message.length - 1]
+			if(contentType !== CONTENT_TYPE_MAP['APPLICATION_DATA']) {
+				continue
+			}
+
+			message = m.message.slice(0, -1)
+		} else if(m.recordHeader[0] === PACKET_TYPE.WRAPPED_RECORD) {
+			message = m.message
+		} else {
+			continue
+		}
+
+		msgs.push({ message, sender: m.sender })
+	}
+
+	return msgs
+}
+
+export function packRpcMessages(...msgs: Partial<RPCMessage>[]) {
+	return RPCMessages.create({
+		messages: msgs.map(msg => (
+			RPCMessage.create({
+				...msg,
+				id: msg.id || generateRpcMessageId()
+			})
+		))
+	})
 }
