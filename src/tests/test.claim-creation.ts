@@ -1,10 +1,10 @@
 import { TLSProtocolVersion, uint8ArrayToStr } from '@reclaimprotocol/tls'
 import { WitnessClient } from '../client'
-import { createClaimOnWitness } from '../create-claim'
+import { createClaimOnWitness, getWitnessClientFromPool } from '../create-claim'
 import { WitnessErrorCode } from '../proto/api'
 import { providers } from '../providers'
 import { decryptTranscript } from '../server'
-import { assertValidClaimSignatures, extractApplicationDataFromTranscript, logger } from '../utils'
+import { assertValidClaimSignatures, extractApplicationDataFromTranscript, logger, WitnessError } from '../utils'
 import { describeWithServer } from './describe-with-server'
 import { SPY_PREPARER } from './mocks'
 import { verifyNoDirectRevealLeaks } from './utils'
@@ -116,5 +116,74 @@ describeWithServer('Claim Creation', opts => {
 		)
 		expect(result.error?.message).toMatch(/Response did not start with/)
 		expect(result.request?.transcript).toBeTruthy()
+	})
+
+	describe('Pool', () => {
+
+		it('should reconnect client when found disconnected', async() => {
+			await createClaim()
+			// since we're using a pool, we'll find the client
+			// disconnected and when we create the claim again
+			// we expect a new connection to be established
+			const client = getWitnessClientFromPool(opts.serverUrl)
+			await client.terminateConnection()
+			// ensure claim is still successful
+			const result2 = await createClaim()
+			expect(result2.claim).toBeTruthy()
+
+			const client2 = getWitnessClientFromPool(opts.serverUrl)
+			expect(client2).not.toBe(client)
+		})
+
+		it('should retry on network errors', async() => {
+			const client = getWitnessClientFromPool(opts.serverUrl)
+			client.sendMessage = async() => {
+				// @ts-ignore
+				client.sendMessage = () => {}
+
+				const err = new WitnessError(
+					'WITNESS_ERROR_NETWORK_ERROR',
+					'F'
+				)
+
+				client.terminateConnection(err)
+				throw err
+			}
+
+			// first the client will mock disconnection when
+			// sending a message -- that should trigger a retry
+			// and result in a successful claim creation
+			await expect(
+				createClaim()
+			).resolves.toBeTruthy()
+
+			// ensure new client is created to replace
+			// the disconnected one
+			const client2 = getWitnessClientFromPool(opts.serverUrl)
+			expect(client2).not.toBe(client)
+		})
+
+		function createClaim() {
+			const user = 'testing-123'
+			return createClaimOnWitness({
+				name: 'http',
+				params: {
+					url: claimUrl,
+					method: 'GET',
+					responseRedactions: [],
+					responseMatches: [
+						{
+							type: 'contains',
+							value: `${user}@mock.com`
+						}
+					]
+				},
+				secretParams: {
+					authorisationHeader: `Bearer ${user}`
+				},
+				ownerPrivateKey: opts.privateKeyHex,
+				client: { url: opts.serverUrl }
+			})
+		}
 	})
 })

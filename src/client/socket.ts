@@ -20,6 +20,8 @@ export class WitnessSocket implements IWitnessSocket {
 				event.error
 					|| new Error(event.message)
 			)
+			witErr.code = 'WITNESS_ERROR_NETWORK_ERROR'
+
 			this.dispatchRPCEvent('connection-terminated', witErr)
 		})
 

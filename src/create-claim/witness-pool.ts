@@ -9,26 +9,25 @@ const POOL: { [url: string]: IWitnessClient | undefined } = {}
  */
 export function getWitnessClientFromPool(
 	url: string | URL,
-	createOpts: Omit<IWitnessClientCreateOpts, 'url'> = {}
+	getCreateOpts: () => Omit<IWitnessClientCreateOpts, 'url'> = () => ({})
 ) {
 	const key = url.toString()
 	let client = POOL[key]
+	let createReason: string | undefined
 	if(client?.isClosed) {
-		client = undefined
-		createOpts?.logger?.info(
-			{ key },
-			'client found closed, creating new client...'
-		)
+		createReason = 'closed'
 	} else if(!client) {
-		createOpts?.logger?.info(
-			{ key },
-			'client not found in pool, creating new client...'
-		)
+		createReason = 'non-existent'
 	}
 
-	if(!client) {
+	if(createReason) {
+		const createOpts = getCreateOpts()
+		createOpts?.logger?.info(
+			{ key, createReason },
+			'creating new witness client'
+		)
 		client = (POOL[key] = new WitnessClient({ ...createOpts, url }))
 	}
 
-	return client
+	return client!
 }

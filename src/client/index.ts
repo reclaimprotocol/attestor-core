@@ -51,7 +51,10 @@ export class WitnessClient extends WitnessSocket implements IWitnessClient {
 
 	waitForResponse<T extends RPCType>(id: number) {
 		if(this.isClosed) {
-			throw new Error('Client connection already closed')
+			throw new WitnessError(
+				'WITNESS_ERROR_NETWORK_ERROR',
+				'Client connection already closed'
+			)
 		}
 
 		// setup a promise to wait for the response

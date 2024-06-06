@@ -5,7 +5,8 @@ import { providers } from '../providers'
 import { SIGNATURES } from '../signatures'
 import { makeRpcTlsTunnel } from '../tunnels/make-rpc-tls-tunnel'
 import { CreateClaimOnWitnessOpts, IWitnessClient, MessageRevealInfo, ProviderName } from '../types'
-import { canonicalStringify, generateTunnelId, getBlocksToReveal, getProviderValue, isApplicationData, logger as LOGGER, makeHttpResponseParser, preparePacketsForReveal, redactSlices, unixTimestampSeconds } from '../utils'
+import { canonicalStringify, generateTunnelId, getBlocksToReveal, getProviderValue, isApplicationData, logger as LOGGER, makeHttpResponseParser, preparePacketsForReveal, redactSlices, unixTimestampSeconds, WitnessError } from '../utils'
+import { executeWithRetries } from '../utils/retries'
 import { getDefaultTlsOptions } from '../utils/tls'
 import { getWitnessClientFromPool } from './witness-pool'
 
@@ -17,7 +18,45 @@ type ServerAppDataPacket = {
 /**
  * Create a claim on a witness server
  */
-export async function createClaimOnWitness<N extends ProviderName>(
+
+export function createClaimOnWitness<N extends ProviderName>(
+	{ logger: _logger, ...opts }: CreateClaimOnWitnessOpts<N>
+) {
+	const logger = _logger
+		// if the client has already been initialised
+		// and no logger is provided, use the client's logger
+		// otherwise default to the global logger
+		|| ('logger' in opts.client ? opts.client.logger : LOGGER)
+	return executeWithRetries(
+		attempt => (
+			_createClaimOnWitness<N>({
+				...opts,
+				logger: attempt
+					? logger.child({ attempt })
+					: logger
+			})
+		),
+		{ logger, shouldRetry }
+	)
+}
+
+function shouldRetry(err: Error) {
+	if(err instanceof TypeError) {
+		return false
+	}
+
+	if(
+		err instanceof WitnessError
+		&& err.code !== 'WITNESS_ERROR_INVALID_CLAIM'
+		&& err.code !== 'WITNESS_ERROR_BAD_REQUEST'
+	) {
+		return true
+	}
+
+	return false
+}
+
+async function _createClaimOnWitness<N extends ProviderName>(
 	{
 		name,
 		params,
@@ -26,14 +65,11 @@ export async function createClaimOnWitness<N extends ProviderName>(
 		onStep,
 		ownerPrivateKey,
 		client: clientInit,
-		logger: _logger,
+		logger = LOGGER,
 		...zkOpts
 	}: CreateClaimOnWitnessOpts<N>
 ) {
 	const provider = providers[name]
-	const logger = _logger
-		|| ('logger' in clientInit ? clientInit.logger : LOGGER)
-
 	const hostPort = getProviderValue(params, provider.hostPort)
 	const geoLocation = getProviderValue(params, provider.geoLocation)
 	const providerTlsOpts = getProviderValue(
@@ -68,16 +104,29 @@ export async function createClaimOnWitness<N extends ProviderName>(
 	const tunnel = await makeRpcTlsTunnel({
 		tlsOpts,
 		connect: (initMessages) => {
+			let created = false
 			if('metadata' in clientInit) {
 				client = clientInit
-				client
-					.waitForInit()
-					.then(() => client.sendMessage(...initMessages))
 			} else {
 				client = getWitnessClientFromPool(
 					clientInit.url,
-					{ initMessages, logger }
+					() => {
+						created = true
+						return { initMessages, logger }
+					}
 				)
+			}
+
+			if(!created) {
+				client
+					.waitForInit()
+					.then(() => client.sendMessage(...initMessages))
+					.catch(err => {
+						logger.error(
+							{ err },
+							'error in sending init msgs'
+						)
+					})
 			}
 
 			return client
