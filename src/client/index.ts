@@ -32,6 +32,10 @@ export class WitnessClient extends WitnessSocket implements IWitnessClient {
 				logger.info('client initialised')
 				this.isInitialised = true
 			})
+
+		this.addEventListener('connection-terminated', ev => (
+			logger.info({ err: ev.data }, 'connection terminated')
+		))
 	}
 
 	async rpc<T extends RPCType>(
