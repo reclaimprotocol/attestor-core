@@ -24,6 +24,7 @@ export async function executeWithRetries<T>(
 			const result = await code(retries)
 			return result
 		} catch(err) {
+			retries += 1
 			if(retries >= maxRetries) {
 				throw err
 			}
@@ -33,8 +34,6 @@ export async function executeWithRetries<T>(
 			}
 
 			logger.info({ err, retries }, 'retrying failed operation')
-
-			retries += 1
 		}
 	}
 
