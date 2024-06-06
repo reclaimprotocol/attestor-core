@@ -46,9 +46,24 @@ export class WitnessSocket implements IWitnessSocket {
 		return this.socket.readyState === this.socket.OPEN
 	}
 
+	get isClosed() {
+		return this.socket.readyState === this.socket.CLOSED
+			|| this.socket.readyState === this.socket.CLOSING
+	}
+
 	async sendMessage(...msgs: Partial<RPCMessage>[]) {
+		if(this.isClosed) {
+			throw new WitnessError(
+				'WITNESS_ERROR_NETWORK_ERROR',
+				'Connection closed, cannot send message'
+			)
+		}
+
 		if(!this.isOpen) {
-			throw new Error('socket is not open')
+			throw new WitnessError(
+				'WITNESS_ERROR_NETWORK_ERROR',
+				'Wait for connection to open before sending message'
+			)
 		}
 
 		const msg = packRpcMessages(...msgs)
@@ -74,7 +89,7 @@ export class WitnessSocket implements IWitnessSocket {
 
 	async terminateConnection(err?: Error) {
 		// connection already closed
-		if(this.socket.readyState === this.socket.CLOSED) {
+		if(this.isClosed) {
 			return
 		}
 

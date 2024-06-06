@@ -179,6 +179,7 @@ export enum WitnessErrorCode {
   WITNESS_ERROR_NOT_FOUND = 3,
   WITNESS_ERROR_PROXY_ERROR = 4,
   WITNESS_ERROR_INVALID_CLAIM = 5,
+  WITNESS_ERROR_NETWORK_ERROR = 6,
   UNRECOGNIZED = -1,
 }
 
@@ -202,6 +203,9 @@ export function witnessErrorCodeFromJSON(object: any): WitnessErrorCode {
     case 5:
     case "WITNESS_ERROR_INVALID_CLAIM":
       return WitnessErrorCode.WITNESS_ERROR_INVALID_CLAIM;
+    case 6:
+    case "WITNESS_ERROR_NETWORK_ERROR":
+      return WitnessErrorCode.WITNESS_ERROR_NETWORK_ERROR;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -223,31 +227,64 @@ export function witnessErrorCodeToJSON(object: WitnessErrorCode): string {
       return "WITNESS_ERROR_PROXY_ERROR";
     case WitnessErrorCode.WITNESS_ERROR_INVALID_CLAIM:
       return "WITNESS_ERROR_INVALID_CLAIM";
+    case WitnessErrorCode.WITNESS_ERROR_NETWORK_ERROR:
+      return "WITNESS_ERROR_NETWORK_ERROR";
     case WitnessErrorCode.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
   }
 }
 
+export interface ClaimContext {
+  /**
+   * Extracted parameters from the TLS transcript
+   * by the provider. Any parameters provided by the
+   * user will be overwritten
+   */
+  extractedParameters: { [key: string]: string };
+  /** Provider hash. TODO: docs */
+  providerHash: string;
+}
+
+export interface ClaimContext_ExtractedParametersEntry {
+  key: string;
+  value: string;
+}
+
 export interface ProviderClaimData {
+  /**
+   * Name of the provider to generate the
+   * claim using.
+   * @example "http"
+   */
   provider: string;
+  /**
+   * Canonically JSON stringified parameters
+   * of the claim, as specified by the provider.
+   * @example '{"url":"https://example.com","method":"GET"}'
+   */
   parameters: string;
   /**
    * Owner of the claim. Must be the public key/address
-   * of the signatures
+   * @example "0x1234..."
    */
   owner: string;
-  /** Timestamp of the claim being made. */
+  /**
+   * Unix timestamp in seconds of the claim being made.
+   * Cannot be more than 10 minutes in the past or future
+   */
   timestampS: number;
+  /**
+   * Any additional data you want to store with the claim.
+   * Also expected to be a canonical JSON string.
+   */
   context: string;
   /**
    * identifier of the claim;
    * Hash of (provider, parameters, context)
-   *
-   * This is different from the claimId returned
-   * from the smart contract
    */
   identifier: string;
+  /** Legacy V1 Beacon epoch number */
   epoch: number;
 }
 
@@ -350,7 +387,7 @@ export interface MessageReveal_ZKProof {
   /** the plaintext that is fully or partially revealed */
   redactedPlaintext: Uint8Array;
   /**
-   * start of this specific ChaCha block
+   * start of this specific block
    * in the redactedPlaintext
    */
   startIdx: number;
@@ -408,7 +445,9 @@ export interface ClaimTunnelRequest_Signatures {
 }
 
 export interface ClaimTunnelRequest_TranscriptMessage {
+  /** client or server */
   sender: TranscriptMessageSenderType;
+  /** packet data */
   message: Uint8Array;
   reveal: MessageReveal | undefined;
 }
@@ -511,6 +550,176 @@ export interface RPCMessage {
 export interface RPCMessages {
   messages: RPCMessage[];
 }
+
+function createBaseClaimContext(): ClaimContext {
+  return { extractedParameters: {}, providerHash: "" };
+}
+
+export const ClaimContext = {
+  encode(message: ClaimContext, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    Object.entries(message.extractedParameters).forEach(([key, value]) => {
+      ClaimContext_ExtractedParametersEntry.encode({ key: key as any, value }, writer.uint32(10).fork()).ldelim();
+    });
+    if (message.providerHash !== "") {
+      writer.uint32(18).string(message.providerHash);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimContext {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseClaimContext();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          const entry1 = ClaimContext_ExtractedParametersEntry.decode(reader, reader.uint32());
+          if (entry1.value !== undefined) {
+            message.extractedParameters[entry1.key] = entry1.value;
+          }
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.providerHash = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ClaimContext {
+    return {
+      extractedParameters: isObject(object.extractedParameters)
+        ? Object.entries(object.extractedParameters).reduce<{ [key: string]: string }>((acc, [key, value]) => {
+          acc[key] = String(value);
+          return acc;
+        }, {})
+        : {},
+      providerHash: isSet(object.providerHash) ? globalThis.String(object.providerHash) : "",
+    };
+  },
+
+  toJSON(message: ClaimContext): unknown {
+    const obj: any = {};
+    if (message.extractedParameters) {
+      const entries = Object.entries(message.extractedParameters);
+      if (entries.length > 0) {
+        obj.extractedParameters = {};
+        entries.forEach(([k, v]) => {
+          obj.extractedParameters[k] = v;
+        });
+      }
+    }
+    if (message.providerHash !== "") {
+      obj.providerHash = message.providerHash;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ClaimContext>): ClaimContext {
+    return ClaimContext.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ClaimContext>): ClaimContext {
+    const message = createBaseClaimContext();
+    message.extractedParameters = Object.entries(object.extractedParameters ?? {}).reduce<{ [key: string]: string }>(
+      (acc, [key, value]) => {
+        if (value !== undefined) {
+          acc[key] = globalThis.String(value);
+        }
+        return acc;
+      },
+      {},
+    );
+    message.providerHash = object.providerHash ?? "";
+    return message;
+  },
+};
+
+function createBaseClaimContext_ExtractedParametersEntry(): ClaimContext_ExtractedParametersEntry {
+  return { key: "", value: "" };
+}
+
+export const ClaimContext_ExtractedParametersEntry = {
+  encode(message: ClaimContext_ExtractedParametersEntry, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.key !== "") {
+      writer.uint32(10).string(message.key);
+    }
+    if (message.value !== "") {
+      writer.uint32(18).string(message.value);
+    }
+    return writer;
+  },
+
+  decode(input: _m0.Reader | Uint8Array, length?: number): ClaimContext_ExtractedParametersEntry {
+    const reader = input instanceof _m0.Reader ? input : _m0.Reader.create(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseClaimContext_ExtractedParametersEntry();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.key = reader.string();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.value = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skipType(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): ClaimContext_ExtractedParametersEntry {
+    return {
+      key: isSet(object.key) ? globalThis.String(object.key) : "",
+      value: isSet(object.value) ? globalThis.String(object.value) : "",
+    };
+  },
+
+  toJSON(message: ClaimContext_ExtractedParametersEntry): unknown {
+    const obj: any = {};
+    if (message.key !== "") {
+      obj.key = message.key;
+    }
+    if (message.value !== "") {
+      obj.value = message.value;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<ClaimContext_ExtractedParametersEntry>): ClaimContext_ExtractedParametersEntry {
+    return ClaimContext_ExtractedParametersEntry.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<ClaimContext_ExtractedParametersEntry>): ClaimContext_ExtractedParametersEntry {
+    const message = createBaseClaimContext_ExtractedParametersEntry();
+    message.key = object.key ?? "";
+    message.value = object.value ?? "";
+    return message;
+  },
+};
 
 function createBaseProviderClaimData(): ProviderClaimData {
   return { provider: "", parameters: "", owner: "", timestampS: 0, context: "", identifier: "", epoch: 0 };
@@ -2667,6 +2876,10 @@ function longToNumber(long: Long): number {
 if (_m0.util.Long !== Long) {
   _m0.util.Long = Long as any;
   _m0.configure();
+}
+
+function isObject(value: any): boolean {
+  return typeof value === "object" && value !== null;
 }
 
 function isSet(value: any): boolean {

@@ -2,7 +2,7 @@ import { base64 } from 'ethers/lib/utils'
 import { DEFAULT_METADATA } from '../config'
 import { RPCMessages } from '../proto/api'
 import { IWitnessClient, IWitnessClientCreateOpts, RPCEvent, RPCRequestData, RPCResponseData, RPCType } from '../types'
-import { getRpcRequestType, logger as LOGGER, packRpcMessages } from '../utils'
+import { getRpcRequestType, logger as LOGGER, packRpcMessages, WitnessError } from '../utils'
 import { WitnessSocket } from './socket'
 
 export class WitnessClient extends WitnessSocket implements IWitnessClient {
@@ -46,11 +46,8 @@ export class WitnessClient extends WitnessSocket implements IWitnessClient {
 	}
 
 	waitForResponse<T extends RPCType>(id: number) {
-		if(
-			this.socket.readyState === WebSocket.CLOSED
-			|| this.socket.readyState === WebSocket.CLOSING
-		) {
-			throw new Error('Socket already closed')
+		if(this.isClosed) {
+			throw new Error('Client connection already closed')
 		}
 
 		// setup a promise to wait for the response
@@ -85,5 +82,14 @@ export class WitnessClient extends WitnessSocket implements IWitnessClient {
 		})
 	}
 
-	waitForInit = () => this.waitForInitPromise
+	waitForInit = () => {
+		if(this.isClosed) {
+			throw new WitnessError(
+				'WITNESS_ERROR_NETWORK_ERROR',
+				'Client connection already closed'
+			)
+		}
+
+		return this.waitForInitPromise
+	}
 }

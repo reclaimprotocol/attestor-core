@@ -1,7 +1,7 @@
 import { WitnessClient } from '../client'
 import { IWitnessClient, IWitnessClientCreateOpts } from '../types'
 
-const POOL: { [url: string]: IWitnessClient } = {}
+const POOL: { [url: string]: IWitnessClient | undefined } = {}
 
 /**
  * Get a witness client from the pool,
@@ -12,9 +12,23 @@ export function getWitnessClientFromPool(
 	createOpts: Omit<IWitnessClientCreateOpts, 'url'> = {}
 ) {
 	const key = url.toString()
-	if(!POOL[key]) {
-		POOL[key] = new WitnessClient({ ...createOpts, url })
+	let client = POOL[key]
+	if(client?.isClosed) {
+		client = undefined
+		createOpts?.logger?.info(
+			{ key },
+			'client found closed, creating new client...'
+		)
+	} else if(!client) {
+		createOpts?.logger?.info(
+			{ key },
+			'client not found in pool, creating new client...'
+		)
 	}
 
-	return POOL[key]
+	if(!client) {
+		client = (POOL[key] = new WitnessClient({ ...createOpts, url }))
+	}
+
+	return client
 }

@@ -33,6 +33,10 @@ export declare class IWitnessSocket {
 	 */
 	isOpen: boolean
 	/**
+	 * Has the WebSocket connection been closed
+	 */
+	isClosed: boolean
+	/**
 	 * Whether the WebSocket has been initialised
 	 * by receiving an "init-response" message.
 	 */
