@@ -180,3 +180,11 @@ client.addEventListener('tunnel-message', ({ data }) => {
 	```ts
 	const response = await client.rpc('abcd', { ... })
 	```
+
+### Keep Alive
+
+The server utilises the ping/pong mechanism of the [WebSocket protocol](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers#pings_and_pongs_the_heartbeat_of_websockets) to keep the connection alive.
+
+At the time of writing, the server sends a ping message every 15s. We kill the connection if client doesn't send any data for 30s (including pong messages).
+
+This logic is implemented [here](/src/server/utils/keep-alive.ts)

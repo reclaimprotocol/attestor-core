@@ -40,3 +40,11 @@ export const DEFAULT_METADATA: InitRequest = {
 	signatureType: ServiceSignatureType.SERVICE_SIGNATURE_TYPE_ETH,
 	clientVersion: WitnessVersion.WITNESS_VERSION_2_0_0
 }
+
+export const PING_INTERVAL_MS = 10_000
+/**
+ * Maximum interval in seconds to wait for before assuming
+ * the connection is dead
+ * @default 30s
+ */
+export const MAX_NO_DATA_INTERVAL_MS = 30_000

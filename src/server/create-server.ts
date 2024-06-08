@@ -5,6 +5,7 @@ import { WebSocket, WebSocketServer } from 'ws'
 import { API_SERVER_PORT, BROWSER_RPC_PATHNAME, WS_PATHNAME } from '../config'
 import { logger as LOGGER } from '../utils'
 import { getEnvVariable } from '../utils/env'
+import { addKeepAlive } from './utils/keep-alive'
 import { WitnessServerSocket } from './socket'
 
 const PORT = +(getEnvVariable('PORT') || API_SERVER_PORT)
@@ -81,6 +82,7 @@ async function handleNewClient(ws: WebSocket, req: IncomingMessage) {
 	}
 
 	ws.serverSocket = client
+	addKeepAlive(ws, LOGGER.child({ sessionId: client.sessionId }))
 }
 
 function handleUpgrade(

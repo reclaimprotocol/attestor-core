@@ -12,7 +12,7 @@ export class WitnessServerSocket extends WitnessSocket implements IWitnessServer
 
 	tunnels: IWitnessServerSocket['tunnels'] = {}
 
-	private constructor(socket: WS, logger: Logger) {
+	private constructor(socket: WS, public sessionId: number, logger: Logger) {
 		// @ts-ignore
 		super(socket, {}, logger)
 		// handle RPC requests
@@ -54,7 +54,7 @@ export class WitnessServerSocket extends WitnessSocket implements IWitnessServer
 		const sessionId = generateSessionId()
 		logger = logger.child({ sessionId })
 
-		const client = new WitnessServerSocket(socket, logger)
+		const client = new WitnessServerSocket(socket, sessionId, logger)
 		try {
 			const initMsgs = getInitialMessagesFromQuery(req)
 			logger.trace(

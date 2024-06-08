@@ -95,6 +95,11 @@ export declare class IWitnessSocket {
 }
 
 export declare class IWitnessServerSocket extends IWitnessSocket {
+
+	/**
+	 * Unique identifier for this WebSocket connection
+	 */
+	sessionId: number
 	/**
 	 * Set of tunnels this client created. Only available
 	 * when WS is created by the server
