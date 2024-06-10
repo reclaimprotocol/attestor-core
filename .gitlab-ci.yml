@@ -1,24 +1,24 @@
 stages:
-  # - test
+  - test
   - deploy
-# test:
-#   stage: test
-#   # install latest version, min v22.0.0
-#   # since we need node native WebSockets for
-#   # tests to work
-#   image: node:current
-#   before_script:
-#     - git config --global url."https://git-push-pull:$GL_TOKEN@gitlab.reclaimprotocol.org".insteadOf "https://gitlab.reclaimprotocol.org"
-#   script:
-#     - npm i
-#     - npm run test test.claim-creation
-#   only:
-#     # only deploy if not a docs commit
-#     # or a wip commit
-#     variables:
-#       - $CI_COMMIT_MESSAGE !~ /^wip/ && $CI_COMMIT_MESSAGE !~ /^docs/
-#     refs:
-#       - main
+test:
+  stage: test
+  # install latest version, min v22.0.0
+  # since we need node native WebSockets for
+  # tests to work
+  image: node:current
+  before_script:
+    - git config --global url."https://git-push-pull:$GL_TOKEN@gitlab.reclaimprotocol.org".insteadOf "https://gitlab.reclaimprotocol.org"
+  script:
+    - npm i
+    - npm run test test.claim-creation -- test.claim-creation -t TLS1_2
+  only:
+    # only deploy if not a docs commit
+    # or a wip commit
+    variables:
+      - $CI_COMMIT_MESSAGE !~ /^wip/ && $CI_COMMIT_MESSAGE !~ /^docs/
+    refs:
+      - main
 deploy:
   stage: deploy
   environment: production
