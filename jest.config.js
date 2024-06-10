@@ -11,7 +11,7 @@ module.exports = {
 		'**/tests/test.*.+(ts|tsx)',
 	],
 	transform: {
-		'^.+\\.(js|ts|tsx)?$': 'ts-jest',
+		'^.+\\.(js|ts|tsx)?$': '@swc/jest'
 	},
 	transformIgnorePatterns: [
 		'"node_modules/(?!p-queue/.*)"'
