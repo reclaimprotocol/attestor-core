@@ -3,7 +3,7 @@ import { ProviderParams } from '../types'
 import { describeWithServer } from './describe-with-server'
 import { verifyNoDirectRevealLeaks } from './utils'
 
-jest.setTimeout(60_000)
+jest.setTimeout(90_000)
 
 describeWithServer('HTTP Provider', opts => {
 

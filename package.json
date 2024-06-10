@@ -33,7 +33,6 @@
     "elastic-apm-node": "^4.5.4",
     "esprima-next": "^5.8.4",
     "ethers": "^5.7.2",
-    "fetch-retry": "^6.0.0",
     "https-proxy-agent": "^7.0.4",
     "jsdom": "^24.0.0",
     "jsonpath-plus": "^8.1.0",
