@@ -241,6 +241,12 @@ async function _createClaimOnWitness<N extends ProviderName>(
 	claimTunnelReq.signatures = { requestSignature }
 
 	const result = await client!.rpc('claimTunnel', claimTunnelReq)
+
+	logger.info(
+		{ success: !!result.claim },
+		'recv claim response from witness'
+	)
+
 	return result
 
 	async function writeRedactedWithKeyUpdate() {

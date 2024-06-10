@@ -179,7 +179,7 @@ export async function decryptTranscript(
 
 	logger.info(
 		{ serverTlsVersion, cipherSuite },
-		'got server hello params'
+		'extracted server hello params'
 	)
 
 	const clientHello = getClientHello()
