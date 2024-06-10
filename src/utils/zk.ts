@@ -149,6 +149,10 @@ export async function makeZkProofGenerator(
 			return zkChunksToProve
 		},
 		async generateProofs(onChunkDone?: () => void) {
+			if(!packetsToProve.length) {
+				return
+			}
+
 			const start = Date.now()
 			const tasks: Promise<void>[] = []
 			for(const { onGeneratedProofs, algorithm, proofsToGenerate } of packetsToProve) {
