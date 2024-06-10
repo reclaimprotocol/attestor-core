@@ -21,7 +21,10 @@ export function makeLogger(
 	level?: LogLevel,
 	onLog?: (level: LogLevel, log: any) => void
 ) {
-	const opts: LoggerOptions = {}
+	const opts: LoggerOptions = {
+		// Log human readable time stamps instead of epoch time
+		timestamp: P.stdTimeFunctions.isoTime,
+	}
 	if(redactPii) {
 		opts.formatters = { log: redact }
 		opts.serializers = { redact }
