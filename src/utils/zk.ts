@@ -3,7 +3,7 @@ import {
 	EncryptionAlgorithm,
 	generateProof,
 	makeLocalSnarkJsZkOperator,
-	makeRemoteSnarkJsZkOperator,
+	makeSnarkJsZKOperator,
 	PrivateInput,
 	PublicInput,
 	verifyProof,
@@ -14,9 +14,11 @@ import { DEFAULT_REMOTE_ZK_PARAMS, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from 
 import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof } from '../proto/api'
 import { CompleteTLSPacket, Logger, PrepareZKProofsBaseOpts, ZKOperators, ZKRevealInfo } from '../types'
 import { detectEnvironment, getEnvVariable } from './env'
+import { WitnessError } from './error'
 import { getPureCiphertext, getZkAlgorithmForCipherSuite } from './generics'
 import { logger as LOGGER } from './logger'
 import { isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from './redactions'
+import { executeWithRetries } from './retries'
 
 type GenerateZKChunkProofOpts = {
 	key: Uint8Array
@@ -65,7 +67,7 @@ const ZK_CONCURRENCY = +(
 export async function makeZkProofGenerator(
 	{
 		zkOperators,
-		logger,
+		logger = LOGGER,
 		zkProofConcurrency = ZK_CONCURRENCY,
 		maxZkChunks = MAX_ZK_CHUNKS,
 		cipherSuite,
@@ -241,13 +243,15 @@ export async function makeZkProofGenerator(
 			privateInput, publicInput
 		}: ZKProofToGenerate
 	): Promise<ZKProof> {
-		const zkOperator = await getZkOperatorForAlgorithm(algorithm)
-
+		const operator = await getZkOperatorForAlgorithm(algorithm)
 		const proof = await generateProof(
-			algorithm,
-			privateInput,
-			publicInput,
-			zkOperator,
+			{
+				algorithm,
+				privateInput,
+				publicInput,
+				operator,
+				logger
+			}
 		)
 
 		logger?.debug({ startIdx }, 'generated proof for chunk')
@@ -275,7 +279,7 @@ export async function verifyZkPacket(
 		ciphertext,
 		zkReveal,
 		zkOperators,
-		logger
+		logger = LOGGER
 	}: ZKVerifyOpts,
 ) {
 	if(!zkReveal) {
@@ -333,12 +337,15 @@ export async function verifyZkPacket(
 
 			await verifyProof(
 				{
-					algorithm,
-					proofJson,
-					plaintext: decryptedRedactedCiphertext,
-				},
-				{ ciphertext: ciphertextChunk },
-				operator
+					proof: {
+						algorithm,
+						proofJson,
+						plaintext: decryptedRedactedCiphertext,
+					},
+					publicInput: { ciphertext: ciphertextChunk },
+					operator,
+					logger,
+				}
 			)
 
 			logger?.debug(
@@ -368,7 +375,7 @@ function getChunkSizeBytes(alg: EncryptionAlgorithm) {
 const zkOperators: { [E in EncryptionAlgorithm]?: Promise<ZKOperator> } = {}
 export function makeDefaultZkOperator(
 	algorithm: EncryptionAlgorithm,
-	logger?: Logger
+	logger: Logger
 ) {
 	if(!zkOperators[algorithm]) {
 		const isNode = detectEnvironment() === 'node'
@@ -382,21 +389,16 @@ export function makeDefaultZkOperator(
 		)
 
 		if(isNode) {
-			zkOperators[algorithm] = makeLocalSnarkJsZkOperator(
-				algorithm,
-				logger
-			)
+			zkOperators[algorithm]
+				= makeLocalSnarkJsZkOperator(algorithm)
 		} else {
 			const { zkeyUrl, circuitWasmUrl } = DEFAULT_REMOTE_ZK_PARAMS
-			zkOperators[algorithm] = makeRemoteSnarkJsZkOperator(
-				{
-					zkeyUrl: zkeyUrl
-						.replace('{algorithm}', algorithm),
-					circuitWasmUrl: circuitWasmUrl
-						.replace('{algorithm}', algorithm),
-				},
+			const operator = makeRemoteSnarkJsZkOperator(
+				zkeyUrl.replace('{algorithm}', algorithm),
+				circuitWasmUrl.replace('{algorithm}', algorithm),
 				logger
 			)
+			zkOperators[algorithm] = Promise.resolve(operator)
 		}
 
 		logger?.info(
@@ -409,4 +411,50 @@ export function makeDefaultZkOperator(
 	}
 
 	return zkOperators[algorithm]!
+}
+
+function makeRemoteSnarkJsZkOperator(
+	zkeyUrl: string,
+	wasmUrl: string,
+	logger: Logger
+) {
+	return makeSnarkJsZKOperator(
+		{
+			getCircuitWasm: () => fetchArrayBuffer('wasm', wasmUrl),
+			getZkey: () => (
+				fetchArrayBuffer('zkey', zkeyUrl)
+					.then(data => ({ data }))
+			),
+		}
+	)
+
+	async function fetchArrayBuffer(type: string, url: string) {
+		const res = await executeWithRetries(
+			async() => {
+				const res = await fetch(url)
+				if(!res.ok) {
+					throw new WitnessError(
+						'WITNESS_ERROR_NETWORK_ERROR',
+						`${type} fetch failed with code: ${res.status}`,
+						{ url, status: res.status }
+					)
+				}
+
+				const buff = await res.arrayBuffer()
+				return buff
+			},
+			{
+				logger: logger.child({ type }),
+				maxRetries: 3,
+				shouldRetry(error) {
+					// network errors are TypeErrors
+					// in fetch
+					// https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API#concepts_and_usage
+					return error instanceof TypeError
+				},
+			}
+		)
+
+		return new Uint8Array(res)
+	}
 }
