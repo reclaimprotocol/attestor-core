@@ -23,7 +23,7 @@ properties:
     type: string
     nullable: true
     pattern: >-
-      ^[A-Z]{0,2}$
+      ^[A-Za-z]{0,2}$
     description: >-
       Specify the geographical location from where
       to proxy the request. 2-letter ISO country code
