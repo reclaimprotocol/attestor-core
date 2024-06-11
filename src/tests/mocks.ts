@@ -17,3 +17,10 @@ jest.mock('../utils/prepare-packets', () => {
 		preparePacketsForReveal: SPY_PREPARER
 	}
 })
+
+jest.mock('../server/utils/apm', () => {
+	return {
+		__esModule: true,
+		getApm: jest.fn()
+	}
+})

@@ -11,7 +11,7 @@ let apm: Agent | undefined
  * Utilises the standard env variables mentioned
  * here: https://www.elastic.co/guide/en/apm/agent/nodejs/current/custom-stack.html#custom-stack-advanced-configuration
  */
-export function getApm() {
+export function getApm(): Agent | undefined {
 	if(!apm) {
 		const sampleRate = +(
 			getEnvVariable('ELASTIC_APM_SAMPLE_RATE')
