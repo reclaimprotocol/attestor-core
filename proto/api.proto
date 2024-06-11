@@ -32,12 +32,21 @@ enum BeaconType {
 
 enum WitnessErrorCode {
 	// 0 should be treated as the absence of an error
+	// should be used when gracefully closing the connection
 	WITNESS_ERROR_NO_ERROR = 0;
+	// internal error in the witness -- all "Error/TypeError"
+	// messages are mapped to this
 	WITNESS_ERROR_INTERNAL = 1;
+	// bad request from the client
 	WITNESS_ERROR_BAD_REQUEST = 2;
+	// the item requested was not found
 	WITNESS_ERROR_NOT_FOUND = 3;
+	// error in the proxy
 	WITNESS_ERROR_PROXY_ERROR = 4;
+	// claim creation failed -- i.e. the transcript
+	// did not result in a valid claim
 	WITNESS_ERROR_INVALID_CLAIM = 5;
+	// any network error
 	WITNESS_ERROR_NETWORK_ERROR = 6;
 }
 
