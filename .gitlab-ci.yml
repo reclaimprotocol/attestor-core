@@ -11,7 +11,7 @@ test:
     - git config --global url."https://git-push-pull:$GL_TOKEN@gitlab.reclaimprotocol.org".insteadOf "https://gitlab.reclaimprotocol.org"
     - npm install
   script:
-    - LOG_LEVEL=debug npm run test -- test.claim-creation -t TLS1_2
+    - npm run test
   only:
     # only deploy if not a docs commit
     # or a wip commit
