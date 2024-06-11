@@ -198,7 +198,9 @@ export function isApplicationData(
 /**
  * Convert the received data from a WS to a Uint8Array
  */
-export function extractArrayBufferFromWsData(data: unknown): Uint8Array {
+export async function extractArrayBufferFromWsData(
+	data: unknown
+): Promise<Uint8Array> {
 	if(data instanceof ArrayBuffer) {
 		return new Uint8Array(data)
 	}
@@ -210,6 +212,10 @@ export function extractArrayBufferFromWsData(data: unknown): Uint8Array {
 
 	if(typeof data === 'string') {
 		return strToUint8Array(data)
+	}
+
+	if(data instanceof Blob) {
+		return new Uint8Array(await data.arrayBuffer())
 	}
 
 	throw new Error('unsupported data: ' + String(data))

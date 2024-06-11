@@ -4,7 +4,7 @@ import { extractArrayBufferFromWsData, getRpcRequest, getRpcRequestType, getRpcR
 
 export async function wsMessageHandler(this: IWitnessSocket, data: unknown) {
 	// extract array buffer from WS data & decode proto
-	const buff = extractArrayBufferFromWsData(data)
+	const buff = await extractArrayBufferFromWsData(data)
 	const { messages } = RPCMessages.decode(buff)
 	for(const msg of messages) {
 		await handleMessage.call(this, msg)
