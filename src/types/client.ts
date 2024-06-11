@@ -1,7 +1,16 @@
+import type { WebSocket as WSWebSocket } from 'ws'
 import type { InitRequest, RPCMessage, RPCMessages, ServiceSignatureType, TunnelMessage } from '../proto/api'
 import type { Logger } from './general'
 import type { RPCEvent, RPCEventMap, RPCEventType, RPCRequestData, RPCResponseData, RPCType } from './rpc'
 import type { TCPSocketProperties, Tunnel } from './tunnel'
+
+/**
+ * Any WebSocket implementation -- either the native
+ * WebSocket or the WebSocket from the `ws` package.
+ */
+export type AnyWebSocket = WebSocket | WSWebSocket
+
+export type AnyWebSocketConstructor = new(url: string | URL) => AnyWebSocket
 
 export type IWitnessClientCreateOpts = {
 	/**
@@ -18,6 +27,11 @@ export type IWitnessClientCreateOpts = {
 	 * the connection.
 	 */
 	initMessages?: Partial<RPCMessage>[]
+	/**
+	 * Provide a custom WebSocket implementation,
+	 * will use the native WebSocket if not provided.
+	 */
+	Websocket?: AnyWebSocketConstructor
 }
 
 /**

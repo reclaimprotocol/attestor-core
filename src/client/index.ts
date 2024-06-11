@@ -3,6 +3,7 @@ import { DEFAULT_METADATA } from '../config'
 import { RPCMessages } from '../proto/api'
 import { IWitnessClient, IWitnessClientCreateOpts, RPCEvent, RPCRequestData, RPCResponseData, RPCType } from '../types'
 import { getRpcRequestType, logger as LOGGER, packRpcMessages, WitnessError } from '../utils'
+import { Websocket as DefaultWebsocket } from '../utils/ws'
 import { WitnessSocket } from './socket'
 
 export class WitnessClient extends WitnessSocket implements IWitnessClient {
@@ -14,6 +15,7 @@ export class WitnessClient extends WitnessSocket implements IWitnessClient {
 		initMessages = [],
 		signatureType = DEFAULT_METADATA.signatureType,
 		logger = LOGGER,
+		Websocket = DefaultWebsocket
 	}: IWitnessClientCreateOpts) {
 		const initRequest = { ...DEFAULT_METADATA, signatureType }
 		const msg = packRpcMessages({ initRequest }, ...initMessages)
@@ -23,7 +25,11 @@ export class WitnessClient extends WitnessSocket implements IWitnessClient {
 		url = new URL(url.toString())
 		url.searchParams.set('messages', initRequestB64)
 
-		super(new WebSocket(url), initRequest, logger)
+		super(
+			new Websocket(url) as WebSocket,
+			initRequest,
+			logger
+		)
 
 		const initReqId = msg.messages[0].id
 		this.waitForInitPromise = this

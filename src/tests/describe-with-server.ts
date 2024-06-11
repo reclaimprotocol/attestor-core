@@ -1,4 +1,4 @@
-import type { WebSocket, WebSocketServer } from 'ws'
+import { WebSocket, type WebSocketServer } from 'ws'
 import { WitnessClient } from '../client'
 import { WS_PATHNAME } from '../config'
 import { createServer } from '../server'
@@ -55,7 +55,8 @@ export const describeWithServer = (
 		privateKeyHex = randomPrivateKey()
 		client = new WitnessClient({
 			logger: logger.child({ client: 1 }),
-			url: wsServerUrl
+			url: wsServerUrl,
+			Websocket: WebSocket
 		})
 		await client.waitForInit()
 	})
