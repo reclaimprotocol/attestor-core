@@ -3,6 +3,12 @@ import { IWitnessSocket } from '../types'
 import { extractArrayBufferFromWsData, getRpcRequest, getRpcRequestType, getRpcResponseType, WitnessError } from '../utils'
 
 export async function wsMessageHandler(this: IWitnessSocket, data: unknown) {
+	// ignore empty or null messages
+	if(!data) {
+		this.logger.warn({ data }, 'recv empty message')
+		return
+	}
+
 	// extract array buffer from WS data & decode proto
 	const buff = extractArrayBufferFromWsData(data)
 	const { messages } = RPCMessages.decode(buff)

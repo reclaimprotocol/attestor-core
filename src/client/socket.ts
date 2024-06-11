@@ -36,11 +36,6 @@ export class WitnessSocket implements IWitnessSocket {
 		))
 
 		socket.addEventListener('message', async({ data }) => {
-			// ignore empty or null messages
-			if(!data) {
-				return
-			}
-
 			try {
 				await wsMessageHandler.call(this, data)
 			} catch(err) {
