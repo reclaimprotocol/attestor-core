@@ -14,7 +14,6 @@ export class WitnessSocket implements IWitnessSocket {
 		public metadata: InitRequest,
 		public logger: Logger
 	) {
-		socket.binaryType = 'arraybuffer'
 		socket.addEventListener('error', (event: ErrorEvent) => {
 			const witErr = WitnessError.fromError(
 				event.error
