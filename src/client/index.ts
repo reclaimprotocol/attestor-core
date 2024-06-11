@@ -76,6 +76,19 @@ export class WitnessClient extends WitnessSocket implements IWitnessClient {
 
 			const terminateHandler = (event: RPCEvent<'connection-terminated'>) => {
 				removeHandlers()
+				// if the connection was terminated, reject the promise
+				// but update the error code to reflect the network error
+				if(event.data.code === 'WITNESS_ERROR_NO_ERROR') {
+					reject(
+						new WitnessError(
+							'WITNESS_ERROR_NETWORK_ERROR',
+							event.data.message,
+							event.data.data
+						)
+					)
+					return
+				}
+
 				reject(event.data)
 			}
 

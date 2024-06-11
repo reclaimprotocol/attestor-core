@@ -28,35 +28,13 @@ type ExtraOpts = Omit<CreateTunnelRequest, 'id' | 'initialMessage'> & {
  * The tunnel also retains a transcript of all messages sent and received.
  */
 export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async({
-	host,
-	port,
-	geoLocation,
-	logger,
 	onClose,
 	onMessage,
+	logger,
+	...opts
 }) => {
-	const socket = await getSocket({ host, port, geoLocation, logger })
 	const transcript: TCPSocketProperties['transcript'] = []
-
-	let connectTimeout: NodeJS.Timeout | undefined
-	try {
-		await new Promise((resolve, reject) => {
-			socket.once('connect', resolve)
-			socket.once('error', reject)
-			socket.once('end', () => reject(new Error('connection closed')))
-
-			// add a timeout to ensure the connection doesn't hang
-			// and cause our gateway to send out a 504
-			connectTimeout = setTimeout(
-				() => reject(new Error('server connection timed out')),
-				CONNECTION_TIMEOUT_MS
-			)
-		})
-	} finally {
-		clearTimeout(connectTimeout)
-	}
-
-	logger.debug({ addr: `${host}:${port}` }, 'connected')
+	const socket = await connectTcp({ ...opts, logger })
 
 	socket.once('error', close)
 	socket.once('end', () => close(undefined))
@@ -67,7 +45,7 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 
 	return {
 		transcript,
-		createRequest: { host, port, geoLocation },
+		createRequest: opts,
 		async write(data) {
 			transcript.push({ sender: 'client', message: data })
 			await new Promise<void>((resolve, reject) => {
@@ -99,6 +77,55 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 }
 
 setDnsServers()
+
+async function connectTcp({ host, port, geoLocation, logger }: ExtraOpts) {
+	let connectTimeout: NodeJS.Timeout | undefined
+	let socket: Socket | undefined
+	try {
+		await new Promise(async(resolve, reject) => {
+			try {
+				// add a timeout to ensure the connection doesn't hang
+				// and cause our gateway to send out a 504
+				connectTimeout = setTimeout(
+					() => reject(
+						new WitnessError(
+							'WITNESS_ERROR_NETWORK_ERROR',
+							'Server connection timed out'
+						)
+					),
+					CONNECTION_TIMEOUT_MS
+				)
+				socket = await getSocket({
+					host,
+					port,
+					geoLocation,
+					logger
+				})
+				socket.once('connect', resolve)
+				socket.once('error', reject)
+				socket.once('end', () => (
+					reject(
+						new WitnessError(
+							'WITNESS_ERROR_NETWORK_ERROR',
+							'connection closed'
+						)
+					)
+				))
+			} catch(err) {
+				reject(err)
+			}
+		})
+
+		logger.debug({ addr: `${host}:${port}` }, 'connected')
+
+		return socket!
+	} catch(err) {
+		socket?.end()
+		throw err
+	} finally {
+		clearTimeout(connectTimeout)
+	}
+}
 
 async function getSocket(opts: ExtraOpts) {
 	const { logger } = opts
