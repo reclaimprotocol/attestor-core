@@ -120,6 +120,32 @@ describeWithServer('Claim Creation', opts => {
 
 	describe('Pool', () => {
 
+		it('should correctly throw error when tunnel creation fails', async() => {
+			await expect(
+				createClaimOnWitness({
+					name: 'http',
+					params: {
+						url: 'https://some.dns.not.exist',
+						method: 'GET',
+						responseRedactions: [],
+						responseMatches: [
+							{
+								type: 'contains',
+								value: 'test'
+							}
+						]
+					},
+					secretParams: {
+						authorisationHeader: 'Bearer abcd'
+					},
+					ownerPrivateKey: opts.privateKeyHex,
+					client: { url: opts.serverUrl }
+				})
+			).rejects.toMatchObject({
+				message: /ENOTFOUND/
+			})
+		})
+
 		it('should reconnect client when found disconnected', async() => {
 			await createClaim()
 			// since we're using a pool, we'll find the client
