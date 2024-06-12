@@ -2,6 +2,7 @@ import { createClaimOnWitness } from '../create-claim'
 import { extractHTMLElement, extractJSONValueIndex } from '../providers/http/utils'
 import { ZKOperators } from '../types'
 import { makeLogger } from '../utils'
+import { Benchmark } from '../utils/benchmark'
 import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from './types'
 import { getCurrentMemoryUsage, getWsApiUrlFromLocation, mapToCreateClaimResponse } from './utils'
 import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator } from './window-rpc-zk'
@@ -139,6 +140,12 @@ export function setupWindowRpc() {
 				respond({
 					type: 'setLogLevelDone',
 					response: undefined
+				})
+				break
+			case 'benchmarkZK':
+				respond({
+					type: 'benchmarkZKDone',
+					response: await Benchmark(),
 				})
 				break
 			default:

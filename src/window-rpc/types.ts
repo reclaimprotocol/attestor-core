@@ -93,6 +93,8 @@ export type WindowRPCClient = {
 	 * back to the app
 	 */
 	setLogLevel(options: LogLevelOptions): Promise<void>
+
+	benchmarkZK(): Promise<string>
 }
 
 /**
@@ -135,6 +137,7 @@ export type WindowRPCIncomingMsg = (
 	| WindowRPCRequest<WindowRPCClient, 'extractJSONValueIndex'>
 	| WindowRPCRequest<WindowRPCClient, 'getCurrentMemoryUsage'>
 	| WindowRPCRequest<WindowRPCClient, 'setLogLevel'>
+    | WindowRPCRequest<WindowRPCClient, 'benchmarkZK'>
 	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'zkProve'>>
 	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'zkVerify'>>
 	| AsResponse<WindowRPCErrorResponse>
@@ -150,6 +153,7 @@ export type WindowRPCOutgoingMsg = (
 	| AsResponse<WindowRPCResponse<WindowRPCClient, 'extractJSONValueIndex'>>
 	| AsResponse<WindowRPCResponse<WindowRPCClient, 'getCurrentMemoryUsage'>>
 	| AsResponse<WindowRPCResponse<WindowRPCClient, 'setLogLevel'>>
+    | AsResponse<WindowRPCResponse<WindowRPCClient, 'benchmarkZK'>>
 	| WindowRPCRequest<WindowRPCAppClient, 'zkProve'>
 	| WindowRPCRequest<WindowRPCAppClient, 'zkVerify'>
 	| (
