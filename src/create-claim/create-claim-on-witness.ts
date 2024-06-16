@@ -128,6 +128,8 @@ async function _createClaimOnWitness<N extends ProviderName>(
 		logger,
 		request: createTunnelReq,
 		onMessage(data) {
+			logger.debug({ bytes: data.length }, 'recv data from server')
+
 			resParser.onChunk(data)
 			if(resParser.res.complete) {
 				logger?.debug('got complete HTTP response from server')
