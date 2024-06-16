@@ -77,6 +77,10 @@ describe('HTTP Provider Utils tests', () => {
 			expect(redactions).toEqual([
 				{
 					'fromIndex': 15,
+					'toIndex': 17
+				},
+				{
+					'fromIndex': 52,
 					'toIndex': 4760
 				},
 				{
