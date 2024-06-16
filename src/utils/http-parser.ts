@@ -35,6 +35,8 @@ type HttpResponse = {
      * chunk in the complete response
      */
     chunks?: ArraySlice[]
+
+    headerIndices: Map<string, ArraySlice>
 }
 
 const HTTP_HEADER_LINE_END = strToUint8Array('\r\n')
@@ -51,6 +53,7 @@ export function makeHttpResponseParser() {
 		body: new Uint8Array(),
 		complete: false,
 		headersComplete: false,
+		headerIndices:new Map<string, ArraySlice>()
 	}
 
 	let remainingBodyBytes = 0
@@ -98,6 +101,10 @@ export function makeHttpResponseParser() {
 					} else if(!res.complete) { // parse the header
 						const [key, value] = line.split(': ')
 						res.headers[key.toLowerCase()] = value
+						res.headerIndices[key.toLowerCase()] = {
+							fromIndex:currentByteIdx - line.length - HTTP_HEADER_LINE_END.length,
+							toIndex:currentByteIdx - HTTP_HEADER_LINE_END.length
+						}
 					} else {
 						throw new Error('got more data after response was complete')
 					}
