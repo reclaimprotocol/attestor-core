@@ -121,6 +121,10 @@ export function makeHttpResponseParser() {
 					}
 				}
 
+				if(res.headers['content-length'] === '0') {
+					res.complete = true
+				}
+
 				if(isChunked) {
 					for(let line = getLine(); typeof line !== 'undefined'; line = getLine()) {
 						if(line === '') {

@@ -86,6 +86,18 @@ describe.each(['complete', 'byte-by-byte'] as const)('HTTP Parser tests (mode=%s
 	}
 })
 
+describe('General HTTP Parser Tests', () => {
+
+	it('should correctly parse an empty body response', () => {
+		const str = 'HTTP/1.1 302 \r\nset-cookie: JSESSIONID=X; Path=/; Secure; HttpOnly\r\nx-content-type-options: nosniff\r\nx-xss-protection: 1; mode=block\r\nstrict-transport-security: max-age=31536000 ; includeSubDomains\r\nlocation: https://xyz.com/abcd\r\ncontent-length: 0\r\ndate: Sun, 16 Jun 2024 07:12:03 GMT\r\nconnection: close\r\nSet-Cookie: XYZ; path=/; Httponly; Secure\r\nSet-Cookie: ROUTEID=.node-U01; Path=/; Httponly; Secure\r\n\r\n'
+		const buff = strToUint8Array(str)
+		const parser = makeHttpResponseParser()
+		parser.onChunk(buff)
+
+		expect(parser.res.complete).toEqual(true)
+	})
+})
+
 const RES1 = Buffer.from(
 	'SFRUUC8xLjEgNDAxIFVuYXV0aG9yaXplZA0KV1dXLUF1dGhlbnRpY2F0ZTogQmVhcmVyIHJlYWxtPSJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20vIiwgZXJyb3I9ImludmFsaWRfdG9rZW4iDQpWYXJ5OiBYLU9yaWdpbg0KVmFyeTogUmVmZXJlcg0KQ29udGVudC1UeXBlOiBhcHBsaWNhdGlvbi9qc29uOyBjaGFyc2V0PVVURi04DQpEYXRlOiBUdWUsIDEzIERlYyAyMDIyIDAzOjU1OjM1IEdNVA0KU2VydmVyOiBFU0YNCkNhY2hlLUNvbnRyb2w6IHByaXZhdGUNClgtWFNTLVByb3RlY3Rpb246IDANClgtRnJhbWUtT3B0aW9uczogU0FNRU9SSUdJTg0KWC1Db250ZW50LVR5cGUtT3B0aW9uczogbm9zbmlmZg0KQWNjZXB0LVJhbmdlczogbm9uZQ0KVmFyeTogT3JpZ2luLEFjY2VwdC1FbmNvZGluZw0KVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCkFsdC1TdmM6IGgzPSI6NDQzIjsgbWE9MjU5MjAwMCxoMy0yOT0iOjQ0MyI7IG1hPTI1OTIwMDAsaDMtUTA1MD0iOjQ0MyI7IG1hPTI1OTIwMDAsaDMtUTA0Nj0iOjQ0MyI7IG1hPTI1OTIwMDAsaDMtUTA0Mz0iOjQ0MyI7IG1hPTI1OTIwMDAscXVpYz0iOjQ0MyI7IG1hPTI1OTIwMDA7IHY9IjQ2LDQzIg0KQ29ubmVjdGlvbjogY2xvc2UNCg0KMTI5DQp7CiAgImVycm9yIjogewogICAgImNvZGUiOiA0MDEsCiAgICAibWVzc2FnZSI6ICJSZXF1ZXN0IGhhZCBpbnZhbGlkIGF1dGhlbnRpY2F0aW9uIGNyZWRlbnRpYWxzLiBFeHBlY3RlZCBPQXV0aCAyIGFjY2VzcyB0b2tlbiwgbG9naW4gY29va2llIG9yIG90aGVyIHZhbGlkIGF1dGhlbnRpY2F0aW9uIGNyZWRlbnRpYWwuIFNlZSBodHRwczovL2RldmVsb3BlcnMuZ29vZ2xlLmNvbS9pZGVudGl0eS9zaWduLWluL3dlYi9kZXZjb25zb2xlLXByb2plY3QuIiwKICAgICJzdGF0dXMiOiAiVU5BVVRIRU5USUNBVEVEIgogIH0KfQoNCg==',
 	'base64',
