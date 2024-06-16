@@ -20,6 +20,8 @@ import {
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
 
+const dateHeaderRegex = '[dD]ate: ((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (?:[0-3][0-9]) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?:[0-9]{4}) (?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2} GMT)'
+const dateDiff = 1000 * 60 * 5 // allow 5-min difference
 type HTTPProviderParams = ProviderParams<'http'>
 
 const HTTP_PROVIDER: Provider<'http'> = {
@@ -149,8 +151,15 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			throw new Error('Failed to find body')
 		}
 
-		const body = uint8ArrayToBinaryStr(res.body)
 		const reveals: ArraySlice[] = [{ fromIndex: 0, toIndex: headerEndIndex }]
+
+		//reveal date header
+		if(res.headerIndices['date']) {
+			reveals.push(res.headerIndices['date'])
+		}
+
+		const body = uint8ArrayToBinaryStr(res.body)
+
 		for(const rs of params.responseRedactions || []) {
 			let element = body
 			let elementIdx = 0
@@ -262,6 +271,12 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			throw new Error(`Expected host: ${expectedHostStr}, found: ${req.headers.host}`)
 		}
 
+		const connectionheader = req.headers['connection']
+		if(connectionheader !== 'close') {
+			logTranscript()
+			throw new Error(`Connection header must be "close", got "${connectionheader}"`)
+		}
+
 		const serverBlocks = receipt
 			.filter(s => s.sender === 'server')
 			.map((r) => r.message)
@@ -274,11 +289,19 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			)
 		}
 
-		const connectionheader = req.headers['connection']
-		if(connectionheader !== 'close') {
-			logTranscript()
-			throw new Error(`Connection header must be "close", got "${connectionheader}"`)
+
+		//validate server Date header if present
+		const dateHeader = makeRegex(dateHeaderRegex).exec(res)
+		if(dateHeader?.length > 1) {
+			logger.info('Found Date header: %s', dateHeader)
+			const serverDate = Date.parse(dateHeader[1])
+			if((Date.now() - serverDate) > dateDiff) {
+				throw new Error(
+					`Server date is off by "${(Date.now() - serverDate) / 1000} s"`
+				)
+			}
 		}
+
 
 		const paramBody = params.body instanceof Uint8Array
 			? params.body
