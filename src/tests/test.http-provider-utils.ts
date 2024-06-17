@@ -281,7 +281,7 @@ Content-Type: text/html; charset=utf-8\r
 					method: 'GET'
 				})
 			}
-		}).toThrow('Failed to find body')
+		}).toThrow('Failed to find response body')
 	})
 
 	it('should throw on bad xpath', () => {
