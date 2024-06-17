@@ -148,7 +148,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const headerEndIndex = res.statusLineEndIndex!
 		const bodyStartIdx = res.bodyStartIndex ?? 0
 		if(bodyStartIdx < 4) {
-			throw new Error('Failed to find body')
+			logger.error({ response: uint8ArrayToBinaryStr(response) })
+			throw new Error('Failed to find response body')
 		}
 
 		const reveals: ArraySlice[] = [{ fromIndex: 0, toIndex: headerEndIndex }]
