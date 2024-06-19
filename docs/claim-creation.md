@@ -82,13 +82,14 @@ This entire process is facilitated by the [createClaimOnWitness](/src/create-cla
 	- The user can close the tunnel at any time by sending a `disconnectTunnelRequest` message to the witness optionally with a reason for closing the tunnel.
 	- If the end server closes the connection, the witness will send a `tunnelDisconnectEvent` message to the user.
 	- Once the user is done with the tunnel, i.e the user has sent all the data they want to the end server & received all the data they want from the end server, they can close the tunnel. After which they can proceed to "claim" the tunnel & prove a claim about the data sent & received over the tunnel. This is done via the `claimTunnelRequest` message.
-4. The user will make execute the TLS handshake with the end server via the tunnel through the witness.
+3. The user will make execute the TLS handshake with the end server via the tunnel through the witness.
 	- We utilise our own TLS implementation to manage the TLS connection. More details [here](#tls-implementation).
 	- The user manages this connection using the [makeRpcTlsTunnel](/src/tunnels/make-rpc-tls-tunnel.ts) fn.
 	- The RpcTlsTunnel also stores all the messages sent & received over the tunnel including the symmetric keys used to encrypt/decrypt the messages. 
 		- These will be used later to prove to the witness that the data received from the end server is the same as the data sent to it
 	- Note: TLS is secure even when when passing data through the witness & another proxy. The user can send sensitive data to the end server without worrying about the witness snooping on it.
-5. Once the TLS handshake is complete, the user can start sending data to the end server. We call upon the provider's `createRequest` fn for this -- that returns the data to be sent & the redactions to make.
+4. Once the TLS handshake is complete, the user can start sending data to the end server. We call upon the provider's `createRequest` fn for this -- that returns the data to be sent & the redactions to make.
+5. Before data is sent to the server it is put through the same `assertValidProviderReceipt` function that server uses. It is done to make sure witness creation will succeed
 6. Now, to actually redact sensitive information from the data sent to the witness, the user must send the data in a specific way. We have two methods to handle this:
 	- Using the TLS Key Update method: This is the most efficient method & is the default. More details on what it is [here](#tls-key-update-method). However, it has a few pitfalls:
 		- It only works with TLS 1.3
