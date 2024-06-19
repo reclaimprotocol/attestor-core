@@ -1,6 +1,7 @@
 import { TLSProtocolVersion, uint8ArrayToStr } from '@reclaimprotocol/tls'
 import { WitnessClient } from '../client'
 import { createClaimOnWitness, getWitnessClientFromPool } from '../create-claim'
+import { WitnessErrorCode } from '../proto/api'
 import { providers } from '../providers'
 import { decryptTranscript } from '../server'
 import { assertValidClaimSignatures, extractApplicationDataFromTranscript, logger, WitnessError } from '../utils'
@@ -89,28 +90,32 @@ describeWithServer('Claim Creation', opts => {
 	})
 
 	it('should not create a claim with invalid response', async() => {
+		const result = await createClaimOnWitness({
+			name: 'http',
+			params: {
+				url: claimUrl,
+				method: 'GET',
+				responseRedactions: [],
+				responseMatches: [
+					{
+						type: 'contains',
+						value: 'something@mock.com'
+					}
+				]
+			},
+			secretParams: {
+				authorisationHeader: 'Fail'
+			},
+			ownerPrivateKey: opts.privateKeyHex,
+			client,
+		})
 
-		await expect(async() => {
-			await createClaimOnWitness({
-				name: 'http',
-				params: {
-					url: claimUrl,
-					method: 'GET',
-					responseRedactions: [],
-					responseMatches: [
-						{
-							type: 'contains',
-							value: 'something@mock.com'
-						}
-					]
-				},
-				secretParams: {
-					authorisationHeader: 'Fail'
-				},
-				ownerPrivateKey: opts.privateKeyHex,
-				client,
-			})
-		}).rejects.toThrow('Provider returned error 401')
+		expect(result.error).toBeTruthy()
+		expect(result.error?.code).toEqual(
+			WitnessErrorCode.WITNESS_ERROR_INVALID_CLAIM
+		)
+		expect(result.error?.message).toMatch(/Response did not start with/)
+		expect(result.request?.transcript).toBeTruthy()
 	})
 
 	describe('Pool', () => {

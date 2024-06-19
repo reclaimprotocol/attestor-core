@@ -71,22 +71,20 @@ describeWithServer('HTTP Provider', opts => {
 				'user-agent': 'Mozilla/5.0',
 			}
 		}
-
-		await expect(async() => {
-			await createClaimOnWitness({
-				name: 'http',
-				secretParams: {
-					cookieStr: '<cookie-str>',
-					paramValues: {
-						h: '',
-					},
-					authorisationHeader: 'abc'
+		const receipt = await createClaimOnWitness({
+			name: 'http',
+			secretParams: {
+				cookieStr: '<cookie-str>',
+				paramValues: {
+					h: '',
 				},
-				params: params,
-				ownerPrivateKey: opts.privateKeyHex,
-				client: opts.client,
-			})
-		}).rejects.toThrow('request body mismatch')
-
+				authorisationHeader: 'abc'
+			},
+			params: params,
+			ownerPrivateKey: opts.privateKeyHex,
+			client: opts.client,
+		})
+		expect(receipt?.error).toBeTruthy()
+		expect(receipt?.error?.message).toContain('request body mismatch')
 	})
 })

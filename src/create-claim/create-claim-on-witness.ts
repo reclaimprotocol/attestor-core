@@ -4,7 +4,7 @@ import { ClaimTunnelRequest } from '../proto/api'
 import { providers } from '../providers'
 import { SIGNATURES } from '../signatures'
 import { makeRpcTlsTunnel } from '../tunnels/make-rpc-tls-tunnel'
-import { CreateClaimOnWitnessOpts, IWitnessClient, MessageRevealInfo, ProviderName, Transcript } from '../types'
+import { CreateClaimOnWitnessOpts, IWitnessClient, MessageRevealInfo, ProviderName } from '../types'
 import { canonicalStringify, generateTunnelId, getBlocksToReveal, getProviderValue, isApplicationData, logger as LOGGER, makeHttpResponseParser, preparePacketsForReveal, redactSlices, unixTimestampSeconds, WitnessError } from '../utils'
 import { executeWithRetries } from '../utils/retries'
 import { getDefaultTlsOptions } from '../utils/tls'
@@ -362,37 +362,26 @@ async function _createClaimOnWitness<N extends ProviderName>(
 	function addServerSideReveals() {
 		const allPackets = tunnel.transcript
 		let serverPacketsToReveal: ReturnType<typeof getBlocksToReveal<ServerAppDataPacket>> = 'all'
+		if(provider.getResponseRedactions) {
+			const serverBlocks: ServerAppDataPacket[] = []
+			for(let i = 0;i < allPackets.length;i++) {
+				const b = allPackets[i]
+				if(
+					b.sender !== 'server'
+					|| b.message.type !== 'ciphertext'
+					|| !isApplicationData(b.message, tlsVersion!)
+				) {
+					continue
+				}
 
-		const packets: Transcript<Uint8Array> = []
-		const serverBlocks: ServerAppDataPacket[] = []
-		for(let i = 0;i < allPackets.length;i++) {
-			const b = allPackets[i]
-			if(b.message.type !== 'ciphertext'
-				|| !isApplicationData(b.message, tlsVersion!)
-			) {
-				continue
-			}
-
-			const plaintext = tlsVersion === 'TLS1_3'
-				? b.message.plaintext.slice(0, -1)
-				: b.message.plaintext
-
-			packets.push({
-				message: plaintext,
-				sender:b.sender
-			})
-
-			if(b.sender === 'server') {
 				serverBlocks.push({
-					plaintext:plaintext,
+					plaintext: tlsVersion === 'TLS1_3'
+						? b.message.plaintext.slice(0, -1)
+						: b.message.plaintext,
 					message: b.message
 				})
 			}
-		}
 
-		provider.assertValidProviderReceipt(packets, params)
-
-		if(provider.getResponseRedactions) {
 			serverPacketsToReveal = getBlocksToReveal(
 				serverBlocks,
 				total => provider.getResponseRedactions!(
