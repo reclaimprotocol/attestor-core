@@ -19,7 +19,7 @@ import {
 } from './utils'
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
-
+const statusRegex = /^HTTP\/1.1 (\d{3})/sgi
 const dateHeaderRegex = '[dD]ate: ((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (?:[0-3][0-9]) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?:[0-9]{4}) (?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2} GMT)'
 const dateDiff = 1000 * 60 * 5 // allow 5-min difference
 type HTTPProviderParams = ProviderParams<'http'>
@@ -285,6 +285,14 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const res = Buffer.from(concatArrays(...serverBlocks)).toString()
 		if(!res.startsWith(OK_HTTP_HEADER)) {
 			logTranscript()
+
+			const matchRes = statusRegex.exec(res)
+			if(matchRes && matchRes.length > 1) {
+				throw new Error(
+					`Provider returned error ${matchRes[1]}"`
+				)
+			}
+
 			throw new Error(
 				`Response did not start with "${OK_HTTP_HEADER}"`
 			)

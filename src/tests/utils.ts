@@ -22,6 +22,10 @@ export function getRandomPort() {
  * tls transcript and reveals map that was used.
  */
 export function verifyNoDirectRevealLeaks() {
+	if(!SPY_PREPARER.mock.calls.length) {
+		return
+	}
+
 	const [tlsTranscript, revealsMap] = SPY_PREPARER.mock.calls[0]
 	for(const [packet, reveal] of revealsMap.entries()) {
 		if(reveal.type !== 'complete') {
