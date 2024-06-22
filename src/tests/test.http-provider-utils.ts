@@ -303,7 +303,7 @@ Content-Type: text/html; charset=utf-8\r
 					method: 'GET'
 				})
 			}
-		}).toThrow('Failed to find element: \"abc\"')
+		}).toThrow('Failed to find XPath: \"abc\"')
 	})
 
 	it('should throw on bad jsonPath', () => {
