@@ -168,10 +168,16 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 			if(rs.xPath) {
 				element = extractHTMLElement(body, rs.xPath, !!rs.jsonPath)
+
+				if(element === 'Element not found') {
+					logger.error({ response: Buffer.from(body).toString('base64') })
+					throw new Error(`Failed to find XPath: "${rs.xPath}"`)
+				}
+
 				const substr = findSubstringIgnoreLE(body, element)
 				if(substr.index < 0) {
-					logger.error({ response: uint8ArrayToBinaryStr(res.body) })
-					throw new Error(`Failed to find element: "${rs.xPath}"`)
+					logger.error({ response: Buffer.from(body).toString('base64'), elem:Buffer.from(strToUint8Array(element)).toString('base64') })
+					throw new Error(`Failed to find XPath element position in body: "${rs.xPath}"`)
 				}
 
 				elementIdx = substr.index
@@ -302,9 +308,11 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		//validate server Date header if present
 		const dateHeader = makeRegex(dateHeaderRegex).exec(res)
 		if(dateHeader?.length > 1) {
-			logger.info('Found Date header: %s', dateHeader)
 			const serverDate = Date.parse(dateHeader[1])
 			if((Date.now() - serverDate) > dateDiff) {
+
+				logger.info({ dateHeader:dateHeader[0], current: Date.now() }, 'date header is off')
+
 				throw new Error(
 					`Server date is off by "${(Date.now() - serverDate) / 1000} s"`
 				)
