@@ -245,7 +245,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 	},
 	assertValidProviderReceipt(receipt, paramsAny) {
 		let extractedParams: { [_: string]: string } = {}
-		const newParams = substituteParamValues(paramsAny, undefined, true)
+		const secretParams = ('secretParams' in paramsAny) ? paramsAny.secretParams as ProviderSecretParams<'http'> : undefined
+		const newParams = substituteParamValues(paramsAny, secretParams, false)
 		const params = newParams.newParams
 		extractedParams = { ...extractedParams, ...newParams.extractedValues }
 
@@ -324,7 +325,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			? params.body
 			: strToUint8Array(params.body || '')
 
-		if(paramBody.length > 0 && !('client' in params)) {
+		if(paramBody.length > 0) {
 			if(!matchRedactedStrings(paramBody, req.body)) {
 				logTranscript()
 				throw new Error('request body mismatch')

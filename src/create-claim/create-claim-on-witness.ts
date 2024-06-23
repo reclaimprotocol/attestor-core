@@ -392,7 +392,7 @@ async function _createClaimOnWitness<N extends ProviderName>(
 
 		provider.assertValidProviderReceipt(packets, {
 			...params,
-			client:true //flag to ignore request body validation on client, because it's not redacted, but partially replaced
+			secretParams:secretParams //provide secret params for proper request body validation
 		})
 
 		if(provider.getResponseRedactions) {
