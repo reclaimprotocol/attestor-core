@@ -324,7 +324,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			? params.body
 			: strToUint8Array(params.body || '')
 
-		if(paramBody.length > 0) {
+		if(paramBody.length > 0 && !('client' in params)) {
 			if(!matchRedactedStrings(paramBody, req.body)) {
 				logTranscript()
 				throw new Error('request body mismatch')
