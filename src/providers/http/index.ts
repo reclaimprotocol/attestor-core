@@ -307,7 +307,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 
 		//validate server Date header if present
-		const dateHeader = makeRegex(dateHeaderRegex).exec(res)
+		/*const dateHeader = makeRegex(dateHeaderRegex).exec(res)
 		if(dateHeader?.length > 1) {
 			const serverDate = Date.parse(dateHeader[1])
 			if((Date.now() - serverDate) > dateDiff) {
@@ -318,7 +318,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 					`Server date is off by "${(Date.now() - serverDate) / 1000} s"`
 				)
 			}
-		}
+		}*/
 
 
 		const paramBody = params.body instanceof Uint8Array
