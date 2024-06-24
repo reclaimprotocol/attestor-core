@@ -16,7 +16,7 @@ module.exports = {
 		alias: {
 			'jsdom': false,
 			'dotenv': false,
-			're2-wasm': false
+			're2': false
 		},
 		fallback: {
 			"fs": false,

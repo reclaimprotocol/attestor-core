@@ -23,7 +23,7 @@ type HTTPProviderParams = ProviderParams<'http'>
 
 let RE2
 try {
-	RE2 = require('re2-wasm')
+	RE2 = require('re2')
 	if(!Object.keys(RE2).length) {
 		RE2 = undefined
 		throw new Error()
@@ -219,7 +219,7 @@ export function parseHttpResponse(buff: Uint8Array) {
 
 export function makeRegex(str: string) {
 	if(RE2 !== undefined) {
-		return new RE2.RE2(str, 'sgiu')
+		return RE2(str, 'sgiu')
 	}
 
 	return new RegExp(str, 'sgi')

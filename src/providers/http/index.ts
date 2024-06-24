@@ -20,8 +20,8 @@ import {
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
 const statusRegex = /^HTTP\/1.1 (\d{3})/sgi
-//const dateHeaderRegex = '[dD]ate: ((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (?:[0-3][0-9]) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?:[0-9]{4}) (?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2} GMT)'
-//const dateDiff = 1000 * 60 * 10 // allow 10 min difference
+const dateHeaderRegex = '[dD]ate: ((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (?:[0-3][0-9]) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?:[0-9]{4}) (?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2} GMT)'
+const dateDiff = 1000 * 60 * 10 // allow 10 min difference
 type HTTPProviderParams = ProviderParams<'http'>
 
 const HTTP_PROVIDER: Provider<'http'> = {
@@ -307,7 +307,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 
 		//validate server Date header if present
-		/*const dateHeader = makeRegex(dateHeaderRegex).exec(res)
+		const dateHeader = makeRegex(dateHeaderRegex).exec(res)
 		if(dateHeader?.length > 1) {
 			const serverDate = Date.parse(dateHeader[1])
 			if((Date.now() - serverDate) > dateDiff) {
@@ -318,7 +318,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 					`Server date is off by "${(Date.now() - serverDate) / 1000} s"`
 				)
 			}
-		}*/
+		}
 
 
 		const paramBody = params.body instanceof Uint8Array
