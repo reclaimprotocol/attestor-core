@@ -170,13 +170,13 @@ const HTTP_PROVIDER: Provider<'http'> = {
 				element = extractHTMLElement(body, rs.xPath, !!rs.jsonPath)
 
 				if(element === 'Element not found') {
-					logger.error({ response: Buffer.from(body).toString('base64') })
+					logger.error({ response: btoa(body) })
 					throw new Error(`Failed to find XPath: "${rs.xPath}"`)
 				}
 
 				const substr = findSubstringIgnoreLE(body, element)
 				if(substr.index < 0) {
-					logger.error({ response: Buffer.from(body).toString('base64'), elem:Buffer.from(strToUint8Array(element)).toString('base64') })
+					logger.error({ response: btoa(body), elem:btoa(element) })
 					throw new Error(`Failed to find XPath element position in body: "${rs.xPath}"`)
 				}
 
