@@ -98,6 +98,7 @@ properties:
           description: >-
             Inverses the matching logic.
             Fail when match is found and proceed otherwise
+      additionalProperties: false
   responseRedactions:
     type: array
     uniqueItems: true
@@ -131,6 +132,7 @@ properties:
           type: string
           nullable: true
           description: select a regex match from the response
+      additionalProperties: false
   paramValues:
     type: object
     description: >-
@@ -140,3 +142,4 @@ properties:
       This value will NOT be included in provider hash
     additionalProperties:
       type: string
+additionalProperties: false

@@ -49,7 +49,7 @@ export function assertValidateProviderParams<T extends ProviderName>(
 		throw new WitnessError(
 			'WITNESS_ERROR_BAD_REQUEST',
 			'Params validation failed',
-			{ errors: validate.errors }
+			{ errors: JSON.stringify(validate.errors) }
 		)
 	}
 }
