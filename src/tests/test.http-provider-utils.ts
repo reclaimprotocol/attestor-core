@@ -38,6 +38,20 @@ describe('HTTP Provider Utils tests', () => {
 		expect(regexp.test(json.slice(val.start, val.end))).toBe(true)
 	})
 
+
+	it('should get inner & outer tag contents', () => {
+		const html = `<body>
+			  <div id="content123">This is <span>some</span> text!</div>
+			  <div id="content456">This is <span>some</span> other text!</div>
+			  <div id="content789">This is <span>some</span> irrelevant text!</div>
+			</body>`
+
+		let content = extractHTMLElement(html, "//div[contains(@id, 'content123')]", true)
+		expect(content).toEqual('This is <span>some</span> text!')
+		content = extractHTMLElement(html, "//div[contains(@id, 'content456')]", false)
+		expect(content).toEqual('<div id="content456">This is <span>some</span> other text!</div>')
+	})
+
 	it('should error on incorrect jsonPath', () => {
 		expect(() => {
 			extractJSONValueIndex(('{"asdf": 1}'), '(alert(origin))')

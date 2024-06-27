@@ -59,10 +59,13 @@ export function extractHTMLElement(
 		return 'Element not found'
 	}
 
+	const nodeLocation = dom.nodeLocation(node)
+
 	if(contentsOnly) {
-		return node.textContent!
+		const start = nodeLocation.startTag?.endOffset
+		const end = nodeLocation.endTag?.startOffset
+		return html.slice(start, end)
 	} else {
-		const nodeLocation = dom.nodeLocation(node)
 		return html.slice(nodeLocation?.startOffset, nodeLocation?.endOffset)
 	}
 }
