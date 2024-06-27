@@ -9,7 +9,6 @@ import {
 	Property,
 	Syntax
 } from 'esprima-next'
-import * as jsdom from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
 import { ArraySlice, ProviderParams } from '../../types'
 import { makeHttpResponseParser, REDACTION_CHAR_CODE } from '../../utils'
@@ -32,21 +31,29 @@ try {
 	console.log('RE2 not found. Using standard regex')
 }
 
-// utilise JSDom on NodeJS, otherwise
-// use the browser's window object
-const Window = typeof window !== 'undefined'
-	? window
-	: new jsdom.JSDOM().window
+let jsd
+
+if(typeof window !== 'undefined') {
+	// @ts-ignore
+	jsd = window.jsdom
+} else {
+	jsd = require('jsdom')
+}
 
 export function extractHTMLElement(
 	html: string,
 	xpathExpression: string,
 	contentsOnly: boolean
 ): string {
-	const domParser = new Window.DOMParser()
-	const dom = domParser.parseFromString(html, 'text/html')
-	const node = dom
-		.evaluate(xpathExpression, dom, null, Window.XPathResult.FIRST_ORDERED_NODE_TYPE, null)
+
+	const dom = new jsd.JSDOM(html, {
+		contentType: 'text/html',
+		includeNodeLocations: true
+	})
+
+	const document = dom.window.document
+	const node = document
+		.evaluate(xpathExpression, document, null, dom.window.XPathResult.FIRST_ORDERED_NODE_TYPE, null)
 		?.singleNodeValue
 	if(!node) {
 		return 'Element not found'
@@ -55,10 +62,8 @@ export function extractHTMLElement(
 	if(contentsOnly) {
 		return node.textContent!
 	} else {
-		//a workaround to get exact html element contents
-		const wrap = dom.createElement('div')
-		wrap.appendChild(node.cloneNode(true))
-		return wrap.innerHTML
+		const nodeLocation = dom.nodeLocation(node)
+		return html.slice(nodeLocation?.startOffset, nodeLocation?.endOffset)
 	}
 }
 
