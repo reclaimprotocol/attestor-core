@@ -45,6 +45,15 @@ export function extractHTMLElement(
 	xpathExpression: string,
 	contentsOnly: boolean
 ): string {
+	const { start, end } = extractHTMLElementIndex(html, xpathExpression, contentsOnly)
+	return html.slice(start, end)
+}
+
+export function extractHTMLElementIndex(
+	html: string,
+	xpathExpression: string,
+	contentsOnly: boolean
+): { start: number, end: number } {
 
 	const dom = new jsd.JSDOM(html, {
 		contentType: 'text/html',
@@ -56,17 +65,20 @@ export function extractHTMLElement(
 		.evaluate(xpathExpression, document, null, dom.window.XPathResult.FIRST_ORDERED_NODE_TYPE, null)
 		?.singleNodeValue
 	if(!node) {
-		return 'Element not found'
+		throw new Error(`Failed to find XPath: "${xpathExpression}"`)
 	}
 
 	const nodeLocation = dom.nodeLocation(node)
+	if(!nodeLocation) {
+		throw new Error(`Failed to find XPath node location: "${xpathExpression}"`)
+	}
 
 	if(contentsOnly) {
-		const start = nodeLocation.startTag?.endOffset
-		const end = nodeLocation.endTag?.startOffset
-		return html.slice(start, end)
+		const start = nodeLocation.startTag.endOffset
+		const end = nodeLocation.endTag.startOffset
+		return { start, end }
 	} else {
-		return html.slice(nodeLocation?.startOffset, nodeLocation?.endOffset)
+		return { start:nodeLocation.startOffset, end: nodeLocation.endOffset }
 	}
 }
 

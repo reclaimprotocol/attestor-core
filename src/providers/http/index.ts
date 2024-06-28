@@ -11,7 +11,7 @@ import {
 import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
-	extractHTMLElement,
+	extractHTMLElementIndex,
 	extractJSONValueIndex,
 	makeRegex,
 	matchRedactedStrings,
@@ -167,20 +167,10 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			let elementLength = -1
 
 			if(rs.xPath) {
-				element = extractHTMLElement(body, rs.xPath, !!rs.jsonPath)
-
-				if(element === 'Element not found') {
-					logger.error({ response: btoa(body) })
-					throw new Error(`Failed to find XPath: "${rs.xPath}"`)
-				}
-
-				elementIdx = body.indexOf(element)
-				if(elementIdx === -1) {
-					logger.error({ response: btoa(body) })
-					throw new Error(`Failed to find XPath substring in body: "${element}"`) //should never happen
-				}
-
-				elementLength = element.length
+				const { start, end } = extractHTMLElementIndex(body, rs.xPath, !!rs.jsonPath)
+				element = body.slice(start, end)
+				elementIdx = start
+				elementLength = end - start
 			}
 
 			if(rs.jsonPath) {
