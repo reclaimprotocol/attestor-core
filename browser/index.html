@@ -10,6 +10,12 @@
 	<script>
 		module.exports.setupWindowRpc()
     </script>
+	// hot fix for missing identifier
+	<script>
+		window.addEventListener('load', function (event) {
+            console.assert = (...log) => console.log(log)
+        })
+	</script>
 
     <script>
 		function appendMemoryUsageStr(str) {
