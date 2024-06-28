@@ -1,17 +1,24 @@
 <html>
+
 <head>
-    <script src="browser-rpc/resources/jsdom.js">
-    </script>
-    <script>
+	<script src="browser-rpc/resources/jsdom.js">
+	</script>
+	<script>
 		module = {};
 	</script>
 	<script src="browser-rpc/resources/reclaim-witness.min.js">
 	</script>
 	<script>
 		module.exports.setupWindowRpc()
-    </script>
+	</script>
+	// hot fix for missing identifier
+	<script>
+		window.addEventListener('load', function (event) {
+			console.assert = (...log) => { }
+		})
+	</script>
 
-    <script>
+	<script>
 		function appendMemoryUsageStr(str) {
 			document.getElementById('memory-usage').innerHTML += `[${new Date().toJSON()}] Memory usage: ${str}<br/>`;
 		}
@@ -42,15 +49,17 @@
 		if (window.location.search.includes('track-memory-usage=true')) {
 			trackMemoryUsage()
 		}
-    </script>
+	</script>
 </head>
-<body>
-<h6>
-    Witness SDK RPC
-</h6>
 
-<span id='memory-usage'>
-		
+<body>
+	<h6>
+		Witness SDK RPC
+	</h6>
+
+	<span id='memory-usage'>
+
 	</span>
 </body>
+
 </html>
