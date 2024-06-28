@@ -174,15 +174,13 @@ const HTTP_PROVIDER: Provider<'http'> = {
 					throw new Error(`Failed to find XPath: "${rs.xPath}"`)
 				}
 
-				const substr = findSubstringIgnoreLE(body, element)
-				if(substr.index < 0) {
-					logger.error({ response: btoa(body), elem:btoa(element) })
-					throw new Error(`Failed to find XPath element position in body: "${rs.xPath}"`)
+				elementIdx = body.indexOf(element)
+				if(elementIdx === -1) {
+					logger.error({ response: btoa(body) })
+					throw new Error(`Failed to find XPath substring in body: "${element}"`) //should never happen
 				}
 
-				elementIdx = substr.index
-				elementLength = substr.length
-				element = body.slice(elementIdx, elementIdx + elementLength)
+				elementLength = element.length
 			}
 
 			if(rs.jsonPath) {
@@ -398,27 +396,6 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			logger.error({ request: clientTranscript, response:serverTranscript, params:paramsAny })
 		}
 	},
-}
-
-export function findSubstringIgnoreLE(str: string, substr: string): { index: number, length: number } {
-	// Split up the text on any of the newline sequences,
-	// then escape the parts in-between,
-	// then join together with the alternation
-	const rexText = substr
-		.split(/\r\n|\n|\r/)
-
-	const newLines = ['\r\n', '\n', '\r']
-
-	//try every type of newline
-	for(const nl of newLines) {
-		const sub = rexText.join(nl)
-		const pos = str.indexOf(sub)
-		if(pos !== -1) {
-			return { index: pos, length: sub.length }
-		}
-	}
-
-	return { index: -1, length: -1 }
 }
 
 function getHostPort(params: ProviderParams<'http'>) {
