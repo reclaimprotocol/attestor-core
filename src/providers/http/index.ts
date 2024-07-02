@@ -377,13 +377,13 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		return { extractedParameters: extractedParams }
 
 		function logTranscript() {
-			const clientMsgs = receipt.filter(s => s.sender === 'client').map(m => m.message)
+			/*const clientMsgs = receipt.filter(s => s.sender === 'client').map(m => m.message)
 			const serverMsgs = receipt.filter(s => s.sender === 'server').map(m => m.message)
 
 			const clientTranscript = uint8ArrayToStr(concatenateUint8Arrays(clientMsgs))
 			const serverTranscript = uint8ArrayToStr(concatenateUint8Arrays(serverMsgs))
 
-			logger.error({ request: clientTranscript, response:serverTranscript, params:paramsAny })
+			logger.error({ request: clientTranscript, response:serverTranscript, params:paramsAny })*/
 		}
 	},
 }
