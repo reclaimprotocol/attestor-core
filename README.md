@@ -1,33 +1,97 @@
-# Reclaim Witness
+# Reclaim Protocol
 
-Prove arbritrary claims about the internet with the Reclaim protocol.
+![Reclaim Protocol](./assets/Reclaim.png)
 
-TLDR: The witness is a server that sits between the reclaim user & the internet. The client sends data to the internet via the witness. All this data is exchanged securely via the TLS protocol.
-We leverage some special properties of the TLS protocol along with zero-knowledge proofs to reveal only the necessary information to the witness.
-The witness then signs this data & sends it back to the client. The client can then use this signed data to prove the claim to anyone.
+## Overview
 
-Read a longer brief [here](docs/problem-statement.md).
+Reclaim is a protocol that allows users to prove claims about their online data without requiring cooperation from the websites that hold that data. It enables secure, privacy-preserving credential management and verification.
 
-This repository contains **Typescript** implementation of the witness server & the SDK to interact with it. The SDK is compatible with the browser & NodeJS. However, to run the SDK on React Native/Mobile, refer to our [React Native guide](docs/browser-rpc.md).
+## Architecture
 
-## Install
+The Reclaim protocol consists of several components:
 
-`npm install git+https://gitlab.reclaimprotocol.org/reclaim-clients/witness-sdk`
+1. Client-side libraries for generating proofs
+2. Attestor node software
+3. Reclaim blockchain for managing the token economy and storing proofs
+4. Smart contracts for handling claim requests and attestations
 
-**Note:** this approach is only advised for NodeJS projects or projects meant to run directly in a modern browser. For React Native or any solution running in a mobile app, refer to our doc [here](docs/browser-rpc.md).
+## Key Features
 
-## Running your own witness
+- Generate Proofs of Provenance (PoP) for data received through TLS/HTTPS connections
+- Selective reveal of data, allowing users to share only specific parts of their information
+- Zero-knowledge proofs to maintain user privacy
+- Decentralized attestation system
+- Economic incentives for honest behavior
+- Custom blockchain to facilitate protocol operations and token economy
 
-1. Of course, clone this repository.
-2. Ensure you have an env file with at least the `PRIVATE_KEY` set. See the [.env.sample](.env.sample) file to see all available options.
-3. Optional: build the browser RPC files with `npm run build:browser`. More on this in the [docs](docs/browser-rpc.md).
-4. Run the witness server with `npm run start:tsc`. This will start the server on port 8001 by default.
+## How It Works
+
+Reclaim Protocol generates cryptographic proofs on HTTPS traffic. The type of cryptographic proof it generates is called a [zero knowledge proof](https://en.wikipedia.org/wiki/Zero-knowledge_proof). It lets the user generate the proof without knowledge of anything other than what the user wants to share with you. The Protocol is built upon open standards such as HTTPS and TLS.
+
+You can learn more here
+
+- [A non technical overview of how Reclaim Works](https://blog.reclaimprotocol.org/posts/what-is-reclaimprotocol)
+- [A technical deepdive via our Whitepaper](https://link.reclaimprotocol.org/whitepaper-draft)
+
+## Use Cases
+
+- Prove you're a 5-star driver without sharing your license plate number
+- Demonstrate your credit score without revealing your bank account details
+- Verify employment or income without exposing your full pay stub
+
+## For Developers
+
+Easily integrate Reclaim into your app to securely verify user credentials from any website. Our protocol handles the complex cryptography, so you don't have to.
 
 ## Getting Started
 
-We'd recommend you go through our documentation in the following order:
-1. [Problem Statement](docs/problem-statement.md): Understand the problem we're solving & whether this is the right solution for you.
-2. [Getting Started](docs/getting-started.md): Understand how to get started with the witness SDK & create your first claim.
-3. [Browser RPC/React Native](docs/browser-rpc.md): How to setup the witness SDK for environments like React Native or any other mobile app.
-4. [Provider](docs/provider.md): What is a provider in the Reclaim context, how to create one & details on the HTTP provider.
-5. [Internals of Claim Creation](docs/claim-creation.md): In-depth description of the full flow of creating a claim with a witness.
+To get started with Reclaim, check out our comprehensive documentation,
+
+[Reclaim Documentation](https://docs.reclaimprotocol.org/)
+
+## Try It Out Yourself
+
+Ready to dive in? Follow our installation guide to set up Reclaim,
+
+[Install Reclaim](https://docs.reclaimprotocol.org/install)
+
+## Security
+
+Reclaim prioritizes user privacy and data security through:
+
+- Enhanced HTTPS protocols
+- Cryptographic signing
+- Zero-knowledge proofs
+- Decentralized attestation
+
+## Contributing
+
+We welcome contributions from the community! Please see our [contributing guidelines](link-to-contributing-guidelines) for more information on how to get involved.
+
+## License
+
+This Organizationa and its projects are lincensed under the [License](./LICENSE)
+
+## Vulnerability Disclosure
+
+We take the security of our protocol very seriously. If you have discovered a security vulnerability in the Reclaim Protocol, we appreciate your help in disclosing it to us in a responsible manner.
+
+For full details on our security policy and how to report vulnerabilities, please refer to our [Security Policy](./SECURITY.md).
+
+Key points:
+
+1. Do not publicly disclose the vulnerability.
+2. Email us at security@reclaimprotocol.org with details of the vulnerability.
+3. Allow us a reasonable amount of time to respond and fix the issue before making any information public.
+
+We commit to responding promptly, keeping you updated, and acknowledging your contribution if desired.
+
+Thank you for helping keep Reclaim and its users safe!
+
+## Contact
+
+- Website: [https://reclaimprotocol.org](https://reclaimprotocol.org)
+- Twitter: [@ReclaimProtocol](https://twitter.com/ReclaimProtocol)
+- Email: contact@reclaimprotocol.org
+
+For more detailed information about the protocol, please refer to our [whitepaper](https://drive.google.com/file/d/1wmfdtIGPaN9uJBI1DHqN903tP9c_aTG2/view).
