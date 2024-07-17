@@ -2,7 +2,7 @@ import { WebSocket, type WebSocketServer } from 'ws'
 import { WitnessClient } from '../client'
 import { WS_PATHNAME } from '../config'
 import { createServer } from '../server'
-import { IWitnessServerSocket } from '../types'
+import { IWitnessServerSocket, ZKEngine } from '../types'
 import { logger } from '../utils'
 import { createMockServer } from './mock-provider-server'
 import { SPY_PREPARER } from './mocks'
@@ -18,7 +18,9 @@ type ServerOpts = {
 	mockHttpsServer: ReturnType<typeof createMockServer>
 	mockhttpsServerPort: number
 	serverUrl: string
+	zkEngine: ZKEngine
 }
+
 
 /**
  * Boots up a witness server, a mock https server,
@@ -27,7 +29,7 @@ type ServerOpts = {
 export const describeWithServer = (
 	name: string,
 	fn: (opts: ServerOpts) => void
-) => describe(name, () => {
+) => {
 	let wsServer: WebSocketServer
 
 	let wsServerUrl: string
@@ -79,10 +81,11 @@ export const describeWithServer = (
 		},
 		mockHttpsServer,
 		mockhttpsServerPort: httpsServerPort,
+		zkEngine: 'snarkJS'
 	})
 
 	function getClientOnServer() {
 		const serverSockets = [...wsServer.clients.values()] as WebSocket[]
 		return serverSockets.at(-1)?.serverSocket
 	}
-})
+}

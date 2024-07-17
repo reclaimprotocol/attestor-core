@@ -36,6 +36,7 @@
     "https-proxy-agent": "^7.0.4",
     "jsdom": "^24.1.0",
     "jsonpath-plus": "^8.1.0",
+    "koffi": "^2.8.11",
     "p-queue": "^8.0.1",
     "pino": "^9.2.0",
     "protobufjs": "^7.3.2",
@@ -65,5 +66,10 @@
     "webpack": "^5.92.1",
     "webpack-cli": "^5.1.4",
     "yaml": "^2.4.5"
+  },
+  "overrides": {
+    "@ethersproject/providers": {
+      "ws": "^7.5.10"
+    }
   }
 }

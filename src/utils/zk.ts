@@ -1,18 +1,18 @@
 import {
 	CONFIG as ZK_CONFIG,
 	EncryptionAlgorithm,
-	generateProof,
-	makeLocalSnarkJsZkOperator,
+	generateProof, makeLocalSnarkJsZkOperator,
 	makeSnarkJsZKOperator,
 	PrivateInput,
 	PublicInput,
 	verifyProof,
 	ZKOperator,
 } from '@reclaimprotocol/circom-symmetric-crypto'
+import { makeLocalGnarkZkOperator } from '@reclaimprotocol/circom-symmetric-crypto/lib/gnark'
 import { CipherSuite, crypto } from '@reclaimprotocol/tls'
 import { DEFAULT_REMOTE_ZK_PARAMS, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from '../config'
 import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof } from '../proto/api'
-import { CompleteTLSPacket, Logger, PrepareZKProofsBaseOpts, ZKOperators, ZKRevealInfo } from '../types'
+import { CompleteTLSPacket, Logger, PrepareZKProofsBaseOpts, ZKEngine, ZKOperators, ZKRevealInfo } from '../types'
 import { detectEnvironment, getEnvVariable } from './env'
 import { WitnessError } from './error'
 import { getPureCiphertext, getZkAlgorithmForCipherSuite } from './generics'
@@ -44,6 +44,7 @@ type ZKVerifyOpts = {
 	logger?: Logger
 	/** get ZK operator for specified algorithm */
 	zkOperators?: ZKOperators
+	zkEngine?: ZKEngine
 }
 
 type ZKProofToGenerate = {
@@ -71,6 +72,7 @@ export async function makeZkProofGenerator(
 		zkProofConcurrency = ZK_CONCURRENCY,
 		maxZkChunks = MAX_ZK_CHUNKS,
 		cipherSuite,
+		zkEngine = 'snarkJS'
 	}: PrepareZKProofsOpts
 ) {
 
@@ -82,7 +84,7 @@ export async function makeZkProofGenerator(
 
 	const packetsToProve: ZKPacketToProve[] = []
 
-	logger = (logger || LOGGER).child({ module: 'zk' })
+	logger = (logger || LOGGER).child({ module: 'zk', zkEngine: zkEngine })
 	let zkChunksToProve = 0
 
 	return {
@@ -248,6 +250,7 @@ export async function makeZkProofGenerator(
 		}: ZKProofToGenerate
 	): Promise<ZKProof> {
 		const operator = await getZkOperatorForAlgorithm(algorithm)
+
 		const proof = await generateProof(
 			{
 				algorithm,
@@ -259,7 +262,6 @@ export async function makeZkProofGenerator(
 		)
 
 		logger?.debug({ startIdx }, 'generated proof for chunk')
-
 		return {
 			proofJson: proof.proofJson,
 			decryptedRedactedCiphertext: proof.plaintext,
@@ -270,7 +272,7 @@ export async function makeZkProofGenerator(
 
 	async function getZkOperatorForAlgorithm(algorithm: EncryptionAlgorithm) {
 		return zkOperators?.[algorithm]
-			|| await makeDefaultZkOperator(algorithm, logger)
+			|| await makeDefaultZkOperator(algorithm, zkEngine, logger)
 	}
 }
 
@@ -283,7 +285,8 @@ export async function verifyZkPacket(
 		ciphertext,
 		zkReveal,
 		zkOperators,
-		logger = LOGGER
+		logger = LOGGER,
+		zkEngine = 'snarkJS'
 	}: ZKVerifyOpts,
 ) {
 	if(!zkReveal) {
@@ -293,7 +296,7 @@ export async function verifyZkPacket(
 	const { proofs } = zkReveal
 	const algorithm = getZkAlgorithmForCipherSuite(cipherSuite)
 	const operator = zkOperators?.[algorithm]
-		|| await makeDefaultZkOperator(algorithm, logger)
+		|| await makeDefaultZkOperator(algorithm, zkEngine, logger)
 
 	ciphertext = getPureCiphertext(ciphertext, cipherSuite)
 	/**
@@ -321,7 +324,6 @@ export async function verifyZkPacket(
 				startIdx,
 				startIdx + redactedPlaintext.length
 			)
-
 			// redact ciphertext if plaintext is redacted
 			// to prepare for decryption in ZK circuit
 			// the ZK circuit will take in the redacted ciphertext,
@@ -376,45 +378,57 @@ function getChunkSizeBytes(alg: EncryptionAlgorithm) {
 	return chunkSize * bitsPerWord / 8
 }
 
-const zkOperators: { [E in EncryptionAlgorithm]?: Promise<ZKOperator> } = {}
+const zkEngines: {
+	[z in ZKEngine]?: { [E in EncryptionAlgorithm]?: Promise<ZKOperator> }
+} = {}
+
+const operatorMakers: { [z in ZKEngine]: (algorithm: EncryptionAlgorithm, logger: Logger) => Promise<ZKOperator> } = {
+	'snarkJS': snarkJSOperator,
+	'gnark':makeLocalGnarkZkOperator
+}
+
 export function makeDefaultZkOperator(
 	algorithm: EncryptionAlgorithm,
-	logger: Logger
+	zkEngine: ZKEngine,
+	logger: Logger,
 ) {
-	if(!zkOperators[algorithm]) {
-		const isNode = detectEnvironment() === 'node'
-		const opType = isNode ? 'local' : 'remote'
-		logger?.info(
-			{
-				type: opType,
-				algorithm
-			},
-			'fetching zk operator'
-		)
 
-		if(isNode) {
-			zkOperators[algorithm]
-				= makeLocalSnarkJsZkOperator(algorithm)
-		} else {
-			const { zkeyUrl, circuitWasmUrl } = DEFAULT_REMOTE_ZK_PARAMS
-			const operator = makeRemoteSnarkJsZkOperator(
-				zkeyUrl.replace('{algorithm}', algorithm),
-				circuitWasmUrl.replace('{algorithm}', algorithm),
-				logger
-			)
-			zkOperators[algorithm] = Promise.resolve(operator)
-		}
+	const engine = zkEngine || 'snarkJS'
 
-		logger?.info(
-			{
-				type: isNode ? 'local' : 'remote',
-				algorithm
-			},
-			'got zk operator'
-		)
+	let zkOperators = zkEngines[engine]
+	if(!zkOperators) {
+		zkEngines[engine] = {}
+		zkOperators = zkEngines[engine]
 	}
 
-	return zkOperators[algorithm]!
+	zkOperators[algorithm] = operatorMakers[engine](algorithm, logger)
+	return zkOperators[algorithm]
+}
+
+function snarkJSOperator(algorithm: EncryptionAlgorithm, logger: Logger) {
+	const isNode = detectEnvironment() === 'node'
+	const opType = isNode ? 'local' : 'remote'
+	logger?.info(
+		{
+			type: opType,
+			algorithm
+		},
+		'fetching zk operator'
+	)
+
+	if(isNode) {
+		return makeLocalSnarkJsZkOperator(algorithm)
+	} else {
+		const { zkeyUrl, circuitWasmUrl } = DEFAULT_REMOTE_ZK_PARAMS
+		const operator = makeRemoteSnarkJsZkOperator(
+			zkeyUrl.replace('{algorithm}', algorithm),
+			circuitWasmUrl.replace('{algorithm}', algorithm),
+			logger
+		)
+		return Promise.resolve(operator)
+	}
+
+
 }
 
 function makeRemoteSnarkJsZkOperator(
@@ -444,8 +458,7 @@ function makeRemoteSnarkJsZkOperator(
 					)
 				}
 
-				const buff = await res.arrayBuffer()
-				return buff
+				return await res.arrayBuffer()
 			},
 			{
 				logger: logger.child({ type }),
@@ -462,3 +475,4 @@ function makeRemoteSnarkJsZkOperator(
 		return new Uint8Array(res)
 	}
 }
+

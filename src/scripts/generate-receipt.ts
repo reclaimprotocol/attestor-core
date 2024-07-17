@@ -2,8 +2,8 @@ import { readFile } from 'fs/promises'
 import { WebSocketServer } from 'ws'
 import '../server/utils/config-env'
 import { createServer, decryptTranscript } from '../server'
+import { assertValidateProviderParams } from '../utils'
 import { getEnvVariable } from '../utils/env'
-import { assertValidateProviderParams } from '../utils/validation'
 import {
 	API_SERVER_PORT,
 	createClaimOnWitness,
@@ -54,6 +54,7 @@ export async function main<T extends ProviderName>(
 		ownerPrivateKey: PRIVATE_KEY_HEX,
 		client: { url: witnessHostPort },
 		logger,
+		zkEngine:'gnark'
 	})
 
 	if(receipt.error) {
@@ -70,7 +71,8 @@ export async function main<T extends ProviderName>(
 
 	const decTranscript = await decryptTranscript(
 		receipt.request?.transcript!,
-		logger
+		logger,
+		'gnark',
 	)
 	const transcriptStr = getTranscriptString(decTranscript)
 	console.log('receipt:\n', transcriptStr)

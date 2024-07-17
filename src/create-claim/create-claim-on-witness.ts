@@ -1,6 +1,6 @@
 import { strToUint8Array, TLSPacketContext } from '@reclaimprotocol/tls'
 import { DEFAULT_HTTPS_PORT } from '../config'
-import { ClaimTunnelRequest } from '../proto/api'
+import { ClaimTunnelRequest, ZKProofEngine } from '../proto/api'
 import { providers } from '../providers'
 import { SIGNATURES } from '../signatures'
 import { makeRpcTlsTunnel } from '../tunnels/make-rpc-tls-tunnel'
@@ -45,15 +45,9 @@ function shouldRetry(err: Error) {
 		return false
 	}
 
-	if(
-		err instanceof WitnessError
+	return err instanceof WitnessError
 		&& err.code !== 'WITNESS_ERROR_INVALID_CLAIM'
 		&& err.code !== 'WITNESS_ERROR_BAD_REQUEST'
-	) {
-		return true
-	}
-
-	return false
 }
 
 async function _createClaimOnWitness<N extends ProviderName>(
@@ -229,7 +223,8 @@ async function _createClaimOnWitness<N extends ProviderName>(
 			timestampS: unixTimestampSeconds(),
 			owner: getAddress(),
 		},
-		transcript: await generateTranscript()
+		transcript: await generateTranscript(),
+		zkEngine: zkOpts.zkEngine ? (zkOpts.zkEngine === 'snarkJS' ? ZKProofEngine.ZK_ENGINE_SNARKJS : ZKProofEngine.ZK_ENGINE_GNARK) : ZKProofEngine.ZK_ENGINE_SNARKJS
 	})
 
 	onStep?.({ name: 'waiting-for-verification' })

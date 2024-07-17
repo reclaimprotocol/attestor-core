@@ -1,7 +1,7 @@
-FROM node:lts-alpine3.16
+FROM node:lts
 
 # install git
-RUN apk update && apk upgrade && apk add git
+RUN apt update -y && apt upgrade -y && apt install git -y
 
 ARG GL_TOKEN
 RUN git config --global url."https://git-push-pull:${GL_TOKEN}@gitlab.reclaimprotocol.org".insteadOf "https://gitlab.reclaimprotocol.org"

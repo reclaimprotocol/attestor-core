@@ -21,7 +21,7 @@ export function makeWindowRpcZkOperator(
 ): ZKOperator {
 	return {
 		async generateWitness(input) {
-			const operator = await makeDefaultZkOperator(algorithm, logger)
+			const operator = await makeDefaultZkOperator(algorithm, 'snarkJS', logger)
 			return operator.generateWitness(input)
 		},
 		groth16Prove(input) {

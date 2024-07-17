@@ -1,5 +1,8 @@
 import { CipherSuite, concatenateUint8Arrays, crypto, TLSPacketContext } from '@reclaimprotocol/tls'
-import { ClaimTunnelRequest_TranscriptMessage as TranscriptMessage, TranscriptMessageSenderType } from '../proto/api'
+import {
+	ClaimTunnelRequest_TranscriptMessage as TranscriptMessage,
+	TranscriptMessageSenderType
+} from '../proto/api'
 import { CompleteTLSPacket, Logger, MessageRevealInfo, PrepareZKProofsBaseOpts, Transcript } from '../types'
 import { makeZkProofGenerator } from './zk'
 
@@ -32,7 +35,7 @@ export async function preparePacketsForReveal(
 				? TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
 				: TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER,
 			message: message.data,
-			reveal: undefined,
+			reveal: undefined
 		}
 		transcript.push(msg)
 
