@@ -195,7 +195,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 				element = match[0]
 			}
 
-			if(elementIdx > 0 && elementLength > 0) {
+			if(elementIdx >= 0 && elementLength > 0) {
 				const from = convertResponsePosToAbsolutePos(
 					elementIdx,
 					bodyStartIdx,

@@ -392,7 +392,6 @@ export function makeDefaultZkOperator(
 	zkEngine: ZKEngine,
 	logger: Logger,
 ) {
-
 	const engine = zkEngine || 'snarkJS'
 
 	let zkOperators = zkEngines[engine]
@@ -401,7 +400,10 @@ export function makeDefaultZkOperator(
 		zkOperators = zkEngines[engine]
 	}
 
-	zkOperators[algorithm] = operatorMakers[engine](algorithm, logger)
+	if(!zkOperators[algorithm]) {
+		zkOperators[algorithm] = operatorMakers[engine](algorithm, logger)
+	}
+
 	return zkOperators[algorithm]
 }
 
