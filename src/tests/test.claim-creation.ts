@@ -56,7 +56,8 @@ describeWithServer('Claim Creation', opts => {
 				authorisationHeader: `Bearer ${user}`
 			},
 			ownerPrivateKey: opts.privateKeyHex,
-			client
+			client,
+			zkEngine:opts.zkEngine
 		})
 
 		expect(result.error).toBeUndefined()
@@ -66,7 +67,7 @@ describeWithServer('Claim Creation', opts => {
 		// leak our secrets in the application data
 		const transcript = result.request!.transcript
 		const applMsgs = extractApplicationDataFromTranscript(
-			await decryptTranscript(transcript, logger)
+			await decryptTranscript(transcript, logger, opts.zkEngine)
 		)
 
 		const requestData = applMsgs

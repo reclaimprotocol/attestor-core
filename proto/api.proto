@@ -50,6 +50,11 @@ enum WitnessErrorCode {
 	WITNESS_ERROR_NETWORK_ERROR = 6;
 }
 
+enum ZKProofEngine {
+  ZK_ENGINE_SNARKJS = 0;
+  ZK_ENGINE_GNARK = 1;
+}
+
 message ClaimContext {
 	/**
 	 * Extracted parameters from the TLS transcript
@@ -247,6 +252,9 @@ message ClaimTunnelRequest {
 	repeated TranscriptMessage transcript = 3;
 
 	Signatures signatures = 4;
+
+  /** type of ZK engine used. SnarkJS or Gnark */
+  ZKProofEngine zkEngine = 5;
 
 	message Signatures {
 		/**

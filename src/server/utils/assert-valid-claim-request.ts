@@ -1,9 +1,39 @@
-import { areUint8ArraysEqual, concatenateUint8Arrays, crypto, decryptWrappedRecord, PACKET_TYPE, parseClientHello, parseServerHello, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
-import { ClaimTunnelRequest, InitRequest, ProviderClaimInfo, TranscriptMessageSenderType } from '../../proto/api'
+import {
+	areUint8ArraysEqual,
+	concatenateUint8Arrays,
+	crypto,
+	decryptWrappedRecord,
+	PACKET_TYPE,
+	parseClientHello,
+	parseServerHello,
+	SUPPORTED_CIPHER_SUITE_MAP
+} from '@reclaimprotocol/tls'
+import {
+	ClaimTunnelRequest,
+	InitRequest,
+	ProviderClaimInfo,
+	TranscriptMessageSenderType,
+	ZKProofEngine
+} from '../../proto/api'
 import { providers } from '../../providers'
 import { SIGNATURES } from '../../signatures'
-import { IDecryptedTranscript, IDecryptedTranscriptMessage, Logger, ProviderName, TCPSocketProperties, Transcript } from '../../types'
-import { assertValidateProviderParams, canonicalStringify, extractApplicationDataFromTranscript, getPureCiphertext, hashProviderParams, verifyZkPacket, WitnessError } from '../../utils'
+import {
+	IDecryptedTranscript,
+	IDecryptedTranscriptMessage,
+	Logger,
+	ProviderName,
+	TCPSocketProperties,
+	Transcript, ZKEngine
+} from '../../types'
+import {
+	assertValidateProviderParams,
+	canonicalStringify,
+	extractApplicationDataFromTranscript,
+	getPureCiphertext,
+	hashProviderParams,
+	verifyZkPacket,
+	WitnessError
+} from '../../utils'
 import { niceParseJsonObject } from './generics'
 
 /**
@@ -27,6 +57,7 @@ export async function assertValidClaimRequest(
 	const {
 		data,
 		signatures: { requestSignature } = {},
+		zkEngine
 	} = request
 	if(!data) {
 		throw new WitnessError(
@@ -61,7 +92,8 @@ export async function assertValidClaimRequest(
 
 	const receipt = await decryptTranscript(
 		request.transcript,
-		logger
+		logger,
+		zkEngine !== ZKProofEngine.UNRECOGNIZED ? (zkEngine === ZKProofEngine.ZK_ENGINE_SNARKJS ? 'snarkJS' : 'gnark') : 'snarkJS'
 	)
 	const reqHost = request.request?.host
 	if(receipt.hostname !== reqHost) {
@@ -173,6 +205,7 @@ export function assertTranscriptsMatch(
 export async function decryptTranscript(
 	transcript: ClaimTunnelRequest['transcript'],
 	logger: Logger,
+	zkEngine: ZKEngine
 ): Promise<IDecryptedTranscript> {
 	// first server packet is hello packet
 	const { serverTlsVersion, cipherSuite, } = await getServerHello()
@@ -199,7 +232,7 @@ export async function decryptTranscript(
 		transcript.map(async({
 			sender,
 			message,
-			reveal: { zkReveal, directReveal } = {},
+			reveal: { zkReveal, directReveal } = {}
 		}, i): Promise<IDecryptedTranscriptMessage> => {
 			const isEncrypted = isEncryptedPacket(i)
 
@@ -245,6 +278,7 @@ export async function decryptTranscript(
 						zkReveal,
 						logger,
 						cipherSuite,
+						zkEngine: zkEngine
 					}
 				)
 				plaintext = result.redactedPlaintext
@@ -298,14 +332,8 @@ export async function decryptTranscript(
 		}
 
 		// msg is after change cipher spec
-		if(
-			changeCipherSpecMsgIdx >= 0
+		return changeCipherSpecMsgIdx >= 0
 			&& pktIdx > changeCipherSpecMsgIdx
-		) {
-			return true
-		}
-
-		return false
 	}
 
 	function getServerHello() {
