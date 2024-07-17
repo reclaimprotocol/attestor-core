@@ -29,6 +29,7 @@ export const describeWithServer = (
 	fn: (opts: ServerOpts) => void
 ) => describe(name, () => {
 	let wsServer: WebSocketServer
+
 	let wsServerUrl: string
 
 	let privateKeyHex: string
