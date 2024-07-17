@@ -54,7 +54,7 @@ export async function main<T extends ProviderName>(
 		ownerPrivateKey: PRIVATE_KEY_HEX,
 		client: { url: witnessHostPort },
 		logger,
-		zkEngine:'gnark'
+		zkEngine:'snarkJS'
 	})
 
 	if(receipt.error) {
@@ -72,7 +72,7 @@ export async function main<T extends ProviderName>(
 	const decTranscript = await decryptTranscript(
 		receipt.request?.transcript!,
 		logger,
-		'gnark',
+		'snarkJS',
 	)
 	const transcriptStr = getTranscriptString(decTranscript)
 	console.log('receipt:\n', transcriptStr)
