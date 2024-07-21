@@ -1,27 +1,22 @@
 Copyright (c) 2024-present CreatorOS, Inc.
 
+Terms and Conditions:
+
+a. Commercial Use: If a commercial entity uses a modified version and chooses not to open-source the software containing said modifications, they must purchase a separate license from CreatorOS, Inc.
+
+b. Open Source Companies/Products: Commercial entities building open source software may fork, clone, and modify the repository without purchasing a license, provided that:
+  - The resulting codebase remains open source
+  - The same LICENSE file is included
+  - All other terms of this license are adhered to
+
 This software is licensed under multiple licenses:
 
-1. Commercial License: All content within the [Reclaim Protocol](https://github.com/reclaimprotocol) and [CreatorOS/Questbook](https://github.com/creatoros) directories is licensed under the terms defined in "LICENSE".
+1. Commercial License: All content within the [Reclaim Protocol](https://github.com/reclaimprotocol) organization and the respective repositories under the organization is licensed under the terms defined in "LICENSE".
 
 2. Third-Party Components: All third-party components are licensed under their original licenses.
 
 3. Open Source License (AGPLv3): All other content is licensed under the GNU Affero General Public License v3.0 (AGPLv3) as given below.
 
-Additional Terms:
-
-a. Commercial Use: For commercial use of modified versions, a separate license must be purchased 
-   from CreatorOS, Inc. if the modifications are not made publicly available.
-
-b. Open Source Companies/Products: Open source companies, startups, or products may fork, clone, and modify the 
-   repository without purchasing a license, provided that:
-   - The resulting codebase remains open source
-   - The same LICENSE file is included
-   - All other terms of this license are adhered to
-
-c. Indie Hackers: We got you and we hear you, just shoot us an email or Tag us on Twitter/X [@reclaimprotocol](https://x.com/reclaimprotocol) about your use-case and how or what do you plan on making changes for and once approved, you are all good to go
-   - Hit us up at indie@reclaimprotocol.org
-   - PS. if we like the idea, we may support you with a small grant as well :)
 
 For the full text of the AGPLv3 license, please see <https://www.gnu.org/licenses/agpl-3.0.html>
 
