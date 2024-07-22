@@ -1,6 +1,6 @@
 import { createClaimOnWitness } from '../create-claim'
 import { extractHTMLElement, extractJSONValueIndex } from '../providers/http/utils'
-import { ZKOperators } from '../types'
+import { ZKEngine, ZKOperators } from '../types'
 import { makeLogger } from '../utils'
 import { Benchmark } from '../utils/benchmark'
 import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from './types'
@@ -72,7 +72,7 @@ export function setupWindowRpc() {
 						? JSON.parse(req.request.context)
 						: undefined,
 					zkOperators: getZkOperators(
-						req.request.zkOperatorMode
+						req.request.zkOperatorMode, req.request.zkEngine
 					),
 					client: { url: defaultWitnessUrl },
 					logger,
@@ -164,7 +164,8 @@ export function setupWindowRpc() {
 
 		function getZkOperators(
 			zkOperatorMode: RPCCreateClaimOptions['zkOperatorMode']
-			= 'default'
+			= 'default',
+			zkEngine: ZKEngine = 'snarkJS'
 		) {
 			// use default snarkJS ops
 			if(zkOperatorMode === 'default') {
@@ -177,7 +178,8 @@ export function setupWindowRpc() {
 			for(const alg of ALL_ENC_ALGORITHMS) {
 				operators[alg] = makeWindowRpcZkOperator(
 					alg,
-					makeCommunicationBridge()
+					makeCommunicationBridge(),
+					zkEngine
 				)
 			}
 

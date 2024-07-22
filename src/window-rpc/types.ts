@@ -1,6 +1,14 @@
 import type { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-symmetric-crypto'
 import type { extractHTMLElement, extractJSONValueIndex } from '../providers/http/utils'
-import type { CompleteClaimData, CreateClaimOnWitnessOpts, LogLevel, ProofGenerationStep, ProviderName, WitnessData } from '../types'
+import type {
+	CompleteClaimData,
+	CreateClaimOnWitnessOpts,
+	LogLevel,
+	ProofGenerationStep,
+	ProviderName,
+	WitnessData,
+	ZKEngine
+} from '../types'
 
 type IdentifiedMessage = {
 	module: 'witness-sdk'
@@ -23,6 +31,7 @@ export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<CreateCla
 	 */
 	zkOperatorMode?: 'default' | 'rpc'
 	context?: string
+	zkEngine?: ZKEngine
 }
 
 type ExtractHTMLElementOptions = {
