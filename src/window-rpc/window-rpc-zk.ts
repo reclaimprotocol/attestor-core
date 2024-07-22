@@ -1,5 +1,6 @@
 import { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-symmetric-crypto'
 import { base64 } from 'ethers/lib/utils'
+import { ZKEngine } from '../types'
 import { logger, makeDefaultZkOperator } from '../utils'
 import { CommunicationBridge, WindowRPCAppClient } from './types'
 import { generateRpcRequestId } from './utils'
@@ -17,11 +18,12 @@ export const ALL_ENC_ALGORITHMS: EncryptionAlgorithm[] = [
  */
 export function makeWindowRpcZkOperator(
 	algorithm: EncryptionAlgorithm,
-	bridge: CommunicationBridge
+	bridge: CommunicationBridge,
+	zkEngine: ZKEngine = 'snarkJS'
 ): ZKOperator {
 	return {
 		async generateWitness(input) {
-			const operator = await makeDefaultZkOperator(algorithm, 'snarkJS', logger)
+			const operator = await makeDefaultZkOperator(algorithm, zkEngine, logger)
 			return operator.generateWitness(input)
 		},
 		groth16Prove(input) {
