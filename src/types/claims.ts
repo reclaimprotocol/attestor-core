@@ -49,6 +49,12 @@ export type CreateClaimOnWitnessOpts<N extends ProviderName> = {
 	 * client pool.
 	 */
 	client: IWitnessClient | { url: string | URL }
+	/**
+	 * Optionally set the timestamp of the claim
+	 * in unix seconds. If not provided, the current
+	 * time will be used.
+	 */
+	timestampS?: number
 
 	logger?: Logger
 } & PrepareZKProofsBaseOpts

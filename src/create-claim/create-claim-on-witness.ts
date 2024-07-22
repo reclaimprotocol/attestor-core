@@ -60,6 +60,7 @@ async function _createClaimOnWitness<N extends ProviderName>(
 		ownerPrivateKey,
 		client: clientInit,
 		logger = LOGGER,
+		timestampS,
 		...zkOpts
 	}: CreateClaimOnWitnessOpts<N>
 ) {
@@ -222,7 +223,7 @@ async function _createClaimOnWitness<N extends ProviderName>(
 			provider: name,
 			parameters: canonicalStringify(params),
 			context: canonicalStringify(context),
-			timestampS: unixTimestampSeconds(),
+			timestampS: timestampS ?? unixTimestampSeconds(),
 			owner: getAddress(),
 		},
 		transcript: await generateTranscript(),
