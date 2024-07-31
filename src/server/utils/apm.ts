@@ -7,11 +7,18 @@ let apm: Agent | undefined
 /**
  * Initialises the APM agent if required,
  * and returns it.
+ * If ELASTIC_APM_SERVER_URL & ELASTIC_APM_SECRET_TOKEN
+ * are not set will return undefined
  *
  * Utilises the standard env variables mentioned
  * here: https://www.elastic.co/guide/en/apm/agent/nodejs/current/custom-stack.html#custom-stack-advanced-configuration
  */
 export function getApm(): Agent | undefined {
+	if(!getEnvVariable('ELASTIC_APM_SERVER_URL') || !getEnvVariable('ELASTIC_APM_SECRET_TOKEN')) {
+		logger.info('ELASTIC_APM_SERVER_URL or ELASTIC_APM_SECRET_TOKEN no found in env APM agent not initialised')
+		return undefined
+	}
+
 	if(!apm) {
 		const sampleRate = +(
 			getEnvVariable('ELASTIC_APM_SAMPLE_RATE')
