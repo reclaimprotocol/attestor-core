@@ -266,30 +266,46 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			throw new Error(`Expected host: ${expectedHostStr}, found: ${req.headers.host}`)
 		}
 
-		const connectionheader = req.headers['connection']
-		if(connectionheader !== 'close') {
+		const connectionHeader = req.headers['connection']
+		if(connectionHeader !== 'close') {
 			logTranscript()
-			throw new Error(`Connection header must be "close", got "${connectionheader}"`)
+			throw new Error(`Connection header must be "close", got "${connectionHeader}"`)
 		}
 
 		const serverBlocks = receipt
 			.filter(s => s.sender === 'server')
 			.map((r) => r.message)
 			.filter(b => !b.every(b => b === REDACTION_CHAR_CODE)) // filter out fully redacted blocks
-		const res = uint8ArrayToStr(concatArrays(...serverBlocks))
-		if(!res.startsWith(OK_HTTP_HEADER)) {
-			logTranscript()
-			const statusRegex = makeRegex('^HTTP\\/1.1 (\\d{3})')
-			const matchRes = statusRegex.exec(res)
-			if(matchRes && matchRes.length > 1) {
+		const response = concatArrays(...serverBlocks)
+
+		let res
+		if(secretParams) { //means we're on client doing preliminary checks
+			const parsedResp = parseHttpResponse(response) // to deal with chunked responses
+
+			if(parsedResp.statusCode !== 200) {
+				logTranscript()
 				throw new Error(
-					`Provider returned error ${matchRes[1]}"`
+					`Provider returned error ${parsedResp.statusCode} ${parsedResp.statusMessage}"`
 				)
 			}
 
-			throw new Error(
-				`Response did not start with "${OK_HTTP_HEADER}"}`
-			)
+			res = uint8ArrayToStr(parsedResp.body)
+		} else {
+			res = uint8ArrayToStr(response)
+			if(!res.startsWith(OK_HTTP_HEADER)) {
+				logTranscript()
+				const statusRegex = makeRegex('^HTTP\\/1.1 (\\d{3})')
+				const matchRes = statusRegex.exec(res)
+				if(matchRes && matchRes.length > 1) {
+					throw new Error(
+						`Provider returned error ${matchRes[1]}"`
+					)
+				}
+
+				throw new Error(
+					`Response did not start with "${OK_HTTP_HEADER}"}`
+				)
+			}
 		}
 
 
