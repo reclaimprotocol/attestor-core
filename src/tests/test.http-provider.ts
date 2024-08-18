@@ -2,7 +2,7 @@ import { createClaimOnWitness } from '../create-claim'
 import { describeWithServer } from './describe-with-server'
 import { verifyNoDirectRevealLeaks } from './utils'
 
-jest.setTimeout(90_000)
+jest.setTimeout(300_000)
 
 describeWithServer('HTTP Provider', opts => {
 
@@ -33,7 +33,8 @@ describeWithServer('HTTP Provider', opts => {
 				cookieStr: '<cookie-str>'
 			},
 			ownerPrivateKey: opts.privateKeyHex,
-			client: opts.client
+			client: opts.client,
+			zkEngine:'gnark'
 		})
 		expect(resp.error).toBeUndefined()
 		expect(resp.claim?.context)
