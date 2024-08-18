@@ -104,6 +104,7 @@ export function getIdentifierFromClaimInfo(info: ClaimInfo): ClaimID {
 	}
 
 	const str = `${info.provider}\n${info.parameters}\n${info.context || ''}`
+	console.log('Identifier: ' + btoa(str))
 	return utils.keccak256(
 		strToUint8Array(str)
 	).toLowerCase()
