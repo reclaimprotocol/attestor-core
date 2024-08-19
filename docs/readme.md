@@ -16,6 +16,8 @@ This repository contains **Typescript** implementation of the witness server & t
 
 **Note:** this approach is only advised for NodeJS projects or projects meant to run directly in a modern browser. For React Native or any solution running in a mobile app, refer to our doc [here](docs/browser-rpc.md).
 
+Note for devs: the "prepare" script which is run after `npm install` is configured to only build when there are files in the `src` directory. This is to prevent errors when building the Docker image.
+
 ## Running your own witness
 
 1. Of course, clone this repository.

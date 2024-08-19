@@ -45,9 +45,9 @@ Easily integrate Reclaim into your app to securely verify user credentials from 
 
 ## Getting Started
 
-To get started with Reclaim, check out our comprehensive documentation,
+To get started with Reclaim, check out our comprehensive documentation, [Reclaim Documentation](https://docs.reclaimprotocol.org/).
 
-[Reclaim Documentation](https://docs.reclaimprotocol.org/)
+For an intro to this package & how it works, check out our [Getting Started Guide](/docs/readme.md).
 
 ## Try It Out Yourself
 
