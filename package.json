@@ -8,7 +8,7 @@
     "build:browser": "sh ./src/scripts/build-browser.sh",
     "start:tsc": "ts-node src/scripts/start-server",
     "start": "node lib/scripts/start-server",
-    "prepare": "npm run build",
+    "prepare": "[ \"$(find src -name '*.ts')\" ] && tsc",
     "test": "NODE_ENV=test TZ=utc jest --verbose --forceExit --detectOpenHandles",
     "lint": "eslint ./ --ext .js,.ts,.jsx,.tsx",
     "lint:fix": "eslint ./ --fix --ext .js,.ts,.jsx,.tsx",

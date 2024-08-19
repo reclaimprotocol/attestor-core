@@ -8,11 +8,12 @@ RUN git config --global url."https://git-push-pull:${GL_TOKEN}@gitlab.reclaimpro
 
 COPY ./package.json /witness/
 COPY ./package-lock.json /witness/
+COPY ./tsconfig.json /witness/
 
 # install our witness node
 WORKDIR /witness
 
-RUN npm i --ignore-scripts
+RUN npm i
 
 COPY ./ /witness
 
