@@ -103,12 +103,6 @@ export async function makeZkProofGenerator(
 				throw new Error('Cannot generate proof for plaintext')
 			}
 
-			if(zkChunksToProve > maxZkChunks) {
-				throw new Error(
-					`Too many chunks to prove: ${zkChunksToProve} > ${maxZkChunks}`
-				)
-			}
-
 			const alg = getZkAlgorithmForCipherSuite(cipherSuite)
 			const chunkSizeBytes = getChunkSizeBytes(alg)
 
@@ -143,6 +137,12 @@ export async function makeZkProofGenerator(
 
 				packetToProve.proofsToGenerate.push(proof)
 				zkChunksToProve += 1
+
+				if(zkChunksToProve > maxZkChunks) {
+					throw new Error(
+						`Too many chunks to prove: ${zkChunksToProve} > ${maxZkChunks}`
+					)
+				}
 			}
 
 			packetsToProve.push(packetToProve)
