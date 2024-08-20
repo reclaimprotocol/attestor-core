@@ -10,7 +10,7 @@ describeWithServer('HTTP Provider', opts => {
 		await verifyNoDirectRevealLeaks()
 	})
 
-	it.skip('should create claim with template params', async() => {
+	it('should create claim with template params', async() => {
 		const resp = await createClaimOnWitness({
 			name: 'http',
 			params: {
