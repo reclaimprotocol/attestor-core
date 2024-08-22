@@ -25,6 +25,7 @@
   "author": "Adhiraj Singh",
   "license": "ISC",
   "dependencies": {
+    "@bufbuild/protobuf": "^2.0.0",
     "@reclaimprotocol/circom-symmetric-crypto": "git+https://gitlab.reclaimprotocol.org/reclaim/zk-symmetric-crypto",
     "@reclaimprotocol/tls": "git+https://gitlab.reclaimprotocol.org/reclaim/tls",
     "ajv": "^8.17.1",
