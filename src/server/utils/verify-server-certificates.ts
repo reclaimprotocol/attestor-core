@@ -19,8 +19,8 @@ export async function verifyServerCertificates(receipt: IDecryptedTranscript, lo
 	const handshakeRawMessages: Uint8Array[] = []
 	const certificates: X509Certificate[] = []
 	let cipherSuite: CipherSuite | undefined = undefined
-	let serverRandom: Uint8Array
-	let clientRandom: Uint8Array
+	let serverRandom: Uint8Array | undefined = undefined
+	let clientRandom: Uint8Array | undefined = undefined
 
 	let certVerified = false
 	while((packetData = readPacket()) && !certVerified) {
@@ -61,7 +61,7 @@ export async function verifyServerCertificates(receipt: IDecryptedTranscript, lo
 				signatureData,
 			})
 			await verifyCertificateChain(certificates, receipt.hostname)
-			logger.info({ }, 'verified provider server certificate chain')
+			logger.info({ host:receipt.hostname }, 'verified provider certificate chain')
 			certVerified = true
 			break
 
@@ -88,7 +88,7 @@ export async function verifyServerCertificates(receipt: IDecryptedTranscript, lo
 				signatureData: signatureData12,
 			})
 			await verifyCertificateChain(certificates, receipt.hostname)
-			logger.info({ }, 'verified provider certificate chain')
+			logger.info({ host:receipt.hostname }, 'verified provider certificate chain')
 			certVerified = true
 			break
 		}
