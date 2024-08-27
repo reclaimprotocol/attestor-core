@@ -88,7 +88,7 @@ export function extractJSONValueIndex(json: string, jsonPath: string) {
 		json: JSON.parse(json),
 		wrap: false,
 		resultType: 'pointer',
-		eval:'safe'
+		eval:'safe',
 	})
 	if(!pointers) {
 		throw new Error('jsonPath not found')
@@ -97,7 +97,10 @@ export function extractJSONValueIndex(json: string, jsonPath: string) {
 	const tree = parseScript('(' + json + ')', { range: true }) //wrap in parentheses for esprima to parse
 	if(tree.body[0] instanceof ExpressionStatement
 		&& (tree.body[0].expression instanceof ObjectExpression || tree.body[0].expression instanceof ArrayExpression)) {
-		const index = traverse(tree.body[0].expression, '', pointers)
+
+		const traversePointers = Array.isArray(pointers) ? pointers : [pointers]
+
+		const index = traverse(tree.body[0].expression, '', traversePointers)
 		if(index) {
 			return {
 				start: index.start - 1, //account for '('
@@ -113,12 +116,12 @@ export function extractJSONValueIndex(json: string, jsonPath: string) {
  * recursively go through AST tree and build a JSON path while it's not equal to the one we search for
  * @param o - esprima expression for root object
  * @param path - path that is being built
- * @param pointer - JSON pointer to compare to
+ * @param pointers - JSON pointers to compare to
  */
 function traverse(
 	o: Expression,
 	path: string,
-	pointer: string
+	pointers: string[]
 ): JSONIndex | null {
 	if(o instanceof ObjectExpression) {
 		for(const p of o.properties) {
@@ -130,7 +133,7 @@ function traverse(
 					localPath = path
 				}
 
-				if(localPath === pointer && 'range' in p && Array.isArray(p.range)) {
+				if(pointers.includes(localPath) && 'range' in p && Array.isArray(p.range)) {
 					return {
 						start: p.range[0],
 						end: p.range[1],
@@ -138,14 +141,14 @@ function traverse(
 				}
 
 				if(p.value instanceof ObjectExpression) {
-					const res = traverse(p.value, localPath, pointer)
+					const res = traverse(p.value, localPath, pointers)
 					if(res) {
 						return res
 					}
 				}
 
 				if(p.value instanceof ArrayExpression) {
-					const res = traverse(p.value, localPath, pointer)
+					const res = traverse(p.value, localPath, pointers)
 					if(res) {
 						return res
 					}
@@ -164,7 +167,7 @@ function traverse(
 			const localPath = path + '/' + i
 
 			if(
-				localPath === pointer &&
+				pointers.includes(localPath) &&
                 'range' in element &&
                 Array.isArray(element.range)
 			) {
@@ -175,14 +178,14 @@ function traverse(
 			}
 
 			if(element instanceof ObjectExpression) {
-				const res = traverse(element, localPath, pointer)
+				const res = traverse(element, localPath, pointers)
 				if(res) {
 					return res
 				}
 			}
 
 			if(element instanceof ArrayExpression) {
-				const res = traverse(element, localPath, pointer)
+				const res = traverse(element, localPath, pointers)
 				if(res) {
 					return res
 				}
