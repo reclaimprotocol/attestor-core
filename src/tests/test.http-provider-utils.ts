@@ -55,7 +55,7 @@ describe('HTTP Provider Utils tests', () => {
 	it('should error on incorrect jsonPath', () => {
 		expect(() => {
 			extractJSONValueIndex(('{"asdf": 1}'), '(alert(origin))')
-		}).toThrow('Eval [(expr)] prevented in JSONPath expression')
+		}).toThrow('jsonPath: alert is not defined: (alert(origin))')
 	})
 
 	it('should not error on incorrect regex', () => {
