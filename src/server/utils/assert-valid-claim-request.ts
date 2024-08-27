@@ -3,10 +3,8 @@ import {
 	concatenateUint8Arrays,
 	crypto,
 	decryptWrappedRecord,
-	PACKET_TYPE,
-	parseClientHello,
-	parseServerHello,
-	SUPPORTED_CIPHER_SUITE_MAP
+	PACKET_TYPE, parseClientHello,
+	parseServerHello, SUPPORTED_CIPHER_SUITE_MAP
 } from '@reclaimprotocol/tls'
 import {
 	ClaimTunnelRequest,
@@ -28,13 +26,12 @@ import {
 import {
 	assertValidateProviderParams,
 	canonicalStringify,
-	extractApplicationDataFromTranscript,
-	getPureCiphertext,
-	hashProviderParams,
+	extractApplicationDataFromTranscript, hashProviderParams,
 	verifyZkPacket,
 	WitnessError
 } from '../../utils'
 import { niceParseJsonObject } from './generics'
+import { verifyServerCertificates } from './verify-server-certificates'
 
 /**
  * Asserts that the claim request is valid.
@@ -93,7 +90,7 @@ export async function assertValidClaimRequest(
 	const receipt = await decryptTranscript(
 		request.transcript,
 		logger,
-		zkEngine !== ZKProofEngine.UNRECOGNIZED ? (zkEngine === ZKProofEngine.ZK_ENGINE_SNARKJS ? 'snarkJS' : 'gnark') : 'snarkJS'
+		zkEngine === ZKProofEngine.ZK_ENGINE_GNARK ? 'gnark' : 'snarkJS'
 	)
 	const reqHost = request.request?.host
 	if(receipt.hostname !== reqHost) {
@@ -101,6 +98,8 @@ export async function assertValidClaimRequest(
 			`Expected server name ${reqHost}, got ${receipt.hostname}`
 		)
 	}
+
+	await verifyServerCertificates(receipt, logger)
 
 	// get all application data messages
 	const applData = extractApplicationDataFromTranscript(receipt)
@@ -285,10 +284,8 @@ export async function decryptTranscript(
 				redacted = false
 				plaintextLength = plaintext.length
 			} else {
-				plaintextLength = getPureCiphertext(
-					getWithoutHeader(message),
-					cipherSuite,
-				).length
+				plaintext = getWithoutHeader(message)
+				plaintextLength = plaintext.length
 			}
 
 			return {
@@ -358,9 +355,11 @@ export async function decryptTranscript(
 		const message = getWithoutHeader(transcript[0].message)
 		return parseClientHello(message)
 	}
-
-	function getWithoutHeader(message: Uint8Array) {
-		// strip the record header (xx 03 03 xx xx)
-		return message.slice(5)
-	}
 }
+
+export function getWithoutHeader(message: Uint8Array) {
+	// strip the record header (xx 03 03 xx xx)
+	return message.slice(5)
+}
+
+

@@ -249,8 +249,7 @@ async function _createClaimOnWitness<N extends ProviderName>(
 
 	async function writeRedactedWithKeyUpdate() {
 		let currentIndex = 0
-		for(let i = 0;i < redactions.length;i++) {
-			const section = redactions[i]
+		for(const section of redactions) {
 			const block = requestData
 				.slice(currentIndex, section.fromIndex)
 			if(block.length) {
@@ -363,10 +362,9 @@ async function _createClaimOnWitness<N extends ProviderName>(
 
 		const packets: Transcript<Uint8Array> = []
 		const serverBlocks: ServerAppDataPacket[] = []
-		for(let i = 0;i < allPackets.length;i++) {
-			const b = allPackets[i]
+		for(const b of allPackets) {
 			if(b.message.type !== 'ciphertext'
-				|| !isApplicationData(b.message, tlsVersion!)
+				|| !isApplicationData(b.message, tlsVersion)
 			) {
 				continue
 			}
@@ -419,21 +417,17 @@ async function _createClaimOnWitness<N extends ProviderName>(
 			}
 		}
 
-		// reveal all client side handshake blocks
+		// reveal all handshake blocks
 		// so the witness can verify there was no
 		// hanky-panky
 		for(const p of allPackets) {
-			if(p.sender !== 'client') {
-				continue
-			}
-
 			if(p.message.type !== 'ciphertext') {
 				continue
 			}
 
 			// break the moment we hit the first
 			// application data packet
-			if(isApplicationData(p.message, tlsVersion!)) {
+			if(isApplicationData(p.message, tlsVersion)) {
 				break
 			}
 

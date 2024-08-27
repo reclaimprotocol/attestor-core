@@ -88,21 +88,20 @@ export function extractJSONValueIndex(json: string, jsonPath: string) {
 		json: JSON.parse(json),
 		wrap: false,
 		resultType: 'pointer',
-		preventEval: true
+		eval:false
 	})
 	if(!pointers) {
 		throw new Error('jsonPath not found')
 	}
 
 	const tree = parseScript('(' + json + ')', { range: true }) //wrap in parentheses for esprima to parse
-	if(tree.body[0] instanceof ExpressionStatement) {
-		if(tree.body[0].expression instanceof ObjectExpression || tree.body[0].expression instanceof ArrayExpression) {
-			const index = traverse(tree.body[0].expression, '', pointers)
-			if(index) {
-				return {
-					start: index.start - 1, //account for '('
-					end: index.end - 1,
-				}
+	if(tree.body[0] instanceof ExpressionStatement
+		&& (tree.body[0].expression instanceof ObjectExpression || tree.body[0].expression instanceof ArrayExpression)) {
+		const index = traverse(tree.body[0].expression, '', pointers)
+		if(index) {
+			return {
+				start: index.start - 1, //account for '('
+				end: index.end - 1,
 			}
 		}
 	}
@@ -213,12 +212,12 @@ export function buildHeaders(input: HTTPProviderParams['headers']) {
 export function convertResponsePosToAbsolutePos(pos: number, bodyStartIdx: number, chunks?: ArraySlice[]): number {
 	if(chunks?.length) {
 		let chunkBodyStart = 0
-		for(let i = 0; i < chunks.length; i++) {
+		for(const chunk of chunks) {
 
-			const chunkSize = chunks[i].toIndex - chunks[i].fromIndex
+			const chunkSize = chunk.toIndex - chunk.fromIndex
 
 			if(pos >= chunkBodyStart && pos <= (chunkBodyStart + chunkSize)) {
-				return pos - chunkBodyStart + chunks[i].fromIndex
+				return pos - chunkBodyStart + chunk.fromIndex
 			}
 
 			chunkBodyStart += chunkSize
