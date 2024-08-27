@@ -1,47 +1,6 @@
-# Reclaim Protocol
+# Reclaim Protocol - Witness SDK
 
-![Reclaim Protocol](./assets/Reclaim.png)
-
-## Overview
-
-Reclaim is a protocol that allows users to prove claims about their online data without requiring cooperation from the websites that hold that data. It enables secure, privacy-preserving credential management and verification.
-
-## Architecture
-
-The Reclaim protocol consists of several components:
-
-1. Client-side libraries for generating proofs
-2. Attestor node software
-3. Reclaim blockchain for managing the token economy and storing proofs
-4. Smart contracts for handling claim requests and attestations
-
-## Key Features
-
-- Generate Proofs of Provenance (PoP) for data received through TLS/HTTPS connections
-- Selective reveal of data, allowing users to share only specific parts of their information
-- Zero-knowledge proofs to maintain user privacy
-- Decentralized attestation system
-- Economic incentives for honest behavior
-- Custom blockchain to facilitate protocol operations and token economy
-
-## How It Works
-
-Reclaim Protocol generates cryptographic proofs on HTTPS traffic. The type of cryptographic proof it generates is called a [zero knowledge proof](https://en.wikipedia.org/wiki/Zero-knowledge_proof). It lets the user generate the proof without knowledge of anything other than what the user wants to share with you. The Protocol is built upon open standards such as HTTPS and TLS.
-
-You can learn more here
-
-- [A non technical overview of how Reclaim Works](https://blog.reclaimprotocol.org/posts/what-is-reclaimprotocol)
-- [A technical deepdive via our Whitepaper](https://link.reclaimprotocol.org/whitepaper-draft)
-
-## Use Cases
-
-- Prove you're a 5-star driver without sharing your license plate number
-- Demonstrate your credit score without revealing your bank account details
-- Verify employment or income without exposing your full pay stub
-
-## For Developers
-
-Easily integrate Reclaim into your app to securely verify user credentials from any website. Our protocol handles the complex cryptography, so you don't have to.
+The witness server securely intermediates internet data exchange, using TLS and zero-knowledge proofs to verify and sign user claims with minimal information disclosure.
 
 ## Getting Started
 
