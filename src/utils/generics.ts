@@ -51,9 +51,11 @@ export function findIndexInUint8Array(
  */
 export function uint8ArrayToBinaryStr(buf: Uint8Array) {
 	let ret = ''
-	buf.forEach(v => (
-		ret += String.fromCharCode(v)
-	))
+	for(const v of buf) {
+		(
+			ret += String.fromCharCode(v)
+		)
+	}
 
 	return ret
 }
@@ -183,7 +185,7 @@ export function getRpcRequestType<T extends RPCType>(type: T) {
 
 export function isApplicationData(
 	packet: CompleteTLSPacket,
-	tlsVersion: string
+	tlsVersion: string | undefined
 ) {
 	return packet.type === 'ciphertext'
 		&& (
@@ -282,6 +284,39 @@ export function extractApplicationDataFromTranscript(
 			message = m.message
 		} else {
 			continue
+		}
+
+		msgs.push({ message, sender: m.sender })
+	}
+
+	return msgs
+}
+
+export function extractHandshakeFromTranscript(
+	{ transcript, tlsVersion }: IDecryptedTranscript,
+) {
+	const msgs: Transcript<Uint8Array> = []
+	for(const m of transcript) {
+		let message: Uint8Array
+		if(m.recordHeader[0] === PACKET_TYPE.HELLO) {
+			message = m.message
+		} else if(m.recordHeader[0] === PACKET_TYPE.WRAPPED_RECORD) {
+			if(tlsVersion === 'TLS1_3') {
+				const contentType = m.message[m.message.length - 1]
+				if(contentType !== CONTENT_TYPE_MAP['HANDSHAKE']) {
+					break
+				}
+
+				message = m.message.slice(0, -1)
+			} else {
+				break
+			}
+		} else {
+			continue
+		}
+
+		if(!message.length) {
+			throw new Error('unsupported handshake message')
 		}
 
 		msgs.push({ message, sender: m.sender })

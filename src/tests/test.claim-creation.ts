@@ -15,6 +15,14 @@ const TLS_VERSIONS: TLSProtocolVersion[] = [
 
 jest.setTimeout(90_000)
 
+jest.mock('../server/utils/verify-server-certificates', () => {
+	return {
+		__esModule: true,
+		verifyServerCertificates: jest.fn().mockResolvedValue()
+	}
+})
+
+
 describeWithServer('Claim Creation', opts => {
 
 	let client: WitnessClient

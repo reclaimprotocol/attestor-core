@@ -328,11 +328,9 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			? params.body
 			: strToUint8Array(params.body || '')
 
-		if(paramBody.length > 0) {
-			if(!matchRedactedStrings(paramBody, req.body)) {
-				logTranscript()
-				throw new Error('request body mismatch')
-			}
+		if(paramBody.length > 0 && !matchRedactedStrings(paramBody, req.body)) {
+			logTranscript()
+			throw new Error('request body mismatch')
 		}
 
 		for(const { type, value, invert } of params.responseMatches || []) {
@@ -474,7 +472,7 @@ function substituteParamValues(
 	}
 
 	if(params.responseRedactions) {
-		params.responseRedactions.forEach(r => {
+		for(const r of params.responseRedactions) {
 			if(r.regex) {
 				const regexParams = extractAndReplaceTemplateValues(r.regex)
 				r.regex = regexParams?.newParam
@@ -489,17 +487,17 @@ function substituteParamValues(
 				const jsonPathParams = extractAndReplaceTemplateValues(r.jsonPath)
 				r.jsonPath = jsonPathParams?.newParam
 			}
-		})
+		}
 	}
 
 	if(params.responseMatches) {
-		params.responseMatches.forEach(r => {
+		for(const r of params.responseMatches) {
 			if(r.value !== '') {
 				const matchParam = extractAndReplaceTemplateValues(r.value)
 				r.value = matchParam?.newParam!
 				extractedValues = { ...extractedValues, ...matchParam?.extractedValues }
 			}
-		})
+		}
 	}
 
 	return {
@@ -564,13 +562,14 @@ function getGeoLocation(v2Params: HTTPProviderParams) {
 			paramNames.add(match[1])
 		}
 
-		paramNames.forEach(pn => {
+		for(const pn of paramNames) {
 			if(v2Params.paramValues && pn in v2Params.paramValues) {
 				geo = geo?.replaceAll(`{{${pn}}}`, v2Params.paramValues[pn].toString())
 			} else {
 				throw new Error(`parameter "${pn}" value not found in templateParams`)
 			}
-		})
+		}
+
 		return geo
 	}
 
@@ -587,13 +586,14 @@ function getURL(v2Params: HTTPProviderParams) {
 		paramNames.add(match[1])
 	}
 
-	paramNames.forEach(pn => {
+	for(const pn of paramNames) {
 		if(v2Params.paramValues && pn in v2Params.paramValues) {
 			hostPort = hostPort?.replaceAll(`{{${pn}}}`, v2Params.paramValues[pn].toString())
 		} else {
 			throw new Error(`parameter "${pn}" value not found in templateParams`)
 		}
-	})
+	}
+
 	return hostPort
 }
 
