@@ -55,49 +55,28 @@ Ready to dive in? Follow our installation guide to set up Reclaim,
 
 [Install Reclaim](https://docs.reclaimprotocol.org/install)
 
+## Contributing to Our Project
+
+We're excited that you're interested in contributing to our project! Before you get started, please take a moment to review the following guidelines.
+
+## Code of Conduct
+
+Please read and follow our [Code of Conduct](https://github.com/reclaimprotocol/.github/blob/main/Code-of-Conduct.md) to ensure a positive and inclusive environment for all contributors.
+
 ## Security
 
-Reclaim prioritizes user privacy and data security through:
+If you discover any security-related issues, please refer to our [Security Policy](https://github.com/reclaimprotocol/.github/blob/main/SECURITY.md) for information on how to responsibly disclose vulnerabilities.
 
-- Enhanced HTTPS protocols
-- Cryptographic signing
-- Zero-knowledge proofs
-- Decentralized attestation
+## Contributor License Agreement
 
-## Contributing
+Before contributing to this project, please read and sign our [Contributor License Agreement (CLA)](https://github.com/reclaimprotocol/.github/blob/main/CLA.md).
 
-We welcome contributions from the community! Please see our [contributing guidelines](link-to-contributing-guidelines) for more information on how to get involved.
+## Indie Hackers
+
+For Indie Hackers: [Check out our guidelines and potential grant opportunities](https://github.com/reclaimprotocol/.github/blob/main/Indie-Hackers.md)
 
 ## License
 
-This Organizationa and its projects are lincensed under the [License](./LICENSE)
+This project is licensed under a [custom license](https://github.com/reclaimprotocol/.github/blob/main/LICENSE). By contributing to this project, you agree that your contributions will be licensed under its terms.
 
-## Vulnerability Disclosure
-
-We take the security of our protocol very seriously. If you have discovered a security vulnerability in the Reclaim Protocol, we appreciate your help in disclosing it to us in a responsible manner.
-
-For full details on our security policy and how to report vulnerabilities, please refer to our [Security Policy](./SECURITY.md).
-
-Key points:
-
-1. Do not publicly disclose the vulnerability.
-2. Email us at security@reclaimprotocol.org with details of the vulnerability.
-3. Allow us a reasonable amount of time to respond and fix the issue before making any information public.
-
-We commit to responding promptly, keeping you updated, and acknowledging your contribution if desired.
-
-Thank you for helping keep Reclaim and its users safe!
-
-## Indie Hackers: 
-
-We got you and we hear you, just shoot us an email or Tag us on Twitter/X [@reclaimprotocol](https://x.com/reclaimprotocol) about your use-case and how or what do you plan on making changes for and once approved, you are all good to go
-   - Hit us up at indie@reclaimprotocol.org
-   - PS. if we like the idea, we may support you with a small grant as well :)
-
-## Contact
-
-- Website: [https://reclaimprotocol.org](https://reclaimprotocol.org)
-- Twitter: [@ReclaimProtocol](https://twitter.com/ReclaimProtocol)
-- Email: contact@reclaimprotocol.org
-
-For more detailed information about the protocol, please refer to our [whitepaper](https://drive.google.com/file/d/1wmfdtIGPaN9uJBI1DHqN903tP9c_aTG2/view).
+Thank you for your contributions!

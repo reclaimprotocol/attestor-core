@@ -16,16 +16,42 @@
     "generate:contracts-data": "sh ./src/scripts/contract-data-gen.sh",
     "generate:provider-types": "ts-node src/scripts/generate-provider-types.ts",
     "verify:root-ca": "ts-node src/scripts/verify-root-ca.ts",
-    "create:claim": "ts-node src/scripts/generate-receipt.ts"
+    "create:claim": "ts-node src/scripts/generate-receipt.ts",
+    "commitlint": "commitlint --edit"
   },
   "files": [
     "lib/*"
   ],
-  "keywords": [],
+  "keywords": [
+    "reclaim-protocol",
+    "witness-sdk",
+    "blockchain",
+    "ethereum",
+    "zero-knowledge-proofs",
+    "circom",
+    "tls",
+    "cryptography",
+    "web3",
+    "decentralized-identity",
+    "data-verification",
+    "smart-contracts",
+    "typescript",
+    "nodejs",
+    "protobuf",
+    "snarkjs",
+    "ethers-js",
+    "zk-symmetric-crypto"
+  ],
+  "bugs": {
+    "url": "https://github.com/reclaimprotocol/witness-sdk/issues"
+  },
+  "homepage": "https://github.com/reclaimprotocol/witness-sdk",
   "author": "Adhiraj Singh",
-  "license": "ISC",
+  "license": "See License in <https://github.com/reclaimprotocol/.github/blob/main/LICENSE>",
   "dependencies": {
     "@bufbuild/protobuf": "^2.0.0",
+    "@commitlint/cli": "^17.7.1",
+    "@commitlint/config-conventional": "^17.7.0",
     "@reclaimprotocol/circom-symmetric-crypto": "git+https://gitlab.reclaimprotocol.org/reclaim/zk-symmetric-crypto",
     "@reclaimprotocol/tls": "git+https://gitlab.reclaimprotocol.org/reclaim/tls",
     "ajv": "^8.17.1",

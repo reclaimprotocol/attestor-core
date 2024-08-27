@@ -10,3 +10,4 @@ browser/resources
 example-local
 .idea
 coverage/
+.gitlab-ci.yml
