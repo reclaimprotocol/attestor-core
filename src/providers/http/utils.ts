@@ -88,7 +88,7 @@ export function extractJSONValueIndex(json: string, jsonPath: string) {
 		json: JSON.parse(json),
 		wrap: false,
 		resultType: 'pointer',
-		eval:false
+		eval:'safe'
 	})
 	if(!pointers) {
 		throw new Error('jsonPath not found')
