@@ -363,7 +363,6 @@ const HTTP_PROVIDER: Provider<'http'> = {
 				const includes = res.includes(value)
 				if(includes === inv) {
 					logTranscript()
-					logger.error({ res }, 'match response')
 					throw new Error(
 						`Invalid receipt. Response ${invert ? 'contains' : 'does not contain'} "${value}"`
 					)
