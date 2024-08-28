@@ -1,4 +1,5 @@
 import { concatenateUint8Arrays, strToUint8Array, TLSConnectionOptions } from '@reclaimprotocol/tls'
+import { base64 } from 'ethers/lib/utils'
 import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { ArraySlice, Provider, ProviderParams, ProviderSecretParams } from '../../types'
 import {
@@ -279,6 +280,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const response = concatArrays(...serverBlocks)
 
 		let res
+		let pureRes: Uint8Array
 		if(secretParams) { //means we're on client doing preliminary checks
 			const parsedResp = parseHttpResponse(response) // to deal with chunked responses
 
@@ -289,8 +291,10 @@ const HTTP_PROVIDER: Provider<'http'> = {
 				)
 			}
 
+			pureRes = parsedResp.body
 			res = uint8ArrayToStr(parsedResp.body)
 		} else {
+			pureRes = response
 			res = uint8ArrayToStr(response)
 			if(!res.startsWith(OK_HTTP_HEADER)) {
 				logTranscript()
@@ -363,6 +367,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 				const includes = res.includes(value)
 				if(includes === inv) {
 					logTranscript()
+					logger.error({ res: base64.encode(pureRes) })
 					throw new Error(
 						`Invalid receipt. Response ${invert ? 'contains' : 'does not contain'} "${value}"`
 					)
