@@ -291,7 +291,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 				)
 			}
 
-			pureRes = parsedResp.body
+			pureRes = response
 			res = uint8ArrayToStr(parsedResp.body)
 		} else {
 			pureRes = response
