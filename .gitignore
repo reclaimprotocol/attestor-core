@@ -1,7 +1,7 @@
 extra-contracts-config.json
 .env.development
 node_modules
-lib
+/lib
 .DS_Store
 *.LICENSE.txt
 browser/resources
