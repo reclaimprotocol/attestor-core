@@ -1,6 +1,6 @@
 import { createClaimOnWitness } from '../create-claim'
 import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from '../providers/http/utils'
-import { ZKEngine, ZKOperators } from '../types'
+import { ProviderParams, ZKEngine, ZKOperators } from '../types'
 import { makeLogger } from '../utils'
 import { Benchmark } from '../utils/benchmark'
 import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from './types'
@@ -229,7 +229,7 @@ export function setupWindowRpc() {
 			}
 		}
 
-		async function updateProviderParams (transcript,tlsVersion): Promise<Partial<import("/Users/abdul/Desktop/code/rc/witness-sdk/src/types/providers.gen").HttpProviderParameters>> {
+		async function updateProviderParams (transcript,tlsVersion): Promise<Partial<ProviderParams<'http'>>> {
 			const { req, res } = generateRequstAndResponseFromTranscript(transcript,tlsVersion)
 			const bridge = makeCommunicationBridge()
 			const id = generateRpcRequestId()
