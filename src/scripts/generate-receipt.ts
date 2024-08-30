@@ -16,7 +16,6 @@ import {
 	ProviderSecretParams,
 	WS_PATHNAME,
 } from '..'
-import { generateRequstAndResponseFromTranscript } from '../providers/http/utils'
 
 type ProviderReceiptGenerationParams<P extends ProviderName> = {
     name: P
