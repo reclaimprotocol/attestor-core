@@ -1,3 +1,4 @@
+import { uint8ArrayToStr } from '@reclaimprotocol/tls'
 import { createClaimOnWitness } from '../create-claim'
 import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from '../providers/http/utils'
 import { ProviderParams, ZKEngine, ZKOperators } from '../types'
@@ -230,20 +231,20 @@ export function setupWindowRpc() {
 		}
 
 		async function updateProviderParams (transcript,tlsVersion): Promise<Partial<ProviderParams<'http'>>> {
-			const { req, res } = generateRequstAndResponseFromTranscript(transcript,tlsVersion)
+			const { req , res } = generateRequstAndResponseFromTranscript(transcript,tlsVersion)
 			const bridge = makeCommunicationBridge()
 			const id = generateRpcRequestId()
-			const waitForRes = await waitForResponse('updateProviderParams', id,bridge)
+			const waitForRes =  waitForResponse('updateProviderParams', id,bridge)
 			bridge.send({
 				type: 'updateProviderParams',
 				id,
 				request: {
-					request: req,
-					response: res
+					request: {...req, body: req.body ? uint8ArrayToStr(req.body) : undefined},
+					response: {...res, body:  uint8ArrayToStr(res.body) },
 				},
 				module: 'witness-sdk'
 			})
-			return waitForRes
+			return await waitForRes
 		}
 	}
 }

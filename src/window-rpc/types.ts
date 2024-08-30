@@ -57,8 +57,9 @@ type ZKProveOpts = {
 }
 
 type UpdateProviderParamsOpts = {
-	request: HttpRequest
-	response: HttpResponse
+	request: Omit<HttpRequest, 'body'> & { body: string | undefined }
+	response: Omit<HttpResponse, 'body'> & { body: string | undefined }
+	
 }
 
 type ZKVerifyOpts = {
