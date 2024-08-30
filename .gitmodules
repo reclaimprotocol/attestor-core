@@ -9,4 +9,4 @@
 [submodule "avs/contracts/lib/eigenlayer-middleware"]
 	path = avs/contracts/lib/eigenlayer-middleware
 	url = https://github.com/layr-Labs/eigenlayer-middleware
-	branch = v0.2.0-rc1-holesky-preprod-payments-1-ga23de11
+	branch = v0.2.0-rc1-holesky-preprod-payments
