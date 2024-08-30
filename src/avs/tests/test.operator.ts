@@ -15,7 +15,6 @@ import assert from 'node:assert'
 import type { createClaimOnWitness } from '../../create-claim'
 import { ClaimInfo } from '../../types'
 import { canonicalStringify, createSignDataForClaim, getIdentifierFromClaimInfo } from '../../utils'
-import { CHAIN_CONFIG } from '../config'
 import { ReclaimServiceManager__factory } from '../contracts'
 import { NewTaskCreatedEventObject, TaskCompletedEventObject } from '../contracts/ReclaimServiceManager'
 import { createClaimOnAvs } from '../create-claim-on-avs'
@@ -190,7 +189,7 @@ describe('Operators', () => {
 	async function createNewTask(userWallet: Wallet) {
 		// eslint-disable-next-line camelcase
 		const contract = ReclaimServiceManager__factory.connect(
-			await CHAIN_CONFIG.contractAddress,
+			await contracts.contract.address,
 			userWallet
 		)
 

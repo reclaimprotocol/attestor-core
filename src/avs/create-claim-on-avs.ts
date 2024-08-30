@@ -1,14 +1,14 @@
-import { Wallet } from 'ethers'
 import { createClaimOnWitness as _createClaimOnWitness } from '../create-claim'
 import { ClaimTunnelResponse } from '../proto/api'
 import { ProviderName } from '../types'
 import { canonicalStringify, getIdentifierFromClaimInfo } from '../utils'
 import { logger as LOGGER } from '../utils/logger'
 import { NewTaskCreatedEventObject, TaskCompletedEventObject } from './contracts/ReclaimServiceManager'
-import { getContracts } from './utils/contracts'
-import { SELECTED_CHAIN_ID } from './config'
+import { initialiseContracts } from './utils/contracts'
+import { CHAIN_CONFIGS, SELECTED_CHAIN_ID } from './config'
 import { CreateClaimOnAvsOpts } from './types'
 
+const EMPTY_CLAIM_USER_ID = new Uint8Array(32)
 /**
  * Creates a Reclaim claim on the AVS chain.
  */
@@ -18,7 +18,6 @@ export async function createClaimOnAvs<N extends ProviderName>({
 	chainId = SELECTED_CHAIN_ID,
 	...opts
 }: CreateClaimOnAvsOpts<N>) {
-	const config = getContracts(chainId)
 	const {
 		logger = LOGGER,
 		ownerPrivateKey,
@@ -26,8 +25,10 @@ export async function createClaimOnAvs<N extends ProviderName>({
 		params,
 		context,
 	} = opts
-	const wallet = new Wallet(ownerPrivateKey, config.provider)
-	const contract = config.contract.connect(wallet)
+	const { contract, wallet } = initialiseContracts(
+		CHAIN_CONFIGS[chainId!],
+		ownerPrivateKey
+	)
 
 	logger.info(
 		{ owner: wallet.address, contract: contract.address },
@@ -36,7 +37,9 @@ export async function createClaimOnAvs<N extends ProviderName>({
 
 	const task = await contract.createNewTask({
 		provider: name,
-		claimUserId: new Uint8Array(32),
+		// blank for now -- till we figure out the right
+		// algorithm for this
+		claimUserId: EMPTY_CLAIM_USER_ID,
 		claimHash: getIdentifierFromClaimInfo({
 			provider: name,
 			parameters: canonicalStringify(params),

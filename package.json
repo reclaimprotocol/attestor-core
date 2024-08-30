@@ -17,6 +17,7 @@
     "generate:provider-types": "ts-node src/scripts/generate-provider-types.ts",
     "verify:root-ca": "ts-node src/scripts/verify-root-ca.ts",
     "create:claim": "ts-node src/scripts/generate-receipt.ts",
+    "register-avs-operator": "ts-node src/scripts/register-avs-operator.ts",
     "generate-avs-types": "typechain --target ethers-v5 --out-dir src/avs/contracts avs/contracts/out/ReclaimServiceManager.sol/*.json",
     "start-chain-with-contracts-deployed": "./avs/utils/anvil/start-anvil-chain-with-el-and-avs-deployed.sh"
   },

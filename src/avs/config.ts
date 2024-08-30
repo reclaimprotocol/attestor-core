@@ -12,18 +12,7 @@ export const CHAIN_CONFIGS: { [key: string]: ChainConfig } = {
 }
 
 export const PRIVATE_KEY = process.env.PRIVATE_KEY!
-if(!PRIVATE_KEY) {
-	throw new Error('PRIVATE_KEY env var not set')
-}
 
-export const SELECTED_CHAIN_ID = process.env.CHAIN_ID!
-if(!SELECTED_CHAIN_ID) {
-	throw new Error('CHAIN_ID env var not set')
-}
-
-export const CHAIN_CONFIG = CHAIN_CONFIGS[SELECTED_CHAIN_ID]
-if(!CHAIN_CONFIG) {
-	throw new Error(`No chain config found for chain ID ${SELECTED_CHAIN_ID}`)
-}
+export const SELECTED_CHAIN_ID = process.env.CHAIN_ID
 
 export const RECLAIM_PUBLIC_RPC_URL = process.env.RPC_URL!

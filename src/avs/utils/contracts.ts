@@ -13,25 +13,28 @@ const configs: { [key: string]: Contracts } = {}
 /**
  * get the contracts for the given chain ID
  */
-export function getContracts(chainId = SELECTED_CHAIN_ID) {
+export function getContracts(chainId = SELECTED_CHAIN_ID!) {
 	const config = CHAIN_CONFIGS[chainId]
 	if(!config) {
-		throw new Error('No config found for chain ID: ' + chainId)
+		throw new Error(`No config found for chain ID: ${chainId}`)
 	}
 
 	configs[chainId] ||= initialiseContracts(config)
 	return configs[chainId]
 }
 
-function initialiseContracts({
-	rpcUrl,
-	stakeRegistryAddress,
-	avsDirectoryAddress,
-	contractAddress,
-	delegationManagerAddress,
-}: ChainConfig) {
+export function initialiseContracts(
+	{
+		rpcUrl,
+		stakeRegistryAddress,
+		avsDirectoryAddress,
+		contractAddress,
+		delegationManagerAddress,
+	}: ChainConfig,
+	privateKey: string = PRIVATE_KEY
+) {
 	const provider = new ethers.providers.JsonRpcProvider(rpcUrl)
-	const wallet = new ethers.Wallet(PRIVATE_KEY, provider)
+	const wallet = new ethers.Wallet(privateKey, provider)
 
 	return {
 		provider,

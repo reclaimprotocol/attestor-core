@@ -1,3 +1,4 @@
+import { createClaimOnAvs } from '../avs/create-claim-on-avs'
 import { createClaimOnWitness } from '../create-claim'
 import { extractHTMLElement, extractJSONValueIndex } from '../providers/http/utils'
 import { ZKEngine, ZKOperators } from '../types'
@@ -94,6 +95,30 @@ export function setupWindowRpc() {
 				respond({
 					type: 'createClaimDone',
 					response,
+				})
+				break
+			case 'createClaimOnAvs':
+				const avsRes = await createClaimOnAvs({
+					...req.request,
+					context: req.request.context
+						? JSON.parse(req.request.context)
+						: undefined,
+					zkOperators: getZkOperators(
+						req.request.zkOperatorMode, req.request.zkEngine
+					),
+					logger,
+					onStep(step) {
+						sendMessage({
+							type: 'createClaimOnAvsStep',
+							step,
+							module: 'witness-sdk',
+							id: req.id,
+						})
+					},
+				})
+				respond({
+					type: 'createClaimOnAvsDone',
+					response: avsRes,
 				})
 				break
 			case 'extractHtmlElement':
