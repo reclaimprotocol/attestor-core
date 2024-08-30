@@ -1,7 +1,8 @@
 import type { ProviderClaimData } from '../proto/api'
 import type { IWitnessClient } from './client'
-import type { Logger } from './general'
+import type { CompleteTLSPacket, Logger } from './general'
 import type { ProofGenerationStep, ProviderName, ProviderParams, ProviderSecretParams } from './providers'
+import { Transcript } from './tunnel'
 import type { PrepareZKProofsBaseOpts } from './zk'
 
 /**
@@ -57,4 +58,9 @@ export type CreateClaimOnWitnessOpts<N extends ProviderName> = {
 	timestampS?: number
 
 	logger?: Logger
+	/**
+	 * Optionally update the provider parameters
+	 * based on the transcript
+	 */
+	updateProviderParams? (transcript: Transcript<CompleteTLSPacket>,tlsVersion: string):  Partial<ProviderParams<N>>
 } & PrepareZKProofsBaseOpts

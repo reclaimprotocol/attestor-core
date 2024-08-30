@@ -1,11 +1,11 @@
 import { createClaimOnWitness } from '../create-claim'
-import { extractHTMLElement, extractJSONValueIndex } from '../providers/http/utils'
+import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from '../providers/http/utils'
 import { ZKEngine, ZKOperators } from '../types'
 import { makeLogger } from '../utils'
 import { Benchmark } from '../utils/benchmark'
 import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from './types'
-import { getCurrentMemoryUsage, getWsApiUrlFromLocation, mapToCreateClaimResponse } from './utils'
-import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator } from './window-rpc-zk'
+import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromLocation, mapToCreateClaimResponse } from './utils'
+import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator, waitForResponse } from './window-rpc-zk'
 
 class WindowRPCEvent extends Event {
 	constructor(public readonly data: WindowRPCIncomingMsg) {
@@ -87,6 +87,7 @@ export function setupWindowRpc() {
 							id: req.id,
 						})
 					},
+					updateProviderParams : req.request.updateProviderParams ? updateProviderParams : undefined
 				})
 				const response = mapToCreateClaimResponse(
 					claimTunnelRes
@@ -226,6 +227,23 @@ export function setupWindowRpc() {
 			} else {
 				event.source!.postMessage(str)
 			}
+		}
+
+		async function updateProviderParams (transcript,tlsVersion): Promise<Partial<import("/Users/abdul/Desktop/code/rc/witness-sdk/src/types/providers.gen").HttpProviderParameters>> {
+			const { req, res } = generateRequstAndResponseFromTranscript(transcript,tlsVersion)
+			const bridge = makeCommunicationBridge()
+			const id = generateRpcRequestId()
+			const waitForRes = await waitForResponse('updateProviderParams', id,bridge)
+			bridge.send({
+				type: 'updateProviderParams',
+				id,
+				request: {
+					request: req,
+					response: res
+				},
+				module: 'witness-sdk'
+			})
+			return waitForRes
 		}
 	}
 }

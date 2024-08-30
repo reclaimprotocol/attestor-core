@@ -10,8 +10,9 @@ import {
 	Syntax
 } from 'esprima-next'
 import { JSONPath } from 'jsonpath-plus'
-import { ArraySlice, ProviderParams } from '../../types'
-import { makeHttpResponseParser, REDACTION_CHAR_CODE } from '../../utils'
+import { ArraySlice, CompleteTLSPacket, ProviderParams, Transcript } from '../../types'
+import { getHttpRequestDataFromTranscript, HttpRequest, HttpResponse, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from '../../utils'
+import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
 
 export type JSONIndex = {
     start: number
@@ -330,4 +331,31 @@ export function matchRedactedStrings(templateString: Uint8Array, redactedString?
 	}
 
 	return ts === templateString.length && rs === redactedString.length
+}
+
+export function generateRequstAndResponseFromTranscript(transcript: Transcript<CompleteTLSPacket>,tlsVersion: string): { req: HttpRequest; res: HttpResponse } {
+	const allPackets = transcript
+	
+	const packets: Transcript<Uint8Array> = []
+	for (const b of allPackets) {
+		if (b.message.type !== 'ciphertext'
+			|| !isApplicationData(b.message, tlsVersion)) {
+			continue
+		}
+		const plaintext = tlsVersion === 'TLS1_3'
+			? b.message.plaintext.slice(0, -1)
+			: b.message.plaintext
+
+		packets.push({
+			message: plaintext,
+			sender: b.sender
+		})
+	}
+
+	const req = getHttpRequestDataFromTranscript(packets)	
+
+	let responsePackets = concatenateUint8Arrays(packets.filter(p => p.sender === 'server').map(p => p.message).filter(b => !b.every(b => b === REDACTION_CHAR_CODE)))
+	const res  = parseHttpResponse(responsePackets) 
+
+	return { req, res }
 }

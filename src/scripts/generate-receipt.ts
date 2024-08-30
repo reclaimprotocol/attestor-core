@@ -16,6 +16,7 @@ import {
 	ProviderSecretParams,
 	WS_PATHNAME,
 } from '..'
+import { generateRequstAndResponseFromTranscript } from '../providers/http/utils'
 
 type ProviderReceiptGenerationParams<P extends ProviderName> = {
     name: P
@@ -54,7 +55,15 @@ export async function main<T extends ProviderName>(
 		ownerPrivateKey: PRIVATE_KEY_HEX,
 		client: { url: witnessHostPort },
 		logger,
-		zkEngine:'snarkJS'
+		zkEngine:'snarkJS',
+		updateProviderParams(transcript,tlsVersion) : Partial<ProviderParams<'http'>> {
+			const { req, res } = generateRequstAndResponseFromTranscript(transcript,tlsVersion)
+			console.log('request:', req)
+			console.log('response:', res)
+			return {
+				responseRedactions: []
+			}
+		}
 	})
 
 	if(receipt.error) {

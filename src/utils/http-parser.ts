@@ -4,7 +4,7 @@ import { ArraySlice, Transcript } from '../types'
 import { findIndexInUint8Array, uint8ArrayToStr } from './generics'
 import { REDACTION_CHAR_CODE } from './redactions'
 
-type HttpRequest = {
+export type HttpRequest = {
     method: string
     url: string
     protocol: string
@@ -12,7 +12,7 @@ type HttpRequest = {
     body?: Uint8Array
 }
 
-type HttpResponse = {
+export type HttpResponse = {
     statusCode: number
     statusMessage: string
     headers: IncomingHttpHeaders
