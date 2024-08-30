@@ -56,14 +56,6 @@ export async function main<T extends ProviderName>(
 		client: { url: witnessHostPort },
 		logger,
 		zkEngine:'snarkJS',
-		updateProviderParams(transcript,tlsVersion) : Partial<ProviderParams<'http'>> {
-			const { req, res } = generateRequstAndResponseFromTranscript(transcript,tlsVersion)
-			console.log('request:', req)
-			console.log('response:', res)
-			return {
-				responseRedactions: []
-			}
-		}
 	})
 
 	if(receipt.error) {
