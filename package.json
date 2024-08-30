@@ -16,7 +16,9 @@
     "generate:contracts-data": "sh ./src/scripts/contract-data-gen.sh",
     "generate:provider-types": "ts-node src/scripts/generate-provider-types.ts",
     "verify:root-ca": "ts-node src/scripts/verify-root-ca.ts",
-    "create:claim": "ts-node src/scripts/generate-receipt.ts"
+    "create:claim": "ts-node src/scripts/generate-receipt.ts",
+    "generate-avs-types": "typechain --target ethers-v5 --out-dir src/avs/contracts avs/contracts/out/ReclaimServiceManager.sol/*.json",
+    "start-chain-with-contracts-deployed": "./avs/utils/anvil/start-anvil-chain-with-el-and-avs-deployed.sh"
   },
   "files": [
     "lib/*"
@@ -50,6 +52,7 @@
     "@adiwajshing/eslint-config": "github:adiwajshing/eslint-config",
     "@swc/core": "^1.7.18",
     "@swc/jest": "^0.2.36",
+    "@typechain/ethers-v5": "^11.1.2",
     "@types/chance": "^1.1.6",
     "@types/jest": "^29.5.12",
     "@types/jsdom": "^21.1.7",
@@ -63,6 +66,7 @@
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "ts-proto": "^2.0.3",
+    "typechain": "^8.3.2",
     "typescript": "^5.5.4",
     "webpack": "^5.94.0",
     "webpack-cli": "^5.1.4",
