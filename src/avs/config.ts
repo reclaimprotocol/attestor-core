@@ -15,4 +15,4 @@ export const PRIVATE_KEY = process.env.PRIVATE_KEY!
 
 export const SELECTED_CHAIN_ID = process.env.CHAIN_ID
 
-export const RECLAIM_PUBLIC_RPC_URL = process.env.RPC_URL!
+export const RECLAIM_PUBLIC_URL = process.env.RECLAIM_PUBLIC_URL!

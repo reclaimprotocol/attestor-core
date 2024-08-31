@@ -1,6 +1,6 @@
 import { ethers } from 'ethers'
 import { logger as LOGGER } from '../../utils'
-import { RECLAIM_PUBLIC_RPC_URL, SELECTED_CHAIN_ID } from '../config'
+import { RECLAIM_PUBLIC_URL, SELECTED_CHAIN_ID } from '../config'
 import { getContracts } from './contracts'
 
 type RegisterOpts = {
@@ -18,7 +18,7 @@ type RegisterOpts = {
 	wallet?: ethers.Wallet
 	/**
 	 * URL of the Reclaim RPC server.
-	 * @default -- env variable RECLAIM_PUBLIC_RPC_URL
+	 * @default -- env variable RECLAIM_PUBLIC_URL
 	 */
 	reclaimRpcUrl?: string
 }
@@ -31,7 +31,7 @@ export async function registerOperator({
 	logger = LOGGER,
 	chainId = SELECTED_CHAIN_ID,
 	wallet = getContracts(chainId).wallet,
-	reclaimRpcUrl = RECLAIM_PUBLIC_RPC_URL
+	reclaimRpcUrl = RECLAIM_PUBLIC_URL
 }: RegisterOpts = {}) {
 	const contracts = getContracts(chainId)
 	const delegationManager = contracts.delegationManager
