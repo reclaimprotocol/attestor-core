@@ -28,14 +28,19 @@ Regardless, if you're one of the chosen few -- here's how you can register yours
 	- Note: if your env is setup with a `.production` suffix, you'll need to run the above command with the `NODE_ENV=production` env flag.
 4. If all goes well, you should be successfully registered on the AVS.
 
-## Working on the Contracts
+## Working on the AVS
 
 1. Clone the repository
 2. Run `npm install`
 3. Install the submodules with `git submodule update --init --recursive`
+	- this'll enable you to work on the contracts
 
 **Building the contracts**:
 	- `npm run build:contracts`
 **Deploying the contracts locally**:
 	- `npm run deploy:contracts`
 	- This will deploy the contracts on the local anvil network, and save the state of the contracts.
+
+**Testing**:
+	- `npm run test` to run all the tests
+	- `npm run test:avs` to run the AVS tests

@@ -27,14 +27,9 @@ contract ReclaimServiceManager is
     // The latest task index
     uint32 public latestTaskNum;
 	/**
-	 * How long a task can be active for before it is considered
-	 * expired
+	 * Default task creation metadata.
 	 */
-	uint32 public maxTaskLifetimeS;
-	/**
-	 * Minimum number of signatures required to complete the task.
-	 */
-	uint8 public minSignaturesPerTask;
+	TaskCreationMetadata public taskCreationMetadata;
 
     // mapping of task indices to all tasks hashes
     // when a task is created, task hash is stored here,
@@ -43,10 +38,16 @@ contract ReclaimServiceManager is
 	// Note: I'm guessing task hashes are stored to reduce gas costs
     mapping(uint32 => bytes32) public allTaskHashes;
 
-	OperatorMetadata[] public registeredOperators;
+    /**
+     * Operators whitelisted to respond to tasks.
+     */
+    address[] public whitelistedOperators;
+    /**
+     * Admins of the contract.
+     */
+    address[] public admins;
 
-    // mapping of task indices to hash of abi.encode(taskResponse, taskResponseMetadata)
-    mapping(address => mapping(uint32 => bytes)) public allTaskResponses;
+	OperatorMetadata[] public registeredOperators;
 
     /* MODIFIERS */
     modifier onlyOperator() {
@@ -72,21 +73,58 @@ contract ReclaimServiceManager is
         )
     {}
 
-    function setup() external initializer {
-        minSignaturesPerTask = 1;
-        // 30m
-        maxTaskLifetimeS = 30 * 60;
-    }
-
-    function setMaxTaskLifetime(uint32 _maxTaskLifetimeS) external preferenceModification {
-        maxTaskLifetimeS = _maxTaskLifetimeS;
-    }
-
-    function setMinSignaturesPerTask(uint8 _minSignaturesPerTask) external preferenceModification {
-        minSignaturesPerTask = _minSignaturesPerTask;
+    function setup(address initialAdmin) external initializer {
+        taskCreationMetadata = TaskCreationMetadata(
+            // 30m
+            30 * 60,
+            1
+        );
+        admins.push(initialAdmin);
     }
 
     /* FUNCTIONS */
+
+    function updateTaskCreationMetadata(
+        TaskCreationMetadata memory newMetadata
+    ) external onlyAdmin {
+        if(newMetadata.maxTaskLifetimeS != 0) {
+            taskCreationMetadata.maxTaskLifetimeS = newMetadata
+                .maxTaskLifetimeS;
+        }
+
+        if(newMetadata.minSignaturesPerTask != 0) {
+            taskCreationMetadata.minSignaturesPerTask = newMetadata
+                .minSignaturesPerTask;
+        }
+    }
+
+    function whitelistAddressAsOperator(
+        address operator,
+        bool isWhitelisted
+    ) external onlyAdmin {
+        if(isWhitelisted) {
+            whitelistedOperators.push(operator);
+            return;
+        }
+
+        for(uint i = 0; i < whitelistedOperators.length; i++) {
+            if(whitelistedOperators[i] == operator) {
+                delete whitelistedOperators[i];
+                return;
+            }
+        }
+
+        revert("Operator not found");
+    }
+
+    function registerOperatorToAVS(
+        address operator,
+        ISignatureUtils.SignatureWithSaltAndExpiry memory operatorSignature
+    ) external virtual override onlyStakeRegistry {
+        require(isOperatorWhitelisted(operator), "Operator not whitelisted");
+        _registerOperatorToAVS(operator, operatorSignature);
+    }
+
     function updateOperatorMetadata(
         OperatorMetadata memory metadata
     ) external onlyOperator {
@@ -136,14 +174,16 @@ contract ReclaimServiceManager is
         Task memory newTask;
         newTask.request = request;
 		newTask.createdAt = uint32(block.timestamp);
-		newTask.expiresAt = uint32(newTask.createdAt + maxTaskLifetimeS);
-		newTask.minimumSignatures = minSignaturesPerTask;
+		newTask.expiresAt = uint32(
+            newTask.createdAt + taskCreationMetadata.maxTaskLifetimeS
+        );
+		newTask.minimumSignatures = taskCreationMetadata.minSignaturesPerTask;
 
 		// hash before picking operators -- we'll use this
 		// as the seed for randomness
 		bytes32 preOpHash = keccak256(abi.encode(newTask));
 		newTask.operators = pickRandomOperators(
-			minSignaturesPerTask,
+			taskCreationMetadata.minSignaturesPerTask,
 			uint256(preOpHash)
 		);
         // store hash of task onchain, emit event, and increase taskNum
@@ -190,8 +230,21 @@ contract ReclaimServiceManager is
 
     // HELPER
 
+    function isOperatorWhitelisted(address operator) public view returns (bool) {
+        for(uint i = 0; i < whitelistedOperators.length; i++) {
+            if(whitelistedOperators[i] == operator) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     function operatorHasMinimumWeight(address operator) public view returns (bool) {
-        return ECDSAStakeRegistry(stakeRegistry).getOperatorWeight(operator) >= ECDSAStakeRegistry(stakeRegistry).minimumWeight();
+        uint opWeight = ECDSAStakeRegistry(stakeRegistry)
+            .getOperatorWeight(operator);
+        uint minWeight = ECDSAStakeRegistry(stakeRegistry).minimumWeight();
+        return opWeight >= minWeight;
     }
 
 	/**
@@ -240,8 +293,20 @@ contract ReclaimServiceManager is
 		return output;
 	}
 
-    modifier preferenceModification {
-        // TODO
+    modifier onlyAdmin {
+        if(msg.sender == owner()) {
+            _;
+            return;
+        }
+
+        for(uint i = 0; i < admins.length; i++) {
+            if(admins[i] == msg.sender) {
+                _;
+                return;
+            }
+        }
+
+        revert("Caller must be an admin");
         _;
     }
 }

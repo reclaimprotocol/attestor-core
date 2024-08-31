@@ -247,7 +247,8 @@ contract ReclaimDeployer is Script, Utils {
             ),
             address(serviceManagerImplementation),
             abi.encodeWithSelector(
-                ReclaimServiceManager.setup.selector
+                ReclaimServiceManager.setup.selector,
+                msg.sender
             )
         );
 

@@ -10,6 +10,7 @@
     "start": "node lib/scripts/start-server",
     "prepare": "sh ./src/scripts/prepare.sh",
     "test": "NODE_ENV=test TZ=utc jest --verbose --forceExit --detectOpenHandles",
+    "test:avs": "NODE_ENV=test TZ=utc jest --verbose --forceExit --detectOpenHandles --testPathPattern=avs",
     "lint": "eslint ./ --ext .js,.ts,.jsx,.tsx",
     "lint:fix": "eslint ./ --fix --ext .js,.ts,.jsx,.tsx",
     "generate:proto": "sh ./src/scripts/generate-proto.sh",
@@ -20,7 +21,7 @@
     "build-contracts": "cd avs/contracts && forge build",
     "deploy-contracts": "sh avs/utils/anvil/deploy-all-to-anvil-and-save-state.sh",
     "register-avs-operator": "ts-node src/scripts/register-avs-operator.ts",
-    "generate-avs-types": "typechain --target ethers-v5 --out-dir src/avs/contracts avs/contracts/out/ReclaimServiceManager.sol/*.json",
+    "generate-avs-types": "typechain -- --target ethers-v5 --out-dir src/avs/contracts avs/contracts/out/ReclaimServiceManager.sol/*.json",
     "start-chain-with-contracts-deployed": "./avs/utils/anvil/start-anvil-chain-with-el-and-avs-deployed.sh"
   },
   "files": [

@@ -74,7 +74,31 @@ interface IReclaimServiceManager {
         string url;
     }
 
+    struct TaskCreationMetadata {
+        /**
+         * How long a task can be active for before it is considered
+         * expired
+         */
+        uint32 maxTaskLifetimeS;
+        /**
+         * Minimum number of signatures required to complete the task.
+         */
+        uint8 minSignaturesPerTask;
+    }
+
     // FUNCTIONS
+
+    // update the task creation metadata
+    // 0 values, empty strings are ignored -- essentially
+    // all falsey values are ignored.
+    function updateTaskCreationMetadata(
+        TaskCreationMetadata memory metadata
+    ) external;
+
+    function whitelistAddressAsOperator(
+        address operator,
+        bool isWhitelisted
+    ) external;
 
     // NOTE: this function is called by the operator
     // updating their metadata.

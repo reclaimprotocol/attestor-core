@@ -86,6 +86,55 @@ describe('Operators', () => {
 		await shutdownChain?.()
 	})
 
+	it('should prevent registration of non-whitelisted operator', async() => {
+		const op = randomWallet()
+		const url = 'ws://abcd.com/ws'
+		await sendGasToAddress(op.address)
+
+		// using try-catch since jest.rejects.toMatchObject wasn't
+		// working as expected
+		try {
+			await registerOperator({
+				wallet: op,
+				reclaimRpcUrl: url
+			})
+			throw new Error('Should have thrown an error')
+		} catch(err) {
+			expect(err.message).toMatch(/Operator not whitelisted/)
+		}
+	})
+
+	it('should prevent non-admins from modifying internal settings', async() => {
+		const nonAdmin = randomWallet()
+		await sendGasToAddress(nonAdmin.address)
+
+		const contract = contracts.contract.connect(nonAdmin)
+
+		const OPS = [
+			() => (
+				contract.whitelistAddressAsOperator(
+					nonAdmin.address,
+					true
+				)
+			),
+			() => (
+				contract.updateTaskCreationMetadata({
+					minSignaturesPerTask: 2,
+					maxTaskLifetimeS: 10
+				})
+			)
+		]
+
+		for(const op of OPS) {
+			try {
+				await op()
+				throw new Error('Should have thrown an error')
+			} catch(err) {
+				expect(err.message).toMatch(/Caller must be an admin/)
+			}
+		}
+	})
+
 	it('should register the operator on chain', async() => {
 		await registerFirstOperator()
 	})
@@ -139,6 +188,12 @@ describe('Operators', () => {
 		// fetch address from the env variable, PRIVATE_KEY
 		const operatorAddress = await contracts.wallet.address
 		await sendGasToAddress(operatorAddress)
+
+		await contracts.contract.whitelistAddressAsOperator(
+			operatorAddress,
+			true
+		)
+
 		await registerOperator({
 			wallet: operators[0].wallet,
 			reclaimRpcUrl: operators[0].url
@@ -164,6 +219,13 @@ describe('Operators', () => {
 		const wallet2 = randomWallet()
 		const url = 'ws://abcd.com/ws'
 		await sendGasToAddress(wallet2.address)
+
+		await contracts.contract.whitelistAddressAsOperator(
+			wallet2.address,
+			true
+		)
+
+
 		await registerOperator({
 			wallet: wallet2,
 			reclaimRpcUrl: url
@@ -259,7 +321,10 @@ describe('Operators', () => {
 	}
 
 	async function createClaimViaFn() {
-		const tx = await contracts.contract.setMinSignaturesPerTask(2)
+		const tx = await contracts.contract.updateTaskCreationMetadata({
+			minSignaturesPerTask: 2,
+			maxTaskLifetimeS: 0
+		})
 		await tx.wait()
 		console.log('min sigs set to 2')
 
