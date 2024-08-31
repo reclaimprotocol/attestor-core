@@ -1,7 +1,7 @@
 import { spawn } from 'child_process'
 
 export async function runFreshChain() {
-	const task = spawn('npm', ['run', 'start-chain-with-contracts-deployed'])
+	const task = spawn('npm', ['run', 'start-chain'])
 	task.stderr.pipe(process.stderr)
 	await new Promise<void>((resolve, reject) => {
 		task.stdout.on('data', (data) => {

@@ -26,7 +26,11 @@ Regardless, if you're one of the chosen few -- here's how you can register yours
 	- Set the `CHAIN_ID` to `0x539` for holesky
 4. Run `npm run register-avs-operator`
 	- Note: if your env is setup with a `.production` suffix, you'll need to run the above command with the `NODE_ENV=production` env flag.
-4. If all goes well, you should be successfully registered on the AVS.
+	- Also, if you're already registered -- this command will update your metadata on the AVS.
+5. If all goes well, you should be successfully registered on the AVS.
+6. Check your registration status by running `npm run check-avs-registration`.
+	- (this'll access the config from the environment variables)
+7. Whenever you run the Reclaim operator now (using `npm run start`), users will be able to discover your node & generate proofs.
 
 ## Working on the AVS
 
@@ -34,6 +38,7 @@ Regardless, if you're one of the chosen few -- here's how you can register yours
 2. Run `npm install`
 3. Install the submodules with `git submodule update --init --recursive`
 	- this'll enable you to work on the contracts
+4. Run `npm run start-chain` to start the local chain with the contracts already deployed
 
 **Building the contracts**:
 	- `npm run build:contracts`

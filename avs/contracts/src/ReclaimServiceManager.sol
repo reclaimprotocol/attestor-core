@@ -230,7 +230,13 @@ contract ReclaimServiceManager is
 
     // HELPER
 
+    // for a whitelist to count -- operator must either be whitelisted
+    // or be an admin
     function isOperatorWhitelisted(address operator) public view returns (bool) {
+        if(isAdmin(operator)) {
+            return true;
+        }
+
         for(uint i = 0; i < whitelistedOperators.length; i++) {
             if(whitelistedOperators[i] == operator) {
                 return true;
@@ -293,20 +299,22 @@ contract ReclaimServiceManager is
 		return output;
 	}
 
-    modifier onlyAdmin {
+    function isAdmin(address _admin) public view returns (bool) {
         if(msg.sender == owner()) {
-            _;
-            return;
+            return true;
         }
 
         for(uint i = 0; i < admins.length; i++) {
-            if(admins[i] == msg.sender) {
-                _;
-                return;
+            if(admins[i] == _admin) {
+                return true;
             }
         }
 
-        revert("Caller must be an admin");
+        return false;
+    }
+
+    modifier onlyAdmin {
+        require(isAdmin(msg.sender), "Caller is not admin");
         _;
     }
 }

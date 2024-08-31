@@ -21,8 +21,9 @@
     "build-contracts": "cd avs/contracts && forge build",
     "deploy-contracts": "sh avs/utils/anvil/deploy-all-to-anvil-and-save-state.sh",
     "register-avs-operator": "ts-node src/scripts/register-avs-operator.ts",
+    "check-avs-registration": "ts-node src/scripts/check-avs-registration.ts",
     "generate-avs-types": "typechain -- --target ethers-v5 --out-dir src/avs/contracts avs/contracts/out/ReclaimServiceManager.sol/*.json",
-    "start-chain-with-contracts-deployed": "./avs/utils/anvil/start-anvil-chain-with-el-and-avs-deployed.sh"
+    "start-chain": "sh ./avs/utils/anvil/start-anvil-chain-with-el-and-avs-deployed.sh"
   },
   "files": [
     "lib/*"
