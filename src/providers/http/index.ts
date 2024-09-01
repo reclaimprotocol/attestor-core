@@ -279,7 +279,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			.filter(b => !b.every(b => b === REDACTION_CHAR_CODE)) // filter out fully redacted blocks
 		const response = concatArrays(...serverBlocks)
 
-		let res
+		let res: string
 		let pureRes: Uint8Array
 		if(secretParams) { //means we're on client doing preliminary checks
 			const parsedResp = parseHttpResponse(response) // to deal with chunked responses
@@ -306,8 +306,17 @@ const HTTP_PROVIDER: Provider<'http'> = {
 					)
 				}
 
+				let lineEnd = res.indexOf('*')
+				if(lineEnd === -1) {
+					lineEnd = res.indexOf('\n')
+				}
+
+				if(lineEnd === -1) {
+					lineEnd = OK_HTTP_HEADER.length
+				}
+
 				throw new Error(
-					`Response did not start with "${OK_HTTP_HEADER}"}`
+					`Response did not start with "${OK_HTTP_HEADER}" got "${res.slice(0, lineEnd)}"`
 				)
 			}
 		}
