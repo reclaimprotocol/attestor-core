@@ -1,7 +1,7 @@
 import RECLAIM_TRUSTED_WITNESS from '../beacon/reclaim-trusted/config.json'
 import { type BeaconIdentifier, BeaconType, InitRequest, ServiceSignatureType, WitnessVersion } from '../proto/api'
 
-export const MAX_ZK_CHUNKS = 100
+export const MAX_ZK_CHUNKS = 200
 
 export const DEFAULT_ZK_CONCURRENCY = 10
 
