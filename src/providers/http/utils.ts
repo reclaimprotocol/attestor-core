@@ -232,6 +232,26 @@ export function convertResponsePosToAbsolutePos(pos: number, bodyStartIdx: numbe
 	return bodyStartIdx + pos
 }
 
+/**
+ * Returns parts of response which contain chunk headers and must be redacted out
+ * of revealed response part
+ * @param from
+ * @param to
+ * @param chunks
+ */
+export function getRedactionsForChunkHeaders(from, to: number, chunks?: ArraySlice[]): ArraySlice[] {
+	const res: ArraySlice[] = []
+	if(chunks?.length) {
+		for(let i = 1; i < chunks?.length; i++) {
+			if(chunks[i].fromIndex > from && chunks[i].fromIndex < to) {
+				res.push({ fromIndex:chunks[i - 1].toIndex, toIndex:chunks[i].fromIndex })
+			}
+		}
+	}
+
+	return res
+}
+
 export function parseHttpResponse(buff: Uint8Array) {
 	const parser = makeHttpResponseParser()
 	parser.onChunk(buff)

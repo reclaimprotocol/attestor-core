@@ -65,6 +65,50 @@ describe('HTTP Provider Utils tests', () => {
 		}).not.toThrow()
 	})
 
+	it('should hide chunked parts from response', () => {
+		const provider = httpProvider
+		const simpleChunk = Buffer.from('HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n9\r\nchunk 1, \r\n7\r\nchunk 2\r\n0\r\n')
+
+		if(provider.getResponseRedactions) {
+			const redactions = provider.getResponseRedactions(simpleChunk, {
+				method: 'GET',
+				url: 'https://test.com',
+				'responseMatches': [
+
+				],
+				'responseRedactions': [
+					{
+						'regex': 'chunk 1, chunk 2'
+					}
+				],
+			})
+			expect(redactions).toEqual([
+				{
+					'fromIndex': 15,
+					'toIndex': 95
+				},
+				{
+					'fromIndex': 104,
+					'toIndex': 109
+				},
+				{
+					'fromIndex': 116,
+					'toIndex': 121
+				}
+			])
+
+			let start = 0
+			let str = ''
+			for(const red of redactions) {
+				str += simpleChunk.subarray(start, red.fromIndex)
+				start = red.toIndex
+			}
+
+			expect(str).toEqual('HTTP/1.1 200 OKchunk 1, chunk 2')
+		}
+
+	})
+
 	it('should get redactions from chunked response', () => {
 		const provider = httpProvider
 		if(provider.getResponseRedactions) {

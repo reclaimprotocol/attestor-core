@@ -13,7 +13,7 @@ import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
 	extractHTMLElementIndex,
-	extractJSONValueIndex,
+	extractJSONValueIndex, getRedactionsForChunkHeaders,
 	makeRegex,
 	matchRedactedStrings,
 	parseHttpResponse,
@@ -160,7 +160,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		const body = uint8ArrayToBinaryStr(res.body)
-
+		const redactions: ArraySlice[] = []
 		for(const rs of params.responseRedactions || []) {
 			let element = body
 			let elementIdx = 0
@@ -208,6 +208,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 					res.chunks
 				)
 				reveals.push({ fromIndex: from, toIndex: to })
+				redactions.push(...getRedactionsForChunkHeaders(from, to, res.chunks))
 			}
 		}
 
@@ -215,7 +216,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			return a.toIndex - b.toIndex
 		})
 
-		const redactions: ArraySlice[] = []
+
 		if(reveals.length > 1) {
 			let currentIndex = 0
 			for(const r of reveals) {
@@ -228,6 +229,11 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 			redactions.push({ fromIndex: currentIndex, toIndex: response.length })
 		}
+
+
+		redactions.sort((a, b) => {
+			return a.toIndex - b.toIndex
+		})
 
 		return redactions
 	},
@@ -281,6 +287,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		let res: string
 		let pureRes: Uint8Array
+		let bodyStart = OK_HTTP_HEADER.length
 		if(secretParams) { //means we're on client doing preliminary checks
 			const parsedResp = parseHttpResponse(response) // to deal with chunked responses
 
@@ -335,6 +342,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 					`Server date is off by "${(Date.now() - serverDate) / 1000} s"`
 				)
 			}
+
+			bodyStart = dateHeader.index + dateHeader[0].length
 		}
 
 
@@ -346,6 +355,12 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			logTranscript()
 			throw new Error('request body mismatch')
 		}
+
+		//remove asterisks to account for chunks in the middle of revealed strings
+		if(!secretParams) {
+			res = res.slice(bodyStart).replace(/(\*){3,}/g, '')
+		}
+
 
 		for(const { type, value, invert } of params.responseMatches || []) {
 			const inv = Boolean(invert) // explicitly cast to boolean
