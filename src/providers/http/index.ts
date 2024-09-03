@@ -315,6 +315,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 					lineEnd = OK_HTTP_HEADER.length
 				}
 
+				logger.error({ res: base64.encode(pureRes), params:paramsAny })
 				throw new Error(
 					`Response did not start with "${OK_HTTP_HEADER}" got "${res.slice(0, lineEnd)}"`
 				)
