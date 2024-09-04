@@ -3,7 +3,12 @@ import { WitnessClient } from '../client'
 import { createClaimOnWitness, getWitnessClientFromPool } from '../create-claim'
 import { providers } from '../providers'
 import { decryptTranscript } from '../server'
-import { assertValidClaimSignatures, extractApplicationDataFromTranscript, logger, WitnessError } from '../utils'
+import {
+	assertValidClaimSignatures,
+	extractApplicationDataFromTranscript,
+	logger,
+	WitnessError
+} from '../utils'
 import { describeWithServer } from './describe-with-server'
 import { SPY_PREPARER } from './mocks'
 import { verifyNoDirectRevealLeaks } from './utils'
@@ -18,7 +23,7 @@ jest.setTimeout(90_000)
 jest.mock('../server/utils/verify-server-certificates', () => {
 	return {
 		__esModule: true,
-		verifyServerCertificates: jest.fn().mockResolvedValue()
+		verifyServerCertificates: jest.fn().mockImplementation(receipt => receipt)
 	}
 })
 

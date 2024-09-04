@@ -87,7 +87,7 @@ export async function assertValidClaimRequest(
 		)
 	}
 
-	const receipt = await decryptTranscript(
+	let receipt = await decryptTranscript(
 		request.transcript,
 		logger,
 		zkEngine === ZKProofEngine.ZK_ENGINE_GNARK ? 'gnark' : 'snarkJS'
@@ -99,7 +99,7 @@ export async function assertValidClaimRequest(
 		)
 	}
 
-	await verifyServerCertificates(receipt, logger)
+	receipt = await verifyServerCertificates(receipt, logger)
 
 	// get all application data messages
 	const applData = extractApplicationDataFromTranscript(receipt)
@@ -245,7 +245,7 @@ export async function decryptTranscript(
 			}
 
 			let redacted = isEncrypted
-			let plaintext = new Uint8Array()
+			let plaintext: Uint8Array
 			let plaintextLength: number
 
 			const recordHeader = message.slice(0, 5)
