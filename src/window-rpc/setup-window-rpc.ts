@@ -1,11 +1,12 @@
+import { uint8ArrayToStr } from '@reclaimprotocol/tls'
 import { createClaimOnWitness } from '../create-claim'
-import { extractHTMLElement, extractJSONValueIndex } from '../providers/http/utils'
-import { ZKEngine, ZKOperators } from '../types'
+import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from '../providers/http/utils'
+import { ProviderParams, ProviderSecretParams, ZKEngine, ZKOperators } from '../types'
 import { makeLogger } from '../utils'
 import { Benchmark } from '../utils/benchmark'
 import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from './types'
-import { getCurrentMemoryUsage, getWsApiUrlFromLocation, mapToCreateClaimResponse } from './utils'
-import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator } from './window-rpc-zk'
+import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromLocation, mapToCreateClaimResponse } from './utils'
+import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator, waitForResponse } from './window-rpc-zk'
 
 class WindowRPCEvent extends Event {
 	constructor(public readonly data: WindowRPCIncomingMsg) {
@@ -87,6 +88,7 @@ export function setupWindowRpc() {
 							id: req.id,
 						})
 					},
+					updateProviderParams : req.request.updateProviderParams ? updateProviderParams : undefined
 				})
 				const response = mapToCreateClaimResponse(
 					claimTunnelRes
@@ -226,6 +228,26 @@ export function setupWindowRpc() {
 			} else {
 				event.source!.postMessage(str)
 			}
+		}
+
+		async function updateProviderParams (transcript,tlsVersion): Promise<{
+			params: Partial<ProviderParams<'http'>>
+			secretParams: Partial<ProviderSecretParams<'http'>>
+		}> {
+			const { req , res } = generateRequstAndResponseFromTranscript(transcript,tlsVersion)
+			const bridge = makeCommunicationBridge()
+			const id = generateRpcRequestId()
+			const waitForRes =  waitForResponse('updateProviderParams', id,bridge)
+			bridge.send({
+				type: 'updateProviderParams',
+				id,
+				request: {
+					request: {...req, body: req.body ? uint8ArrayToStr(req.body) : undefined},
+					response: {...res, body:  uint8ArrayToStr(res.body) },
+				},
+				module: 'witness-sdk'
+			})
+			return await waitForRes
 		}
 	}
 }
