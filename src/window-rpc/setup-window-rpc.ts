@@ -1,7 +1,7 @@
 import { uint8ArrayToStr } from '@reclaimprotocol/tls'
 import { createClaimOnWitness } from '../create-claim'
 import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from '../providers/http/utils'
-import { ProviderParams, ZKEngine, ZKOperators } from '../types'
+import { ProviderParams, ProviderSecretParams, ZKEngine, ZKOperators } from '../types'
 import { makeLogger } from '../utils'
 import { Benchmark } from '../utils/benchmark'
 import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from './types'
@@ -230,7 +230,10 @@ export function setupWindowRpc() {
 			}
 		}
 
-		async function updateProviderParams (transcript,tlsVersion): Promise<Partial<ProviderParams<'http'>>> {
+		async function updateProviderParams (transcript,tlsVersion): Promise<{
+			params: Partial<ProviderParams<'http'>>
+			secretParams: Partial<ProviderSecretParams<'http'>>
+		}> {
 			const { req , res } = generateRequstAndResponseFromTranscript(transcript,tlsVersion)
 			const bridge = makeCommunicationBridge()
 			const id = generateRpcRequestId()

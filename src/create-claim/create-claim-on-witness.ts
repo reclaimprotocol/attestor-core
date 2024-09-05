@@ -215,8 +215,9 @@ async function _createClaimOnWitness<N extends ProviderName>(
 
 	// update the response selections
 	if(updateProviderParams) {
-		const updatedParms = await updateProviderParams(tunnel.transcript,tlsVersion??'TLS1_2')
-		params = { ...params, ...updatedParms }
+		const {params:updatedParms, secretParams:updatedSecretParms} = await updateProviderParams(tunnel.transcript,tlsVersion??'TLS1_2')
+		params = {...params, ...updatedParms}
+		secretParams = {...secretParams, ...updatedSecretParms}
 	}
 
 	const signatureAlg = SIGNATURES[client!.metadata.signatureType]

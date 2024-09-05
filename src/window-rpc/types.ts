@@ -7,6 +7,7 @@ import type {
 	ProofGenerationStep,
 	ProviderName,
 	ProviderParams,
+	ProviderSecretParams,
 	WitnessData,
 	ZKEngine
 } from '../types'
@@ -121,7 +122,10 @@ export type WindowRPCClient = {
 export type WindowRPCAppClient = {
 	zkProve(opts: ZKProveOpts): ReturnType<ZKOperator['groth16Prove']>
 	zkVerify(opts: ZKVerifyOpts): ReturnType<ZKOperator['groth16Verify']>
-	updateProviderParams(opts: UpdateProviderParamsOpts): Partial<ProviderParams<'http'>>
+	updateProviderParams(opts: UpdateProviderParamsOpts): Promise<{
+		params: Partial<ProviderParams<'http'>>
+		secretParams: Partial<ProviderSecretParams<'http'>>
+	}>
 }
 
 type AnyRPCClient = { [_: string]: (opts: any) => any }

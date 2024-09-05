@@ -62,5 +62,8 @@ export type CreateClaimOnWitnessOpts<N extends ProviderName> = {
 	 * Optionally update the provider parameters
 	 * based on the transcript
 	 */
-	updateProviderParams? (transcript: Transcript<CompleteTLSPacket>,tlsVersion: string):  Promise<Partial<ProviderParams<N>>>
+	updateProviderParams? (transcript: Transcript<CompleteTLSPacket>,tlsVersion: string):  Promise<{
+		params: Partial<ProviderParams<N>>
+		secretParams: Partial<ProviderSecretParams<N>>
+	}>
 } & PrepareZKProofsBaseOpts
