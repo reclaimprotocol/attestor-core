@@ -12,9 +12,9 @@ export const CHAIN_CONFIGS: { [key: string]: ChainConfig } = {
 	},
 	'17000': {
 		rpcUrl: getEnvVariable('RPC_URL') || 'https://rpc.holesky.ethpandaops.io',
-		contractAddress: '0x8d396B32e0b30e2b2515048599cc48d99fa78600',
+		contractAddress: '0x0861afc305999bfD3028dB66145395BdD7299366',
 		delegationManagerAddress: '0xA44151489861Fe9e3055d95adC98FbD462B948e7',
-		stakeRegistryAddress: '0x80F13E092a9a24938e2eeBbB3A943d13962d713d',
+		stakeRegistryAddress: '0xDa11C9Da04Ab02C4AF9374B27A5E727944D3E1dD',
 		avsDirectoryAddress: '0x055733000064333CaDDbC92763c58BF0192fFeBf'
 	}
 }

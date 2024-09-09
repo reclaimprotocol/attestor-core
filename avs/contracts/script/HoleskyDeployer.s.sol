@@ -33,6 +33,8 @@ contract HoleskyDeployer is Script, Utils {
     ReclaimServiceManager public serviceManagerProxy;
     ReclaimServiceManager public serviceManagerImplementation;
 
+    string public constant METADATA_URI = "https://raw.githubusercontent.com/reclaimprotocol/witness-sdk/main/avs/metadata.json";
+
     function run() external {
         // Manually pasted addresses of Eigenlayer contracts
         address strategyManagerAddr = 0xdfB5f6CE42aAA7830E94ECFCcAd411beF4d4D5b6;
@@ -169,6 +171,7 @@ contract HoleskyDeployer is Script, Utils {
                 msg.sender
             )
         );
+        serviceManagerProxy.updateAVSMetadataURI(METADATA_URI);
 
         // WRITE JSON DATA
         string memory parent_object = "parent object";

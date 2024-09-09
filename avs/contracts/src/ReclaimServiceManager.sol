@@ -49,8 +49,6 @@ contract ReclaimServiceManager is
 
 	OperatorMetadata[] public registeredOperators;
 
-    string public constant METADATA_URI = "https://raw.githubusercontent.com/reclaimprotocol/witness-sdk/main/avs/metadata.json";
-
     /* MODIFIERS */
     modifier onlyOperator() {
         require(
@@ -83,10 +81,16 @@ contract ReclaimServiceManager is
             1
         );
         admins.push(initialAdmin);
-        IAVSDirectory(avsDirectory).updateAVSMetadataURI(METADATA_URI);
     }
 
     /* FUNCTIONS */
+
+    /// @inheritdoc IServiceManagerUI
+    function updateAVSMetadataURI(
+        string memory _metadataURI
+    ) external override virtual onlyAdmin {
+        _updateAVSMetadataURI(_metadataURI);
+    }
 
     function updateTaskCreationMetadata(
         TaskCreationMetadata memory newMetadata

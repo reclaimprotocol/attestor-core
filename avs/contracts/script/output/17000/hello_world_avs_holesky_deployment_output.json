@@ -1,8 +1,8 @@
 {
   "addresses": {
-    "ECDSAStakeRegistry": "0x80F13E092a9a24938e2eeBbB3A943d13962d713d",
-    "ECDSAStakeRegistryImplementation": "0xA7Fa63941D62C1006FAD3E34dd7435E998619feE",
-    "HelloWorldServiceManagerImplementation": "0x6f0a64a7a2645d96e238fD1a9252E3eE14604072",
-    "HelloWorldServiceManagerProxy": "0x8d396B32e0b30e2b2515048599cc48d99fa78600"
+    "ECDSAStakeRegistry": "0xDa11C9Da04Ab02C4AF9374B27A5E727944D3E1dD",
+    "ECDSAStakeRegistryImplementation": "0x69fD299adC6Cd86899569819d604C45568ED4cdD",
+    "HelloWorldServiceManagerImplementation": "0x683e94F274B9c2F72dD3eD5b40bc8bE579F2479D",
+    "HelloWorldServiceManagerProxy": "0x0861afc305999bfD3028dB66145395BdD7299366"
   }
 }
