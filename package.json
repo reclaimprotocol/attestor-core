@@ -71,6 +71,7 @@
   "overrides": {
     "@ethersproject/providers": {
       "ws": "^7.5.10"
-    }
+    },
+    "elliptic": "^v6.5.7"
   }
 }
