@@ -1,4 +1,5 @@
 import '../server/utils/config-env'
+import { getEnvVariable } from '../utils/env'
 import type { ChainConfig } from './types'
 
 export const CHAIN_CONFIGS: { [key: string]: ChainConfig } = {
@@ -8,11 +9,18 @@ export const CHAIN_CONFIGS: { [key: string]: ChainConfig } = {
 		delegationManagerAddress: '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9',
 		stakeRegistryAddress: '0x9E545E3C0baAB3E08CdfD552C960A1050f373042',
 		avsDirectoryAddress: '0x5FC8d32690cc91D4c39d9d3abcBD16989F875707'
+	},
+	'17000': {
+		rpcUrl: getEnvVariable('RPC_URL') || 'https://rpc.holesky.ethpandaops.io',
+		contractAddress: '0x8d396B32e0b30e2b2515048599cc48d99fa78600',
+		delegationManagerAddress: '0xA44151489861Fe9e3055d95adC98FbD462B948e7',
+		stakeRegistryAddress: '0x80F13E092a9a24938e2eeBbB3A943d13962d713d',
+		avsDirectoryAddress: '0x055733000064333CaDDbC92763c58BF0192fFeBf'
 	}
 }
 
-export const PRIVATE_KEY = process.env.PRIVATE_KEY!
+export const PRIVATE_KEY = getEnvVariable('PRIVATE_KEY')
 
-export const SELECTED_CHAIN_ID = process.env.CHAIN_ID
+export const SELECTED_CHAIN_ID = getEnvVariable('CHAIN_ID')
 
-export const RECLAIM_PUBLIC_URL = process.env.RECLAIM_PUBLIC_URL!
+export const RECLAIM_PUBLIC_URL = getEnvVariable('RECLAIM_PUBLIC_URL')!

@@ -20,6 +20,7 @@
     "create:claim": "ts-node src/scripts/generate-receipt.ts",
     "build-contracts": "cd avs/contracts && forge build",
     "deploy-contracts": "sh avs/utils/anvil/deploy-all-to-anvil-and-save-state.sh",
+    "deploy-contracts-to-chain": "sh avs/utils/anvil/deploy-to-chain.sh",
     "register-avs-operator": "ts-node src/scripts/register-avs-operator.ts",
     "check-avs-registration": "ts-node src/scripts/check-avs-registration.ts",
     "generate-avs-types": "typechain -- --target ethers-v5 --out-dir src/avs/contracts avs/contracts/out/ReclaimServiceManager.sol/*.json",
