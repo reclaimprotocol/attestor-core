@@ -204,6 +204,11 @@ contract ReclaimServiceManager is
             "supplied task does not match the one recorded in the contract"
         );
 
+        require(
+            completedTask.task.expiresAt > uint32(block.timestamp),
+            "Task has expired"
+        );
+
 		Claims.SignedClaim memory signedClaim = Claims.SignedClaim(
             Claims.CompleteClaimData(
                 completedTask.task.request.claimHash,
@@ -222,6 +227,9 @@ contract ReclaimServiceManager is
         }
 
         Claims.assertValidSignedClaim(signedClaim, operatorAddrs);
+
+        // remove so it cannot be claimed again
+        delete allTaskHashes[referenceTaskIndex];
 
         // TODO: distribute fees
 

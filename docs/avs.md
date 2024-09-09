@@ -41,11 +41,11 @@ Regardless, if you're one of the chosen few -- here's how you can register yours
 4. Run `npm run start-chain` to start the local chain with the contracts already deployed
 
 **Building the contracts**:
-	- `npm run build:contracts`
+	- `npm run build-contracts`
 **Deploying the contracts locally**:
-	- `npm run deploy:contracts`
+	- `npm run deploy-contracts`
 	- This will deploy the contracts on the local anvil network, and save the state of the contracts.
 
 **Testing**:
 	- `npm run test` to run all the tests
-	- `npm run test:avs` to run the AVS tests
+	- `npm run test-avs` to run the AVS tests
