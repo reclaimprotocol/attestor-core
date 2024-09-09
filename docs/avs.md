@@ -20,10 +20,13 @@ Regardless, if you're one of the chosen few -- here's how you can register yours
 
 1. Clone the repository
 2. Run `npm install`
-3. Setup the environment variables in a `.env` file. Refer to our [environment variables guide](./env.md) for more information.
+3. Deploy the Reclaim operator on the cloud or some server. See [here](/docs/deployment.md) for more information.
+	- Note the RPC URL from this step & ensure that the operator is running & accessible on the internet.
+4. Setup the environment variables in a `.env` file. Refer to our [environment variables guide](./env.md) for more information.
 	- Ensure that the address of the private key you're using is whitelisted on the AVS
 	- Also ensure there's enough ETH in the account to pay for gas & staking
 	- Set the `CHAIN_ID` to `0x539` for holesky
+	- Ensure `RECLAIM_PUBLIC_URL` is set to the public URL of the operator you deployed in step 3.
 4. Run `npm run register-avs-operator`
 	- Note: if your env is setup with a `.production` suffix, you'll need to run the above command with the `NODE_ENV=production` env flag.
 	- Also, if you're already registered -- this command will update your metadata on the AVS.
