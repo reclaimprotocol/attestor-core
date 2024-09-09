@@ -9,7 +9,7 @@ import {IStrategyManager, IStrategy} from "@eigenlayer/contracts/interfaces/IStr
 import {StrategyBase} from "@eigenlayer/contracts/strategies/StrategyBase.sol";
 import {ECDSAStakeRegistry} from "@eigenlayer-middleware/src/unaudited/ECDSAStakeRegistry.sol";
 import {Quorum, StrategyParams} from "@eigenlayer-middleware/src/interfaces/IECDSAStakeRegistryEventsAndErrors.sol";
-import {HelloWorldServiceManager} from "../src/HelloWorldServiceManager.sol";
+import {ReclaimServiceManager} from "../src/ReclaimServiceManager.sol";
 import "@eigenlayer/test/mocks/EmptyContract.sol";
 import "../src/ERC20Mock.sol";
 import "forge-std/Script.sol";
@@ -24,14 +24,14 @@ contract HoleskyDeployer is Script, Utils {
     StrategyBase public erc20MockStrategy;
 
     // Hello World contracts
-    ProxyAdmin public helloWorldProxyAdmin;
+    ProxyAdmin public proxyAdmin;
     PauserRegistry public helloWorldPauserReg;
     
     ECDSAStakeRegistry public stakeRegistryProxy;
     ECDSAStakeRegistry public stakeRegistryImplementation;
 
-    HelloWorldServiceManager public helloWorldServiceManagerProxy;
-    HelloWorldServiceManager public helloWorldServiceManagerImplementation;
+    ReclaimServiceManager public serviceManagerProxy;
+    ReclaimServiceManager public serviceManagerImplementation;
 
     function run() external {
         // Manually pasted addresses of Eigenlayer contracts
@@ -71,7 +71,7 @@ contract HoleskyDeployer is Script, Utils {
         address helloWorldPauser
     ) internal {
         // Deploy proxy admin for ability to upgrade proxy contracts
-        helloWorldProxyAdmin = new ProxyAdmin();
+        proxyAdmin = new ProxyAdmin();
 
         // Deploy pauser registry
         {
@@ -86,12 +86,13 @@ contract HoleskyDeployer is Script, Utils {
 
         EmptyContract emptyContract = new EmptyContract();
 
-        // First, deploy upgradeable proxy contracts that will point to the implementations.
-        helloWorldServiceManagerProxy = HelloWorldServiceManager(
+        // First, deploy upgradeable proxy contracts that will point to
+        // the implementations.
+        serviceManagerProxy = ReclaimServiceManager(
             address(
                 new TransparentUpgradeableProxy(
                     address(emptyContract),
-                    address(helloWorldProxyAdmin),
+                    address(proxyAdmin),
                     ""
                 )
             )
@@ -100,19 +101,20 @@ contract HoleskyDeployer is Script, Utils {
             address(
                 new TransparentUpgradeableProxy(
                     address(emptyContract),
-                    address(helloWorldProxyAdmin),
+                    address(proxyAdmin),
                     ""
                 )
             )
         );
 
-        // Second, deploy the implementation contracts, using the proxy contracts as inputs
+        // Second, deploy the implementation contracts, using the
+        // proxy contracts as inputs
         {
             stakeRegistryImplementation = new ECDSAStakeRegistry(
                 delegationManager
             );
 
-            helloWorldProxyAdmin.upgrade(
+            proxyAdmin.upgrade(
                 TransparentUpgradeableProxy(payable(address(stakeRegistryProxy))),
                 address(stakeRegistryImplementation)
             );
@@ -132,34 +134,40 @@ contract HoleskyDeployer is Script, Utils {
                 quorumsStrategyParams
             );
 
-            // Sort the array (though it has only one element, it's trivially sorted)
-            // If the array had more elements, you would need to ensure it is sorted by strategy address
+            // Sort the array (though it has only one element,
+            // it's trivially sorted). If the array had more elements,
+            // you would need to ensure it is sorted by strategy address
 
-            helloWorldProxyAdmin.upgradeAndCall(
+            proxyAdmin.upgradeAndCall(
                 TransparentUpgradeableProxy(
                     payable(address(stakeRegistryProxy))
                 ),
                 address(stakeRegistryImplementation),
                 abi.encodeWithSelector(
                     ECDSAStakeRegistry.initialize.selector,
-                    address(helloWorldServiceManagerProxy),
+                    address(serviceManagerProxy),
                     1,
                     quorum
                 )
             );
         }
 
-        helloWorldServiceManagerImplementation = new HelloWorldServiceManager(
+        serviceManagerImplementation = new ReclaimServiceManager(
             address(avsDirectory),
             address(stakeRegistryProxy),
             address(delegationManager)
         );
-        // Upgrade the proxy contracts to use the correct implementation contracts and initialize them.
-        helloWorldProxyAdmin.upgrade(
+        // Upgrade the proxy contracts to use the correct implementation
+        // contracts and initialize them.
+        proxyAdmin.upgradeAndCall(
             TransparentUpgradeableProxy(
-                payable(address(helloWorldServiceManagerProxy))
+                payable(address(serviceManagerProxy))
             ),
-            address(helloWorldServiceManagerImplementation)
+            address(serviceManagerImplementation),
+            abi.encodeWithSelector(
+                ReclaimServiceManager.setup.selector,
+                msg.sender
+            )
         );
 
         // WRITE JSON DATA
@@ -169,12 +177,12 @@ contract HoleskyDeployer is Script, Utils {
         vm.serializeAddress(
             deployed_addresses,
             "HelloWorldServiceManagerProxy",
-            address(helloWorldServiceManagerProxy)
+            address(serviceManagerProxy)
         );
         vm.serializeAddress(
             deployed_addresses,
             "HelloWorldServiceManagerImplementation",
-            address(helloWorldServiceManagerImplementation)
+            address(serviceManagerImplementation)
         );
         vm.serializeAddress(
             deployed_addresses,
