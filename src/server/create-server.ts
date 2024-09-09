@@ -3,7 +3,7 @@ import serveStatic from 'serve-static'
 import type { Duplex } from 'stream'
 import { WebSocket, WebSocketServer } from 'ws'
 import { API_SERVER_PORT, BROWSER_RPC_PATHNAME, WS_PATHNAME } from '../config'
-import { ServiceSignatureType } from '../proto/api'
+import { SelectedServiceSignatureType } from '../signatures'
 import { logger as LOGGER } from '../utils'
 import { getEnvVariable } from '../utils/env'
 import { getWitnessAddress } from './utils/generics'
@@ -64,7 +64,7 @@ export async function createServer(port = PORT) {
 			apiPath: WS_PATHNAME,
 			browserRpcPath: BROWSER_RPC_PATHNAME,
 			signerAddress: getWitnessAddress(
-				ServiceSignatureType.SERVICE_SIGNATURE_TYPE_ETH
+				SelectedServiceSignatureType
 			)
 		},
 		'WS server listening'

@@ -19,7 +19,7 @@ export const CHAIN_CONFIGS: { [key: string]: ChainConfig } = {
 	}
 }
 
-export const PRIVATE_KEY = getEnvVariable('PRIVATE_KEY')
+export const PRIVATE_KEY = getEnvVariable('PRIVATE_KEY')!
 
 export const SELECTED_CHAIN_ID = getEnvVariable('CHAIN_ID')
 
