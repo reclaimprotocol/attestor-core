@@ -61,6 +61,7 @@ async function _createClaimOnWitness<N extends ProviderName>(
 		client: clientInit,
 		logger = LOGGER,
 		timestampS,
+		updateProviderParams,
 		...zkOpts
 	}: CreateClaimOnWitnessOpts<N>
 ) {
@@ -211,6 +212,13 @@ async function _createClaimOnWitness<N extends ProviderName>(
 	await tunnel.close()
 
 	logger.info('got full response from server')
+
+	// update the response selections
+	if(updateProviderParams) {
+		const {params:updatedParms, secretParams:updatedSecretParms} = await updateProviderParams(tunnel.transcript,tlsVersion??'TLS1_2')
+		params = {...params, ...updatedParms}
+		secretParams = {...secretParams, ...updatedSecretParms}
+	}
 
 	const signatureAlg = SIGNATURES[client!.metadata.signatureType]
 

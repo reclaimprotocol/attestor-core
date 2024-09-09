@@ -28,7 +28,7 @@ export function makeWindowRpcZkOperator(
 		},
 		groth16Prove(input) {
 			const id = generateRpcRequestId()
-			const waitForRes = waitForResponse('zkProve', id)
+			const waitForRes = waitForResponse('zkProve', id, bridge)
 
 			bridge.send({
 				type: 'zkProve',
@@ -44,7 +44,7 @@ export function makeWindowRpcZkOperator(
 		},
 		groth16Verify(publicSignals, proof) {
 			const id = generateRpcRequestId()
-			const waitForRes = waitForResponse('zkVerify', id)
+			const waitForRes = waitForResponse('zkVerify', id, bridge)
 
 			bridge.send({
 				type: 'zkVerify',
@@ -61,24 +61,27 @@ export function makeWindowRpcZkOperator(
 		},
 	}
 
-	function waitForResponse<T extends keyof WindowRPCAppClient>(
-		type: T,
-		requestId: string
-	) {
-		type R = Awaited<ReturnType<WindowRPCAppClient[T]>>
-		const returnType = `${type}Done` as const
-		return new Promise<R>((resolve, reject) => {
-			const cancel = bridge.onMessage(msg => {
-				if(msg.id === requestId) {
-					if(msg.type === 'error') {
-						reject(new Error(msg.data.message))
-					} else if(msg.type === returnType) {
-						resolve(msg.response as R)
-					}
+	
+}
 
-					cancel()
+export function waitForResponse<T extends keyof WindowRPCAppClient>(
+	type: T,
+	requestId: string,
+	bridge: CommunicationBridge
+) {
+	type R = Awaited<ReturnType<WindowRPCAppClient[T]>>
+	const returnType = `${type}Done` as const
+	return new Promise<R>((resolve, reject) => {
+		const cancel = bridge.onMessage(msg => {
+			if(msg.id === requestId) {
+				if(msg.type === 'error') {
+					reject(new Error(msg.data.message))
+				} else if(msg.type === returnType) {
+					resolve(msg.response as R)
 				}
-			})
+
+				cancel()
+			}
 		})
-	}
+	})
 }

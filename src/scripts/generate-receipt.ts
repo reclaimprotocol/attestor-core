@@ -54,7 +54,7 @@ export async function main<T extends ProviderName>(
 		ownerPrivateKey: PRIVATE_KEY_HEX,
 		client: { url: witnessHostPort },
 		logger,
-		zkEngine:'snarkJS'
+		zkEngine:'snarkJS',
 	})
 
 	if(receipt.error) {

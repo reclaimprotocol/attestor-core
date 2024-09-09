@@ -10,8 +10,9 @@ import {
 	Syntax
 } from 'esprima-next'
 import { JSONPath } from 'jsonpath-plus'
-import { ArraySlice, ProviderParams } from '../../types'
-import { makeHttpResponseParser, REDACTION_CHAR_CODE } from '../../utils'
+import { ArraySlice, CompleteTLSPacket, ProviderParams, Transcript } from '../../types'
+import { getHttpRequestDataFromTranscript, HttpRequest, HttpResponse, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from '../../utils'
+import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
 
 export type JSONIndex = {
     start: number
@@ -232,6 +233,26 @@ export function convertResponsePosToAbsolutePos(pos: number, bodyStartIdx: numbe
 	return bodyStartIdx + pos
 }
 
+/**
+ * Returns parts of response which contain chunk headers and must be redacted out
+ * of revealed response part
+ * @param from
+ * @param to
+ * @param chunks
+ */
+export function getRedactionsForChunkHeaders(from, to: number, chunks?: ArraySlice[]): ArraySlice[] {
+	const res: ArraySlice[] = []
+	if(chunks?.length) {
+		for(let i = 1; i < chunks?.length; i++) {
+			if(chunks[i].fromIndex > from && chunks[i].fromIndex < to) {
+				res.push({ fromIndex:chunks[i - 1].toIndex, toIndex:chunks[i].fromIndex })
+			}
+		}
+	}
+
+	return res
+}
+
 export function parseHttpResponse(buff: Uint8Array) {
 	const parser = makeHttpResponseParser()
 	parser.onChunk(buff)
@@ -330,4 +351,31 @@ export function matchRedactedStrings(templateString: Uint8Array, redactedString?
 	}
 
 	return ts === templateString.length && rs === redactedString.length
+}
+
+export function generateRequstAndResponseFromTranscript(transcript: Transcript<CompleteTLSPacket>,tlsVersion: string): { req: HttpRequest; res: HttpResponse } {
+	const allPackets = transcript
+	
+	const packets: Transcript<Uint8Array> = []
+	for (const b of allPackets) {
+		if (b.message.type !== 'ciphertext'
+			|| !isApplicationData(b.message, tlsVersion)) {
+			continue
+		}
+		const plaintext = tlsVersion === 'TLS1_3'
+			? b.message.plaintext.slice(0, -1)
+			: b.message.plaintext
+
+		packets.push({
+			message: plaintext,
+			sender: b.sender
+		})
+	}
+
+	const req = getHttpRequestDataFromTranscript(packets)	
+
+	let responsePackets = concatenateUint8Arrays(packets.filter(p => p.sender === 'server').map(p => p.message).filter(b => !b.every(b => b === REDACTION_CHAR_CODE)))
+	const res  = parseHttpResponse(responsePackets) 
+
+	return { req, res }
 }

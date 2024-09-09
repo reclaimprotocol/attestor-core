@@ -1,4 +1,5 @@
 import { concatenateUint8Arrays, strToUint8Array, TLSConnectionOptions } from '@reclaimprotocol/tls'
+import { base64 } from 'ethers/lib/utils'
 import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '../../config'
 import { ArraySlice, Provider, ProviderParams, ProviderSecretParams } from '../../types'
 import {
@@ -12,7 +13,7 @@ import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
 	extractHTMLElementIndex,
-	extractJSONValueIndex,
+	extractJSONValueIndex, getRedactionsForChunkHeaders,
 	makeRegex,
 	matchRedactedStrings,
 	parseHttpResponse,
@@ -159,7 +160,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		const body = uint8ArrayToBinaryStr(res.body)
-
+		const redactions: ArraySlice[] = []
 		for(const rs of params.responseRedactions || []) {
 			let element = body
 			let elementIdx = 0
@@ -207,6 +208,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 					res.chunks
 				)
 				reveals.push({ fromIndex: from, toIndex: to })
+				redactions.push(...getRedactionsForChunkHeaders(from, to, res.chunks))
 			}
 		}
 
@@ -214,7 +216,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			return a.toIndex - b.toIndex
 		})
 
-		const redactions: ArraySlice[] = []
+
 		if(reveals.length > 1) {
 			let currentIndex = 0
 			for(const r of reveals) {
@@ -227,6 +229,11 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 			redactions.push({ fromIndex: currentIndex, toIndex: response.length })
 		}
+
+
+		redactions.sort((a, b) => {
+			return a.toIndex - b.toIndex
+		})
 
 		return redactions
 	},
@@ -278,7 +285,9 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			.filter(b => !b.every(b => b === REDACTION_CHAR_CODE)) // filter out fully redacted blocks
 		const response = concatArrays(...serverBlocks)
 
-		let res
+		let res: string
+		let pureRes: Uint8Array
+		let bodyStart = OK_HTTP_HEADER.length
 		if(secretParams) { //means we're on client doing preliminary checks
 			const parsedResp = parseHttpResponse(response) // to deal with chunked responses
 
@@ -289,8 +298,10 @@ const HTTP_PROVIDER: Provider<'http'> = {
 				)
 			}
 
+			pureRes = parsedResp.body
 			res = uint8ArrayToStr(parsedResp.body)
 		} else {
+			pureRes = response
 			res = uint8ArrayToStr(response)
 			if(!res.startsWith(OK_HTTP_HEADER)) {
 				logTranscript()
@@ -302,8 +313,18 @@ const HTTP_PROVIDER: Provider<'http'> = {
 					)
 				}
 
+				let lineEnd = res.indexOf('*')
+				if(lineEnd === -1) {
+					lineEnd = res.indexOf('\n')
+				}
+
+				if(lineEnd === -1) {
+					lineEnd = OK_HTTP_HEADER.length
+				}
+
+				logger.error({ res: base64.encode(pureRes), params:paramsAny })
 				throw new Error(
-					`Response did not start with "${OK_HTTP_HEADER}"}`
+					`Response did not start with "${OK_HTTP_HEADER}" got "${res.slice(0, lineEnd)}"`
 				)
 			}
 		}
@@ -321,6 +342,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 					`Server date is off by "${(Date.now() - serverDate) / 1000} s"`
 				)
 			}
+
+			bodyStart = dateHeader.index + dateHeader[0].length
 		}
 
 
@@ -332,6 +355,12 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			logTranscript()
 			throw new Error('request body mismatch')
 		}
+
+		//remove asterisks to account for chunks in the middle of revealed strings
+		if(!secretParams) {
+			res = res.slice(bodyStart).replace(/(\*){3,}/g, '')
+		}
+
 
 		for(const { type, value, invert } of params.responseMatches || []) {
 			const inv = Boolean(invert) // explicitly cast to boolean
@@ -363,6 +392,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 				const includes = res.includes(value)
 				if(includes === inv) {
 					logTranscript()
+					logger.error({ res: base64.encode(pureRes) })
 					throw new Error(
 						`Invalid receipt. Response ${invert ? 'contains' : 'does not contain'} "${value}"`
 					)
