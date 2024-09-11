@@ -25,6 +25,10 @@ interface IReclaimServiceManager {
          */
         bytes32 claimHash;
         /**
+         * Requested at timestamp.
+         */
+        uint32 requestedAt;
+        /**
          * Address of the requester.
          */
         address owner;
@@ -84,6 +88,10 @@ interface IReclaimServiceManager {
          * Minimum number of signatures required to complete the task.
          */
         uint8 minSignaturesPerTask;
+        /**
+         * Max time between the submission of the task and requestedAt
+         */
+        uint32 maxTaskCreationDelayS;
     }
 
     // FUNCTIONS
@@ -107,9 +115,16 @@ interface IReclaimServiceManager {
         OperatorMetadata memory metadata
     ) external;
 
-    // NOTE: this function creates new task.
+    /**
+     * Create a new task.
+     * @param request ClaimRequest
+     * @param requestSignature Signature of abi.encode(request)
+     * by the request.owner address. Required when msg.sender is not
+     * the request.owner
+     */
     function createNewTask(
-        ClaimRequest memory request
+        ClaimRequest memory request,
+        bytes memory requestSignature
     ) external;
 
     // NOTE: this function is called by the user

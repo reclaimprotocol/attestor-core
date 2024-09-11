@@ -10,7 +10,7 @@
     "start": "node lib/scripts/start-server",
     "prepare": "sh ./src/scripts/prepare.sh",
     "test": "NODE_ENV=test TZ=utc jest --verbose --forceExit --detectOpenHandles",
-    "test:avs": "NODE_ENV=test TZ=utc jest --verbose --forceExit --detectOpenHandles --testPathPattern=avs",
+    "test-avs": "NODE_ENV=test TZ=utc jest --verbose --forceExit --detectOpenHandles --testPathPattern=avs",
     "lint": "eslint ./ --ext .js,.ts,.jsx,.tsx",
     "lint:fix": "eslint ./ --fix --ext .js,.ts,.jsx,.tsx",
     "generate:proto": "sh ./src/scripts/generate-proto.sh",
@@ -56,6 +56,7 @@
   },
   "devDependencies": {
     "@adiwajshing/eslint-config": "github:adiwajshing/eslint-config",
+    "@swc-node/register": "^1.10.9",
     "@swc/core": "^1.7.18",
     "@swc/jest": "^0.2.36",
     "@typechain/ethers-v5": "^11.1.2",

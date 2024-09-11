@@ -1,7 +1,7 @@
 import { createClaimOnWitness as _createClaimOnWitness } from '../create-claim'
 import { ClaimTunnelResponse } from '../proto/api'
 import { ProviderName } from '../types'
-import { canonicalStringify, getIdentifierFromClaimInfo } from '../utils'
+import { canonicalStringify, getIdentifierFromClaimInfo, unixTimestampSeconds } from '../utils'
 import { logger as LOGGER } from '../utils/logger'
 import { NewTaskCreatedEventObject, TaskCompletedEventObject } from './contracts/ReclaimServiceManager'
 import { initialiseContracts } from './utils/contracts'
@@ -35,20 +35,24 @@ export async function createClaimOnAvs<N extends ProviderName>({
 		'creating claim'
 	)
 
-	const task = await contract.createNewTask({
-		provider: name,
-		// blank for now -- till we figure out the right
-		// algorithm for this
-		claimUserId: EMPTY_CLAIM_USER_ID,
-		claimHash: getIdentifierFromClaimInfo({
+	const task = await contract.createNewTask(
+		{
 			provider: name,
-			parameters: canonicalStringify(params),
-			context: context
-				? canonicalStringify(context)
-				: '',
-		}),
-		owner: wallet.address,
-	})
+			// blank for now -- till we figure out the right
+			// algorithm for this
+			claimUserId: EMPTY_CLAIM_USER_ID,
+			claimHash: getIdentifierFromClaimInfo({
+				provider: name,
+				parameters: canonicalStringify(params),
+				context: context
+					? canonicalStringify(context)
+					: '',
+			}),
+			owner: wallet.address,
+			requestedAt: unixTimestampSeconds()
+		},
+		'0x00'
+	)
 
 	const tx = await task.wait()
 	// check task created event was emitted

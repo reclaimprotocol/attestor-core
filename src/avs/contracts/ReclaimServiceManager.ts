@@ -31,13 +31,21 @@ export declare namespace IReclaimServiceManager {
     provider: string;
     claimUserId: BytesLike;
     claimHash: BytesLike;
+    requestedAt: BigNumberish;
     owner: string;
   };
 
-  export type ClaimRequestStructOutput = [string, string, string, string] & {
+  export type ClaimRequestStructOutput = [
+    string,
+    string,
+    string,
+    number,
+    string
+  ] & {
     provider: string;
     claimUserId: string;
     claimHash: string;
+    requestedAt: number;
     owner: string;
   };
 
@@ -93,11 +101,13 @@ export declare namespace IReclaimServiceManager {
   export type TaskCreationMetadataStruct = {
     maxTaskLifetimeS: BigNumberish;
     minSignaturesPerTask: BigNumberish;
+    maxTaskCreationDelayS: BigNumberish;
   };
 
-  export type TaskCreationMetadataStructOutput = [number, number] & {
+  export type TaskCreationMetadataStructOutput = [number, number, number] & {
     maxTaskLifetimeS: number;
     minSignaturesPerTask: number;
+    maxTaskCreationDelayS: number;
   };
 }
 
@@ -154,11 +164,14 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
     "admins(uint256)": FunctionFragment;
     "allTaskHashes(uint32)": FunctionFragment;
     "avsDirectory()": FunctionFragment;
-    "createNewTask((string,bytes32,bytes32,address))": FunctionFragment;
+    "checkSignerAddress((string,bytes32,bytes32,uint32,address),bytes)": FunctionFragment;
+    "createNewTask((string,bytes32,bytes32,uint32,address),bytes)": FunctionFragment;
     "deregisterOperatorFromAVS(address)": FunctionFragment;
+    "encodeClaimRequest((string,bytes32,bytes32,uint32,address))": FunctionFragment;
     "getMetadataForOperator(address)": FunctionFragment;
     "getOperatorRestakedStrategies(address)": FunctionFragment;
     "getRestakeableStrategies()": FunctionFragment;
+    "isAdmin(address)": FunctionFragment;
     "isOperatorWhitelisted(address)": FunctionFragment;
     "latestTaskNum()": FunctionFragment;
     "operatorHasMinimumWeight(address)": FunctionFragment;
@@ -175,13 +188,13 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
     "setPauserRegistry(address)": FunctionFragment;
     "setup(address)": FunctionFragment;
     "stakeRegistry()": FunctionFragment;
-    "taskCompleted((((string,bytes32,bytes32,address),uint32,uint32,uint8,(address,string)[],uint256),bytes[]),uint32)": FunctionFragment;
+    "taskCompleted((((string,bytes32,bytes32,uint32,address),uint32,uint32,uint8,(address,string)[],uint256),bytes[]),uint32)": FunctionFragment;
     "taskCreationMetadata()": FunctionFragment;
     "transferOwnership(address)": FunctionFragment;
     "unpause(uint256)": FunctionFragment;
     "updateAVSMetadataURI(string)": FunctionFragment;
     "updateOperatorMetadata((address,string))": FunctionFragment;
-    "updateTaskCreationMetadata((uint32,uint8))": FunctionFragment;
+    "updateTaskCreationMetadata((uint32,uint8,uint32))": FunctionFragment;
     "whitelistAddressAsOperator(address,bool)": FunctionFragment;
     "whitelistedOperators(uint256)": FunctionFragment;
   };
@@ -191,11 +204,14 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
       | "admins"
       | "allTaskHashes"
       | "avsDirectory"
+      | "checkSignerAddress"
       | "createNewTask"
       | "deregisterOperatorFromAVS"
+      | "encodeClaimRequest"
       | "getMetadataForOperator"
       | "getOperatorRestakedStrategies"
       | "getRestakeableStrategies"
+      | "isAdmin"
       | "isOperatorWhitelisted"
       | "latestTaskNum"
       | "operatorHasMinimumWeight"
@@ -236,12 +252,20 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "checkSignerAddress",
+    values: [IReclaimServiceManager.ClaimRequestStruct, BytesLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "createNewTask",
-    values: [IReclaimServiceManager.ClaimRequestStruct]
+    values: [IReclaimServiceManager.ClaimRequestStruct, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "deregisterOperatorFromAVS",
     values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "encodeClaimRequest",
+    values: [IReclaimServiceManager.ClaimRequestStruct]
   ): string;
   encodeFunctionData(
     functionFragment: "getMetadataForOperator",
@@ -255,6 +279,7 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
     functionFragment: "getRestakeableStrategies",
     values?: undefined
   ): string;
+  encodeFunctionData(functionFragment: "isAdmin", values: [string]): string;
   encodeFunctionData(
     functionFragment: "isOperatorWhitelisted",
     values: [string]
@@ -351,11 +376,19 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "checkSignerAddress",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "createNewTask",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "deregisterOperatorFromAVS",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "encodeClaimRequest",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -370,6 +403,7 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
     functionFragment: "getRestakeableStrategies",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "isAdmin", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "isOperatorWhitelisted",
     data: BytesLike
@@ -455,11 +489,11 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
 
   events: {
     "Initialized(uint8)": EventFragment;
-    "NewTaskCreated(uint32,((string,bytes32,bytes32,address),uint32,uint32,uint8,(address,string)[],uint256))": EventFragment;
+    "NewTaskCreated(uint32,((string,bytes32,bytes32,uint32,address),uint32,uint32,uint8,(address,string)[],uint256))": EventFragment;
     "OwnershipTransferred(address,address)": EventFragment;
     "Paused(address,uint256)": EventFragment;
     "PauserRegistrySet(address,address)": EventFragment;
-    "TaskCompleted(uint32,(((string,bytes32,bytes32,address),uint32,uint32,uint8,(address,string)[],uint256),bytes[]))": EventFragment;
+    "TaskCompleted(uint32,(((string,bytes32,bytes32,uint32,address),uint32,uint32,uint8,(address,string)[],uint256),bytes[]))": EventFragment;
     "Unpaused(address,uint256)": EventFragment;
   };
 
@@ -580,8 +614,15 @@ export interface ReclaimServiceManager extends BaseContract {
 
     avsDirectory(overrides?: CallOverrides): Promise<[string]>;
 
+    checkSignerAddress(
+      request: IReclaimServiceManager.ClaimRequestStruct,
+      requestSignature: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[string]>;
+
     createNewTask(
       request: IReclaimServiceManager.ClaimRequestStruct,
+      requestSignature: BytesLike,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
@@ -589,6 +630,11 @@ export interface ReclaimServiceManager extends BaseContract {
       operator: string,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
+
+    encodeClaimRequest(
+      request: IReclaimServiceManager.ClaimRequestStruct,
+      overrides?: CallOverrides
+    ): Promise<[string]>;
 
     getMetadataForOperator(
       operator: string,
@@ -601,6 +647,8 @@ export interface ReclaimServiceManager extends BaseContract {
     ): Promise<[string[]]>;
 
     getRestakeableStrategies(overrides?: CallOverrides): Promise<[string[]]>;
+
+    isAdmin(_admin: string, overrides?: CallOverrides): Promise<[boolean]>;
 
     isOperatorWhitelisted(
       operator: string,
@@ -675,9 +723,10 @@ export interface ReclaimServiceManager extends BaseContract {
     taskCreationMetadata(
       overrides?: CallOverrides
     ): Promise<
-      [number, number] & {
+      [number, number, number] & {
         maxTaskLifetimeS: number;
         minSignaturesPerTask: number;
+        maxTaskCreationDelayS: number;
       }
     >;
 
@@ -724,8 +773,15 @@ export interface ReclaimServiceManager extends BaseContract {
 
   avsDirectory(overrides?: CallOverrides): Promise<string>;
 
+  checkSignerAddress(
+    request: IReclaimServiceManager.ClaimRequestStruct,
+    requestSignature: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<string>;
+
   createNewTask(
     request: IReclaimServiceManager.ClaimRequestStruct,
+    requestSignature: BytesLike,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
@@ -733,6 +789,11 @@ export interface ReclaimServiceManager extends BaseContract {
     operator: string,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
+
+  encodeClaimRequest(
+    request: IReclaimServiceManager.ClaimRequestStruct,
+    overrides?: CallOverrides
+  ): Promise<string>;
 
   getMetadataForOperator(
     operator: string,
@@ -745,6 +806,8 @@ export interface ReclaimServiceManager extends BaseContract {
   ): Promise<string[]>;
 
   getRestakeableStrategies(overrides?: CallOverrides): Promise<string[]>;
+
+  isAdmin(_admin: string, overrides?: CallOverrides): Promise<boolean>;
 
   isOperatorWhitelisted(
     operator: string,
@@ -819,9 +882,10 @@ export interface ReclaimServiceManager extends BaseContract {
   taskCreationMetadata(
     overrides?: CallOverrides
   ): Promise<
-    [number, number] & {
+    [number, number, number] & {
       maxTaskLifetimeS: number;
       minSignaturesPerTask: number;
+      maxTaskCreationDelayS: number;
     }
   >;
 
@@ -871,8 +935,15 @@ export interface ReclaimServiceManager extends BaseContract {
 
     avsDirectory(overrides?: CallOverrides): Promise<string>;
 
+    checkSignerAddress(
+      request: IReclaimServiceManager.ClaimRequestStruct,
+      requestSignature: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<string>;
+
     createNewTask(
       request: IReclaimServiceManager.ClaimRequestStruct,
+      requestSignature: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -880,6 +951,11 @@ export interface ReclaimServiceManager extends BaseContract {
       operator: string,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    encodeClaimRequest(
+      request: IReclaimServiceManager.ClaimRequestStruct,
+      overrides?: CallOverrides
+    ): Promise<string>;
 
     getMetadataForOperator(
       operator: string,
@@ -892,6 +968,8 @@ export interface ReclaimServiceManager extends BaseContract {
     ): Promise<string[]>;
 
     getRestakeableStrategies(overrides?: CallOverrides): Promise<string[]>;
+
+    isAdmin(_admin: string, overrides?: CallOverrides): Promise<boolean>;
 
     isOperatorWhitelisted(
       operator: string,
@@ -959,9 +1037,10 @@ export interface ReclaimServiceManager extends BaseContract {
     taskCreationMetadata(
       overrides?: CallOverrides
     ): Promise<
-      [number, number] & {
+      [number, number, number] & {
         maxTaskLifetimeS: number;
         minSignaturesPerTask: number;
+        maxTaskCreationDelayS: number;
       }
     >;
 
@@ -1006,7 +1085,7 @@ export interface ReclaimServiceManager extends BaseContract {
     "Initialized(uint8)"(version?: null): InitializedEventFilter;
     Initialized(version?: null): InitializedEventFilter;
 
-    "NewTaskCreated(uint32,((string,bytes32,bytes32,address),uint32,uint32,uint8,(address,string)[],uint256))"(
+    "NewTaskCreated(uint32,((string,bytes32,bytes32,uint32,address),uint32,uint32,uint8,(address,string)[],uint256))"(
       taskIndex?: BigNumberish | null,
       task?: null
     ): NewTaskCreatedEventFilter;
@@ -1039,7 +1118,7 @@ export interface ReclaimServiceManager extends BaseContract {
       newPauserRegistry?: null
     ): PauserRegistrySetEventFilter;
 
-    "TaskCompleted(uint32,(((string,bytes32,bytes32,address),uint32,uint32,uint8,(address,string)[],uint256),bytes[]))"(
+    "TaskCompleted(uint32,(((string,bytes32,bytes32,uint32,address),uint32,uint32,uint8,(address,string)[],uint256),bytes[]))"(
       taskIndex?: BigNumberish | null,
       task?: null
     ): TaskCompletedEventFilter;
@@ -1068,14 +1147,26 @@ export interface ReclaimServiceManager extends BaseContract {
 
     avsDirectory(overrides?: CallOverrides): Promise<BigNumber>;
 
+    checkSignerAddress(
+      request: IReclaimServiceManager.ClaimRequestStruct,
+      requestSignature: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     createNewTask(
       request: IReclaimServiceManager.ClaimRequestStruct,
+      requestSignature: BytesLike,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     deregisterOperatorFromAVS(
       operator: string,
       overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    encodeClaimRequest(
+      request: IReclaimServiceManager.ClaimRequestStruct,
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     getMetadataForOperator(
@@ -1089,6 +1180,8 @@ export interface ReclaimServiceManager extends BaseContract {
     ): Promise<BigNumber>;
 
     getRestakeableStrategies(overrides?: CallOverrides): Promise<BigNumber>;
+
+    isAdmin(_admin: string, overrides?: CallOverrides): Promise<BigNumber>;
 
     isOperatorWhitelisted(
       operator: string,
@@ -1210,14 +1303,26 @@ export interface ReclaimServiceManager extends BaseContract {
 
     avsDirectory(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
+    checkSignerAddress(
+      request: IReclaimServiceManager.ClaimRequestStruct,
+      requestSignature: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     createNewTask(
       request: IReclaimServiceManager.ClaimRequestStruct,
+      requestSignature: BytesLike,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     deregisterOperatorFromAVS(
       operator: string,
       overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    encodeClaimRequest(
+      request: IReclaimServiceManager.ClaimRequestStruct,
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     getMetadataForOperator(
@@ -1231,6 +1336,11 @@ export interface ReclaimServiceManager extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     getRestakeableStrategies(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    isAdmin(
+      _admin: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 

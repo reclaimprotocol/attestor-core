@@ -14,12 +14,12 @@ import { arrayify } from 'ethers/lib/utils'
 import assert from 'node:assert'
 import type { createClaimOnWitness } from '../../create-claim'
 import { ClaimInfo } from '../../types'
-import { canonicalStringify, createSignDataForClaim, getIdentifierFromClaimInfo } from '../../utils'
-import { ReclaimServiceManager__factory } from '../contracts'
+import { canonicalStringify, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from '../../utils'
 import { NewTaskCreatedEventObject, TaskCompletedEventObject } from '../contracts/ReclaimServiceManager'
 import { createClaimOnAvs } from '../create-claim-on-avs'
 import { getContracts } from '../utils/contracts'
 import { registerOperator } from '../utils/register'
+import { createNewClaimRequestOnChain } from '../utils/tasks'
 import { runFreshChain, sendGasToAddress } from './utils'
 
 const contracts = getContracts()
@@ -120,7 +120,8 @@ describe('Operators', () => {
 			() => (
 				contract.updateTaskCreationMetadata({
 					minSignaturesPerTask: 2,
-					maxTaskLifetimeS: 10
+					maxTaskLifetimeS: 10,
+					maxTaskCreationDelayS: 0
 				})
 			)
 		]
@@ -130,7 +131,7 @@ describe('Operators', () => {
 				await op()
 				throw new Error('Should have thrown an error')
 			} catch(err) {
-				expect(err.message).toMatch(/Caller must be an admin/)
+				expect(err.message).toMatch(/Caller is not admin/)
 			}
 		}
 	})
@@ -172,6 +173,13 @@ describe('Operators', () => {
 			}
 
 			await markTaskAsCompleted(userWallet, arg)
+		})
+
+
+		it('should create a task for another wallet', async() => {
+			const ownerWallet = randomWallet()
+			const rslt = await createNewTask(userWallet, ownerWallet)
+			assert.strictEqual(rslt.task.request.owner, ownerWallet.address)
 		})
 
 		it(
@@ -248,28 +256,22 @@ describe('Operators', () => {
 		registeredSecondOperator = true
 	}
 
-	async function createNewTask(userWallet: Wallet) {
-		// eslint-disable-next-line camelcase
-		const contract = ReclaimServiceManager__factory.connect(
-			await contracts.contract.address,
-			userWallet
-		)
-
+	async function createNewTask(
+		userWallet: Wallet,
+		claimOwner = userWallet
+	) {
 		const params = makeNewCreateClaimParams()
-		const task = await contract.createNewTask({
-			provider: params.provider,
-			claimUserId: new Uint8Array(32),
-			claimHash: getIdentifierFromClaimInfo(params),
-			owner: await userWallet.address,
+		const arg = await createNewClaimRequestOnChain({
+			request: {
+				provider: params.provider,
+				claimUserId: new Uint8Array(32),
+				claimHash: getIdentifierFromClaimInfo(params),
+				requestedAt: unixTimestampSeconds(),
+			},
+			payer: userWallet,
+			owner: claimOwner
 		})
-		const rslt = await task.wait()
-		const events = rslt.events
-		assert.equal(events?.length, 1)
-		// check task created event was emitted
-		const ev = events?.[0]
-		const arg = ev?.args as unknown as NewTaskCreatedEventObject
-
-		assert.equal(ev?.event, 'NewTaskCreated')
+		assert.strictEqual(!!arg, true)
 		assert.equal(arg?.task?.request?.provider, params.provider)
 
 		return arg
@@ -323,7 +325,8 @@ describe('Operators', () => {
 	async function createClaimViaFn() {
 		const tx = await contracts.contract.updateTaskCreationMetadata({
 			minSignaturesPerTask: 2,
-			maxTaskLifetimeS: 0
+			maxTaskLifetimeS: 0,
+			maxTaskCreationDelayS: 0
 		})
 		await tx.wait()
 		console.log('min sigs set to 2')

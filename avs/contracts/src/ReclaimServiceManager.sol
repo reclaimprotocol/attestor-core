@@ -11,7 +11,6 @@ import {IRegistryCoordinator} from "@eigenlayer-middleware/src/interfaces/IRegis
 import "./IReclaimServiceManager.sol";
 import "./utils/Random.sol";
 import "./utils/Claims.sol";
-
 /**
  * @title Primary entrypoint for procuring services from Reclaim.
  */
@@ -78,7 +77,9 @@ contract ReclaimServiceManager is
             // 30m
             30 * 60,
             // 1m
-            1
+            1,
+            // 5m
+            5 * 60
         );
         admins.push(initialAdmin);
     }
@@ -103,6 +104,11 @@ contract ReclaimServiceManager is
         if(newMetadata.minSignaturesPerTask != 0) {
             taskCreationMetadata.minSignaturesPerTask = newMetadata
                 .minSignaturesPerTask;
+        }
+
+        if(newMetadata.maxTaskCreationDelayS != 0) {
+            taskCreationMetadata.maxTaskCreationDelayS = newMetadata
+                .maxTaskCreationDelayS;
         }
     }
 
@@ -177,7 +183,19 @@ contract ReclaimServiceManager is
     }
 
     // NOTE: this function creates new task, assigns it a taskId
-    function createNewTask(ClaimRequest memory request) external {
+    function createNewTask(
+        ClaimRequest memory request,
+        bytes memory requestSignature
+    ) external {
+        if(request.owner != msg.sender) {
+            bytes memory encodedReq = abi.encode(request);
+            address signer = Claims.verifySignature(encodedReq, requestSignature);
+            require(signer == request.owner, "Signer of requestSignature is not request.owner");
+        }
+
+        uint32 diff = absDiff(request.requestedAt, uint32(block.timestamp));
+        require(diff <= taskCreationMetadata.maxTaskCreationDelayS, "Request timestamp too far away");
+
         // create a new task struct
         Task memory newTask;
         newTask.request = request;
@@ -198,6 +216,18 @@ contract ReclaimServiceManager is
         allTaskHashes[latestTaskNum] = keccak256(abi.encode(newTask));
         emit NewTaskCreated(latestTaskNum, newTask);
         latestTaskNum = latestTaskNum + 1;
+    }
+
+    function encodeClaimRequest(ClaimRequest memory request) public pure returns (bytes memory) {
+        return abi.encode(request);
+    }
+
+    function checkSignerAddress(
+        ClaimRequest memory request,
+        bytes memory requestSignature
+    ) public pure returns (address) {
+        bytes memory encodedReq = abi.encode(request);
+        return Claims.verifySignature(encodedReq, requestSignature);
     }
 
 	function taskCompleted(
@@ -314,6 +344,10 @@ contract ReclaimServiceManager is
 
 		return output;
 	}
+
+    function absDiff(uint32 a, uint32 b) internal pure returns (uint32) {
+        return a > b ? a - b : b - a;
+    }
 
     function isAdmin(address _admin) public view returns (bool) {
         if(msg.sender == owner()) {
