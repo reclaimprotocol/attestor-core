@@ -155,6 +155,8 @@ export enum WitnessErrorCode {
   WITNESS_ERROR_INVALID_CLAIM = 5,
   /** WITNESS_ERROR_NETWORK_ERROR - any network error */
   WITNESS_ERROR_NETWORK_ERROR = 6,
+  /** WITNESS_ERROR_PAYMENT_REFUSED - witness refused to pay the costs */
+  WITNESS_ERROR_PAYMENT_REFUSED = 7,
   UNRECOGNIZED = -1,
 }
 
@@ -181,6 +183,9 @@ export function witnessErrorCodeFromJSON(object: any): WitnessErrorCode {
     case 6:
     case "WITNESS_ERROR_NETWORK_ERROR":
       return WitnessErrorCode.WITNESS_ERROR_NETWORK_ERROR;
+    case 7:
+    case "WITNESS_ERROR_PAYMENT_REFUSED":
+      return WitnessErrorCode.WITNESS_ERROR_PAYMENT_REFUSED;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -204,6 +209,8 @@ export function witnessErrorCodeToJSON(object: WitnessErrorCode): string {
       return "WITNESS_ERROR_INVALID_CLAIM";
     case WitnessErrorCode.WITNESS_ERROR_NETWORK_ERROR:
       return "WITNESS_ERROR_NETWORK_ERROR";
+    case WitnessErrorCode.WITNESS_ERROR_PAYMENT_REFUSED:
+      return "WITNESS_ERROR_PAYMENT_REFUSED";
     case WitnessErrorCode.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -477,6 +484,39 @@ export interface ClaimTunnelResponse_Signatures {
   resultSignature: Uint8Array;
 }
 
+export interface RequestClaimOnAvsRequest {
+  /**
+   * Chain ID of the chain on which the claim is to be made
+   * @example 17000 (holesky)
+   */
+  chainId: number;
+  /** Serialised JSON string of the ClaimRequest struct */
+  jsonCreateClaimRequest: string;
+  /** ETH signature of the `ClaimRequest` struct */
+  requestSignature: Uint8Array;
+}
+
+export interface RequestClaimOnAvsResponse {
+  txHash: string;
+  taskIndex: number;
+  jsonTask: string;
+}
+
+export interface CompleteClaimOnAvsRequest {
+  /**
+   * Chain ID of the chain on which the claim is to be made
+   * @example 17000 (holesky)
+   */
+  chainId: number;
+  taskIndex: number;
+  completedTaskJson: string;
+}
+
+export interface CompleteClaimOnAvsResponse {
+  txHash: string;
+  taskCompletedObjectJson: string;
+}
+
 export interface InitRequest {
   /** Witness client version */
   clientVersion: WitnessVersion;
@@ -546,7 +586,20 @@ export interface RPCMessage {
    * The tunnel must be disconnected before making a claim.
    */
   claimTunnelRequest?: ClaimTunnelRequest | undefined;
-  claimTunnelResponse?: ClaimTunnelResponse | undefined;
+  claimTunnelResponse?:
+    | ClaimTunnelResponse
+    | undefined;
+  /**
+   * Request the witness to pay for the claim on the chain.
+   * The Witness can choose to reject the request.
+   */
+  createClaimOnChainRequest?: RequestClaimOnAvsRequest | undefined;
+  createClaimOnChainResponse?:
+    | RequestClaimOnAvsResponse
+    | undefined;
+  /** Submit the work done for the claim on the chain. */
+  completeClaimOnChainRequest?: CompleteClaimOnAvsRequest | undefined;
+  completeClaimOnChainResponse?: CompleteClaimOnAvsResponse | undefined;
 }
 
 export interface RPCMessages {
@@ -2344,6 +2397,351 @@ export const ClaimTunnelResponse_Signatures = {
   },
 };
 
+function createBaseRequestClaimOnAvsRequest(): RequestClaimOnAvsRequest {
+  return { chainId: 0, jsonCreateClaimRequest: "", requestSignature: new Uint8Array(0) };
+}
+
+export const RequestClaimOnAvsRequest = {
+  encode(message: RequestClaimOnAvsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.chainId !== 0) {
+      writer.uint32(8).uint32(message.chainId);
+    }
+    if (message.jsonCreateClaimRequest !== "") {
+      writer.uint32(18).string(message.jsonCreateClaimRequest);
+    }
+    if (message.requestSignature.length !== 0) {
+      writer.uint32(26).bytes(message.requestSignature);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RequestClaimOnAvsRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRequestClaimOnAvsRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.chainId = reader.uint32();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.jsonCreateClaimRequest = reader.string();
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.requestSignature = reader.bytes();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): RequestClaimOnAvsRequest {
+    return {
+      chainId: isSet(object.chainId) ? globalThis.Number(object.chainId) : 0,
+      jsonCreateClaimRequest: isSet(object.jsonCreateClaimRequest)
+        ? globalThis.String(object.jsonCreateClaimRequest)
+        : "",
+      requestSignature: isSet(object.requestSignature) ? bytesFromBase64(object.requestSignature) : new Uint8Array(0),
+    };
+  },
+
+  toJSON(message: RequestClaimOnAvsRequest): unknown {
+    const obj: any = {};
+    if (message.chainId !== 0) {
+      obj.chainId = Math.round(message.chainId);
+    }
+    if (message.jsonCreateClaimRequest !== "") {
+      obj.jsonCreateClaimRequest = message.jsonCreateClaimRequest;
+    }
+    if (message.requestSignature.length !== 0) {
+      obj.requestSignature = base64FromBytes(message.requestSignature);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<RequestClaimOnAvsRequest>): RequestClaimOnAvsRequest {
+    return RequestClaimOnAvsRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<RequestClaimOnAvsRequest>): RequestClaimOnAvsRequest {
+    const message = createBaseRequestClaimOnAvsRequest();
+    message.chainId = object.chainId ?? 0;
+    message.jsonCreateClaimRequest = object.jsonCreateClaimRequest ?? "";
+    message.requestSignature = object.requestSignature ?? new Uint8Array(0);
+    return message;
+  },
+};
+
+function createBaseRequestClaimOnAvsResponse(): RequestClaimOnAvsResponse {
+  return { txHash: "", taskIndex: 0, jsonTask: "" };
+}
+
+export const RequestClaimOnAvsResponse = {
+  encode(message: RequestClaimOnAvsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.txHash !== "") {
+      writer.uint32(10).string(message.txHash);
+    }
+    if (message.taskIndex !== 0) {
+      writer.uint32(16).uint32(message.taskIndex);
+    }
+    if (message.jsonTask !== "") {
+      writer.uint32(26).string(message.jsonTask);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): RequestClaimOnAvsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseRequestClaimOnAvsResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.txHash = reader.string();
+          continue;
+        case 2:
+          if (tag !== 16) {
+            break;
+          }
+
+          message.taskIndex = reader.uint32();
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.jsonTask = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): RequestClaimOnAvsResponse {
+    return {
+      txHash: isSet(object.txHash) ? globalThis.String(object.txHash) : "",
+      taskIndex: isSet(object.taskIndex) ? globalThis.Number(object.taskIndex) : 0,
+      jsonTask: isSet(object.jsonTask) ? globalThis.String(object.jsonTask) : "",
+    };
+  },
+
+  toJSON(message: RequestClaimOnAvsResponse): unknown {
+    const obj: any = {};
+    if (message.txHash !== "") {
+      obj.txHash = message.txHash;
+    }
+    if (message.taskIndex !== 0) {
+      obj.taskIndex = Math.round(message.taskIndex);
+    }
+    if (message.jsonTask !== "") {
+      obj.jsonTask = message.jsonTask;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<RequestClaimOnAvsResponse>): RequestClaimOnAvsResponse {
+    return RequestClaimOnAvsResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<RequestClaimOnAvsResponse>): RequestClaimOnAvsResponse {
+    const message = createBaseRequestClaimOnAvsResponse();
+    message.txHash = object.txHash ?? "";
+    message.taskIndex = object.taskIndex ?? 0;
+    message.jsonTask = object.jsonTask ?? "";
+    return message;
+  },
+};
+
+function createBaseCompleteClaimOnAvsRequest(): CompleteClaimOnAvsRequest {
+  return { chainId: 0, taskIndex: 0, completedTaskJson: "" };
+}
+
+export const CompleteClaimOnAvsRequest = {
+  encode(message: CompleteClaimOnAvsRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.chainId !== 0) {
+      writer.uint32(8).uint32(message.chainId);
+    }
+    if (message.taskIndex !== 0) {
+      writer.uint32(16).uint32(message.taskIndex);
+    }
+    if (message.completedTaskJson !== "") {
+      writer.uint32(26).string(message.completedTaskJson);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CompleteClaimOnAvsRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCompleteClaimOnAvsRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 8) {
+            break;
+          }
+
+          message.chainId = reader.uint32();
+          continue;
+        case 2:
+          if (tag !== 16) {
+            break;
+          }
+
+          message.taskIndex = reader.uint32();
+          continue;
+        case 3:
+          if (tag !== 26) {
+            break;
+          }
+
+          message.completedTaskJson = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): CompleteClaimOnAvsRequest {
+    return {
+      chainId: isSet(object.chainId) ? globalThis.Number(object.chainId) : 0,
+      taskIndex: isSet(object.taskIndex) ? globalThis.Number(object.taskIndex) : 0,
+      completedTaskJson: isSet(object.completedTaskJson) ? globalThis.String(object.completedTaskJson) : "",
+    };
+  },
+
+  toJSON(message: CompleteClaimOnAvsRequest): unknown {
+    const obj: any = {};
+    if (message.chainId !== 0) {
+      obj.chainId = Math.round(message.chainId);
+    }
+    if (message.taskIndex !== 0) {
+      obj.taskIndex = Math.round(message.taskIndex);
+    }
+    if (message.completedTaskJson !== "") {
+      obj.completedTaskJson = message.completedTaskJson;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<CompleteClaimOnAvsRequest>): CompleteClaimOnAvsRequest {
+    return CompleteClaimOnAvsRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<CompleteClaimOnAvsRequest>): CompleteClaimOnAvsRequest {
+    const message = createBaseCompleteClaimOnAvsRequest();
+    message.chainId = object.chainId ?? 0;
+    message.taskIndex = object.taskIndex ?? 0;
+    message.completedTaskJson = object.completedTaskJson ?? "";
+    return message;
+  },
+};
+
+function createBaseCompleteClaimOnAvsResponse(): CompleteClaimOnAvsResponse {
+  return { txHash: "", taskCompletedObjectJson: "" };
+}
+
+export const CompleteClaimOnAvsResponse = {
+  encode(message: CompleteClaimOnAvsResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.txHash !== "") {
+      writer.uint32(10).string(message.txHash);
+    }
+    if (message.taskCompletedObjectJson !== "") {
+      writer.uint32(18).string(message.taskCompletedObjectJson);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CompleteClaimOnAvsResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCompleteClaimOnAvsResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          if (tag !== 10) {
+            break;
+          }
+
+          message.txHash = reader.string();
+          continue;
+        case 2:
+          if (tag !== 18) {
+            break;
+          }
+
+          message.taskCompletedObjectJson = reader.string();
+          continue;
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): CompleteClaimOnAvsResponse {
+    return {
+      txHash: isSet(object.txHash) ? globalThis.String(object.txHash) : "",
+      taskCompletedObjectJson: isSet(object.taskCompletedObjectJson)
+        ? globalThis.String(object.taskCompletedObjectJson)
+        : "",
+    };
+  },
+
+  toJSON(message: CompleteClaimOnAvsResponse): unknown {
+    const obj: any = {};
+    if (message.txHash !== "") {
+      obj.txHash = message.txHash;
+    }
+    if (message.taskCompletedObjectJson !== "") {
+      obj.taskCompletedObjectJson = message.taskCompletedObjectJson;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<CompleteClaimOnAvsResponse>): CompleteClaimOnAvsResponse {
+    return CompleteClaimOnAvsResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<CompleteClaimOnAvsResponse>): CompleteClaimOnAvsResponse {
+    const message = createBaseCompleteClaimOnAvsResponse();
+    message.txHash = object.txHash ?? "";
+    message.taskCompletedObjectJson = object.taskCompletedObjectJson ?? "";
+    return message;
+  },
+};
+
 function createBaseInitRequest(): InitRequest {
   return { clientVersion: 0, signatureType: 0 };
 }
@@ -2433,6 +2831,10 @@ function createBaseRPCMessage(): RPCMessage {
     tunnelDisconnectEvent: undefined,
     claimTunnelRequest: undefined,
     claimTunnelResponse: undefined,
+    createClaimOnChainRequest: undefined,
+    createClaimOnChainResponse: undefined,
+    completeClaimOnChainRequest: undefined,
+    completeClaimOnChainResponse: undefined,
   };
 }
 
@@ -2476,6 +2878,18 @@ export const RPCMessage = {
     }
     if (message.claimTunnelResponse !== undefined) {
       ClaimTunnelResponse.encode(message.claimTunnelResponse, writer.uint32(106).fork()).join();
+    }
+    if (message.createClaimOnChainRequest !== undefined) {
+      RequestClaimOnAvsRequest.encode(message.createClaimOnChainRequest, writer.uint32(114).fork()).join();
+    }
+    if (message.createClaimOnChainResponse !== undefined) {
+      RequestClaimOnAvsResponse.encode(message.createClaimOnChainResponse, writer.uint32(122).fork()).join();
+    }
+    if (message.completeClaimOnChainRequest !== undefined) {
+      CompleteClaimOnAvsRequest.encode(message.completeClaimOnChainRequest, writer.uint32(130).fork()).join();
+    }
+    if (message.completeClaimOnChainResponse !== undefined) {
+      CompleteClaimOnAvsResponse.encode(message.completeClaimOnChainResponse, writer.uint32(138).fork()).join();
     }
     return writer;
   },
@@ -2578,6 +2992,34 @@ export const RPCMessage = {
 
           message.claimTunnelResponse = ClaimTunnelResponse.decode(reader, reader.uint32());
           continue;
+        case 14:
+          if (tag !== 114) {
+            break;
+          }
+
+          message.createClaimOnChainRequest = RequestClaimOnAvsRequest.decode(reader, reader.uint32());
+          continue;
+        case 15:
+          if (tag !== 122) {
+            break;
+          }
+
+          message.createClaimOnChainResponse = RequestClaimOnAvsResponse.decode(reader, reader.uint32());
+          continue;
+        case 16:
+          if (tag !== 130) {
+            break;
+          }
+
+          message.completeClaimOnChainRequest = CompleteClaimOnAvsRequest.decode(reader, reader.uint32());
+          continue;
+        case 17:
+          if (tag !== 138) {
+            break;
+          }
+
+          message.completeClaimOnChainResponse = CompleteClaimOnAvsResponse.decode(reader, reader.uint32());
+          continue;
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2617,6 +3059,18 @@ export const RPCMessage = {
         : undefined,
       claimTunnelResponse: isSet(object.claimTunnelResponse)
         ? ClaimTunnelResponse.fromJSON(object.claimTunnelResponse)
+        : undefined,
+      createClaimOnChainRequest: isSet(object.createClaimOnChainRequest)
+        ? RequestClaimOnAvsRequest.fromJSON(object.createClaimOnChainRequest)
+        : undefined,
+      createClaimOnChainResponse: isSet(object.createClaimOnChainResponse)
+        ? RequestClaimOnAvsResponse.fromJSON(object.createClaimOnChainResponse)
+        : undefined,
+      completeClaimOnChainRequest: isSet(object.completeClaimOnChainRequest)
+        ? CompleteClaimOnAvsRequest.fromJSON(object.completeClaimOnChainRequest)
+        : undefined,
+      completeClaimOnChainResponse: isSet(object.completeClaimOnChainResponse)
+        ? CompleteClaimOnAvsResponse.fromJSON(object.completeClaimOnChainResponse)
         : undefined,
     };
   },
@@ -2661,6 +3115,18 @@ export const RPCMessage = {
     }
     if (message.claimTunnelResponse !== undefined) {
       obj.claimTunnelResponse = ClaimTunnelResponse.toJSON(message.claimTunnelResponse);
+    }
+    if (message.createClaimOnChainRequest !== undefined) {
+      obj.createClaimOnChainRequest = RequestClaimOnAvsRequest.toJSON(message.createClaimOnChainRequest);
+    }
+    if (message.createClaimOnChainResponse !== undefined) {
+      obj.createClaimOnChainResponse = RequestClaimOnAvsResponse.toJSON(message.createClaimOnChainResponse);
+    }
+    if (message.completeClaimOnChainRequest !== undefined) {
+      obj.completeClaimOnChainRequest = CompleteClaimOnAvsRequest.toJSON(message.completeClaimOnChainRequest);
+    }
+    if (message.completeClaimOnChainResponse !== undefined) {
+      obj.completeClaimOnChainResponse = CompleteClaimOnAvsResponse.toJSON(message.completeClaimOnChainResponse);
     }
     return obj;
   },
@@ -2711,6 +3177,22 @@ export const RPCMessage = {
     message.claimTunnelResponse = (object.claimTunnelResponse !== undefined && object.claimTunnelResponse !== null)
       ? ClaimTunnelResponse.fromPartial(object.claimTunnelResponse)
       : undefined;
+    message.createClaimOnChainRequest =
+      (object.createClaimOnChainRequest !== undefined && object.createClaimOnChainRequest !== null)
+        ? RequestClaimOnAvsRequest.fromPartial(object.createClaimOnChainRequest)
+        : undefined;
+    message.createClaimOnChainResponse =
+      (object.createClaimOnChainResponse !== undefined && object.createClaimOnChainResponse !== null)
+        ? RequestClaimOnAvsResponse.fromPartial(object.createClaimOnChainResponse)
+        : undefined;
+    message.completeClaimOnChainRequest =
+      (object.completeClaimOnChainRequest !== undefined && object.completeClaimOnChainRequest !== null)
+        ? CompleteClaimOnAvsRequest.fromPartial(object.completeClaimOnChainRequest)
+        : undefined;
+    message.completeClaimOnChainResponse =
+      (object.completeClaimOnChainResponse !== undefined && object.completeClaimOnChainResponse !== null)
+        ? CompleteClaimOnAvsResponse.fromPartial(object.completeClaimOnChainResponse)
+        : undefined;
     return message;
   },
 };

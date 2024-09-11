@@ -44,6 +44,14 @@ export type CreateClaimOnAvsOpts<N extends ProviderName> = (
 	 * @default -- env variable CHAIN_ID
 	 */
 	chainId?: string
+	/**
+	 * Who will pay for the claim creation, including gas
+	 * costs. Note: the witness can choose to reject the
+	 * claim if 'witness' is chosen.
+	 * @default undefined (owner of the claim)
+	 */
+	payer?: { witness: string }
+
 	onStep?(step: CreateClaimOnAvsStep): void
 	/**
 	 * Override the default createClaimOnWitness function

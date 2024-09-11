@@ -261,7 +261,7 @@ describe('Operators', () => {
 		claimOwner = userWallet
 	) {
 		const params = makeNewCreateClaimParams()
-		const arg = await createNewClaimRequestOnChain({
+		const { task } = await createNewClaimRequestOnChain({
 			request: {
 				provider: params.provider,
 				claimUserId: new Uint8Array(32),
@@ -271,10 +271,10 @@ describe('Operators', () => {
 			payer: userWallet,
 			owner: claimOwner
 		})
-		assert.strictEqual(!!arg, true)
-		assert.equal(arg?.task?.request?.provider, params.provider)
+		assert.strictEqual(!!task, true)
+		assert.equal(task?.task?.request?.provider, params.provider)
 
-		return arg
+		return task
 	}
 
 	async function markTaskAsCompleted(

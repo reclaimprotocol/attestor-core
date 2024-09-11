@@ -12,7 +12,7 @@ type CreateNewClaimRequestOnChainOpts = {
 	owner: Wallet
 } | {
 	owner: string
-	requestSignature?: string
+	requestSignature?: string | Uint8Array
 })
 
 export async function createNewClaimRequestOnChain({
@@ -38,9 +38,9 @@ export async function createNewClaimRequestOnChain({
 	const ev = events?.[0]
 	const arg = ev?.args as unknown as NewTaskCreatedEventObject
 
-	return arg
+	return { task: arg, tx: rslt }
 
-	async function getSignature() {
+	function getSignature() {
 		if(ownerAddress.toLowerCase() === payer.address.toLowerCase()) {
 			return
 		}
@@ -56,7 +56,17 @@ export async function createNewClaimRequestOnChain({
 			)
 		}
 
-		const encoded = await contract.encodeClaimRequest(fullRequest)
-		return rest.owner.signMessage(ethers.utils.arrayify(encoded))
+		return signClaimRequest(fullRequest, rest.owner, chainId)
 	}
+}
+
+export async function signClaimRequest(
+	request: IReclaimServiceManager.ClaimRequestStruct,
+	owner: Wallet,
+	chainId?: string
+) {
+	const contract = getContracts(chainId).contract
+	const encoded = await contract.encodeClaimRequest(request)
+	const strSig = await owner.signMessage(ethers.utils.arrayify(encoded))
+	return ethers.utils.arrayify(strSig)
 }

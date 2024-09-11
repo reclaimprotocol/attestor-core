@@ -1,14 +1,17 @@
-import { createClaimOnWitness as _createClaimOnWitness } from '../create-claim'
+import { Wallet } from 'ethers'
+import { createClaimOnWitness as _createClaimOnWitness, getWitnessClientFromPool } from '../create-claim'
 import { ClaimTunnelResponse } from '../proto/api'
 import { ProviderName } from '../types'
 import { canonicalStringify, getIdentifierFromClaimInfo, unixTimestampSeconds } from '../utils'
 import { logger as LOGGER } from '../utils/logger'
-import { NewTaskCreatedEventObject, TaskCompletedEventObject } from './contracts/ReclaimServiceManager'
+import { IReclaimServiceManager, NewTaskCreatedEventObject, TaskCompletedEventObject } from './contracts/ReclaimServiceManager'
 import { initialiseContracts } from './utils/contracts'
+import { createNewClaimRequestOnChain, signClaimRequest } from './utils/tasks'
 import { CHAIN_CONFIGS, SELECTED_CHAIN_ID } from './config'
 import { CreateClaimOnAvsOpts } from './types'
 
 const EMPTY_CLAIM_USER_ID = new Uint8Array(32)
+
 /**
  * Creates a Reclaim claim on the AVS chain.
  */
@@ -16,6 +19,7 @@ export async function createClaimOnAvs<N extends ProviderName>({
 	onStep,
 	createClaimOnWitness = _createClaimOnWitness,
 	chainId = SELECTED_CHAIN_ID,
+	payer,
 	...opts
 }: CreateClaimOnAvsOpts<N>) {
 	const {
@@ -35,32 +39,7 @@ export async function createClaimOnAvs<N extends ProviderName>({
 		'creating claim'
 	)
 
-	const task = await contract.createNewTask(
-		{
-			provider: name,
-			// blank for now -- till we figure out the right
-			// algorithm for this
-			claimUserId: EMPTY_CLAIM_USER_ID,
-			claimHash: getIdentifierFromClaimInfo({
-				provider: name,
-				parameters: canonicalStringify(params),
-				context: context
-					? canonicalStringify(context)
-					: '',
-			}),
-			owner: wallet.address,
-			requestedAt: unixTimestampSeconds()
-		},
-		'0x00'
-	)
-
-	const tx = await task.wait()
-	// check task created event was emitted
-	const ev = tx.events?.[0]
-	const arg = ev?.args as unknown as NewTaskCreatedEventObject
-	if(!arg) {
-		throw new Error('INTERNAL: Task creation failed, no event emitted')
-	}
+	const arg = await requestClaimCreation()
 
 	logger.info(
 		{
@@ -111,26 +90,89 @@ export async function createClaimOnAvs<N extends ProviderName>({
 		})
 	}
 
-	const taskComplete = await contract.taskCompleted(
-		{
-			task: arg.task,
-			signatures: responses
-				.map(res => res.signatures?.claimSignature!),
-		},
-		arg.taskIndex
-	)
-	const tx2 = await taskComplete.wait()
-	// check task created event was emitted
-	const ev2 = tx2.events?.[0]
-	const completedData = ev2?.args as unknown as TaskCompletedEventObject
+	const {
+		object: completedData,
+		txHash
+	} = await completeTask()
 
 	logger.info(
-		{
-			tx: tx2.transactionHash,
-			task: arg.taskIndex,
-		},
+		{ tx: txHash, task: arg.taskIndex },
 		'claim submitted & validated'
 	)
 
 	return completedData
+
+	async function requestClaimCreation() {
+		const request: IReclaimServiceManager.ClaimRequestStruct = {
+			provider: name,
+			// blank for now -- till we figure out the right
+			// algorithm for this
+			claimUserId: EMPTY_CLAIM_USER_ID,
+			claimHash: getIdentifierFromClaimInfo({
+				provider: name,
+				parameters: canonicalStringify(params),
+				context: context
+					? canonicalStringify(context)
+					: '',
+			}),
+			owner: wallet.address,
+			requestedAt: unixTimestampSeconds()
+		}
+
+		if(!payer) {
+			const wallet = new Wallet(ownerPrivateKey, contract.provider)
+			const { task } = await createNewClaimRequestOnChain({
+				request,
+				payer: wallet,
+				owner: wallet,
+				chainId
+			})
+			return task
+		}
+
+		const requestSignature = await signClaimRequest(
+			request,
+			wallet,
+			chainId
+		)
+		const client = getWitnessClientFromPool(payer.witness)
+		const rslt = await client.rpc('createClaimOnChain', {
+			chainId: +chainId!,
+			jsonCreateClaimRequest: JSON.stringify(request),
+			requestSignature
+		})
+
+		return JSON.parse(rslt.jsonTask) as NewTaskCreatedEventObject
+	}
+
+	async function completeTask() {
+		const data: IReclaimServiceManager.CompletedTaskStruct = {
+			task: arg.task,
+			signatures: responses
+				.map(res => res.signatures?.claimSignature!),
+		}
+
+		if(!payer) {
+			const tx = await contract.taskCompleted(data, arg.taskIndex)
+			const rslt = await tx.wait()
+			// check task created event was emitted
+			const ev = rslt.events?.[0]
+			return {
+				object: ev?.args as unknown as TaskCompletedEventObject,
+				txHash: rslt.transactionHash
+			}
+		}
+
+		const client = getWitnessClientFromPool(payer.witness)
+		const rslt = await client.rpc('completeClaimOnChain', {
+			chainId: +chainId!,
+			taskIndex: arg.taskIndex,
+			completedTaskJson: JSON.stringify(data)
+		})
+		const object = JSON.parse(rslt.taskCompletedObjectJson) as TaskCompletedEventObject
+		return {
+			object,
+			txHash: rslt.txHash
+		}
+	}
 }

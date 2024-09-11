@@ -42,6 +42,8 @@ enum WitnessErrorCode {
 	WITNESS_ERROR_INVALID_CLAIM = 5;
 	// any network error
 	WITNESS_ERROR_NETWORK_ERROR = 6;
+	// witness refused to pay the costs
+	WITNESS_ERROR_PAYMENT_REFUSED = 7;
 }
 
 enum ZKProofEngine {
@@ -284,6 +286,43 @@ message ClaimTunnelResponse {
 	}
 }
 
+message RequestClaimOnAvsRequest {
+	/**
+	 * Chain ID of the chain on which the claim is to be made
+	 * @example 17000 (holesky)
+	 */
+	uint32 chainId = 1;
+	/**
+	 * Serialised JSON string of the ClaimRequest struct
+	 */
+	string jsonCreateClaimRequest = 2;
+	/**
+	 * ETH signature of the `ClaimRequest` struct
+	 */
+	bytes requestSignature = 3;
+}
+
+message RequestClaimOnAvsResponse {
+	string txHash = 1;
+	uint32 taskIndex = 2;
+	string jsonTask = 3;
+}
+
+message CompleteClaimOnAvsRequest {
+	/**
+	 * Chain ID of the chain on which the claim is to be made
+	 * @example 17000 (holesky)
+	 */
+	uint32 chainId = 1;
+	uint32 taskIndex = 2;
+	string completedTaskJson = 3;
+}
+
+message CompleteClaimOnAvsResponse {
+	string txHash = 1;
+	string taskCompletedObjectJson = 2;
+}
+
 message InitRequest {
 	/** Witness client version */
 	WitnessVersion clientVersion = 2;
@@ -346,6 +385,19 @@ message RPCMessage {
 		 */
 		ClaimTunnelRequest claimTunnelRequest = 12;
 		ClaimTunnelResponse claimTunnelResponse = 13;
+		
+		/**
+		 * Request the witness to pay for the claim on the chain.
+		 * The Witness can choose to reject the request.
+		 */
+		RequestClaimOnAvsRequest createClaimOnChainRequest = 14;
+		RequestClaimOnAvsResponse createClaimOnChainResponse = 15;
+
+		/**
+		 * Submit the work done for the claim on the chain.
+		 */
+		CompleteClaimOnAvsRequest completeClaimOnChainRequest = 16;
+		CompleteClaimOnAvsResponse completeClaimOnChainResponse = 17;
 	}
 }
 
