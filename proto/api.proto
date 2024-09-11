@@ -24,12 +24,6 @@ enum WitnessVersion {
 	WITNESS_VERSION_2_0_0 = 3;
 }
 
-enum BeaconType {
-	BEACON_TYPE_UNKNOWN = 0;
-	BEACON_TYPE_SMART_CONTRACT = 1;
-	BEACON_TYPE_RECLAIM_TRUSTED = 2;
-}
-
 enum WitnessErrorCode {
 	// 0 should be treated as the absence of an error
 	// should be used when gracefully closing the connection
@@ -111,18 +105,6 @@ message ProviderClaimInfo {
 	string provider = 1;
 	string parameters = 2;
 	string context = 6;
-}
-
-message BeaconIdentifier {
-	/** 
-	 * type of beacon
-	 */
-	BeaconType type = 1;
-	/** 
-	 * ID of the Beacon.
-	 * For smart contract, it's the chain ID.
-	 */
-	string id = 2;
 }
 
 message WitnessErrorData {
