@@ -335,3 +335,28 @@ export function packRpcMessages(...msgs: Partial<RPCMessage>[]) {
 		))
 	})
 }
+
+/**
+ * Converts an Ethers struct (an array w named keys) to
+ * a plain object. Recursively converts all structs inside.
+ * Required to correctly JSON.stringify the struct.
+ */
+export function ethersStructToPlainObject<T>(struct: T): T {
+	if(!Array.isArray(struct)) {
+		return struct
+	}
+
+	const namedKeys = Object.keys(struct)
+		.filter(key => isNaN(Number(key)))
+	// seems to be an actual array
+	if(!namedKeys.length) {
+		return struct.map(ethersStructToPlainObject) as any
+	}
+
+	const obj: any = {}
+	for(const key of namedKeys) {
+		obj[key] = ethersStructToPlainObject(struct[key])
+	}
+
+	return obj
+}

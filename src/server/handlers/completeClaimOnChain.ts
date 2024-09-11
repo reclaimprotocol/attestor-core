@@ -1,7 +1,7 @@
 import { IReclaimServiceManager, TaskCompletedEventObject } from '../../avs/contracts/ReclaimServiceManager'
 import { getContracts } from '../../avs/utils/contracts'
 import { RPCHandler } from '../../types'
-import { WitnessError } from '../../utils'
+import { ethersStructToPlainObject, WitnessError } from '../../utils'
 import { getEnvVariable } from '../../utils/env'
 
 const ACCEPT_CLAIM_PAYMENT_REQUESTS = getEnvVariable('ACCEPT_CLAIM_PAYMENT_REQUESTS') === '1'
@@ -27,8 +27,10 @@ export const completeClaimOnChain: RPCHandler<'completeClaimOnChain'> = async(
 	const ev = rslt.events?.[0]
 	const obj = ev?.args as unknown as TaskCompletedEventObject
 
+	const plainObj = ethersStructToPlainObject(obj)
+
 	return {
 		txHash: rslt.transactionHash,
-		taskCompletedObjectJson: JSON.stringify(obj)
+		taskCompletedObjectJson: JSON.stringify(plainObj)
 	}
 }

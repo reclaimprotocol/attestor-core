@@ -1,4 +1,4 @@
-import { Wallet } from 'ethers'
+import { ethers, Wallet } from 'ethers'
 import { createClaimOnWitness as _createClaimOnWitness, getWitnessClientFromPool } from '../create-claim'
 import { ClaimTunnelResponse } from '../proto/api'
 import { ProviderName } from '../types'
@@ -10,7 +10,7 @@ import { createNewClaimRequestOnChain, signClaimRequest } from './utils/tasks'
 import { CHAIN_CONFIGS, SELECTED_CHAIN_ID } from './config'
 import { CreateClaimOnAvsOpts } from './types'
 
-const EMPTY_CLAIM_USER_ID = new Uint8Array(32)
+const EMPTY_CLAIM_USER_ID = ethers.utils.hexlify(new Uint8Array(32))
 
 /**
  * Creates a Reclaim claim on the AVS chain.
@@ -136,6 +136,7 @@ export async function createClaimOnAvs<N extends ProviderName>({
 			chainId
 		)
 		const client = getWitnessClientFromPool(payer.witness)
+		await client.waitForInit()
 		const rslt = await client.rpc('createClaimOnChain', {
 			chainId: +chainId!,
 			jsonCreateClaimRequest: JSON.stringify(request),
@@ -149,7 +150,9 @@ export async function createClaimOnAvs<N extends ProviderName>({
 		const data: IReclaimServiceManager.CompletedTaskStruct = {
 			task: arg.task,
 			signatures: responses
-				.map(res => res.signatures?.claimSignature!),
+				.map(res => (
+					ethers.utils.hexlify(res.signatures?.claimSignature!)
+				)),
 		}
 
 		if(!payer) {
@@ -164,6 +167,7 @@ export async function createClaimOnAvs<N extends ProviderName>({
 		}
 
 		const client = getWitnessClientFromPool(payer.witness)
+		await client.waitForInit()
 		const rslt = await client.rpc('completeClaimOnChain', {
 			chainId: +chainId!,
 			taskIndex: arg.taskIndex,

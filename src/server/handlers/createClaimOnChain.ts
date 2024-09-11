@@ -2,7 +2,7 @@ import { IReclaimServiceManager } from '../../avs/contracts/ReclaimServiceManage
 import { getContracts } from '../../avs/utils/contracts'
 import { createNewClaimRequestOnChain } from '../../avs/utils/tasks'
 import { RPCHandler } from '../../types'
-import { WitnessError } from '../../utils'
+import { ethersStructToPlainObject, WitnessError } from '../../utils'
 import { getEnvVariable } from '../../utils/env'
 
 const ACCEPT_CLAIM_PAYMENT_REQUESTS = getEnvVariable('ACCEPT_CLAIM_PAYMENT_REQUESTS') === '1'
@@ -29,9 +29,11 @@ export const createClaimOnChain: RPCHandler<'createClaimOnChain'> = async(
 		requestSignature: requestSignature
 	})
 
+	const plainTask = ethersStructToPlainObject(task)
+
 	return {
 		txHash: tx.transactionHash,
 		taskIndex: task.taskIndex,
-		jsonTask: JSON.stringify(task)
+		jsonTask: JSON.stringify(plainTask)
 	}
 }

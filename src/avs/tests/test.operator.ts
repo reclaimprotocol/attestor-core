@@ -21,6 +21,7 @@ import { getContracts } from '../utils/contracts'
 import { registerOperator } from '../utils/register'
 import { createNewClaimRequestOnChain } from '../utils/tasks'
 import { runFreshChain, sendGasToAddress } from './utils'
+import { describeWithServer } from '../../tests/describe-with-server'
 
 const contracts = getContracts()
 
@@ -175,17 +176,47 @@ describe('Operators', () => {
 			await markTaskAsCompleted(userWallet, arg)
 		})
 
-
 		it('should create a task for another wallet', async() => {
 			const ownerWallet = randomWallet()
 			const rslt = await createNewTask(userWallet, ownerWallet)
 			assert.strictEqual(rslt.task.request.owner, ownerWallet.address)
+		})
+	})
+
+	describeWithServer('With Task & Witness Server', opts => {
+		beforeAll(async() => {
+			await registerFirstOperator()
+			await registerSecondOperator()
 		})
 
 		it(
 			'should create claim via createClaimOnChain',
 			createClaimViaFn
 		)
+
+		it('should make witness pay for claim', async() => {
+			const userWallet = randomWallet()
+			const rslt = await createClaimOnAvs({
+				ownerPrivateKey: userWallet.privateKey,
+				name: 'http',
+				params: {
+					url: 'https://example.com',
+					method: 'GET',
+					responseRedactions: [],
+					responseMatches: [
+						{
+							type: 'contains',
+							value: 'test'
+						}
+					]
+				},
+				secretParams: {},
+				payer: { witness: opts.serverUrl },
+				createClaimOnWitness: createClaimFn
+			})
+
+			assert.strictEqual(rslt.task.task.request.owner, userWallet.address)
+		})
 	})
 
 	async function registerFirstOperator() {
