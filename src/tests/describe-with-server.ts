@@ -29,7 +29,7 @@ type ServerOpts = {
 export const describeWithServer = (
 	name: string,
 	fn: (opts: ServerOpts) => void
-) => {
+) => describe(name, () => {
 	let wsServer: WebSocketServer
 
 	let wsServerUrl: string
@@ -88,4 +88,4 @@ export const describeWithServer = (
 		const serverSockets = [...wsServer.clients.values()] as WebSocket[]
 		return serverSockets.at(-1)?.serverSocket
 	}
-}
+})
