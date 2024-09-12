@@ -10,3 +10,5 @@ browser/resources
 example-local
 .idea
 coverage/
+ngrok.yml
+src/test.ts

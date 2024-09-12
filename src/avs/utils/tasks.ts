@@ -11,6 +11,9 @@ type CreateNewClaimRequestOnChainOpts = {
 } & ({
 	owner: Wallet
 } | {
+	/**
+	 * Address of the owner of the claim
+	 */
 	owner: string
 	requestSignature?: string | Uint8Array
 })

@@ -46,7 +46,7 @@ describe('Operators', () => {
 
 	beforeAll(async() => {
 		shutdownChain = await runFreshChain()
-		operators = [{ wallet: contracts.wallet, url: 'ws://example.com' }]
+		operators = [{ wallet: contracts.wallet!, url: 'ws://example.com' }]
 
 		createClaimFn.mockImplementation(async({
 			ownerPrivateKey, name, params, context, client, timestampS
@@ -225,7 +225,7 @@ describe('Operators', () => {
 		}
 
 		// fetch address from the env variable, PRIVATE_KEY
-		const operatorAddress = await contracts.wallet.address
+		const operatorAddress = await contracts.wallet!.address
 		await sendGasToAddress(operatorAddress)
 
 		await contracts.contract.whitelistAddressAsOperator(

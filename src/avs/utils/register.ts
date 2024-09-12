@@ -30,7 +30,7 @@ type RegisterOpts = {
 export async function registerOperator({
 	logger = LOGGER,
 	chainId = SELECTED_CHAIN_ID,
-	wallet = getContracts(chainId).wallet,
+	wallet = getContracts(chainId).wallet!,
 	reclaimRpcUrl = RECLAIM_PUBLIC_URL
 }: RegisterOpts = {}) {
 	const contracts = getContracts(chainId)
@@ -92,17 +92,25 @@ export async function registerOperator({
 
 	logger.info('operator signature generated successfully')
 
-	if(await registryContract.operatorRegistered(addr)) {
+	if(!(await registryContract.operatorRegistered(addr))) {
+		const tx2 = await registryContract
+			.registerOperatorWithSignature(addr, operatorSignature)
+		await tx2.wait()
+		logger.info('operator registered on AVS successfully')
+	} else {
 		logger.info('Operator already registered on AVS')
+	}
+
+	const existingMetadata = await contract.getMetadataForOperator(addr)
+	const metadata = { addr, url: reclaimRpcUrl }
+	if(
+		existingMetadata.addr === metadata.addr
+		&& existingMetadata.url === metadata.url
+	) {
+		logger.info('operator metadata already up to date')
 		return
 	}
 
-	const tx2 = await registryContract
-		.registerOperatorWithSignature(addr, operatorSignature)
-	await tx2.wait()
-	logger.info('operator registered on AVS successfully')
-
-	const metadata = { addr, url: reclaimRpcUrl }
 	await contract.updateOperatorMetadata(metadata)
 
 	logger.info({ metadata }, 'operator metadata updated successfully')

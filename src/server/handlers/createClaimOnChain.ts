@@ -24,7 +24,7 @@ export const createClaimOnChain: RPCHandler<'createClaimOnChain'> = async(
 	const { task, tx } = await createNewClaimRequestOnChain({
 		request,
 		owner: request.owner,
-		payer: wallet,
+		payer: wallet!,
 		chainId,
 		requestSignature: requestSignature
 	})

@@ -31,10 +31,12 @@ export function initialiseContracts(
 		contractAddress,
 		delegationManagerAddress,
 	}: ChainConfig,
-	privateKey: string = PRIVATE_KEY
+	privateKey: string | undefined = PRIVATE_KEY
 ) {
 	const provider = new ethers.providers.JsonRpcProvider(rpcUrl)
-	const wallet = new ethers.Wallet(privateKey, provider)
+	const wallet = privateKey
+		? new ethers.Wallet(privateKey, provider)
+		: undefined
 
 	return {
 		provider,
@@ -42,22 +44,22 @@ export function initialiseContracts(
 		delegationManager: new ethers.Contract(
 			delegationManagerAddress,
 			delegationABI,
-			wallet
+			wallet || provider
 		),
 		// eslint-disable-next-line camelcase
 		contract: ReclaimServiceManager__factory.connect(
 			contractAddress,
-			wallet
+			wallet || provider
 		),
 		registryContract: new ethers.Contract(
 			stakeRegistryAddress,
 			registryABI,
-			wallet
+			wallet || provider
 		),
 		avsDirectory: new ethers.Contract(
 			avsDirectoryAddress,
 			avsDirectoryABI,
-			wallet
+			wallet || provider
 		),
 	}
 }

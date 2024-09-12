@@ -2,7 +2,7 @@ import { ethers, Wallet } from 'ethers'
 import { createClaimOnWitness as _createClaimOnWitness, getWitnessClientFromPool } from '../create-claim'
 import { ClaimTunnelResponse } from '../proto/api'
 import { ProviderName } from '../types'
-import { canonicalStringify, getIdentifierFromClaimInfo, unixTimestampSeconds } from '../utils'
+import { assertValidClaimSignatures, canonicalStringify, getIdentifierFromClaimInfo, unixTimestampSeconds } from '../utils'
 import { logger as LOGGER } from '../utils/logger'
 import { IReclaimServiceManager, NewTaskCreatedEventObject, TaskCompletedEventObject } from './contracts/ReclaimServiceManager'
 import { initialiseContracts } from './utils/contracts'
@@ -35,7 +35,7 @@ export async function createClaimOnAvs<N extends ProviderName>({
 	)
 
 	logger.info(
-		{ owner: wallet.address, contract: contract.address },
+		{ owner: wallet!.address, contract: contract.address },
 		'creating claim'
 	)
 
@@ -115,7 +115,7 @@ export async function createClaimOnAvs<N extends ProviderName>({
 					? canonicalStringify(context)
 					: '',
 			}),
-			owner: wallet.address,
+			owner: wallet!.address,
 			requestedAt: unixTimestampSeconds()
 		}
 
@@ -132,7 +132,7 @@ export async function createClaimOnAvs<N extends ProviderName>({
 
 		const requestSignature = await signClaimRequest(
 			request,
-			wallet,
+			wallet!,
 			chainId
 		)
 		const client = getWitnessClientFromPool(payer.witness)
@@ -174,9 +174,6 @@ export async function createClaimOnAvs<N extends ProviderName>({
 			completedTaskJson: JSON.stringify(data)
 		})
 		const object = JSON.parse(rslt.taskCompletedObjectJson) as TaskCompletedEventObject
-		return {
-			object,
-			txHash: rslt.txHash
-		}
+		return { object, txHash: rslt.txHash }
 	}
 }

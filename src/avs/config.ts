@@ -1,4 +1,3 @@
-import '../server/utils/config-env'
 import { getEnvVariable } from '../utils/env'
 import type { ChainConfig } from './types'
 
