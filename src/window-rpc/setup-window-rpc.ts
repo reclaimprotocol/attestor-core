@@ -180,7 +180,10 @@ export function setupWindowRpc() {
 				break
 			}
 		} catch(err) {
-			logger.error({ err, data: event.data }, 'error in RPC')
+			logger.error(
+				{ msg: err.message, err, data: event.data },
+				'error in RPC'
+			)
 			respond({
 				type: 'error',
 				data: {

@@ -1,8 +1,8 @@
 import { ethers, Wallet } from 'ethers'
 import { createClaimOnWitness as _createClaimOnWitness, getWitnessClientFromPool } from '../create-claim'
-import { ClaimTunnelResponse } from '../proto/api'
+import { ClaimRequestData, ClaimTunnelResponse, ProviderClaimData } from '../proto/api'
 import { ProviderName } from '../types'
-import { assertValidClaimSignatures, canonicalStringify, getIdentifierFromClaimInfo, unixTimestampSeconds } from '../utils'
+import { canonicalStringify, getIdentifierFromClaimInfo, unixTimestampSeconds, WitnessError } from '../utils'
 import { logger as LOGGER } from '../utils/logger'
 import { IReclaimServiceManager, NewTaskCreatedEventObject, TaskCompletedEventObject } from './contracts/ReclaimServiceManager'
 import { initialiseContracts } from './utils/contracts'
@@ -72,6 +72,19 @@ export async function createClaimOnAvs<N extends ProviderName>({
 		const signature = res.signatures?.claimSignature
 		if(!signature) {
 			throw new Error('INTERNAL: Claim signature not generated')
+		}
+
+		const diff = getClaimRequestDifference(res.request?.data!, res.claim!)
+		if(diff) {
+			throw new WitnessError(
+				'WITNESS_ERROR_INVALID_CLAIM',
+				`Claim request does not match the claim res data: ${diff}`,
+				{
+					diff,
+					request: res.request?.data?.[diff],
+					claim: res.claim?.[diff]
+				}
+			)
 		}
 
 		responses.push(res)
@@ -175,5 +188,25 @@ export async function createClaimOnAvs<N extends ProviderName>({
 		})
 		const object = JSON.parse(rslt.taskCompletedObjectJson) as TaskCompletedEventObject
 		return { object, txHash: rslt.txHash }
+	}
+}
+
+type Req = ProviderClaimData | ClaimRequestData
+
+function getClaimRequestDifference(a: Req, b: Req): (keyof Req) | undefined {
+	if(a.provider !== b.provider) {
+		return 'provider'
+	}
+
+	if(a.context !== b.context) {
+		return 'context'
+	}
+
+	if(a.parameters !== b.parameters) {
+		return 'parameters'
+	}
+
+	if(a.timestampS !== b.timestampS) {
+		return 'timestampS'
 	}
 }
