@@ -103,17 +103,14 @@ export async function createClaimOnAvs<N extends ProviderName>({
 		})
 	}
 
-	const {
-		object: completedData,
-		txHash
-	} = await completeTask()
+	const rslt = await completeTask()
 
 	logger.info(
-		{ tx: txHash, task: arg.taskIndex },
+		{ tx: rslt.txHash, task: arg.taskIndex },
 		'claim submitted & validated'
 	)
 
-	return completedData
+	return rslt
 
 	async function requestClaimCreation() {
 		const request: IReclaimServiceManager.ClaimRequestStruct = {

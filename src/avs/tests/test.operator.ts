@@ -196,7 +196,7 @@ describe('Operators', () => {
 
 		it('should make witness pay for claim', async() => {
 			const userWallet = randomWallet()
-			const rslt = await createClaimOnAvs({
+			const { object: rslt } = await createClaimOnAvs({
 				ownerPrivateKey: userWallet.privateKey,
 				name: 'http',
 				params: {
@@ -365,7 +365,7 @@ describe('Operators', () => {
 		const userWallet = randomWallet()
 		await sendGasToAddress(userWallet.address)
 
-		const rslt = await createClaimOnAvs({
+		const { object: rslt } = await createClaimOnAvs({
 			ownerPrivateKey: userWallet.privateKey,
 			name: 'http',
 			params: {

@@ -1,5 +1,5 @@
-import { createClaimOnAvs } from '../avs/create-claim-on-avs'
 import { uint8ArrayToStr } from '@reclaimprotocol/tls'
+import { createClaimOnAvs } from '../avs/create-claim-on-avs'
 import { createClaimOnWitness } from '../create-claim'
 import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from '../providers/http/utils'
 import { ProviderParams, ProviderSecretParams, ZKEngine, ZKOperators } from '../types'
@@ -261,20 +261,20 @@ export function setupWindowRpc() {
 			}
 		}
 
-		async function updateProviderParams (transcript,tlsVersion): Promise<{
+		async function updateProviderParams(transcript, tlsVersion): Promise<{
 			params: Partial<ProviderParams<'http'>>
 			secretParams: Partial<ProviderSecretParams<'http'>>
 		}> {
-			const { req , res } = generateRequstAndResponseFromTranscript(transcript,tlsVersion)
+			const { req, res } = generateRequstAndResponseFromTranscript(transcript, tlsVersion)
 			const bridge = makeCommunicationBridge()
 			const id = generateRpcRequestId()
-			const waitForRes =  waitForResponse('updateProviderParams', id,bridge)
+			const waitForRes = waitForResponse('updateProviderParams', id, bridge)
 			bridge.send({
 				type: 'updateProviderParams',
 				id,
 				request: {
-					request: {...req, body: req.body ? uint8ArrayToStr(req.body) : undefined},
-					response: {...res, body:  uint8ArrayToStr(res.body) },
+					request: { ...req, body: req.body ? uint8ArrayToStr(req.body) : undefined },
+					response: { ...res, body:  uint8ArrayToStr(res.body) },
 				},
 				module: 'witness-sdk'
 			})

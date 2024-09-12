@@ -74,7 +74,6 @@ type ZKProveOpts = {
 type UpdateProviderParamsOpts = {
 	request: Omit<HttpRequest, 'body'> & { body: string | undefined }
 	response: Omit<HttpResponse, 'body'> & { body: string | undefined }
-	
 }
 
 type ZKVerifyOpts = {
@@ -90,6 +89,11 @@ type LogLevelOptions = {
 	 * via postMessage
 	 */
 	sendLogsToApp: boolean
+}
+
+type AVSCreateResult = {
+	object: TaskCompletedEventObject
+	txHash: string
 }
 
 /**
@@ -114,7 +118,7 @@ export type WindowRPCClient = {
 	/**
 	 * Create a claim on the AVS
 	 */
-	createClaimOnAvs(opts: RPCCreateClaimOnAvsOptions): Promise<TaskCompletedEventObject>
+	createClaimOnAvs(opts: RPCCreateClaimOnAvsOptions): Promise<AVSCreateResult>
 	/**
 	 * Extract an HTML element from a string of HTML
 	 */
