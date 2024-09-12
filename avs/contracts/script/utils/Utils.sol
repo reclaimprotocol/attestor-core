@@ -57,14 +57,18 @@ contract Utils is Script {
     // Forge scripts best practice: https://book.getfoundry.sh/tutorials/best-practices#scripts
     function readInput(
         string memory inputFileName
-    ) internal view returns (string memory) {
+    ) internal returns (string memory) {
         string memory inputDir = string.concat(
             vm.projectRoot(),
             "/script/input/"
         );
         string memory chainDir = string.concat(vm.toString(block.chainid), "/");
         string memory file = string.concat(inputFileName, ".json");
-        return vm.readFile(string.concat(inputDir, chainDir, file));
+        string memory path = string.concat(inputDir, chainDir, file);
+        if(!vm.isFile(path)) {
+            return '';
+        }
+        return vm.readFile(path);
     }
 
     function readOutput(

@@ -25,7 +25,7 @@ contract HoleskyDeployer is Script, Utils {
 
     // Hello World contracts
     ProxyAdmin public proxyAdmin;
-    PauserRegistry public helloWorldPauserReg;
+    PauserRegistry public pauserReg;
     
     ECDSAStakeRegistry public stakeRegistryProxy;
     ECDSAStakeRegistry public stakeRegistryImplementation;
@@ -51,26 +51,34 @@ contract HoleskyDeployer is Script, Utils {
         PauserRegistry eigenLayerPauserReg = PauserRegistry(eigenLayerPauserRegAddr);
         StrategyBase baseStrategyImplementation = StrategyBase(baseStrategyImplementationAddr);
 
-        address helloWorldCommunityMultisig = msg.sender;
-        address helloWorldPauser = msg.sender;
+        // Read the "hello_world_avs_holesky_deployment_output" file
+        string memory jsonContent = readOutput("hello_world_avs_holesky_deployment_output");
+        if(bytes(jsonContent).length > 0) {
+            console.log("Upgrading contracts...");
+            _upgrade(jsonContent, avsDirectory, delegationManager);
+            return;
+        }
+
+        address communityMultisig = msg.sender;
+        address pauser = msg.sender;
 
         vm.startBroadcast();
-        _deployHelloWorldContracts(
+        _deployContracts(
             delegationManager,
             avsDirectory,
             baseStrategyImplementation,
-            helloWorldCommunityMultisig,
-            helloWorldPauser
+            communityMultisig,
+            pauser
         );
         vm.stopBroadcast();
     }
 
-    function _deployHelloWorldContracts(
+    function _deployContracts(
         IDelegationManager delegationManager,
         IAVSDirectory avsDirectory,
         IStrategy baseStrategyImplementation,
-        address helloWorldCommunityMultisig,
-        address helloWorldPauser
+        address communityMultisig,
+        address pauser
     ) internal {
         // Deploy proxy admin for ability to upgrade proxy contracts
         proxyAdmin = new ProxyAdmin();
@@ -78,11 +86,11 @@ contract HoleskyDeployer is Script, Utils {
         // Deploy pauser registry
         {
             address[] memory pausers = new address[](2);
-            pausers[0] = helloWorldPauser;
-            pausers[1] = helloWorldCommunityMultisig;
-            helloWorldPauserReg = new PauserRegistry(
+            pausers[0] = pauser;
+            pausers[1] = communityMultisig;
+            pauserReg = new PauserRegistry(
                 pausers,
-                helloWorldCommunityMultisig
+                communityMultisig
             );
         }
 
@@ -122,7 +130,7 @@ contract HoleskyDeployer is Script, Utils {
             );
         }
 
-        {   
+        {
             // Create an array with one StrategyParams element
             StrategyParams memory strategyParams = StrategyParams({
                 strategy: baseStrategyImplementation,
@@ -192,6 +200,11 @@ contract HoleskyDeployer is Script, Utils {
             "ECDSAStakeRegistry",
             address(stakeRegistryProxy)
         );
+        vm.serializeAddress(
+            deployed_addresses,
+            "ProxyAdmin",
+            address(proxyAdmin)
+        );
         
         string memory deployed_addresses_output = vm.serializeAddress(
             deployed_addresses,
@@ -207,5 +220,57 @@ contract HoleskyDeployer is Script, Utils {
         );
 
         writeOutput(finalJson, "hello_world_avs_holesky_deployment_output");
+    }
+
+    function _upgrade(
+        string memory jsonContent,
+        IAVSDirectory avsDirectory,
+        IDelegationManager delegationManager
+    ) internal {        
+        // Parse JSON content to extract contract addresses
+        address serviceManagerProxyAddr = vm.parseJsonAddress(jsonContent, "$.addresses.HelloWorldServiceManagerProxy");
+        address stakeRegistryProxyAddr = vm.parseJsonAddress(jsonContent, "$.addresses.ECDSAStakeRegistry");
+        address proxyAdminAddr = vm.parseJsonAddress(jsonContent, "$.addresses.ProxyAdmin");
+
+        // Admin for upgrading the proxies
+        ProxyAdmin proxyAdmin = ProxyAdmin(proxyAdminAddr);
+
+        console.log("Proxy Admin Address: ", proxyAdminAddr);
+        console.log("Service Manager Proxy Address: ", serviceManagerProxyAddr);
+        console.log("Stake Registry Proxy Address: ", stakeRegistryProxyAddr);
+
+        // Upgrade the proxies
+        vm.startBroadcast();
+
+        // New implementation addresses (assuming these are the new ones to be upgraded to)
+        address newServiceManagerImpl = address(new ReclaimServiceManager(
+            address(avsDirectory), // AVS Directory address
+            stakeRegistryProxyAddr,
+            address(delegationManager)  // Delegation Manager address
+        ));
+
+        address newStakeRegistryImpl = address(new ECDSAStakeRegistry(
+            // Delegation Manager address
+            delegationManager
+        ));
+
+        console.log("New Service Manager Implementation Address: ", newServiceManagerImpl);
+        console.log("New Stake Registry Implementation Address: ", newStakeRegistryImpl);
+
+        // Upgrade the Service Manager proxy
+        proxyAdmin.upgrade(
+            TransparentUpgradeableProxy(payable(serviceManagerProxyAddr)),
+            newServiceManagerImpl
+        );
+        
+        // Upgrade the Stake Registry proxy
+        proxyAdmin.upgrade(
+            TransparentUpgradeableProxy(payable(stakeRegistryProxyAddr)),
+            newStakeRegistryImpl
+        );
+
+        console.log("Contracts successfully upgraded!");
+
+        vm.stopBroadcast();
     }
 }
