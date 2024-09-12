@@ -1,4 +1,9 @@
-# Reclaim Protocol - Witness SDK
+<div>
+    <div>
+        <img src="https://raw.githubusercontent.com/reclaimprotocol/.github/main/assets/banners/Witness-SDK.png"  />
+    </div>
+</div>
+
 
 The witness server securely intermediates internet data exchange, using TLS and zero-knowledge proofs to verify and sign user claims with minimal information disclosure.
 
