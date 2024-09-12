@@ -13,6 +13,7 @@ import { Wallet } from 'ethers'
 import { arrayify } from 'ethers/lib/utils'
 import assert from 'node:assert'
 import type { createClaimOnWitness } from '../../create-claim'
+import { describeWithServer } from '../../tests/describe-with-server'
 import { ClaimInfo } from '../../types'
 import { canonicalStringify, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from '../../utils'
 import { NewTaskCreatedEventObject, TaskCompletedEventObject } from '../contracts/ReclaimServiceManager'
@@ -21,7 +22,6 @@ import { getContracts } from '../utils/contracts'
 import { registerOperator } from '../utils/register'
 import { createNewClaimRequestOnChain } from '../utils/tasks'
 import { runFreshChain, sendGasToAddress } from './utils'
-import { describeWithServer } from '../../tests/describe-with-server'
 
 const contracts = getContracts()
 

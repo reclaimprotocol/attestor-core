@@ -100,6 +100,9 @@ export function setupWindowRpc() {
 			case 'createClaimOnAvs':
 				const avsRes = await createClaimOnAvs({
 					...req.request,
+					payer: req.request.payer === 'witness'
+						? { witness: defaultWitnessUrl }
+						: undefined,
 					context: req.request.context
 						? JSON.parse(req.request.context)
 						: undefined,

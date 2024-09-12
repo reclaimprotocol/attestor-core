@@ -23,7 +23,7 @@ type IdentifiedMessage = {
 	id: string
 }
 
-type RPCBaseOpts = {
+type CreateClaimRPCBaseOpts = {
 	/**
 	 * Specify the mode for the ZK operator,
 	 * 'default' -> will use the default ZK operator included in the SDK
@@ -39,12 +39,14 @@ type RPCBaseOpts = {
 export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<
 	CreateClaimOnWitnessOpts<N>,
 	'zkOperators' | 'context'
-> & RPCBaseOpts
+> & CreateClaimRPCBaseOpts
 
 export type RPCCreateClaimOnAvsOptions<N extends ProviderName = any> = Omit<
 	CreateClaimOnAvsOpts<N>,
-	'zkOperators' | 'context'
-> & RPCBaseOpts
+	'zkOperators' | 'context' | 'payer'
+> & {
+	payer?: 'witness'
+} & CreateClaimRPCBaseOpts
 
 type ExtractHTMLElementOptions = {
 	html: string
