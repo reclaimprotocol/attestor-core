@@ -8,9 +8,12 @@ import type {
 	LogLevel,
 	ProofGenerationStep,
 	ProviderName,
+	ProviderParams,
+	ProviderSecretParams,
 	WitnessData,
 	ZKEngine
 } from '../types'
+import { HttpRequest, HttpResponse } from '../utils'
 
 type IdentifiedMessage = {
 	module: 'witness-sdk'
@@ -34,6 +37,7 @@ type CreateClaimRPCBaseOpts = {
 	zkOperatorMode?: 'default' | 'rpc'
 	context?: string
 	zkEngine?: ZKEngine
+	updateProviderParams?: boolean
 }
 
 export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<
@@ -65,6 +69,12 @@ type ZKProveOpts = {
 		/** Base64 encoded witness */
 		witnessB64: string
 	}
+}
+
+type UpdateProviderParamsOpts = {
+	request: Omit<HttpRequest, 'body'> & { body: string | undefined }
+	response: Omit<HttpResponse, 'body'> & { body: string | undefined }
+	
 }
 
 type ZKVerifyOpts = {
@@ -130,6 +140,10 @@ export type WindowRPCClient = {
 export type WindowRPCAppClient = {
 	zkProve(opts: ZKProveOpts): ReturnType<ZKOperator['groth16Prove']>
 	zkVerify(opts: ZKVerifyOpts): ReturnType<ZKOperator['groth16Verify']>
+	updateProviderParams(opts: UpdateProviderParamsOpts): Promise<{
+		params: Partial<ProviderParams<'http'>>
+		secretParams: Partial<ProviderSecretParams<'http'>>
+	}>
 }
 
 type AnyRPCClient = { [_: string]: (opts: any) => any }
@@ -168,6 +182,7 @@ export type WindowRPCIncomingMsg = (
     | WindowRPCRequest<WindowRPCClient, 'benchmarkZK'>
 	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'zkProve'>>
 	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'zkVerify'>>
+	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'updateProviderParams'>>
 	| AsResponse<WindowRPCErrorResponse>
 ) & IdentifiedMessage
 
@@ -185,6 +200,7 @@ export type WindowRPCOutgoingMsg = (
     | AsResponse<WindowRPCResponse<WindowRPCClient, 'benchmarkZK'>>
 	| WindowRPCRequest<WindowRPCAppClient, 'zkProve'>
 	| WindowRPCRequest<WindowRPCAppClient, 'zkVerify'>
+	| WindowRPCRequest<WindowRPCAppClient, 'updateProviderParams'>
 	| (
 		{
 			type: 'createClaimStep'

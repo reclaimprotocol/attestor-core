@@ -88,6 +88,7 @@ export function getZkAlgorithmForCipherSuite(cipherSuite: CipherSuite) {
  * Get the pure ciphertext without any MAC,
  * or authentication tag,
  * @param content content w/o header
+ * @param cipherSuite
  */
 export function getPureCiphertext(
 	content: Uint8Array,
@@ -296,7 +297,8 @@ export function extractHandshakeFromTranscript(
 	{ transcript, tlsVersion }: IDecryptedTranscript,
 ) {
 	const msgs: Transcript<Uint8Array> = []
-	for(const m of transcript) {
+	let lastMsgIndex
+	for(const [i, m] of transcript.entries()) {
 		let message: Uint8Array
 		if(m.recordHeader[0] === PACKET_TYPE.HELLO) {
 			message = m.message
@@ -320,9 +322,13 @@ export function extractHandshakeFromTranscript(
 		}
 
 		msgs.push({ message, sender: m.sender })
+		lastMsgIndex = i
 	}
 
-	return msgs
+	return {
+		messages: msgs,
+		lastMsgIndex: lastMsgIndex,
+	}
 }
 
 export function packRpcMessages(...msgs: Partial<RPCMessage>[]) {

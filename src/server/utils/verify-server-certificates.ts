@@ -12,9 +12,14 @@ import { extractHandshakeFromTranscript } from '../../utils'
 
 const RECORD_LENGTH_BYTES = 3
 
-export async function verifyServerCertificates(receipt: IDecryptedTranscript, logger) {
+/**
+ * Verifies server cert chain and removes handshake messages from transcript, returning new one
+ * @param receipt
+ * @param logger
+ */
+export async function verifyServerCertificates(receipt: IDecryptedTranscript, logger): Promise<IDecryptedTranscript> {
 	const handshakeMsgs = extractHandshakeFromTranscript(receipt)
-	let handshakeData = concatenateUint8Arrays(handshakeMsgs.map(m => m.message))
+	let handshakeData = concatenateUint8Arrays(handshakeMsgs.messages.map(m => m.message))
 	let packetData: ReturnType<typeof readPacket>
 	const handshakeRawMessages: Uint8Array[] = []
 	const certificates: X509Certificate[] = []
@@ -119,4 +124,9 @@ export async function verifyServerCertificates(receipt: IDecryptedTranscript, lo
 		return { type, content }
 	}
 
+	return {
+		tlsVersion:receipt.tlsVersion,
+		hostname:receipt.hostname,
+		transcript:receipt.transcript.slice(handshakeMsgs.lastMsgIndex)
+	}
 }
