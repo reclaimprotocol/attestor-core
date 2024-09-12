@@ -1,4 +1,5 @@
 import { uint8ArrayToStr } from '@reclaimprotocol/tls'
+import { createClaimOnAvs } from '../avs/create-claim-on-avs'
 import { createClaimOnWitness } from '../create-claim'
 import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from '../providers/http/utils'
 import { ProviderParams, ProviderSecretParams, ZKEngine, ZKOperators } from '../types'
@@ -98,6 +99,33 @@ export function setupWindowRpc() {
 					response,
 				})
 				break
+			case 'createClaimOnAvs':
+				const avsRes = await createClaimOnAvs({
+					...req.request,
+					payer: req.request.payer === 'witness'
+						? { witness: defaultWitnessUrl }
+						: undefined,
+					context: req.request.context
+						? JSON.parse(req.request.context)
+						: undefined,
+					zkOperators: getZkOperators(
+						req.request.zkOperatorMode, req.request.zkEngine
+					),
+					logger,
+					onStep(step) {
+						sendMessage({
+							type: 'createClaimOnAvsStep',
+							step,
+							module: 'witness-sdk',
+							id: req.id,
+						})
+					},
+				})
+				respond({
+					type: 'createClaimOnAvsDone',
+					response: avsRes,
+				})
+				break
 			case 'extractHtmlElement':
 				respond({
 					type: 'extractHtmlElementDone',
@@ -154,7 +182,10 @@ export function setupWindowRpc() {
 				break
 			}
 		} catch(err) {
-			logger.error({ err, data: event.data }, 'error in RPC')
+			logger.error(
+				{ msg: err.message, err, data: event.data },
+				'error in RPC'
+			)
 			respond({
 				type: 'error',
 				data: {
@@ -230,20 +261,20 @@ export function setupWindowRpc() {
 			}
 		}
 
-		async function updateProviderParams (transcript,tlsVersion): Promise<{
+		async function updateProviderParams(transcript, tlsVersion): Promise<{
 			params: Partial<ProviderParams<'http'>>
 			secretParams: Partial<ProviderSecretParams<'http'>>
 		}> {
-			const { req , res } = generateRequstAndResponseFromTranscript(transcript,tlsVersion)
+			const { req, res } = generateRequstAndResponseFromTranscript(transcript, tlsVersion)
 			const bridge = makeCommunicationBridge()
 			const id = generateRpcRequestId()
-			const waitForRes =  waitForResponse('updateProviderParams', id,bridge)
+			const waitForRes = waitForResponse('updateProviderParams', id, bridge)
 			bridge.send({
 				type: 'updateProviderParams',
 				id,
 				request: {
-					request: {...req, body: req.body ? uint8ArrayToStr(req.body) : undefined},
-					response: {...res, body:  uint8ArrayToStr(res.body) },
+					request: { ...req, body: req.body ? uint8ArrayToStr(req.body) : undefined },
+					response: { ...res, body:  uint8ArrayToStr(res.body) },
 				},
 				module: 'witness-sdk'
 			})

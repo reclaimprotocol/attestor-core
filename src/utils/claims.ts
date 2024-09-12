@@ -131,7 +131,7 @@ export function hashProviderParams(params: ProviderParams<'http'>): string {
 		geoLocation:params.geoLocation
 	}
 
-	const serializedParams = canonicalStringify(filteredParams)!
+	const serializedParams = canonicalStringify(filteredParams)
 	return utils.keccak256(
 		strToUint8Array(serializedParams)
 	).toLowerCase()

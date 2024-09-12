@@ -10,13 +10,21 @@
     "start": "node lib/scripts/start-server",
     "prepare": "sh ./src/scripts/prepare.sh",
     "test": "NODE_ENV=test TZ=utc jest --verbose --forceExit --detectOpenHandles",
+    "test:avs": "NODE_ENV=test TZ=utc jest --verbose --forceExit --detectOpenHandles --testPathPattern=avs",
     "lint": "eslint ./ --ext .js,.ts,.jsx,.tsx",
     "lint:fix": "eslint ./ --fix --ext .js,.ts,.jsx,.tsx",
     "generate:proto": "sh ./src/scripts/generate-proto.sh",
     "generate:contracts-data": "sh ./src/scripts/contract-data-gen.sh",
     "generate:provider-types": "ts-node src/scripts/generate-provider-types.ts",
     "verify:root-ca": "ts-node src/scripts/verify-root-ca.ts",
-    "create:claim": "ts-node src/scripts/generate-receipt.ts"
+    "create:claim": "ts-node src/scripts/generate-receipt.ts",
+    "build-contracts": "cd avs/contracts && forge build",
+    "deploy:contracts": "sh avs/utils/anvil/deploy-all-to-anvil-and-save-state.sh",
+    "deploy:contracts-to-chain": "sh avs/utils/anvil/deploy-to-chain.sh",
+    "register:avs-operator": "ts-node src/scripts/register-avs-operator.ts",
+    "check:avs-registration": "ts-node src/scripts/check-avs-registration.ts",
+    "generate:avs": "typechain -- --target ethers-v5 --out-dir src/avs/contracts avs/contracts/out/ReclaimServiceManager.sol/*.json",
+    "start:chain": "sh ./avs/utils/anvil/start-anvil-chain-with-el-and-avs-deployed.sh"
   },
   "files": [
     "lib/*"
@@ -48,8 +56,10 @@
   },
   "devDependencies": {
     "@adiwajshing/eslint-config": "github:adiwajshing/eslint-config",
+    "@swc-node/register": "^1.10.9",
     "@swc/core": "^1.7.23",
     "@swc/jest": "^0.2.36",
+    "@typechain/ethers-v5": "^11.1.2",
     "@types/chance": "^1.1.6",
     "@types/jest": "^29.5.12",
     "@types/jsdom": "^21.1.7",
@@ -62,6 +72,7 @@
     "json-schema-to-typescript": "^15.0.2",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
+    "typechain": "^8.3.2",
     "ts-proto": "^2.2.0",
     "typescript": "^5.5.4",
     "webpack": "^5.94.0",

@@ -1,4 +1,6 @@
 import type { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-symmetric-crypto'
+import type { TaskCompletedEventObject } from '../avs/contracts/ReclaimServiceManager'
+import type { CreateClaimOnAvsOpts, CreateClaimOnAvsStep } from '../avs/types'
 import type { extractHTMLElement, extractJSONValueIndex } from '../providers/http/utils'
 import type {
 	CompleteClaimData,
@@ -24,7 +26,7 @@ type IdentifiedMessage = {
 	id: string
 }
 
-export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<CreateClaimOnWitnessOpts<N>, 'zkOperators' | 'context'> & {
+type CreateClaimRPCBaseOpts = {
 	/**
 	 * Specify the mode for the ZK operator,
 	 * 'default' -> will use the default ZK operator included in the SDK
@@ -37,6 +39,18 @@ export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<CreateCla
 	zkEngine?: ZKEngine
 	updateProviderParams?: boolean
 }
+
+export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<
+	CreateClaimOnWitnessOpts<N>,
+	'zkOperators' | 'context'
+> & CreateClaimRPCBaseOpts
+
+export type RPCCreateClaimOnAvsOptions<N extends ProviderName = any> = Omit<
+	CreateClaimOnAvsOpts<N>,
+	'zkOperators' | 'context' | 'payer'
+> & {
+	payer?: 'witness'
+} & CreateClaimRPCBaseOpts
 
 type ExtractHTMLElementOptions = {
 	html: string
@@ -60,7 +74,6 @@ type ZKProveOpts = {
 type UpdateProviderParamsOpts = {
 	request: Omit<HttpRequest, 'body'> & { body: string | undefined }
 	response: Omit<HttpResponse, 'body'> & { body: string | undefined }
-	
 }
 
 type ZKVerifyOpts = {
@@ -76,6 +89,11 @@ type LogLevelOptions = {
 	 * via postMessage
 	 */
 	sendLogsToApp: boolean
+}
+
+type AVSCreateResult = {
+	object: TaskCompletedEventObject
+	txHash: string
 }
 
 /**
@@ -97,6 +115,10 @@ export type WindowRPCClient = {
 	 * Create a claim on the witness where the RPC SDK is hosted.
 	 */
 	createClaim(options: RPCCreateClaimOptions): Promise<CreateClaimResponse>
+	/**
+	 * Create a claim on the AVS
+	 */
+	createClaimOnAvs(opts: RPCCreateClaimOnAvsOptions): Promise<AVSCreateResult>
 	/**
 	 * Extract an HTML element from a string of HTML
 	 */
@@ -156,6 +178,7 @@ type AsResponse<T> = T & { isResponse: true }
 // spread out each key because TS can't handle
 export type WindowRPCIncomingMsg = (
 	WindowRPCRequest<WindowRPCClient, 'createClaim'>
+	| WindowRPCRequest<WindowRPCClient, 'createClaimOnAvs'>
 	| WindowRPCRequest<WindowRPCClient, 'extractHtmlElement'>
 	| WindowRPCRequest<WindowRPCClient, 'extractJSONValueIndex'>
 	| WindowRPCRequest<WindowRPCClient, 'getCurrentMemoryUsage'>
@@ -173,6 +196,7 @@ export type WindowRPCIncomingMsg = (
  */
 export type WindowRPCOutgoingMsg = (
 	AsResponse<WindowRPCResponse<WindowRPCClient, 'createClaim'>>
+	| AsResponse<WindowRPCResponse<WindowRPCClient, 'createClaimOnAvs'>>
 	| AsResponse<WindowRPCResponse<WindowRPCClient, 'extractHtmlElement'>>
 	| AsResponse<WindowRPCResponse<WindowRPCClient, 'extractJSONValueIndex'>>
 	| AsResponse<WindowRPCResponse<WindowRPCClient, 'getCurrentMemoryUsage'>>
@@ -188,6 +212,12 @@ export type WindowRPCOutgoingMsg = (
 				name: 'witness-progress'
 				step: ProofGenerationStep
 			}
+		}
+	)
+	| (
+		{
+			type: 'createClaimOnAvsStep'
+			step: CreateClaimOnAvsStep
 		}
 	)
 	| (

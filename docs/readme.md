@@ -33,3 +33,5 @@ We'd recommend you go through our documentation in the following order:
 3. [Browser RPC/React Native](docs/browser-rpc.md): How to setup the witness SDK for environments like React Native or any other mobile app.
 4. [Provider](docs/provider.md): What is a provider in the Reclaim context, how to create one & details on the HTTP provider.
 5. [Internals of Claim Creation](docs/claim-creation.md): In-depth description of the full flow of creating a claim with a witness.
+6. [Deployment](docs/deployment.md): Understand how to deploy your own witness server.
+6. [AVS](docs/avs.md): Understand how we use an Eigen AVS to decentralize the witness server.
