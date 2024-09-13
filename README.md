@@ -4,9 +4,6 @@
     </div>
 </div>
 
-
-The witness server securely intermediates internet data exchange, using TLS and zero-knowledge proofs to verify and sign user claims with minimal information disclosure.
-
 ## Getting Started
 
 To get started with Reclaim, check out our comprehensive documentation, [Reclaim Documentation](https://docs.reclaimprotocol.org/).
