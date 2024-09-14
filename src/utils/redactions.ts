@@ -10,10 +10,10 @@ export const REDACTION_CHAR_CODE = REDACTION_CHAR.charCodeAt(0)
  * @param original the original content
  */
 export function isRedactionCongruent<T extends string | Uint8Array>(redacted: T, original: T): boolean {
-	for(let i = 0;i < redacted.length;i++) {
-		const areSame = redacted[i] === original[i]
-			|| (typeof redacted[i] === 'string' && redacted[i] === REDACTION_CHAR)
-			|| (typeof redacted[i] === 'number' && redacted[i] === REDACTION_CHAR_CODE)
+	for(const [i, element] of redacted.entries()) {
+		const areSame = element === original[i]
+			|| (typeof element === 'string' && element === REDACTION_CHAR)
+			|| (typeof element === 'number' && element === REDACTION_CHAR_CODE)
 		if(!areSame) {
 			return false
 		}
@@ -26,10 +26,10 @@ export function isRedactionCongruent<T extends string | Uint8Array>(redacted: T,
  * Is the string fully redacted?
  */
 export function isFullyRedacted<T extends string | Uint8Array>(redacted: T): boolean {
-	for(let i = 0;i < redacted.length;i++) {
+	for(const element of redacted) {
 		if(
-			redacted[i] !== REDACTION_CHAR
-			&& redacted[i] !== REDACTION_CHAR_CODE
+			element !== REDACTION_CHAR
+			&& element !== REDACTION_CHAR_CODE
 		) {
 			return false
 		}

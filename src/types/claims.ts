@@ -62,7 +62,7 @@ export type CreateClaimOnWitnessOpts<N extends ProviderName> = {
 	 * Optionally update the provider parameters
 	 * based on the transcript
 	 */
-	updateProviderParams? (transcript: Transcript<CompleteTLSPacket>,tlsVersion: string):  Promise<{
+	updateProviderParams? (transcript: Transcript<CompleteTLSPacket>, tlsVersion: string): Promise<{
 		params: Partial<ProviderParams<N>>
 		secretParams: Partial<ProviderSecretParams<N>>
 	}>

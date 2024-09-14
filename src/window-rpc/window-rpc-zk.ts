@@ -61,7 +61,7 @@ export function makeWindowRpcZkOperator(
 		},
 	}
 
-	
+
 }
 
 export function waitForResponse<T extends keyof WindowRPCAppClient>(

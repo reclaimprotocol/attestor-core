@@ -88,10 +88,10 @@ describe('ZK Tests', () => {
 			}
 
 			expect(realOutput).toHaveLength(output.length)
-			for(let i = 0; i < output.length; i++) {
+			for(const [i, element] of output.entries()) {
 				expect(
 					uint8ArrayToStr(realOutput[i].redactedPlaintext)
-				).toEqual(output[i])
+				).toEqual(element)
 			}
 		}
 	})

@@ -97,9 +97,9 @@ export function redact(json) {
 		}
 
 		if(Array.isArray(redacted[prop])) {
-			redacted[prop].forEach((value, index) => {
+			for(const [index, value] of redacted[prop].entries()) {
 				redacted[prop][index] = redact(value)
-			})
+			}
 		} else if(isObjectProperty(redacted[prop])) {
 			redacted[prop] = redact(redacted[prop])
 		}
