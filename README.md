@@ -12,7 +12,7 @@ For an intro to this package & how it works, check out our [Getting Started Guid
 
 ## Try It Out Yourself
 
-Ready to dive in? Follow our installation guide to set up Reclaim,
+Ready to dive in? Follow our installation guide to set up Reclaim.
 
 [Install Reclaim](https://docs.reclaimprotocol.org/install)
 
