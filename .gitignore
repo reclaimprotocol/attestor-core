@@ -12,3 +12,5 @@ example-local
 coverage/
 ngrok.yml
 src/test.ts
+.gitlab-ci.yml
+.env.*
