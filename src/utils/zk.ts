@@ -202,46 +202,6 @@ export async function makeZkProofGenerator(
 		},
 	}
 
-	function getProofGenerationParamsForChunk(
-		algorithm: EncryptionAlgorithm,
-		{
-			key,
-			iv,
-			ciphertext,
-			redactedPlaintext,
-			offsetChunks,
-		}: GenerateZKChunkProofOpts,
-	): ZKProofToGenerate | undefined {
-		const chunkSize = getChunkSizeBytes(algorithm)
-
-		const startIdx = offsetChunks * chunkSize
-		const endIdx = (offsetChunks + 1) * chunkSize
-		const ciphertextChunk = ciphertext
-			.slice(startIdx, endIdx)
-		const plaintextChunk = redactedPlaintext
-			.slice(startIdx, endIdx)
-		if(isFullyRedacted(plaintextChunk)) {
-			return
-		}
-
-		// redact ciphertext if plaintext is redacted
-		// to prepare for decryption in ZK circuit
-		// the ZK circuit will take in the redacted ciphertext,
-		// which shall produce the redacted plaintext
-		for(let i = 0;i < ciphertextChunk.length;i++) {
-			if(plaintextChunk[i] === REDACTION_CHAR_CODE) {
-				ciphertextChunk[i] = REDACTION_CHAR_CODE
-			}
-		}
-
-		return {
-			startIdx,
-			redactedPlaintext: plaintextChunk,
-			privateInput: { key, iv, offset: offsetChunks },
-			publicInput: { ciphertext: ciphertextChunk },
-		}
-	}
-
 	async function generateProofForChunk(
 		algorithm: EncryptionAlgorithm,
 		{
@@ -475,6 +435,46 @@ function makeRemoteSnarkJsZkOperator(
 		)
 
 		return new Uint8Array(res)
+	}
+}
+
+function getProofGenerationParamsForChunk(
+	algorithm: EncryptionAlgorithm,
+	{
+		key,
+		iv,
+		ciphertext,
+		redactedPlaintext,
+		offsetChunks,
+	}: GenerateZKChunkProofOpts,
+): ZKProofToGenerate | undefined {
+	const chunkSize = getChunkSizeBytes(algorithm)
+
+	const startIdx = offsetChunks * chunkSize
+	const endIdx = (offsetChunks + 1) * chunkSize
+	const ciphertextChunk = ciphertext
+		.slice(startIdx, endIdx)
+	const plaintextChunk = redactedPlaintext
+		.slice(startIdx, endIdx)
+	if(isFullyRedacted(plaintextChunk)) {
+		return
+	}
+
+	// redact ciphertext if plaintext is redacted
+	// to prepare for decryption in ZK circuit
+	// the ZK circuit will take in the redacted ciphertext,
+	// which shall produce the redacted plaintext
+	for(let i = 0;i < ciphertextChunk.length;i++) {
+		if(plaintextChunk[i] === REDACTION_CHAR_CODE) {
+			ciphertextChunk[i] = REDACTION_CHAR_CODE
+		}
+	}
+
+	return {
+		startIdx,
+		redactedPlaintext: plaintextChunk,
+		privateInput: { key, iv, offset: offsetChunks },
+		publicInput: { ciphertext: ciphertextChunk },
 	}
 }
 

@@ -126,33 +126,28 @@ function traverse(
 ): JSONIndex | null {
 	if(o instanceof ObjectExpression) {
 		for(const p of o.properties) {
-			if(p instanceof Property) {
-				let localPath
-				if(p.key.type === Syntax.Literal) {
-					localPath = path + '/' + p.key.value
-				} else {
-					localPath = path
-				}
+			if(!(p instanceof Property)) {
+				continue
+			}
 
-				if(pointers.includes(localPath) && 'range' in p && Array.isArray(p.range)) {
-					return {
-						start: p.range[0],
-						end: p.range[1],
-					}
-				}
+			const localPath = p.key.type === Syntax.Literal
+				? path + '/' + p.key.value
+				: path
 
-				if(p.value instanceof ObjectExpression) {
-					const res = traverse(p.value, localPath, pointers)
-					if(res) {
-						return res
-					}
+			if(pointers.includes(localPath) && 'range' in p && Array.isArray(p.range)) {
+				return {
+					start: p.range[0],
+					end: p.range[1],
 				}
+			}
 
-				if(p.value instanceof ArrayExpression) {
-					const res = traverse(p.value, localPath, pointers)
-					if(res) {
-						return res
-					}
+			if(
+				p.value instanceof ObjectExpression
+				|| p.value instanceof ArrayExpression
+			) {
+				const res = traverse(p.value, localPath, pointers)
+				if(res) {
+					return res
 				}
 			}
 		}

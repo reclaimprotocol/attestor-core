@@ -70,20 +70,6 @@ describe.each(['complete', 'byte-by-byte'] as const)('HTTP Parser tests (mode=%s
 		const json = JSON.parse(uint8ArrayToStr(res.body))
 		expect(json.name).toBeTruthy()
 	})
-
-	function parseHttpResponse(buff: Uint8Array, mode: 'complete' | 'byte-by-byte') {
-		const parser = makeHttpResponseParser()
-		if(mode === 'complete') {
-			parser.onChunk(buff)
-		} else {
-			for(const byte of buff) {
-				parser.onChunk(new Uint8Array([byte]))
-			}
-		}
-
-		parser.streamEnded()
-		return parser.res
-	}
 })
 
 describe('General HTTP Parser Tests', () => {
@@ -98,6 +84,20 @@ describe('General HTTP Parser Tests', () => {
 	})
 })
 
+function parseHttpResponse(buff: Uint8Array, mode: 'complete' | 'byte-by-byte') {
+	const parser = makeHttpResponseParser()
+	if(mode === 'complete') {
+		parser.onChunk(buff)
+	} else {
+		for(const byte of buff) {
+			parser.onChunk(new Uint8Array([byte]))
+		}
+	}
+
+	parser.streamEnded()
+	return parser.res
+}
+
 const RES1 = Buffer.from(
 	'SFRUUC8xLjEgNDAxIFVuYXV0aG9yaXplZA0KV1dXLUF1dGhlbnRpY2F0ZTogQmVhcmVyIHJlYWxtPSJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20vIiwgZXJyb3I9ImludmFsaWRfdG9rZW4iDQpWYXJ5OiBYLU9yaWdpbg0KVmFyeTogUmVmZXJlcg0KQ29udGVudC1UeXBlOiBhcHBsaWNhdGlvbi9qc29uOyBjaGFyc2V0PVVURi04DQpEYXRlOiBUdWUsIDEzIERlYyAyMDIyIDAzOjU1OjM1IEdNVA0KU2VydmVyOiBFU0YNCkNhY2hlLUNvbnRyb2w6IHByaXZhdGUNClgtWFNTLVByb3RlY3Rpb246IDANClgtRnJhbWUtT3B0aW9uczogU0FNRU9SSUdJTg0KWC1Db250ZW50LVR5cGUtT3B0aW9uczogbm9zbmlmZg0KQWNjZXB0LVJhbmdlczogbm9uZQ0KVmFyeTogT3JpZ2luLEFjY2VwdC1FbmNvZGluZw0KVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCkFsdC1TdmM6IGgzPSI6NDQzIjsgbWE9MjU5MjAwMCxoMy0yOT0iOjQ0MyI7IG1hPTI1OTIwMDAsaDMtUTA1MD0iOjQ0MyI7IG1hPTI1OTIwMDAsaDMtUTA0Nj0iOjQ0MyI7IG1hPTI1OTIwMDAsaDMtUTA0Mz0iOjQ0MyI7IG1hPTI1OTIwMDAscXVpYz0iOjQ0MyI7IG1hPTI1OTIwMDA7IHY9IjQ2LDQzIg0KQ29ubmVjdGlvbjogY2xvc2UNCg0KMTI5DQp7CiAgImVycm9yIjogewogICAgImNvZGUiOiA0MDEsCiAgICAibWVzc2FnZSI6ICJSZXF1ZXN0IGhhZCBpbnZhbGlkIGF1dGhlbnRpY2F0aW9uIGNyZWRlbnRpYWxzLiBFeHBlY3RlZCBPQXV0aCAyIGFjY2VzcyB0b2tlbiwgbG9naW4gY29va2llIG9yIG90aGVyIHZhbGlkIGF1dGhlbnRpY2F0aW9uIGNyZWRlbnRpYWwuIFNlZSBodHRwczovL2RldmVsb3BlcnMuZ29vZ2xlLmNvbS9pZGVudGl0eS9zaWduLWluL3dlYi9kZXZjb25zb2xlLXByb2plY3QuIiwKICAgICJzdGF0dXMiOiAiVU5BVVRIRU5USUNBVEVEIgogIH0KfQoNCg==',
 	'base64',
@@ -110,7 +110,6 @@ const RES_EMPTY = [
 	'', //empty line
 	'',
 ].join('\r\n')
-
 
 const BODY_JSON = '{"name":"John","age":30,"car":null}'
 const RES_BODY = [

@@ -197,28 +197,28 @@ describeWithServer('Claim Creation', opts => {
 			const client2 = getWitnessClientFromPool(opts.serverUrl)
 			expect(client2).not.toBe(client)
 		})
-
-		function createClaim() {
-			const user = 'testing-123'
-			return createClaimOnWitness({
-				name: 'http',
-				params: {
-					url: claimUrl,
-					method: 'GET',
-					responseRedactions: [],
-					responseMatches: [
-						{
-							type: 'contains',
-							value: `${user}@mock.com`
-						}
-					]
-				},
-				secretParams: {
-					authorisationHeader: `Bearer ${user}`
-				},
-				ownerPrivateKey: opts.privateKeyHex,
-				client: { url: opts.serverUrl }
-			})
-		}
 	})
+
+	function createClaim() {
+		const user = 'testing-123'
+		return createClaimOnWitness({
+			name: 'http',
+			params: {
+				url: claimUrl,
+				method: 'GET',
+				responseRedactions: [],
+				responseMatches: [
+					{
+						type: 'contains',
+						value: `${user}@mock.com`
+					}
+				]
+			},
+			secretParams: {
+				authorisationHeader: `Bearer ${user}`
+			},
+			ownerPrivateKey: opts.privateKeyHex,
+			client: { url: opts.serverUrl }
+		})
+	}
 })

@@ -371,20 +371,23 @@ const HTTP_PROVIDER: Provider<'http'> = {
 				const match = regexRes !== null
 				if(match === inv) { // if both true or both false then fail
 					logTranscript()
-					throw new Error(`Invalid receipt. Regex "${value}" ${invert ? 'matched' : "didn't match"}`)
+					throw new Error(
+						'Invalid receipt.'
+						+ ` Regex "${value}" ${invert ? 'matched' : "didn't match"}`
+					)
 				}
 
-				if(match) {
-					const groups = regexRes?.groups
-					if(groups) {
-						for(const paramName in groups) {
-							if(paramName in extractedParams) {
-								throw new Error(`Duplicate parameter ${paramName}`)
-							}
+				if(!match) {
+					continue
+				}
 
-							extractedParams[paramName] = groups[paramName]
-						}
+				const groups = regexRes?.groups
+				for(const paramName in groups || []) {
+					if(paramName in extractedParams) {
+						throw new Error(`Duplicate parameter ${paramName}`)
 					}
+
+					extractedParams[paramName] = groups[paramName]
 				}
 
 				break
@@ -408,27 +411,28 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			const totalSize = bufs.reduce((acc, e) => acc + e.length, 0)
 			const merged = new Uint8Array(totalSize)
 
-			bufs.forEach((array, i, arrays) => {
-				const offset = arrays.slice(0, i).reduce((acc, e) => acc + e.length, 0)
-				merged.set(array, offset)
-			})
+			let lenDone = 0
+			for(const array of bufs) {
+				merged.set(array, lenDone)
+				lenDone += array.length
+			}
 
 			return merged
 
 		}
 
 		return { extractedParameters: extractedParams }
-
-		function logTranscript() {
-			/*const clientMsgs = receipt.filter(s => s.sender === 'client').map(m => m.message)
-			const serverMsgs = receipt.filter(s => s.sender === 'server').map(m => m.message)
-
-			const clientTranscript = uint8ArrayToStr(concatenateUint8Arrays(clientMsgs))
-			const serverTranscript = uint8ArrayToStr(concatenateUint8Arrays(serverMsgs))
-
-			logger.error({ request: clientTranscript, response:serverTranscript, params:paramsAny })*/
-		}
 	},
+}
+
+function logTranscript() {
+	/*const clientMsgs = receipt.filter(s => s.sender === 'client').map(m => m.message)
+	const serverMsgs = receipt.filter(s => s.sender === 'server').map(m => m.message)
+
+	const clientTranscript = uint8ArrayToStr(concatenateUint8Arrays(clientMsgs))
+	const serverTranscript = uint8ArrayToStr(concatenateUint8Arrays(serverMsgs))
+
+	logger.error({ request: clientTranscript, response:serverTranscript, params:paramsAny })*/
 }
 
 function getHostPort(params: ProviderParams<'http'>) {
