@@ -111,7 +111,7 @@ Regardless, if you're one of the chosen few -- here's how you can register yours
 
 1. Clone the repository
 2. Run `npm install`
-3. Deploy the Reclaim operator on the cloud or some server. See [here](/docs/deployment.md) for more information.
+3. Deploy the Reclaim operator on the cloud or some server. See [here](/docs/project.md#deploying-to-the-cloud) for more information.
 	- Note the RPC URL from this step & ensure that the operator is running & accessible on the internet.
 4. Setup the environment variables in a `.env` file. Refer to our [environment variables guide](./env.md) for more information.
 	- Ensure that the address of the private key you're using is whitelisted on the AVS

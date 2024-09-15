@@ -1,9 +1,9 @@
 import { concatenateUint8Arrays, makeTLSClient, TLSConnectionOptions } from '@reclaimprotocol/tls'
-import { DEFAULT_HTTPS_PORT } from '../config'
-import { CreateTunnelRequest, RPCMessage } from '../proto/api'
-import { CompleteTLSPacket, IWitnessClient, Logger, MakeTunnelFn, Transcript, Tunnel } from '../types'
-import { generateRpcMessageId, generateTunnelId } from '../utils'
-import { makeRpcTcpTunnel } from './make-rpc-tcp-tunnel'
+import { makeRpcTcpTunnel } from 'src/client/tunnels/make-rpc-tcp-tunnel'
+import { DEFAULT_HTTPS_PORT } from 'src/config'
+import { CreateTunnelRequest, RPCMessage } from 'src/proto/api'
+import { CompleteTLSPacket, IWitnessClient, Logger, MakeTunnelFn, Transcript, Tunnel } from 'src/types'
+import { generateRpcMessageId, generateTunnelId } from 'src/utils'
 
 type ExtraTLSOptions = {
 	request: Partial<CreateTunnelRequest>

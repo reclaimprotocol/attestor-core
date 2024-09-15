@@ -1,5 +1,5 @@
-import { WitnessClient } from '../client'
-import { IWitnessClient, IWitnessClientCreateOpts } from '../types'
+import { WitnessClient } from 'src/client/utils/client-socket'
+import { IWitnessClient, IWitnessClientCreateOpts } from 'src/types'
 
 const POOL: { [url: string]: IWitnessClient | undefined } = {}
 

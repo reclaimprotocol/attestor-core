@@ -1,6 +1,6 @@
 import ElasticAPM, { Agent } from 'elastic-apm-node'
-import { getEnvVariable } from '../../utils/env'
-import { logger } from '../../utils/logger'
+import { getEnvVariable } from 'src/utils/env'
+import { logger } from 'src/utils/logger'
 
 let apm: Agent | undefined
 

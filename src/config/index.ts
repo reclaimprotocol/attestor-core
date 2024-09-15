@@ -1,4 +1,4 @@
-import { InitRequest, ServiceSignatureType, WitnessVersion } from '../proto/api'
+import { InitRequest, ServiceSignatureType, WitnessVersion } from 'src/proto/api'
 
 export const MAX_ZK_CHUNKS = 200
 

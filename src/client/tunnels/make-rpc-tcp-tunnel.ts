@@ -1,6 +1,6 @@
-import { CreateTunnelRequest } from '../proto/api'
-import { IWitnessClient, MakeTunnelFn, RPCEvent } from '../types'
-import { WitnessError } from '../utils'
+import { CreateTunnelRequest } from 'src/proto/api'
+import { IWitnessClient, MakeTunnelFn, RPCEvent } from 'src/types'
+import { WitnessError } from 'src/utils'
 
 export type TCPTunnelCreateOpts = {
 	/**

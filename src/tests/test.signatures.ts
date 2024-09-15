@@ -1,6 +1,6 @@
 import { utils, Wallet } from 'ethers'
-import { ServiceSignatureType } from '../proto/api'
-import { SIGNATURES } from '../signatures'
+import { ServiceSignatureType } from 'src/proto/api'
+import { SIGNATURES } from 'src/utils/signatures'
 
 const ALGS = [
 	{

@@ -1,8 +1,8 @@
 
-import type { createClaimOnWitness } from '../../create-claim'
-import type { ClaimTunnelResponse } from '../../proto/api'
-import type { CreateClaimOnWitnessOpts, ProofGenerationStep, ProviderName } from '../../types'
-import type { NewTaskCreatedEventObject } from '../contracts/ReclaimServiceManager'
+import type { NewTaskCreatedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
+import type { createClaimOnWitness } from 'src/client'
+import type { ClaimTunnelResponse } from 'src/proto/api'
+import type { CreateClaimOnWitnessOpts, ProofGenerationStep, ProviderName } from 'src/types'
 
 export type ChainConfig = {
 	rpcUrl: string

@@ -6,8 +6,8 @@ import {
 	SUPPORTED_RECORD_TYPE_MAP, verifyCertificateSignature, X509Certificate
 } from '@reclaimprotocol/tls'
 import { verifyCertificateChain } from '@reclaimprotocol/tls/lib/utils/parse-certificate'
-import { IDecryptedTranscript } from '../../types'
-import { extractHandshakeFromTranscript } from '../../utils'
+import { IDecryptedTranscript } from 'src/types'
+import { extractHandshakeFromTranscript } from 'src/utils'
 
 
 const RECORD_LENGTH_BYTES = 3

@@ -1,6 +1,6 @@
 import { ethers, type Wallet } from 'ethers'
-import type { IReclaimServiceManager, NewTaskCreatedEventObject } from '../contracts/ReclaimServiceManager'
-import { getContracts } from './contracts'
+import type { IReclaimServiceManager, NewTaskCreatedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
+import { getContracts } from 'src/avs/utils/contracts'
 
 type CreateClaimWithoutOwner = Omit<IReclaimServiceManager.ClaimRequestStruct, 'owner'>
 

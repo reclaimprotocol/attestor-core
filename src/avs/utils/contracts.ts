@@ -1,10 +1,10 @@
 import { ethers } from 'ethers'
-import { avsDirectoryABI } from '../abis/avsDirectoryABI'
-import { delegationABI } from '../abis/delegationABI'
-import { registryABI } from '../abis/registryABI'
-import { CHAIN_CONFIGS, PRIVATE_KEY, SELECTED_CHAIN_ID } from '../config'
-import { ReclaimServiceManager__factory } from '../contracts'
-import { ChainConfig } from '../types'
+import { avsDirectoryABI } from 'src/avs/abis/avsDirectoryABI'
+import { delegationABI } from 'src/avs/abis/delegationABI'
+import { registryABI } from 'src/avs/abis/registryABI'
+import { CHAIN_CONFIGS, PRIVATE_KEY, SELECTED_CHAIN_ID } from 'src/avs/config'
+import { ReclaimServiceManager__factory } from 'src/avs/contracts'
+import { ChainConfig } from 'src/avs/types'
 
 type Contracts = ReturnType<typeof initialiseContracts>
 

@@ -1,15 +1,15 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
-import { deserialize, serialize } from 'v8'
-import { providers } from '../providers'
-import httpProvider from '../providers/http'
+import { providers } from 'src/providers'
+import httpProvider from 'src/providers/http'
 import {
 	extractHTMLElement,
 	extractJSONValueIndex,
 	makeRegex,
 	matchRedactedStrings
-} from '../providers/http/utils'
-import { ProviderParams, Transcript } from '../types'
-import { assertValidateProviderParams, getProviderValue, hashProviderParams, uint8ArrayToStr } from '../utils'
+} from 'src/providers/http/utils'
+import { ProviderParams, Transcript } from 'src/types'
+import { assertValidateProviderParams, getProviderValue, hashProviderParams, uint8ArrayToStr } from 'src/utils'
+import { deserialize, serialize } from 'v8'
 
 jest.setTimeout(60_000)
 

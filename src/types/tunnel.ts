@@ -1,4 +1,4 @@
-import type { CreateTunnelRequest } from '../proto/api'
+import type { CreateTunnelRequest } from 'src/proto/api'
 
 export type MakeTunnelBaseOpts<O> = O & {
 	onClose?(err?: Error): void

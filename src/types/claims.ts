@@ -1,9 +1,9 @@
-import type { ProviderClaimData } from '../proto/api'
-import type { IWitnessClient } from './client'
-import type { CompleteTLSPacket, Logger } from './general'
-import type { ProofGenerationStep, ProviderName, ProviderParams, ProviderSecretParams } from './providers'
-import { Transcript } from './tunnel'
-import type { PrepareZKProofsBaseOpts } from './zk'
+import type { ProviderClaimData } from 'src/proto/api'
+import type { IWitnessClient } from 'src/types/client'
+import type { CompleteTLSPacket, Logger } from 'src/types/general'
+import type { ProofGenerationStep, ProviderName, ProviderParams, ProviderSecretParams } from 'src/types/providers'
+import { Transcript } from 'src/types/tunnel'
+import type { PrepareZKProofsBaseOpts } from 'src/types/zk'
 
 /**
  * Uniquely identifies a claim.

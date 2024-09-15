@@ -1,10 +1,10 @@
+import { WitnessClient } from 'src/client'
+import { makeRpcTcpTunnel } from 'src/client/tunnels/make-rpc-tcp-tunnel'
+import { makeRpcTlsTunnel } from 'src/client/tunnels/make-rpc-tls-tunnel'
+import { describeWithServer } from 'src/tests/describe-with-server'
+import { delay } from 'src/tests/utils'
+import { logger } from 'src/utils'
 import { TLSSocket } from 'tls'
-import { WitnessClient } from '../client'
-import { makeRpcTcpTunnel } from '../tunnels/make-rpc-tcp-tunnel'
-import { makeRpcTlsTunnel } from '../tunnels/make-rpc-tls-tunnel'
-import { logger } from '../utils'
-import { describeWithServer } from './describe-with-server'
-import { delay } from './utils'
 
 describeWithServer('RPC Tunnel', opts => {
 

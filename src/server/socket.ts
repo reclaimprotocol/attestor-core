@@ -1,12 +1,12 @@
 import { IncomingMessage } from 'http'
+import { handleMessage } from 'src/client/utils/message-handler'
+import { HANDLERS } from 'src/server/handlers'
+import { getInitialMessagesFromQuery } from 'src/server/utils/generics'
+import { IWitnessServerSocket, Logger, RPCEvent, RPCHandler } from 'src/types'
+import { generateSessionId, WitnessError } from 'src/utils'
+import { WitnessSocket } from 'src/utils/socket-base'
 import { promisify } from 'util'
 import { WebSocket as WS } from 'ws'
-import { handleMessage } from '../client/message-handler'
-import { WitnessSocket } from '../client/socket'
-import { IWitnessServerSocket, Logger, RPCEvent, RPCHandler } from '../types'
-import { generateSessionId, WitnessError } from '../utils'
-import { getInitialMessagesFromQuery } from './utils/generics'
-import { HANDLERS } from './handlers'
 
 export class WitnessServerSocket extends WitnessSocket implements IWitnessServerSocket {
 

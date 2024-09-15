@@ -1,14 +1,6 @@
 import { concatenateUint8Arrays, strToUint8Array, TLSConnectionOptions } from '@reclaimprotocol/tls'
 import { base64 } from 'ethers/lib/utils'
-import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '../../config'
-import { ArraySlice, Provider, ProviderParams, ProviderSecretParams } from '../../types'
-import {
-	findIndexInUint8Array,
-	getHttpRequestDataFromTranscript, logger,
-	REDACTION_CHAR_CODE,
-	uint8ArrayToBinaryStr,
-	uint8ArrayToStr,
-} from '../../utils'
+import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from 'src/config'
 import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
@@ -17,7 +9,15 @@ import {
 	makeRegex,
 	matchRedactedStrings,
 	parseHttpResponse,
-} from './utils'
+} from 'src/providers/http/utils'
+import { ArraySlice, Provider, ProviderParams, ProviderSecretParams } from 'src/types'
+import {
+	findIndexInUint8Array,
+	getHttpRequestDataFromTranscript, logger,
+	REDACTION_CHAR_CODE,
+	uint8ArrayToBinaryStr,
+	uint8ArrayToStr,
+} from 'src/utils'
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
 const dateHeaderRegex = '[dD]ate: ((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (?:[0-3][0-9]) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?:[0-9]{4}) (?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2} GMT)'

@@ -1,8 +1,12 @@
-import { InitRequest, RPCMessage, RPCMessages } from '../proto/api'
-import { IWitnessSocket, Logger, RPCEvent, RPCEventMap } from '../types'
-import { makeRpcEvent, packRpcMessages, WitnessError } from '../utils'
-import { wsMessageHandler } from './message-handler'
+import { wsMessageHandler } from 'src/client/utils/message-handler'
+import { InitRequest, RPCMessage, RPCMessages } from 'src/proto/api'
+import { IWitnessSocket, Logger, RPCEvent, RPCEventMap } from 'src/types'
+import { makeRpcEvent, packRpcMessages, WitnessError } from 'src/utils'
 
+/**
+ * Common WitnessSocket class used on the client & server side as the
+ * base for their respective socket implementations.
+ */
 export class WitnessSocket implements IWitnessSocket {
 
 	private eventTarget = new EventTarget()

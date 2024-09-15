@@ -1,6 +1,6 @@
-import { SIGNATURES } from '../../signatures'
-import { RPCHandler } from '../../types'
-import { WitnessError } from '../../utils'
+import { RPCHandler } from 'src/types'
+import { WitnessError } from 'src/utils'
+import { SIGNATURES } from 'src/utils/signatures'
 
 export const init: RPCHandler<'init'> = async(
 	initRequest,

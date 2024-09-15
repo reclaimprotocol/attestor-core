@@ -1,7 +1,7 @@
 import type { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-symmetric-crypto'
-import type { TaskCompletedEventObject } from '../avs/contracts/ReclaimServiceManager'
-import type { CreateClaimOnAvsOpts, CreateClaimOnAvsStep } from '../avs/types'
-import type { extractHTMLElement, extractJSONValueIndex } from '../providers/http/utils'
+import type { TaskCompletedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
+import type { CreateClaimOnAvsOpts, CreateClaimOnAvsStep } from 'src/avs/types'
+import type { extractHTMLElement, extractJSONValueIndex } from 'src/providers/http/utils'
 import type {
 	CompleteClaimData,
 	CreateClaimOnWitnessOpts,
@@ -12,8 +12,8 @@ import type {
 	ProviderSecretParams,
 	WitnessData,
 	ZKEngine
-} from '../types'
-import { HttpRequest, HttpResponse } from '../utils'
+} from 'src/types'
+import { HttpRequest, HttpResponse } from 'src/utils'
 
 type IdentifiedMessage = {
 	module: 'witness-sdk'

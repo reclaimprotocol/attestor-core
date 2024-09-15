@@ -1,5 +1,5 @@
-import '../server/utils/config-env'
-import { getContracts } from '../avs/utils/contracts'
+import { getContracts } from 'src/avs/utils/contracts'
+import 'src/server/utils/config-env'
 
 async function main() {
 	const { wallet, contract } = getContracts()

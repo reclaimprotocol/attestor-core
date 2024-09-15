@@ -1,6 +1,6 @@
-import { RPCMessage, RPCMessages } from '../proto/api'
-import { IWitnessSocket } from '../types'
-import { extractArrayBufferFromWsData, getRpcRequest, getRpcRequestType, getRpcResponseType, WitnessError } from '../utils'
+import { RPCMessage, RPCMessages } from 'src/proto/api'
+import { IWitnessSocket } from 'src/types'
+import { extractArrayBufferFromWsData, getRpcRequest, getRpcRequestType, getRpcResponseType, WitnessError } from 'src/utils'
 
 export async function wsMessageHandler(this: IWitnessSocket, data: unknown) {
 	// extract array buffer from WS data & decode proto
@@ -37,7 +37,7 @@ export function handleMessage(this: IWitnessSocket, msg: RPCMessage) {
 		) {
 			this.dispatchRPCEvent('rpc-response', {
 				id: msg.id,
-				error: WitnessError.fromProto(msg.requestError!)
+				error: WitnessError.fromProto(msg.requestError)
 			})
 			return
 		}

@@ -1,14 +1,14 @@
 import { createServer as createHttpServer, IncomingMessage } from 'http'
 import serveStatic from 'serve-static'
+import { API_SERVER_PORT, BROWSER_RPC_PATHNAME, WS_PATHNAME } from 'src/config'
+import { WitnessServerSocket } from 'src/server/socket'
+import { getWitnessAddress } from 'src/server/utils/generics'
+import { addKeepAlive } from 'src/server/utils/keep-alive'
+import { logger as LOGGER } from 'src/utils'
+import { getEnvVariable } from 'src/utils/env'
+import { SelectedServiceSignatureType } from 'src/utils/signatures'
 import type { Duplex } from 'stream'
 import { WebSocket, WebSocketServer } from 'ws'
-import { API_SERVER_PORT, BROWSER_RPC_PATHNAME, WS_PATHNAME } from '../config'
-import { SelectedServiceSignatureType } from '../signatures'
-import { logger as LOGGER } from '../utils'
-import { getEnvVariable } from '../utils/env'
-import { getWitnessAddress } from './utils/generics'
-import { addKeepAlive } from './utils/keep-alive'
-import { WitnessServerSocket } from './socket'
 
 const PORT = +(getEnvVariable('PORT') || API_SERVER_PORT)
 

@@ -1,13 +1,13 @@
 import { uint8ArrayToStr } from '@reclaimprotocol/tls'
-import { createClaimOnAvs } from '../avs/create-claim-on-avs'
-import { createClaimOnWitness } from '../create-claim'
-import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from '../providers/http/utils'
-import { ProviderParams, ProviderSecretParams, ZKEngine, ZKOperators } from '../types'
-import { makeLogger } from '../utils'
-import { Benchmark } from '../utils/benchmark'
-import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from './types'
-import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromLocation, mapToCreateClaimResponse } from './utils'
-import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator, waitForResponse } from './window-rpc-zk'
+import { createClaimOnAvs } from 'src/avs/client/create-claim-on-avs'
+import { createClaimOnWitness } from 'src/client'
+import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from 'src/providers/http/utils'
+import { ProviderParams, ProviderSecretParams, ZKEngine, ZKOperators } from 'src/types'
+import { makeLogger } from 'src/utils'
+import { Benchmark } from 'src/utils/benchmark'
+import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from 'src/window-rpc/types'
+import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromLocation, mapToCreateClaimResponse } from 'src/window-rpc/utils'
+import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator, waitForResponse } from 'src/window-rpc/window-rpc-zk'
 
 class WindowRPCEvent extends Event {
 	constructor(public readonly data: WindowRPCIncomingMsg) {

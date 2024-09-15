@@ -1,7 +1,7 @@
 import { ethers } from 'ethers'
-import { logger as LOGGER } from '../../utils'
-import { RECLAIM_PUBLIC_URL, SELECTED_CHAIN_ID } from '../config'
-import { getContracts } from './contracts'
+import { RECLAIM_PUBLIC_URL, SELECTED_CHAIN_ID } from 'src/avs/config'
+import { getContracts } from 'src/avs/utils/contracts'
+import { logger as LOGGER } from 'src/utils'
 
 type RegisterOpts = {
 	logger?: typeof LOGGER

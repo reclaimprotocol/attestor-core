@@ -1,14 +1,13 @@
 import { ethers, Wallet } from 'ethers'
-import { createClaimOnWitness as _createClaimOnWitness, getWitnessClientFromPool } from '../create-claim'
-import { ClaimRequestData, ClaimTunnelResponse, ProviderClaimData } from '../proto/api'
-import { ProviderName } from '../types'
-import { canonicalStringify, getIdentifierFromClaimInfo, unixTimestampSeconds, WitnessError } from '../utils'
-import { logger as LOGGER } from '../utils/logger'
-import { IReclaimServiceManager, NewTaskCreatedEventObject, TaskCompletedEventObject } from './contracts/ReclaimServiceManager'
-import { initialiseContracts } from './utils/contracts'
-import { createNewClaimRequestOnChain, signClaimRequest } from './utils/tasks'
-import { CHAIN_CONFIGS, SELECTED_CHAIN_ID } from './config'
-import { CreateClaimOnAvsOpts } from './types'
+import { CHAIN_CONFIGS, SELECTED_CHAIN_ID } from 'src/avs/config'
+import { IReclaimServiceManager, NewTaskCreatedEventObject, TaskCompletedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
+import { CreateClaimOnAvsOpts } from 'src/avs/types'
+import { initialiseContracts } from 'src/avs/utils/contracts'
+import { createNewClaimRequestOnChain, signClaimRequest } from 'src/avs/utils/tasks'
+import { createClaimOnWitness as _createClaimOnWitness, getWitnessClientFromPool } from 'src/client'
+import { ClaimRequestData, ClaimTunnelResponse, ProviderClaimData } from 'src/proto/api'
+import { ProviderName } from 'src/types'
+import { canonicalStringify, getIdentifierFromClaimInfo, logger as LOGGER, unixTimestampSeconds, WitnessError } from 'src/utils'
 
 const EMPTY_CLAIM_USER_ID = ethers.utils.hexlify(new Uint8Array(32))
 

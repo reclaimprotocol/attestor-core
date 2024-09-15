@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto'
-import { SPY_PREPARER } from './mocks'
+import { SPY_PREPARER } from 'src/tests/mocks'
 
 export function delay(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms))

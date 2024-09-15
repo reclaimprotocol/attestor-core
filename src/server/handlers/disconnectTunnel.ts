@@ -1,4 +1,4 @@
-import { RPCHandler } from '../../types'
+import { RPCHandler } from 'src/types'
 
 export const disconnectTunnel: RPCHandler<'disconnectTunnel'> = async(
 	{ id },

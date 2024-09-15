@@ -1,17 +1,17 @@
 import { TLSProtocolVersion, uint8ArrayToStr } from '@reclaimprotocol/tls'
-import { WitnessClient } from '../client'
-import { createClaimOnWitness, getWitnessClientFromPool } from '../create-claim'
-import { providers } from '../providers'
-import { decryptTranscript } from '../server'
+import { WitnessClient } from 'src/client'
+import { createClaimOnWitness, getWitnessClientFromPool } from 'src/client'
+import { providers } from 'src/providers'
+import { decryptTranscript } from 'src/server'
+import { describeWithServer } from 'src/tests/describe-with-server'
+import { SPY_PREPARER } from 'src/tests/mocks'
+import { verifyNoDirectRevealLeaks } from 'src/tests/utils'
 import {
 	assertValidClaimSignatures,
 	extractApplicationDataFromTranscript,
 	logger,
 	WitnessError
-} from '../utils'
-import { describeWithServer } from './describe-with-server'
-import { SPY_PREPARER } from './mocks'
-import { verifyNoDirectRevealLeaks } from './utils'
+} from 'src/utils'
 
 const TLS_VERSIONS: TLSProtocolVersion[] = [
 	'TLS1_3',
