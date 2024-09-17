@@ -62,7 +62,7 @@ export function mapToCreateClaimResponse(
 	return {
 		identifier: getIdentifierFromClaimInfo(res.claim),
 		claimData: res.claim,
-		attestors: [
+		witnesses: [
 			{
 				id: res.signatures!.attestorAddress,
 				url: getWsApiUrlFromLocation()

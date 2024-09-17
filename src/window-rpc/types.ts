@@ -103,7 +103,10 @@ export type CreateClaimResponse = {
 	identifier: string
 	claimData: CompleteClaimData
 	signatures: string[]
-	attestors: AttestorData[]
+	/**
+	 * @deprecated no longer valid
+	 */
+	witnesses: AttestorData[]
 }
 
 /**
