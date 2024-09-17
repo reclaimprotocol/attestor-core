@@ -1,6 +1,6 @@
 # Usage of Zero-Knowledge Proofs
 
-We utilise zero-knowledge proofs to allow a user to prove to the witness that a certain encrypted block decrypts to a certain plaintext without revealing the key used to encrypt the block.
+We utilise zero-knowledge proofs to allow a user to prove to the attestor that a certain encrypted block decrypts to a certain plaintext without revealing the key used to encrypt the block.
 
 We've written these proofs as Circom circuits, that can be found [here](https://gitlab.reclaimprotocol.org/reclaim/zk-symmetric-crypto). The list of supported symmetric encryption algorithms can also be found there.
 
@@ -12,7 +12,7 @@ Let's Alice has access to the following piece of data: `Hi alice123, you have 10
 
 Now, assume Bob also has access to the same ciphertext (encrypted data), but no access to the plaintext inside. Alice would like to prove to Bob that the block corresponds to her having a balance of `10,000USD`, but doesn't want to reveal her username.
 
-This is the exact parallel to Alice having received this piece of data from her bank website in a TLS-encrypted connection. Bob would be our witness in this case.
+This is the exact parallel to Alice having received this piece of data from her bank website in a TLS-encrypted connection. Bob would be our attestor in this case.
 
 Of course, if Alice were to send Bob the key used to encrypt the data, Bob would be able to decrypt the data and see the username. He'd also be able to see all other data encrypted with the same key (explained why [here](/docs/claim-creation.md#why-we-need-separate-keys-for-each-chunk)).
 

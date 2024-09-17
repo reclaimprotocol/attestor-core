@@ -1,13 +1,13 @@
 import { wsMessageHandler } from 'src/client/utils/message-handler'
 import { InitRequest, RPCMessage, RPCMessages } from 'src/proto/api'
-import { IWitnessSocket, Logger, RPCEvent, RPCEventMap } from 'src/types'
-import { makeRpcEvent, packRpcMessages, WitnessError } from 'src/utils'
+import { IAttestorSocket, Logger, RPCEvent, RPCEventMap } from 'src/types'
+import { AttestorError, makeRpcEvent, packRpcMessages } from 'src/utils'
 
 /**
- * Common WitnessSocket class used on the client & server side as the
+ * Common AttestorSocket class used on the client & server side as the
  * base for their respective socket implementations.
  */
-export class WitnessSocket implements IWitnessSocket {
+export class AttestorSocket implements IAttestorSocket {
 
 	private eventTarget = new EventTarget()
 
@@ -19,11 +19,11 @@ export class WitnessSocket implements IWitnessSocket {
 		public logger: Logger
 	) {
 		socket.addEventListener('error', (event: ErrorEvent) => {
-			const witErr = WitnessError.fromError(
+			const witErr = AttestorError.fromError(
 				event.error
 					|| new Error(event.message)
 			)
-			witErr.code = 'WITNESS_ERROR_NETWORK_ERROR'
+			witErr.code = 'ERROR_NETWORK_ERROR'
 
 			this.dispatchRPCEvent('connection-terminated', witErr)
 		})
@@ -31,8 +31,8 @@ export class WitnessSocket implements IWitnessSocket {
 		socket.addEventListener('close', () => (
 			this.dispatchRPCEvent(
 				'connection-terminated',
-				new WitnessError(
-					'WITNESS_ERROR_NO_ERROR',
+				new AttestorError(
+					'ERROR_NO_ERROR',
 					'connection closed'
 				)
 			)
@@ -58,15 +58,15 @@ export class WitnessSocket implements IWitnessSocket {
 
 	async sendMessage(...msgs: Partial<RPCMessage>[]) {
 		if(this.isClosed) {
-			throw new WitnessError(
-				'WITNESS_ERROR_NETWORK_ERROR',
+			throw new AttestorError(
+				'ERROR_NETWORK_ERROR',
 				'Connection closed, cannot send message'
 			)
 		}
 
 		if(!this.isOpen) {
-			throw new WitnessError(
-				'WITNESS_ERROR_NETWORK_ERROR',
+			throw new AttestorError(
+				'ERROR_NETWORK_ERROR',
 				'Wait for connection to open before sending message'
 			)
 		}
@@ -100,8 +100,8 @@ export class WitnessSocket implements IWitnessSocket {
 
 		try {
 			const witErr = err
-				? WitnessError.fromError(err)
-				: new WitnessError('WITNESS_ERROR_NO_ERROR', '')
+				? AttestorError.fromError(err)
+				: new AttestorError('ERROR_NO_ERROR', '')
 			this.dispatchRPCEvent('connection-terminated', witErr)
 			if(this.isOpen) {
 				await this.sendMessage({

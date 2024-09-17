@@ -4,7 +4,7 @@ import type { ArraySlice } from 'src/types/general'
 import type { ProvidersConfig } from 'src/types/providers.gen'
 import type { Transcript } from 'src/types/tunnel'
 
-export type WitnessData = {
+export type AttestorData = {
 	id: string
 	url: string
 }
@@ -51,7 +51,7 @@ export interface Provider<
    * the protocol establishes a connection to the first one
    * when a request is received from a user.
    *
-   * Run on witness side when creating a new session
+   * Run on attestor side when creating a new session
    *
    * Eg. "www.google.com:443", (p) => p.url.host
    * */
@@ -88,7 +88,7 @@ export interface Provider<
    * [{start: 17, end: 20}]
    *
    * This is run on the client side, to selct which portions of
-   * the server response to send to the witness
+   * the server response to send to the attestor
    * */
   getResponseRedactions?(response: Uint8Array, params: Params): ArraySlice[]
   /**
@@ -96,7 +96,7 @@ export interface Provider<
    * to ensure the receipt does contain the claims the
    * user is claiming to have
    *
-   * This is run on the witness side.
+   * This is run on the attestor side.
    * @param receipt application data messages exchanged in the TLS session
    * @param params the parameters to verify the receipt against.
    *  Eg. `{"email": "abcd@gmail.com"}`
@@ -112,14 +112,14 @@ export interface Provider<
 
 export type ProofGenerationStep =
   | {
-    // initialise session on witness
+    // initialise session on attestor
     // using initialiseSession RPC
     name: 'connecting'
   }
   | {
-    // once connection to witness
+    // once connection to attestor
     // is established, send the
-    // request data to the witness
+    // request data to the attestor
     name: 'sending-request-data'
   }
   | {
@@ -142,7 +142,7 @@ export type ProofGenerationStep =
     approxTimeLeftS?: number
   }
   | {
-    // wait for the witness to verify
+    // wait for the attestor to verify
     // said proofs & receipt
     name: 'waiting-for-verification'
   }
@@ -150,25 +150,21 @@ export type ProofGenerationStep =
 type StepData = {
   timestampS: number
   epoch: number
-  /** @deprecated use 'witnesses' */
-  witnessHosts: string[]
-  witnesses: WitnessData[]
+  attestors: AttestorData[]
 }
 
 export type CreateStep =
   | ({ name: 'creating' } & StepData)
   | ({
-    name: 'witness-progress'
-    currentWitness: WitnessData
+    name: 'attestor-progress'
+    currentAttestor: AttestorData
     step: ProofGenerationStep
   } & StepData)
   | {
-      name: 'witness-done'
+      name: 'attestor-done'
       timestampS: number
       epoch: number
-      /** @deprecated use 'witnessesLeft' */
-      witnessHostsLeft: string[]
-      witnessesLeft: WitnessData[]
+      attestorsLeft: AttestorData[]
       claimData: ProviderClaimData
       signaturesDone: string[]
     };

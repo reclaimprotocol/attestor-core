@@ -1,12 +1,12 @@
 import { base64 } from 'ethers/lib/utils'
 import { DEFAULT_METADATA } from 'src/config'
 import { RPCMessages } from 'src/proto/api'
-import { IWitnessClient, IWitnessClientCreateOpts, RPCEvent, RPCRequestData, RPCResponseData, RPCType } from 'src/types'
-import { getRpcRequestType, logger as LOGGER, packRpcMessages, WitnessError } from 'src/utils'
-import { WitnessSocket } from 'src/utils/socket-base'
+import { IAttestorClient, IAttestorClientCreateOpts, RPCEvent, RPCRequestData, RPCResponseData, RPCType } from 'src/types'
+import { AttestorError, getRpcRequestType, logger as LOGGER, packRpcMessages } from 'src/utils'
+import { AttestorSocket } from 'src/utils/socket-base'
 import { Websocket as DefaultWebsocket } from 'src/utils/ws'
 
-export class WitnessClient extends WitnessSocket implements IWitnessClient {
+export class AttestorClient extends AttestorSocket implements IAttestorClient {
 
 	private waitForInitPromise: Promise<void>
 
@@ -16,7 +16,7 @@ export class WitnessClient extends WitnessSocket implements IWitnessClient {
 		signatureType = DEFAULT_METADATA.signatureType,
 		logger = LOGGER,
 		Websocket = DefaultWebsocket
-	}: IWitnessClientCreateOpts) {
+	}: IAttestorClientCreateOpts) {
 		const initRequest = { ...DEFAULT_METADATA, signatureType }
 		const msg = packRpcMessages({ initRequest }, ...initMessages)
 		const initRequestBytes = RPCMessages.encode(msg).finish()
@@ -57,8 +57,8 @@ export class WitnessClient extends WitnessSocket implements IWitnessClient {
 
 	waitForResponse<T extends RPCType>(id: number) {
 		if(this.isClosed) {
-			throw new WitnessError(
-				'WITNESS_ERROR_NETWORK_ERROR',
+			throw new AttestorError(
+				'ERROR_NETWORK_ERROR',
 				'Client connection already closed'
 			)
 		}
@@ -84,10 +84,10 @@ export class WitnessClient extends WitnessSocket implements IWitnessClient {
 				removeHandlers()
 				// if the connection was terminated, reject the promise
 				// but update the error code to reflect the network error
-				if(event.data.code === 'WITNESS_ERROR_NO_ERROR') {
+				if(event.data.code === 'ERROR_NO_ERROR') {
 					reject(
-						new WitnessError(
-							'WITNESS_ERROR_NETWORK_ERROR',
+						new AttestorError(
+							'ERROR_NETWORK_ERROR',
 							event.data.message,
 							event.data.data
 						)
@@ -110,8 +110,8 @@ export class WitnessClient extends WitnessSocket implements IWitnessClient {
 
 	waitForInit = () => {
 		if(this.isClosed) {
-			throw new WitnessError(
-				'WITNESS_ERROR_NETWORK_ERROR',
+			throw new AttestorError(
+				'ERROR_NETWORK_ERROR',
 				'Client connection already closed'
 			)
 		}

@@ -2,7 +2,7 @@ import { IReclaimServiceManager } from 'src/avs/contracts/ReclaimServiceManager'
 import { getContracts } from 'src/avs/utils/contracts'
 import { createNewClaimRequestOnChain } from 'src/avs/utils/tasks'
 import { RPCHandler } from 'src/types'
-import { ethersStructToPlainObject, WitnessError } from 'src/utils'
+import { AttestorError, ethersStructToPlainObject } from 'src/utils'
 import { getEnvVariable } from 'src/utils/env'
 
 const ACCEPT_CLAIM_PAYMENT_REQUESTS = getEnvVariable('ACCEPT_CLAIM_PAYMENT_REQUESTS') === '1'
@@ -11,8 +11,8 @@ export const createClaimOnChain: RPCHandler<'createClaimOnChain'> = async(
 	{ chainId: chainIdNum, jsonCreateClaimRequest, requestSignature },
 ) => {
 	if(!ACCEPT_CLAIM_PAYMENT_REQUESTS) {
-		throw new WitnessError(
-			'WITNESS_ERROR_PAYMENT_REFUSED',
+		throw new AttestorError(
+			'ERROR_PAYMENT_REFUSED',
 			'Payment requests are not accepted at this time'
 		)
 	}

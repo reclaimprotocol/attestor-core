@@ -1,4 +1,4 @@
-import { InitRequest, ServiceSignatureType, WitnessVersion } from 'src/proto/api'
+import { AttestorVersion, InitRequest, ServiceSignatureType } from 'src/proto/api'
 
 export const MAX_ZK_CHUNKS = 200
 
@@ -32,7 +32,7 @@ export const MAX_CLAIM_TIMESTAMP_DIFF_S = 10 * 60
 
 export const DEFAULT_METADATA: InitRequest = {
 	signatureType: ServiceSignatureType.SERVICE_SIGNATURE_TYPE_ETH,
-	clientVersion: WitnessVersion.WITNESS_VERSION_2_0_0
+	clientVersion: AttestorVersion.ATTESTOR_VERSION_2_0_0
 }
 
 export const PING_INTERVAL_MS = 10_000

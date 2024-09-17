@@ -12,7 +12,7 @@ export const ALL_ENC_ALGORITHMS: EncryptionAlgorithm[] = [
 ]
 
 /**
- * The goal of this RPC operator is if the witness
+ * The goal of this RPC operator is if the attestor client
  * is running in a WebView, it can call the native
  * application to perform the ZK operations
  */
@@ -37,7 +37,7 @@ export function makeWindowRpcZkOperator(
 					algorithm,
 					input: { witnessB64: base64.encode(input) },
 				},
-				module: 'witness-sdk'
+				module: 'attestor-core'
 			})
 
 			return waitForRes
@@ -54,7 +54,7 @@ export function makeWindowRpcZkOperator(
 					publicSignals,
 					proof,
 				},
-				module: 'witness-sdk'
+				module: 'attestor-core'
 			})
 
 			return waitForRes

@@ -14,7 +14,7 @@ import { DEFAULT_REMOTE_ZK_PARAMS, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from 
 import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof } from 'src/proto/api'
 import { CompleteTLSPacket, Logger, PrepareZKProofsBaseOpts, ZKEngine, ZKOperators, ZKRevealInfo } from 'src/types'
 import { detectEnvironment, getEnvVariable } from 'src/utils/env'
-import { WitnessError } from 'src/utils/error'
+import { AttestorError } from 'src/utils/error'
 import { getPureCiphertext, getZkAlgorithmForCipherSuite } from 'src/utils/generics'
 import { logger as LOGGER } from 'src/utils/logger'
 import { isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from 'src/utils/redactions'
@@ -413,8 +413,8 @@ function makeRemoteSnarkJsZkOperator(
 			async() => {
 				const res = await fetch(url)
 				if(!res.ok) {
-					throw new WitnessError(
-						'WITNESS_ERROR_NETWORK_ERROR',
+					throw new AttestorError(
+						'ERROR_NETWORK_ERROR',
 						`${type} fetch failed with code: ${res.status}`,
 						{ url, status: res.status }
 					)

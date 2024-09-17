@@ -1,8 +1,8 @@
 
 import type { NewTaskCreatedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
-import type { createClaimOnWitness } from 'src/client'
+import type { createClaimOnAttestor } from 'src/client'
 import type { ClaimTunnelResponse } from 'src/proto/api'
-import type { CreateClaimOnWitnessOpts, ProofGenerationStep, ProviderName } from 'src/types'
+import type { CreateClaimOnAttestorOpts, ProofGenerationStep, ProviderName } from 'src/types'
 
 export type ChainConfig = {
 	rpcUrl: string
@@ -19,13 +19,13 @@ export type CreateClaimOnAvsStep = {
 	type: 'taskCreated'
 	data: NewTaskCreatedEventObject
 } | {
-	type: 'witnessStep'
+	type: 'attestorStep'
 	data: {
 		operatorAddress: string
 		step: ProofGenerationStep
 	}
 } | {
-	type: 'witnessDone'
+	type: 'attestorDone'
 	data: {
 		task: NewTaskCreatedEventObject
 		/**
@@ -37,7 +37,7 @@ export type CreateClaimOnAvsStep = {
 }
 
 export type CreateClaimOnAvsOpts<N extends ProviderName> = (
-	Omit<CreateClaimOnWitnessOpts<N>, 'onStep' | 'client'>
+	Omit<CreateClaimOnAttestorOpts<N>, 'onStep' | 'client'>
 ) & {
 	/**
 	 * Chain ID to use for the claim
@@ -46,15 +46,15 @@ export type CreateClaimOnAvsOpts<N extends ProviderName> = (
 	chainId?: string
 	/**
 	 * Who will pay for the claim creation, including gas
-	 * costs. Note: the witness can choose to reject the
-	 * claim if 'witness' is chosen.
+	 * costs. Note: the attestor can choose to reject the
+	 * claim if 'attestor' is chosen.
 	 * @default undefined (owner of the claim)
 	 */
-	payer?: { witness: string }
+	payer?: { attestor: string }
 
 	onStep?(step: CreateClaimOnAvsStep): void
 	/**
-	 * Override the default createClaimOnWitness function
+	 * Override the default createClaimOnAttestor function
 	 */
-	createClaimOnWitness?: typeof createClaimOnWitness
+	createClaimOnAttestor?: typeof createClaimOnAttestor
 }

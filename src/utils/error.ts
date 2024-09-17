@@ -1,16 +1,16 @@
-import { WitnessErrorCode, WitnessErrorData } from 'src/proto/api'
+import { ErrorCode, ErrorData } from 'src/proto/api'
 
 /**
- * Represents an error that can be thrown by the Witness SDK
+ * Represents an error that can be thrown by the Attestor Core
  * or server. Provides a code, and optional data
  * to pass along with the error.
  */
-export class WitnessError extends Error {
+export class AttestorError extends Error {
 
-	readonly name = 'WitnessError'
+	readonly name = 'AttestorError'
 
 	constructor(
-		public code: keyof typeof WitnessErrorCode,
+		public code: keyof typeof ErrorCode,
 		public message: string,
 		public data?: { [_: string]: any }
 	) {
@@ -18,39 +18,39 @@ export class WitnessError extends Error {
 	}
 
 	/**
-	 * Encodes the error as a WitnessErrorData
+	 * Encodes the error as a ErrorData
 	 * protobuf message
 	 */
 	toProto() {
-		return WitnessErrorData.create({
-			code: WitnessErrorCode[this.code],
+		return ErrorData.create({
+			code: ErrorCode[this.code],
 			message: this.message,
 			data: JSON.stringify(this.data)
 		})
 	}
 
-	static fromProto(data = WitnessErrorData.fromJSON({})) {
-		return new WitnessError(
-			WitnessErrorCode[data.code] as keyof typeof WitnessErrorCode,
+	static fromProto(data = ErrorData.fromJSON({})) {
+		return new AttestorError(
+			ErrorCode[data.code] as keyof typeof ErrorCode,
 			data.message,
 			data.data ? JSON.parse(data.data) : undefined
 		)
 	}
 
 	static fromError(err: Error) {
-		if(err instanceof WitnessError) {
+		if(err instanceof AttestorError) {
 			return err
 		}
 
-		return new WitnessError(
-			'WITNESS_ERROR_INTERNAL',
+		return new AttestorError(
+			'ERROR_INTERNAL',
 			err.message,
 		)
 	}
 
 	static badRequest(message: string, data?: { [_: string]: any }) {
-		return new WitnessError(
-			'WITNESS_ERROR_BAD_REQUEST',
+		return new AttestorError(
+			'ERROR_BAD_REQUEST',
 			message,
 			data
 		)

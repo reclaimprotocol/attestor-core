@@ -314,24 +314,24 @@ contract ReclaimServiceManager is
 			"Internal: Not enough operators"
 		);
 		OperatorMetadata[] memory temp = registeredOperators;
-		uint256 witnessesLeft = temp.length;
+		uint256 left = temp.length;
 
 		Operator[] memory output = new Operator[](count);
 		for (uint8 i = 0; i < output.length;) {
 			require(
-				witnessesLeft > 0,
+				left > 0,
 				"Internal: Fees too low. No operators left to pick from."
 			);
-			uint256 idx = Random.random(seed + i) % witnessesLeft;
+			uint256 idx = Random.random(seed + i) % left;
 			OperatorMetadata memory item = temp[idx];
-			// we've utilised witness at index "idx"
-			// we of course don't want to pick the same witness twice
-			// so we remove it from the list of witnesses
-			// and reduce the number of witnesses left to pick from
+			// we've utilised operator at index "idx"
+			// we of course don't want to pick the same operator twice
+			// so we remove it from the list of operators
+			// and reduce the number of operators left to pick from
 			// since solidity doesn't support "pop()" in memory arrays
 			// we swap the last element with the element we want to remove
-			temp[idx] = temp[witnessesLeft - 1];
-			witnessesLeft -= 1;
+			temp[idx] = temp[left - 1];
+			left -= 1;
 
 			if(!operatorHasMinimumWeight(item.addr)) {
 				continue;

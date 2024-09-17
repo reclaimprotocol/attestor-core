@@ -2,15 +2,15 @@ import { IncomingMessage } from 'http'
 import { handleMessage } from 'src/client/utils/message-handler'
 import { HANDLERS } from 'src/server/handlers'
 import { getInitialMessagesFromQuery } from 'src/server/utils/generics'
-import { IWitnessServerSocket, Logger, RPCEvent, RPCHandler } from 'src/types'
-import { generateSessionId, WitnessError } from 'src/utils'
-import { WitnessSocket } from 'src/utils/socket-base'
+import { IAttestorServerSocket, Logger, RPCEvent, RPCHandler } from 'src/types'
+import { AttestorError, generateSessionId } from 'src/utils'
+import { AttestorSocket } from 'src/utils/socket-base'
 import { promisify } from 'util'
 import { WebSocket as WS } from 'ws'
 
-export class WitnessServerSocket extends WitnessSocket implements IWitnessServerSocket {
+export class AttestorServerSocket extends AttestorSocket implements IAttestorServerSocket {
 
-	tunnels: IWitnessServerSocket['tunnels'] = {}
+	tunnels: IAttestorServerSocket['tunnels'] = {}
 
 	private constructor(socket: WS, public sessionId: number, logger: Logger) {
 		// @ts-ignore
@@ -32,8 +32,8 @@ export class WitnessServerSocket extends WitnessSocket implements IWitnessServer
 	getTunnel(tunnelId: number) {
 		const tunnel = this.tunnels[tunnelId]
 		if(!tunnel) {
-			throw new WitnessError(
-				'WITNESS_ERROR_NOT_FOUND',
+			throw new AttestorError(
+				'ERROR_NOT_FOUND',
 				`Tunnel "${tunnelId}" not found`
 			)
 		}
@@ -54,7 +54,7 @@ export class WitnessServerSocket extends WitnessSocket implements IWitnessServer
 		const sessionId = generateSessionId()
 		logger = logger.child({ sessionId })
 
-		const client = new WitnessServerSocket(socket, sessionId, logger)
+		const client = new AttestorServerSocket(socket, sessionId, logger)
 		try {
 			const initMsgs = getInitialMessagesFromQuery(req)
 			logger.trace(
@@ -70,9 +70,9 @@ export class WitnessServerSocket extends WitnessSocket implements IWitnessServer
 			logger.error({ err }, 'error in new connection')
 			if(client.isOpen) {
 				client.terminateConnection(
-					err instanceof WitnessError
+					err instanceof AttestorError
 						? err
-						: WitnessError.badRequest(err.message)
+						: AttestorError.badRequest(err.message)
 				)
 			}
 
@@ -84,7 +84,7 @@ export class WitnessServerSocket extends WitnessSocket implements IWitnessServer
 }
 
 async function handleTunnelMessage(
-	this: IWitnessServerSocket,
+	this: IAttestorServerSocket,
 	{ data: { tunnelId, message } }: RPCEvent<'tunnel-message'>
 ) {
 	try {
@@ -102,7 +102,7 @@ async function handleTunnelMessage(
 }
 
 async function handleRpcRequest(
-	this: IWitnessServerSocket,
+	this: IAttestorServerSocket,
 	{ data: { data, requestId, respond, type } }: RPCEvent<'rpc-request'>
 ) {
 	const logger = this.logger.child({
@@ -119,6 +119,6 @@ async function handleRpcRequest(
 		logger.debug({ res }, 'handled RPC request')
 	} catch(err) {
 		logger.error({ err }, 'error in RPC request')
-		respond(WitnessError.fromError(err))
+		respond(AttestorError.fromError(err))
 	}
 }

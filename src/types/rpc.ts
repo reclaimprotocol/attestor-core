@@ -1,5 +1,5 @@
 import type { RPCMessage, TunnelDisconnectEvent, TunnelMessage } from 'src/proto/api'
-import type { WitnessError } from 'src/utils/error'
+import type { AttestorError } from 'src/utils/error'
 
 // simple typescript type to extract all fields that end with the givens suffix
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -18,7 +18,7 @@ export type RPCRequest<T extends RPCType> = {
 	requestId: RPCMessage['id']
 	type: T
 	data: RPCRequestData<T>
-	respond(res: RPCResponseData<T> | WitnessError): void
+	respond(res: RPCResponseData<T> | AttestorError): void
 }
 
 export type RPCResponse<T extends RPCType> = {
@@ -27,11 +27,11 @@ export type RPCResponse<T extends RPCType> = {
 	data: RPCResponseData<T>
 } | {
 	id: RPCMessage['id']
-	error: WitnessError
+	error: AttestorError
 }
 
 export type RPCEventMap = {
-	'connection-terminated': WitnessError
+	'connection-terminated': AttestorError
 	'tunnel-message': TunnelMessage
 	'tunnel-disconnect-event': TunnelDisconnectEvent
 	'rpc-request': RPCRequest<RPCType>

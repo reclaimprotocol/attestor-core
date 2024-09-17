@@ -30,23 +30,23 @@ library Claims {
 	}
 
 	/**
-	 * Asserts that the claim is signed by the expected witnesses
+	 * Asserts that the claim is signed by the expected attestors
 	 */
 	function assertValidSignedClaim(
 		SignedClaim memory self,
-		address[] memory expectedWitnessAddresses
+		address[] memory expectedSignerAddresses
 	) internal pure {
 		require(self.signatures.length > 0, "No signatures");
-		address[] memory signedWitnesses = recoverSignersOfSignedClaim(self);
-		for(uint256 i = 0; i < expectedWitnessAddresses.length; i++) {
+		address[] memory claimSigners = recoverSignersOfSignedClaim(self);
+		for(uint256 i = 0; i < expectedSignerAddresses.length; i++) {
 			bool found = false;
-			for(uint256 j = 0; j < signedWitnesses.length; j++) {
-				if(signedWitnesses[j] == expectedWitnessAddresses[i]) {
+			for(uint256 j = 0; j < claimSigners.length; j++) {
+				if(claimSigners[j] == expectedSignerAddresses[i]) {
 					found = true;
 					break;
 				}
 			}
-			require(found, "Missing witness signature");
+			require(found, "Missing attestor signature");
 		}
 	}
 

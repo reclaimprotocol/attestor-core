@@ -1,8 +1,8 @@
 import { createServer as createHttpServer, IncomingMessage } from 'http'
 import serveStatic from 'serve-static'
 import { API_SERVER_PORT, BROWSER_RPC_PATHNAME, WS_PATHNAME } from 'src/config'
-import { WitnessServerSocket } from 'src/server/socket'
-import { getWitnessAddress } from 'src/server/utils/generics'
+import { AttestorServerSocket } from 'src/server/socket'
+import { getAttestorAddress } from 'src/server/utils/generics'
 import { addKeepAlive } from 'src/server/utils/keep-alive'
 import { logger as LOGGER } from 'src/utils'
 import { getEnvVariable } from 'src/utils/env'
@@ -63,7 +63,7 @@ export async function createServer(port = PORT) {
 			port,
 			apiPath: WS_PATHNAME,
 			browserRpcPath: BROWSER_RPC_PATHNAME,
-			signerAddress: getWitnessAddress(
+			signerAddress: getAttestorAddress(
 				SelectedServiceSignatureType
 			)
 		},
@@ -79,7 +79,7 @@ export async function createServer(port = PORT) {
 }
 
 async function handleNewClient(ws: WebSocket, req: IncomingMessage) {
-	const client = await WitnessServerSocket
+	const client = await AttestorServerSocket
 		.acceptConnection(ws, req, LOGGER)
 	// if initialisation fails, don't store the client
 	if(!client) {

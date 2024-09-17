@@ -31,7 +31,7 @@ properties:
     type: object
     description: >-
       Any additional headers to be sent with the request
-      Note: these will be revealed to the witness & won't be
+      Note: these will be revealed to the attestor & won't be
       redacted from the transcript. To add hidden headers,
       use 'secretParams.headers' instead
     additionalProperties:
@@ -55,7 +55,7 @@ properties:
     type: object
     description: >-
       Apply TLS configuration when creating the
-      tunnel to the witness.
+      tunnel to the attestor.
     nullable: true
     properties:
       supportedProtocolVersions:
@@ -72,7 +72,7 @@ properties:
     minItems: 1
     uniqueItems: true
     description: >-
-      The witness will use this list to check
+      The attestor will use this list to check
       that the redacted response does indeed match
       all the provided strings/regexes
     items:
@@ -107,7 +107,7 @@ properties:
       These are selected in order, xpath => jsonPath => regex
       *
       These redactions are done client side and only the selected
-      portions are sent to the witness. The witness will only be able
+      portions are sent to the attestor. The attestor will only be able
       to see the selected portions alongside the first line of the HTTP
       response (i.e. "HTTP/1.1 200 OK")
       *

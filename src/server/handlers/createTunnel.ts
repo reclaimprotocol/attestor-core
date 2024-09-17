@@ -1,7 +1,7 @@
 import { makeTcpTunnel } from 'src/server/tunnels/make-tcp-tunnel'
 import { getApm } from 'src/server/utils/apm'
 import { RPCHandler } from 'src/types'
-import { WitnessError } from 'src/utils'
+import { AttestorError } from 'src/utils'
 
 export const createTunnel: RPCHandler<'createTunnel'> = async(
 	{ id, ...opts },
@@ -15,7 +15,7 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 	sessionTx?.addLabels({ tunnelId: id, ...opts })
 
 	if(client.tunnels[id]) {
-		throw WitnessError.badRequest(`Tunnel "${id}" already exists`)
+		throw AttestorError.badRequest(`Tunnel "${id}" already exists`)
 	}
 
 	try {
@@ -51,7 +51,7 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 					tunnelDisconnectEvent: {
 						tunnelId: id,
 						error: err
-							? WitnessError
+							? AttestorError
 								.fromError(err)
 								.toProto()
 							: undefined

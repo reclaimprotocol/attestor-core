@@ -17,7 +17,7 @@ The AVS is built on the stack Eigen provides in their [Hello world AVS](https://
 To create a claim on the AVS, you can use the `createClaimOnAvs` function. 
 
 ``` ts
-import { createClaimOnAvs } from '@reclaimprotocol/witness-sdk'
+import { createClaimOnAvs } from '@reclaimprotocol/attestor-core'
 
 createClaimOnAvs({
 	// the claim owner -- the private key of the owner
@@ -27,7 +27,8 @@ createClaimOnAvs({
 	chainId: '17000',
 	// provider name
 	name: 'http',
-	// same claim parameters as the witness
+	// same claim parameters as when creating claim
+	// on a single attestor
 	params: {
 		url: 'https://example.com',
 		method: 'GET',
@@ -45,29 +46,29 @@ createClaimOnAvs({
 })
 ```
 
-Do note: the owner of the claim must have enough ETH to pay for the gas & claim fees (Presently there is no claim fee). If the owner wallet does not have enough ETH, a witness server can be requested to pay for the fees.
+Do note: the owner of the claim must have enough ETH to pay for the gas & claim fees (Presently there is no claim fee). If the owner wallet does not have enough ETH, a attestor server can be requested to pay for the fees.
 
 ``` ts
 createClaimOnAvs({
 	...
-	// specify the RPC URL of the witness server that will pay for the fees
-	payer: { witness: 'wss://witness.example.com' }
+	// specify the RPC URL of the attestor server that will pay for the fees
+	payer: { attestor: 'wss://attestor.example.com' }
 })
 ```
 
-Do note: the witness can reject the request to pay for the fees if they do not wish to subsidize the claim. The official Reclaim witness at `wss://witness.reclaimprotocol.org/ws` does subsidize the claim fees.
+Do note: the attestor can reject the request to pay for the fees if they do not wish to subsidize the claim. The official Reclaim attestor at `wss://attestor.reclaimprotocol.org/ws` does subsidize the claim fees.
 
-If you're using the browser-rpc API, then the process is very similar to single witness claim creation. All you really have to do is change the `type` to `createClaimOnAvs`, and add a `chainId` field to the request.
+If you're using the browser-rpc API, then the process is very similar to single attestor claim creation. All you really have to do is change the `type` to `createClaimOnAvs`, and add a `chainId` field to the request.
 
-You can still ask the witness to pay for the fees by setting the `payer` field to `witness`.
+You can still ask the attestor to pay for the fees by setting the `payer` field to `attestor`.
 
 ```ts
-import type { WindowRPCIncomingMsg } from '@reclaimprotocol/witness-sdk'
+import type { WindowRPCIncomingMsg } from '@reclaimprotocol/attestor-core'
 
 const req: WindowRPCIncomingMsg = {
 	// lets the window know this is a request
 	// intended for it
-	module: 'witness-sdk',
+	module: 'attestor-core',
 	// this is a random ID you generate,
 	// use to match the response to the request
 	id: '123',
@@ -96,8 +97,8 @@ const req: WindowRPCIncomingMsg = {
 		zkProofConcurrency: 1,
 
 		chainId: '17000',
-		// let the witness be the payer
-		payer: 'witness',
+		// let the attestor be the payer
+		payer: 'attestor',
 	}
 }
 webviewRef.current?.postMessage(JSON.stringify(req))

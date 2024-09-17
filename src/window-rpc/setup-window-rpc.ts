@@ -1,6 +1,6 @@
 import { uint8ArrayToStr } from '@reclaimprotocol/tls'
 import { createClaimOnAvs } from 'src/avs/client/create-claim-on-avs'
-import { createClaimOnWitness } from 'src/client'
+import { createClaimOnAttestor } from 'src/client'
 import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from 'src/providers/http/utils'
 import { ProviderParams, ProviderSecretParams, ZKEngine, ZKOperators } from 'src/types'
 import { makeLogger } from 'src/utils'
@@ -25,9 +25,9 @@ export function setupWindowRpc() {
 	window.addEventListener('message', handleMessage, false)
 	const windowMsgs = new EventTarget()
 
-	const defaultWitnessUrl = getWsApiUrlFromLocation()
+	const defaultUrl = getWsApiUrlFromLocation()
 
-	logger.info({ defaultWitnessUrl }, 'window RPC setup')
+	logger.info({ defaultUrl }, 'window RPC setup')
 
 	async function handleMessage(event: MessageEvent<any>) {
 		let id = ''
@@ -43,7 +43,7 @@ export function setupWindowRpc() {
 					: event.data
 			)
 			// ignore any messages not for us
-			if(req.module !== 'witness-sdk') {
+			if(req.module !== 'attestor-core') {
 				return
 			}
 
@@ -68,7 +68,7 @@ export function setupWindowRpc() {
 
 			switch (req.type) {
 			case 'createClaim':
-				const claimTunnelRes = await createClaimOnWitness({
+				const claimTunnelRes = await createClaimOnAttestor({
 					...req.request,
 					context: req.request.context
 						? JSON.parse(req.request.context)
@@ -76,16 +76,16 @@ export function setupWindowRpc() {
 					zkOperators: getZkOperators(
 						req.request.zkOperatorMode, req.request.zkEngine
 					),
-					client: { url: defaultWitnessUrl },
+					client: { url: defaultUrl },
 					logger,
 					onStep(step) {
 						sendMessage({
 							type: 'createClaimStep',
 							step: {
-								name: 'witness-progress',
+								name: 'attestor-progress',
 								step,
 							},
-							module: 'witness-sdk',
+							module: 'attestor-core',
 							id: req.id,
 						})
 					},
@@ -102,8 +102,8 @@ export function setupWindowRpc() {
 			case 'createClaimOnAvs':
 				const avsRes = await createClaimOnAvs({
 					...req.request,
-					payer: req.request.payer === 'witness'
-						? { witness: defaultWitnessUrl }
+					payer: req.request.payer === 'attestor'
+						? { attestor: defaultUrl }
 						: undefined,
 					context: req.request.context
 						? JSON.parse(req.request.context)
@@ -116,7 +116,7 @@ export function setupWindowRpc() {
 						sendMessage({
 							type: 'createClaimOnAvsStep',
 							step,
-							module: 'witness-sdk',
+							module: 'attestor-core',
 							id: req.id,
 						})
 					},
@@ -161,7 +161,7 @@ export function setupWindowRpc() {
 								type: 'log',
 								level,
 								message,
-								module: 'witness-sdk',
+								module: 'attestor-core',
 								id: req.id,
 							})
 						)
@@ -246,7 +246,7 @@ export function setupWindowRpc() {
 			const res = {
 				...data,
 				id,
-				module: 'witness-sdk',
+				module: 'attestor-core',
 				isResponse: true
 			} as WindowRPCOutgoingMsg
 			return sendMessage(res)
@@ -276,7 +276,7 @@ export function setupWindowRpc() {
 					request: { ...req, body: req.body ? uint8ArrayToStr(req.body) : undefined },
 					response: { ...res, body:  uint8ArrayToStr(res.body) },
 				},
-				module: 'witness-sdk'
+				module: 'attestor-core'
 			})
 			return await waitForRes
 		}

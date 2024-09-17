@@ -1,6 +1,6 @@
 import { TLSProtocolVersion, uint8ArrayToStr } from '@reclaimprotocol/tls'
-import { WitnessClient } from 'src/client'
-import { createClaimOnWitness, getWitnessClientFromPool } from 'src/client'
+import { AttestorClient } from 'src/client'
+import { createClaimOnAttestor, getAttestorClientFromPool } from 'src/client'
 import { providers } from 'src/providers'
 import { decryptTranscript } from 'src/server'
 import { describeWithServer } from 'src/tests/describe-with-server'
@@ -8,10 +8,9 @@ import { SPY_PREPARER } from 'src/tests/mocks'
 import { verifyNoDirectRevealLeaks } from 'src/tests/utils'
 import {
 	assertValidClaimSignatures,
+	AttestorError,
 	extractApplicationDataFromTranscript,
-	logger,
-	WitnessError
-} from 'src/utils'
+	logger } from 'src/utils'
 
 const TLS_VERSIONS: TLSProtocolVersion[] = [
 	'TLS1_3',
@@ -30,7 +29,7 @@ jest.mock('../server/utils/verify-server-certificates', () => {
 
 describeWithServer('Claim Creation', opts => {
 
-	let client: WitnessClient
+	let client: AttestorClient
 	let claimUrl: string
 	beforeEach(() => {
 		client = opts.client
@@ -52,7 +51,7 @@ describeWithServer('Claim Creation', opts => {
 		}
 
 		const user = 'adhiraj'
-		const result = await createClaimOnWitness({
+		const result = await createClaimOnAttestor({
 			name: 'http',
 			params: {
 				url: claimUrl,
@@ -105,7 +104,7 @@ describeWithServer('Claim Creation', opts => {
 	it('should not create a claim with invalid response', async() => {
 
 		await expect(async() => {
-			await createClaimOnWitness({
+			await createClaimOnAttestor({
 				name: 'http',
 				params: {
 					url: claimUrl,
@@ -131,7 +130,7 @@ describeWithServer('Claim Creation', opts => {
 
 		it('should correctly throw error when tunnel creation fails', async() => {
 			await expect(
-				createClaimOnWitness({
+				createClaimOnAttestor({
 					name: 'http',
 					params: {
 						url: 'https://some.dns.not.exist',
@@ -160,24 +159,24 @@ describeWithServer('Claim Creation', opts => {
 			// since we're using a pool, we'll find the client
 			// disconnected and when we create the claim again
 			// we expect a new connection to be established
-			const client = getWitnessClientFromPool(opts.serverUrl)
+			const client = getAttestorClientFromPool(opts.serverUrl)
 			await client.terminateConnection()
 			// ensure claim is still successful
 			const result2 = await createClaim()
 			expect(result2.claim).toBeTruthy()
 
-			const client2 = getWitnessClientFromPool(opts.serverUrl)
+			const client2 = getAttestorClientFromPool(opts.serverUrl)
 			expect(client2).not.toBe(client)
 		})
 
 		it('should retry on network errors', async() => {
-			const client = getWitnessClientFromPool(opts.serverUrl)
+			const client = getAttestorClientFromPool(opts.serverUrl)
 			client.sendMessage = async() => {
 				// @ts-ignore
 				client.sendMessage = () => {}
 
-				const err = new WitnessError(
-					'WITNESS_ERROR_NETWORK_ERROR',
+				const err = new AttestorError(
+					'ERROR_NETWORK_ERROR',
 					'F'
 				)
 
@@ -194,14 +193,14 @@ describeWithServer('Claim Creation', opts => {
 
 			// ensure new client is created to replace
 			// the disconnected one
-			const client2 = getWitnessClientFromPool(opts.serverUrl)
+			const client2 = getAttestorClientFromPool(opts.serverUrl)
 			expect(client2).not.toBe(client)
 		})
 	})
 
 	function createClaim() {
 		const user = 'testing-123'
-		return createClaimOnWitness({
+		return createClaimOnAttestor({
 			name: 'http',
 			params: {
 				url: claimUrl,

@@ -12,9 +12,9 @@ export type AnyWebSocket = WebSocket | WSWebSocket
 
 export type AnyWebSocketConstructor = new(url: string | URL) => AnyWebSocket
 
-export type IWitnessClientCreateOpts = {
+export type IAttestorClientCreateOpts = {
 	/**
-	 * Witness WS URL
+	 * Attestor WS URL
 	 */
 	url: string | URL
 
@@ -38,7 +38,7 @@ export type IWitnessClientCreateOpts = {
  * Base layer for the WebSocket connection on
  * the client and server.
  */
-export declare class IWitnessSocket {
+export declare class IAttestorSocket {
 	metadata: InitRequest
 	logger: Logger
 
@@ -97,8 +97,8 @@ export declare class IWitnessSocket {
 	 * captured by the `addEventListener` method.
 	 *
 	 * Will also listen to "error" & "close" events on the WebSocket
-	 * and emit a "witness-error" event with the error.
-	 * So, you only need to listen to the "witness-error"
+	 * and emit a "attestor-error" event with the error.
+	 * So, you only need to listen to the "attestor-error"
 	 * event to capture anything you're interested in.
 	 */
 	constructor(
@@ -108,7 +108,7 @@ export declare class IWitnessSocket {
 	)
 }
 
-export declare class IWitnessServerSocket extends IWitnessSocket {
+export declare class IAttestorServerSocket extends IAttestorSocket {
 
 	/**
 	 * Unique identifier for this WebSocket connection
@@ -127,8 +127,8 @@ export declare class IWitnessServerSocket extends IWitnessSocket {
 	getTunnel(tunnelId: TunnelMessage['tunnelId']): Tunnel<TCPSocketProperties>
 }
 
-export declare class IWitnessClient extends IWitnessSocket {
-	constructor(opts: IWitnessClientCreateOpts)
+export declare class IAttestorClient extends IAttestorSocket {
+	constructor(opts: IAttestorClientCreateOpts)
 
 	/**
 	 * Waits for a particular message to come in.
@@ -155,7 +155,7 @@ interface WebSocketWithServerSocket {
 	/**
 	 * Our RPC socket instance
 	 */
-	serverSocket?: IWitnessServerSocket
+	serverSocket?: IAttestorServerSocket
 }
 
 declare module 'ws' {

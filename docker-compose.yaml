@@ -1,10 +1,10 @@
 services:
-  witness:
+  attestor:
     build:
       context: ./
       # build only the backend dockerfile
-      # as it'll also build the witness
-      dockerfile: ./witness.dockerfile
+      # as it'll also build the attestor
+      dockerfile: ./attestor.dockerfile
       args:
         GL_TOKEN: ${GL_TOKEN}
     environment:

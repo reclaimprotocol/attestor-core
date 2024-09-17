@@ -1,5 +1,5 @@
 import type { ProviderClaimData } from 'src/proto/api'
-import type { IWitnessClient } from 'src/types/client'
+import type { IAttestorClient } from 'src/types/client'
 import type { CompleteTLSPacket, Logger } from 'src/types/general'
 import type { ProofGenerationStep, ProviderName, ProviderParams, ProviderSecretParams } from 'src/types/providers'
 import { Transcript } from 'src/types/tunnel'
@@ -20,7 +20,7 @@ export type CompleteClaimData = Pick<ProviderClaimData, 'owner' | 'timestampS' |
 	& AnyClaimInfo
 
 
-export type CreateClaimOnWitnessOpts<N extends ProviderName> = {
+export type CreateClaimOnAttestorOpts<N extends ProviderName> = {
 	/** name of the provider to generate signed receipt for */
 	name: N
 	/**
@@ -43,13 +43,11 @@ export type CreateClaimOnWitnessOpts<N extends ProviderName> = {
 	ownerPrivateKey: string
 	/**
 	 * Provide either the client or the URL
-	 * to the witness server -- so a client can
-	 * be created internally.
+	 * to the server -- so a client can be created internally.
 	 *
-	 * The created client will go into the global witness
-	 * client pool.
+	 * The created client will go into the global client pool.
 	 */
-	client: IWitnessClient | { url: string | URL }
+	client: IAttestorClient | { url: string | URL }
 	/**
 	 * Optionally set the timestamp of the claim
 	 * in unix seconds. If not provided, the current

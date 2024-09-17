@@ -1,7 +1,7 @@
 import Ajv, { ValidateFunction } from 'ajv'
 import { ProviderName, ProviderParams } from 'src/types'
 import { PROVIDER_SCHEMAS } from 'src/types/providers.gen'
-import { WitnessError } from 'src/utils/error'
+import { AttestorError } from 'src/utils/error'
 
 const PROVIDER_VALIDATOR_MAP: { [N in ProviderName]?: ValidateFunction } = {}
 
@@ -36,8 +36,8 @@ export function assertValidateProviderParams<T extends ProviderName>(
 	if(!validate) {
 		const schema = PROVIDER_SCHEMAS[name]?.parameters
 		if(!schema) {
-			throw new WitnessError(
-				'WITNESS_ERROR_BAD_REQUEST',
+			throw new AttestorError(
+				'ERROR_BAD_REQUEST',
 				`Invalid provider name "${name}"`
 			)
 		}
@@ -46,8 +46,8 @@ export function assertValidateProviderParams<T extends ProviderName>(
 	}
 
 	if(!validate(params)) {
-		throw new WitnessError(
-			'WITNESS_ERROR_BAD_REQUEST',
+		throw new AttestorError(
+			'ERROR_BAD_REQUEST',
 			'Params validation failed',
 			{ errors: JSON.stringify(validate.errors) }
 		)

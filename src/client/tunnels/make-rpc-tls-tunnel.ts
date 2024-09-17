@@ -2,7 +2,7 @@ import { concatenateUint8Arrays, makeTLSClient, TLSConnectionOptions } from '@re
 import { makeRpcTcpTunnel } from 'src/client/tunnels/make-rpc-tcp-tunnel'
 import { DEFAULT_HTTPS_PORT } from 'src/config'
 import { CreateTunnelRequest, RPCMessage } from 'src/proto/api'
-import { CompleteTLSPacket, IWitnessClient, Logger, MakeTunnelFn, Transcript, Tunnel } from 'src/types'
+import { CompleteTLSPacket, IAttestorClient, Logger, MakeTunnelFn, Transcript, Tunnel } from 'src/types'
 import { generateRpcMessageId, generateTunnelId } from 'src/utils'
 
 type ExtraTLSOptions = {
@@ -15,7 +15,7 @@ type ExtraTLSOptions = {
 	 *
 	 * @returns the client that was used to send the messages
 	 */
-	connect(initMessages: Partial<RPCMessage>[]): IWitnessClient
+	connect(initMessages: Partial<RPCMessage>[]): IAttestorClient
 	tlsOpts?: TLSConnectionOptions
 }
 
@@ -35,7 +35,7 @@ export const makeRpcTlsTunnel: MakeTunnelFn<ExtraTLSOptions, TLSTunnelProperties
 	const transcript: TLSTunnelProperties['transcript'] = []
 	const tunnelId = request.id || generateTunnelId()
 	let tunnel: Tunnel<{}>
-	let client: IWitnessClient | undefined
+	let client: IAttestorClient | undefined
 
 	let handshakeResolve: ((value: void) => void) | undefined
 	let handshakeReject: ((reason: any) => void) | undefined

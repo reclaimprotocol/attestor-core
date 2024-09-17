@@ -1,11 +1,11 @@
 import { strToUint8Array, TLSPacketContext } from '@reclaimprotocol/tls'
 import { makeRpcTlsTunnel } from 'src/client/tunnels/make-rpc-tls-tunnel'
-import { getWitnessClientFromPool } from 'src/client/utils/witness-pool'
+import { getAttestorClientFromPool } from 'src/client/utils/attestor-pool'
 import { DEFAULT_HTTPS_PORT } from 'src/config'
 import { ClaimTunnelRequest, ZKProofEngine } from 'src/proto/api'
 import { providers } from 'src/providers'
-import { CreateClaimOnWitnessOpts, IWitnessClient, MessageRevealInfo, ProviderName, Transcript } from 'src/types'
-import { canonicalStringify, generateTunnelId, getBlocksToReveal, getProviderValue, isApplicationData, logger as LOGGER, makeHttpResponseParser, preparePacketsForReveal, redactSlices, unixTimestampSeconds, WitnessError } from 'src/utils'
+import { CreateClaimOnAttestorOpts, IAttestorClient, MessageRevealInfo, ProviderName, Transcript } from 'src/types'
+import { AttestorError, canonicalStringify, generateTunnelId, getBlocksToReveal, getProviderValue, isApplicationData, logger as LOGGER, makeHttpResponseParser, preparePacketsForReveal, redactSlices, unixTimestampSeconds } from 'src/utils'
 import { executeWithRetries } from 'src/utils/retries'
 import { SIGNATURES } from 'src/utils/signatures'
 import { getDefaultTlsOptions } from 'src/utils/tls'
@@ -16,11 +16,10 @@ type ServerAppDataPacket = {
 }
 
 /**
- * Create a claim on a witness server
+ * Create a claim on the attestor
  */
-
-export function createClaimOnWitness<N extends ProviderName>(
-	{ logger: _logger, ...opts }: CreateClaimOnWitnessOpts<N>
+export function createClaimOnAttestor<N extends ProviderName>(
+	{ logger: _logger, ...opts }: CreateClaimOnAttestorOpts<N>
 ) {
 	const logger = _logger
 		// if the client has already been initialised
@@ -29,7 +28,7 @@ export function createClaimOnWitness<N extends ProviderName>(
 		|| ('logger' in opts.client ? opts.client.logger : LOGGER)
 	return executeWithRetries(
 		attempt => (
-			_createClaimOnWitness<N>({
+			_createClaimOnAttestor<N>({
 				...opts,
 				logger: attempt
 					? logger.child({ attempt })
@@ -45,12 +44,12 @@ function shouldRetry(err: Error) {
 		return false
 	}
 
-	return err instanceof WitnessError
-		&& err.code !== 'WITNESS_ERROR_INVALID_CLAIM'
-		&& err.code !== 'WITNESS_ERROR_BAD_REQUEST'
+	return err instanceof AttestorError
+		&& err.code !== 'ERROR_INVALID_CLAIM'
+		&& err.code !== 'ERROR_BAD_REQUEST'
 }
 
-async function _createClaimOnWitness<N extends ProviderName>(
+async function _createClaimOnAttestor<N extends ProviderName>(
 	{
 		name,
 		params,
@@ -63,7 +62,7 @@ async function _createClaimOnWitness<N extends ProviderName>(
 		timestampS,
 		updateProviderParams,
 		...zkOpts
-	}: CreateClaimOnWitnessOpts<N>
+	}: CreateClaimOnAttestorOpts<N>
 ) {
 	const provider = providers[name]
 	const hostPort = getProviderValue(params, provider.hostPort)
@@ -82,7 +81,7 @@ async function _createClaimOnWitness<N extends ProviderName>(
 	const [host, port] = hostPort.split(':')
 	const resParser = makeHttpResponseParser()
 
-	let client: IWitnessClient
+	let client: IAttestorClient
 	let lastMsgRevealed = false
 
 	const revealMap = new Map<TLSPacketContext, MessageRevealInfo>()
@@ -104,7 +103,7 @@ async function _createClaimOnWitness<N extends ProviderName>(
 			if('metadata' in clientInit) {
 				client = clientInit
 			} else {
-				client = getWitnessClientFromPool(
+				client = getAttestorClientFromPool(
 					clientInit.url,
 					() => {
 						created = true
@@ -223,7 +222,7 @@ async function _createClaimOnWitness<N extends ProviderName>(
 	const signatureAlg = SIGNATURES[client!.metadata.signatureType]
 
 	// now that we have the full transcript, we need
-	// to generate the ZK proofs & send them to the witness
+	// to generate the ZK proofs & send them to the attestor
 	// to verify & sign our claim
 	const claimTunnelReq = ClaimTunnelRequest.create({
 		request: createTunnelReq,
@@ -248,10 +247,7 @@ async function _createClaimOnWitness<N extends ProviderName>(
 
 	const result = await client!.rpc('claimTunnel', claimTunnelReq)
 
-	logger.info(
-		{ success: !!result.claim },
-		'recv claim response from witness'
-	)
+	logger.info({ success: !!result.claim }, 'recv claim response')
 
 	return result
 
@@ -291,7 +287,7 @@ async function _createClaimOnWitness<N extends ProviderName>(
 
 	/**
 	 * Write data to the tunnel, with the option to mark the packet
-	 * as revealable to the witness or not
+	 * as revealable to the attestor or not
 	 */
 	async function writeWithReveal(data: Uint8Array, reveal: boolean) {
 		// if the reveal state has changed, update the traffic keys
@@ -302,7 +298,7 @@ async function _createClaimOnWitness<N extends ProviderName>(
 		}
 
 		await tunnel.write(data)
-		// now we mark the packet to be revealed to the witness
+		// now we mark the packet to be revealed to the attestor
 		setRevealOfLastSentBlock(reveal ? { type: 'complete' } : undefined)
 		lastMsgRevealed = reveal
 	}
@@ -329,7 +325,7 @@ async function _createClaimOnWitness<N extends ProviderName>(
 	}
 
 	/**
-	 * Generate transcript with reveal data for the witness to verify
+	 * Generate transcript with reveal data for the attestor to verify
 	 */
 	async function generateTranscript() {
 		addServerSideReveals()
@@ -426,7 +422,7 @@ async function _createClaimOnWitness<N extends ProviderName>(
 		}
 
 		// reveal all handshake blocks
-		// so the witness can verify there was no
+		// so the attestor can verify there was no
 		// hanky-panky
 		for(const p of allPackets) {
 			if(p.message.type !== 'ciphertext') {

@@ -18,7 +18,7 @@ import { runFreshChain, sendGasToAddress } from 'src/avs/tests/utils'
 import { getContracts } from 'src/avs/utils/contracts'
 import { registerOperator } from 'src/avs/utils/register'
 import { createNewClaimRequestOnChain } from 'src/avs/utils/tasks'
-import type { createClaimOnWitness } from 'src/client'
+import type { createClaimOnAttestor } from 'src/client'
 import { describeWithServer } from 'src/tests/describe-with-server'
 import { ClaimInfo } from 'src/types'
 import { canonicalStringify, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from 'src/utils'
@@ -35,8 +35,8 @@ describe('Operators', () => {
 		url: string
 	}[] = []
 	const createClaimFn = jest.fn<
-		ReturnType<typeof createClaimOnWitness>,
-		Parameters<typeof createClaimOnWitness>
+		ReturnType<typeof createClaimOnAttestor>,
+		Parameters<typeof createClaimOnAttestor>
 	>(() => {
 		throw new Error('Not implemented')
 	})
@@ -183,7 +183,7 @@ describe('Operators', () => {
 		})
 	})
 
-	describeWithServer('With Task & Witness Server', opts => {
+	describeWithServer('With Task & Attestor Server', opts => {
 		beforeAll(async() => {
 			await registerFirstOperator()
 			await registerSecondOperator()
@@ -194,7 +194,7 @@ describe('Operators', () => {
 			createClaimViaFn
 		)
 
-		it('should make witness pay for claim', async() => {
+		it('should make attestor pay for claim', async() => {
 			const userWallet = randomWallet()
 			const { object: rslt } = await createClaimOnAvs({
 				ownerPrivateKey: userWallet.privateKey,
@@ -211,8 +211,8 @@ describe('Operators', () => {
 					]
 				},
 				secretParams: {},
-				payer: { witness: opts.serverUrl },
-				createClaimOnWitness: createClaimFn
+				payer: { attestor: opts.serverUrl },
+				createClaimOnAttestor: createClaimFn
 			})
 
 			assert.strictEqual(rslt.task.task.request.owner, userWallet.address)
@@ -380,7 +380,7 @@ describe('Operators', () => {
 				]
 			},
 			secretParams: {},
-			createClaimOnWitness: createClaimFn
+			createClaimOnAttestor: createClaimFn
 		})
 
 		// ensure two operators were selected

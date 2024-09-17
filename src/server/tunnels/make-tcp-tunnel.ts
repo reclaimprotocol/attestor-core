@@ -7,7 +7,7 @@ import { CreateTunnelRequest } from 'src/proto/api'
 import { isValidCountryCode } from 'src/server/utils/iso'
 import type { Logger } from 'src/types'
 import type { MakeTunnelFn, TCPSocketProperties } from 'src/types'
-import { WitnessError } from 'src/utils'
+import { AttestorError } from 'src/utils'
 import { getEnvVariable } from 'src/utils/env'
 
 const HTTPS_PROXY_URL = getEnvVariable('HTTPS_PROXY_URL')
@@ -88,8 +88,8 @@ async function connectTcp({ host, port, geoLocation, logger }: ExtraOpts) {
 				// and cause our gateway to send out a 504
 				connectTimeout = setTimeout(
 					() => reject(
-						new WitnessError(
-							'WITNESS_ERROR_NETWORK_ERROR',
+						new AttestorError(
+							'ERROR_NETWORK_ERROR',
 							'Server connection timed out'
 						)
 					),
@@ -105,8 +105,8 @@ async function connectTcp({ host, port, geoLocation, logger }: ExtraOpts) {
 				socket.once('error', reject)
 				socket.once('end', () => (
 					reject(
-						new WitnessError(
-							'WITNESS_ERROR_NETWORK_ERROR',
+						new AttestorError(
+							'ERROR_NETWORK_ERROR',
 							'connection closed'
 						)
 					)
@@ -138,7 +138,7 @@ async function getSocket(opts: ExtraOpts) {
 		// connect directly via address to
 		// avoid proxy knowing which host we're connecting to
 		if(
-			!(err instanceof WitnessError)
+			!(err instanceof AttestorError)
 			|| err.data?.code !== 403
 		) {
 			throw err
@@ -188,7 +188,7 @@ async function _getSocket(
 	}
 
 	if(!isValidCountryCode(geoLocation)) {
-		throw WitnessError.badRequest(
+		throw AttestorError.badRequest(
 			`Geolocation "${geoLocation}" is invalid. Must be 2 letter ISO country code`,
 			{ geoLocation }
 		)
@@ -219,8 +219,8 @@ async function _getSocket(
 			{ geoLocation, res },
 			'Proxy geo location failed'
 		)
-		throw new WitnessError(
-			'WITNESS_ERROR_PROXY_ERROR',
+		throw new AttestorError(
+			'ERROR_PROXY_ERROR',
 			`Proxy via geo location "${geoLocation}" failed with status code: ${res.statusCode}, message: ${res.statusText}`,
 			{
 				code: res.statusCode,

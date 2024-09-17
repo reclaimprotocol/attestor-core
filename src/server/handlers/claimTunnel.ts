@@ -1,9 +1,9 @@
 import { MAX_CLAIM_TIMESTAMP_DIFF_S } from 'src/config'
 import { ClaimTunnelResponse } from 'src/proto/api'
 import { assertTranscriptsMatch, assertValidClaimRequest } from 'src/server/utils/assert-valid-claim-request'
-import { getWitnessAddress, signAsWitness } from 'src/server/utils/generics'
+import { getAttestorAddress, signAsAttestor } from 'src/server/utils/generics'
 import { RPCHandler } from 'src/types'
-import { createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds, WitnessError } from 'src/utils'
+import { AttestorError, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from 'src/utils'
 
 export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 	claimRequest,
@@ -14,10 +14,10 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 		data: { timestampS } = {},
 	} = claimRequest
 	const tunnel = client.getTunnel(request?.id!)
-	// we throw an error for cases where the witness cannot prove
+	// we throw an error for cases where the attestor cannot prove
 	// the user's request is faulty. For eg. if the user sends a
 	// "createRequest" that does not match the tunnel's actual
-	// create request -- the witness cannot prove that the user
+	// create request -- the attestor cannot prove that the user
 	// is lying. In such cases, we throw a bad request error.
 	// Same goes for matching the transcript.
 	if(
@@ -25,7 +25,7 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 		|| tunnel.createRequest?.port !== request?.port
 		|| tunnel.createRequest?.geoLocation !== request?.geoLocation
 	) {
-		throw WitnessError.badRequest('Tunnel request does not match')
+		throw AttestorError.badRequest('Tunnel request does not match')
 	}
 
 	assertTranscriptsMatch(claimRequest.transcript, tunnel.transcript)
@@ -34,8 +34,8 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 	try {
 		const now = unixTimestampSeconds()
 		if(Math.floor(timestampS! - now) > MAX_CLAIM_TIMESTAMP_DIFF_S) {
-			throw new WitnessError(
-				'WITNESS_ERROR_INVALID_CLAIM',
+			throw new AttestorError(
+				'ERROR_INVALID_CLAIM',
 				`Timestamp provided ${timestampS} is too far off. Current time is ${now}`
 			)
 		}
@@ -53,22 +53,22 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 		}
 	} catch(err) {
 		logger.error({ err }, 'invalid claim request')
-		const witnessErr = WitnessError.fromError(err)
-		witnessErr.code = 'WITNESS_ERROR_INVALID_CLAIM'
-		res.error = witnessErr.toProto()
+		const attestorErr = AttestorError.fromError(err)
+		attestorErr.code = 'ERROR_INVALID_CLAIM'
+		res.error = attestorErr.toProto()
 	}
 
 	res.signatures = {
-		witnessAddress: await getWitnessAddress(
+		attestorAddress: await getAttestorAddress(
 			client.metadata.signatureType
 		),
 		claimSignature: res.claim
-			? await signAsWitness(
+			? await signAsAttestor(
 				createSignDataForClaim(res.claim),
 				client.metadata.signatureType
 			)
 			: new Uint8Array(),
-		resultSignature: await signAsWitness(
+		resultSignature: await signAsAttestor(
 			ClaimTunnelResponse.encode(res).finish(),
 			client.metadata.signatureType
 		)

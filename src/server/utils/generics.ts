@@ -1,16 +1,16 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
 import { IncomingMessage } from 'http'
 import { RPCMessages, ServiceSignatureType } from 'src/proto/api'
-import { WitnessError } from 'src/utils'
+import { AttestorError } from 'src/utils'
 import { getEnvVariable } from 'src/utils/env'
 import { SIGNATURES } from 'src/utils/signatures'
 
 const PRIVATE_KEY = getEnvVariable('PRIVATE_KEY')!
 
 /**
- * Sign using the witness's private key.
+ * Sign message using the PRIVATE_KEY env var.
  */
-export function signAsWitness(
+export function signAsAttestor(
 	data: Uint8Array | string,
 	scheme: ServiceSignatureType
 ) {
@@ -22,9 +22,9 @@ export function signAsWitness(
 }
 
 /**
- * Get the witness's address, from the PRIVATE_KEY env var.
+ * Obtain the address on chain, from the PRIVATE_KEY env var.
  */
-export function getWitnessAddress(scheme: ServiceSignatureType) {
+export function getAttestorAddress(scheme: ServiceSignatureType) {
 	const { getAddress, getPublicKey } = SIGNATURES[scheme]
 	const publicKey = getPublicKey(PRIVATE_KEY)
 	return getAddress(publicKey)
@@ -44,15 +44,15 @@ export function niceParseJsonObject(data: string, key: string) {
 	try {
 		return JSON.parse(data)
 	} catch(e) {
-		throw WitnessError.badRequest(
+		throw AttestorError.badRequest(
 			`Invalid JSON in ${key}: ${e.message}`,
 		)
 	}
 }
 
 /**
- * Extract any initial messages sent to the witness
- * via the query string.
+ * Extract any initial messages sent via the query string,
+ * in the `messages` parameter.
  */
 export function getInitialMessagesFromQuery(req: IncomingMessage) {
 	const url = new URL(req.url!, 'http://localhost')

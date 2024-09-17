@@ -1,6 +1,6 @@
 import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
 import type { IncomingHttpHeaders } from 'http'
-import { ArraySlice, Transcript } from 'src/types'
+import type { ArraySlice, Transcript } from 'src/types'
 import { findIndexInUint8Array, uint8ArrayToStr } from 'src/utils/generics'
 import { REDACTION_CHAR_CODE } from 'src/utils/redactions'
 

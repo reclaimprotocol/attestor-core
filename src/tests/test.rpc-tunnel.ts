@@ -1,4 +1,4 @@
-import { WitnessClient } from 'src/client'
+import { AttestorClient } from 'src/client'
 import { makeRpcTcpTunnel } from 'src/client/tunnels/make-rpc-tcp-tunnel'
 import { makeRpcTlsTunnel } from 'src/client/tunnels/make-rpc-tls-tunnel'
 import { describeWithServer } from 'src/tests/describe-with-server'
@@ -10,7 +10,7 @@ describeWithServer('RPC Tunnel', opts => {
 
 	const { mockHttpsServer, getClientOnServer } = opts
 
-	let client: WitnessClient
+	let client: AttestorClient
 	beforeEach(async() => {
 		client = opts.client
 	})
@@ -79,7 +79,7 @@ describeWithServer('RPC Tunnel', opts => {
 		})
 
 		it('should setup a 0-RTT TLS connection', async() => {
-			let client2: WitnessClient | undefined
+			let client2: AttestorClient | undefined
 			const tunnel = await makeRpcTlsTunnel({
 				request: {
 					id: 1,
@@ -91,7 +91,7 @@ describeWithServer('RPC Tunnel', opts => {
 				},
 				logger: client.logger,
 				connect(initMessages) {
-					client2 = new WitnessClient({
+					client2 = new AttestorClient({
 						url: opts.serverUrl,
 						logger: logger.child({ client: 2 }),
 						initMessages

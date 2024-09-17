@@ -1,8 +1,8 @@
 import { RPCMessage, RPCMessages } from 'src/proto/api'
-import { IWitnessSocket } from 'src/types'
-import { extractArrayBufferFromWsData, getRpcRequest, getRpcRequestType, getRpcResponseType, WitnessError } from 'src/utils'
+import { IAttestorSocket } from 'src/types'
+import { AttestorError, extractArrayBufferFromWsData, getRpcRequest, getRpcRequestType, getRpcResponseType } from 'src/utils'
 
-export async function wsMessageHandler(this: IWitnessSocket, data: unknown) {
+export async function wsMessageHandler(this: IAttestorSocket, data: unknown) {
 	// extract array buffer from WS data & decode proto
 	const buff = await extractArrayBufferFromWsData(data)
 	const { messages } = RPCMessages.decode(buff)
@@ -11,15 +11,15 @@ export async function wsMessageHandler(this: IWitnessSocket, data: unknown) {
 	}
 }
 
-export function handleMessage(this: IWitnessSocket, msg: RPCMessage) {
+export function handleMessage(this: IAttestorSocket, msg: RPCMessage) {
 	// handle connection termination alert
 	if(msg.connectionTerminationAlert) {
-		const err = WitnessError.fromProto(
+		const err = AttestorError.fromProto(
 			msg.connectionTerminationAlert
 		)
 		this.logger?.warn(
 			{
-				err: err.code !== 'WITNESS_ERROR_NO_ERROR'
+				err: err.code !== 'ERROR_NO_ERROR'
 					? err
 					: undefined
 			},
@@ -37,7 +37,7 @@ export function handleMessage(this: IWitnessSocket, msg: RPCMessage) {
 		) {
 			this.dispatchRPCEvent('rpc-response', {
 				id: msg.id,
-				error: WitnessError.fromProto(msg.requestError)
+				error: AttestorError.fromProto(msg.requestError)
 			})
 			return
 		}
@@ -59,7 +59,7 @@ export function handleMessage(this: IWitnessSocket, msg: RPCMessage) {
 			)
 			this.sendMessage({
 				id: msg.id,
-				requestError: WitnessError
+				requestError: AttestorError
 					.badRequest('Initialise connection first')
 					.toProto()
 			})

@@ -1,7 +1,7 @@
 
 # Provider
 
-A "provider" in reclaim's context is simply a set of functions that tells the witness how to format the request & check the validity of the response, that proves a claim.
+A "provider" in reclaim's context is simply a set of functions that tells the attestor how to format the request & check the validity of the response, that proves a claim.
 
 For example, you could have a provider termed "google-login" that is configured to verify claims of ownership of google accounts.
 
@@ -12,9 +12,9 @@ The library makes it fairly simple to add new providers for particular use cases
 	- `{provider-name}/parameters.yaml`: This file should contain the JSON schema for the parameters that the user will provide to the provider.
    		- These parameters are used to make the request to the server & are publicly visible
 		- For example, in the case of the google-login provider, the parameters could be the email address of the user.
-		- The witness will use this schema to verify whether the parameters provided by the user are valid for the provider
+		- The attestor will use this schema to verify whether the parameters provided by the user are valid for the provider
 	- `{provider-name}/secret-parameters.yaml`: This file should contain the JSON schema for the secret parameters that the user will provide to the provider.
-   		- These parameters are used to authenticate the request to the server & are hidden from the witness
+   		- These parameters are used to authenticate the request to the server & are hidden from the attestor
 		- For example, in the case of the google-login provider, the secret parameters could be the access token of the user.
 		- Presently, we don't validate the secret parameters on the client before sending them. Instead this schema is kept for future use, and to keep the types store consistent for the secret parameters & parameters
 
@@ -45,7 +45,7 @@ The library makes it fairly simple to add new providers for particular use cases
 		* the protocol establishes a connection to the first one
 		* when a request is received from a user.
 		*
-		* Run on witness side when creating a new session
+		* Run on attestor side when creating a new session
 		*
 		* Eg. "www.google.com:443", (p) => p.url.host
 		* */
@@ -83,7 +83,7 @@ The library makes it fairly simple to add new providers for particular use cases
 		* [{start: 17, end: 20}]
 		*
 		* This is run on the client side, to selct which portions of
-		* the server response to send to the witness
+		* the server response to send to the attestor
 		* */
 		getResponseRedactions?(response: Uint8Array, params: Params): ArraySlice[]
 		/**
@@ -91,7 +91,7 @@ The library makes it fairly simple to add new providers for particular use cases
 		* to ensure the receipt does contain the claims the
 		* user is claiming to have
 		*
-		* This is run on the witness side.
+		* This is run on the attestor side.
 		* @param receipt application data messages exchanged in the TLS session
 		* @param params the parameters to verify the receipt against. Eg. `{"email": "abcd@gmail.com"}`
 		* @returns sucessful verification or throws an error message.
@@ -114,10 +114,10 @@ Example providers:
 - [HTTP](/src/providers/http/index.ts)
 	- This is a generic provider that can be used to verify any HTTP request
 
-## Testing a Provider with a Remote Witness
+## Testing a Provider with a Remote Attestor
 
 We'd of course recommend writing automated tests for your provider. Examples of such tests can be found in the [tests folder](/src/tests).
-However, if you'd like to test your provider with a remote witness, you can do so by following these steps:
+However, if you'd like to test your provider with a remote attestor, you can do so by following these steps:
 
 1. Create a JSON outlining the parameters for the provider. For eg. for the HTTP provider, this would look like:
    ```json
@@ -136,9 +136,9 @@ However, if you'd like to test your provider with a remote witness, you can do s
    ```sh
 	npm run create:claim -- --json google-login-params.json
    ```
-   This will use the default witness server to generate a receipt for the given provider. To use a custom witness server, use the `--witness` flag
+   This will use the default attestor server to generate a receipt for the given provider. To use a custom attestor server, use the `--attestor` flag
    ```sh
-   	npm run create:claim -- --json google-login-params.json --witness ws://localhost:8080/ws
+   	npm run create:claim -- --json google-login-params.json --attestor ws://localhost:8080/ws
    ```
 3. The script will output the receipt alongside whether the receipt contained a valid claim from the provider
 
@@ -153,7 +153,7 @@ Each application should have test in `tests` folder. `redactions` and `assertVal
 
 Since almost all APIs we'd encounter would be HTTP based, we've created a generic HTTP provider that can be used to verify any HTTP request.
 
-All you need to do is provide the URL, method, headers & body of the request you want to verify along with the secret parameters required to make the request (that are hidden from the witness any other party).
+All you need to do is provide the URL, method, headers & body of the request you want to verify along with the secret parameters required to make the request (that are hidden from the attestor any other party).
 
 Let's look at a detailed example of how to prove the date of birth of a user without revealing any other information. We'd be doing this via the "Aadhar" API. For context, Aadhar is a unique identification number issued by the Indian government to its citizens.
 
@@ -180,8 +180,8 @@ The parameters of the request would be:
 		// what portions of the data are relevant to the claim
 		// we're trying to prove. The client will slice the response
 		// in such a way that only the portions specified here are
-		// sent to the witness. This redaction can be done via
-		// JSONPath, XPath or regex. If all are specified, the witness will
+		// sent to the attestor. This redaction can be done via
+		// JSONPath, XPath or regex. If all are specified, the attestor will
 		// first find the element matching the xpath -> then use the JSONPath
 		// to find the specific data & finally use the regex to match the data
         "responseRedactions": [
@@ -191,9 +191,9 @@ The parameters of the request would be:
                 "xPath": "",
             }
         ],
-		// this is the response selection. This tells the witness
+		// this is the response selection. This tells the attestor
 		// what to look for in the response. If the response doesn't
-		// match this -- the witness will reject the claim.
+		// match this -- the attestor will reject the claim.
 		// This selection can be done either by a simple string match
 		// or regex
 		"responseSelections": [
@@ -205,7 +205,7 @@ The parameters of the request would be:
 		// headers to be sent with the request that help access
 		// the API/webpage. The headers present in the "params"
 		// are meant to be public & can be viewed by anyone -- 
-		// including the witness
+		// including the attestor
 		"headers": {
 			"accept": "application/json, text/plain, */*",
             "accept-language": "en_IN",
@@ -217,19 +217,19 @@ The parameters of the request would be:
 		}
     },
 	// secret parameters that are used to make the request
-	// these are hidden from the witness & any other party
+	// these are hidden from the attestor & any other party
     "secretParams": {
 		// the headers present in the "secretParams" are meant to be
-		// secret & cannot be viewed by anyone -- including the witness
+		// secret & cannot be viewed by anyone -- including the attestor
 		// these are redacted by the client before sending the transcript
-		// to the witness
+		// to the attestor
         "headers": {
             "x-request-id": "{{requestId}}",
 			"Authorization": "Bearer {{bearerToken}}"
         },
 		// the paramValues are the values that will replace the templates
 		// only in the secretParams. These parameters will of course, not
-		// be visible to the witness.
+		// be visible to the attestor.
 		// To replace the templates in the params, you can place a
 		// "paramValues" key in the params object
 		"paramValues": {
@@ -242,9 +242,9 @@ The parameters of the request would be:
 }
 ```
 
-Now, you may be wondering we've not actually specified the date of birth in the parameters. It's simply a regex that matches any date. So, how does the witness know what date to prove?
+Now, you may be wondering we've not actually specified the date of birth in the parameters. It's simply a regex that matches any date. So, how does the attestor know what date to prove?
 
-This is where "extractedParameters" come in. When the witness processes the transcript, it'll use the regex specified in the `responseMatches` to extract the date of birth from the response.
+This is where "extractedParameters" come in. When the attestor processes the transcript, it'll use the regex specified in the `responseMatches` to extract the date of birth from the response.
 
 This date of birth will then be included in the `context` property of the claim. It'll be specified by the name of the regex group. In our case that was `dob`. In the absence of a named group -- the parameter will not be extracted. Read more on named regex groups [here](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions/Named_capturing_group)
 
@@ -272,6 +272,6 @@ You can read the full types of the HTTP provider [here](/src/providers/http-prov
 The HTTP provider handles other considerations when creating the request & parsing the response to prevent abuse, and false generation of claims. This list is not exhaustive, but some notable considerations include:
 
 1. `Connection: close` header is added to the request to prevent the server from keeping the connection open. This is done to prevent the user from sending multiple requests to the server & getting different responses, and perhaps using one of those responses to falsely generate a claim.
-	- The witness of course verifies the presence of this header in the transcript
+	- The attestor of course verifies the presence of this header in the transcript
 2. `Accept-Encoding: identity` header is added to the request to prevent the server from compressing the response. This is done because we can't correctly validate the response if it's compressed & redacted.
 3. Validation of the `Host` header in the request is done to ensure the request is being sent to the correct server.

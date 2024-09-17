@@ -6,9 +6,9 @@ import { WebSocketServer } from 'ws'
 import 'src/server/utils/config-env'
 import {
 	API_SERVER_PORT,
-	createClaimOnWitness,
+	createClaimOnAttestor,
+	getAttestorClientFromPool,
 	getTranscriptString,
-	getWitnessClientFromPool,
 	logger,
 	ProviderName,
 	ProviderParams,
@@ -23,7 +23,7 @@ type ProviderReceiptGenerationParams<P extends ProviderName> = {
     secretParams: ProviderSecretParams<P>
 }
 
-const DEFAULT_WITNESS_HOST_PORT = 'wss://witness.reclaimprotocol.org/ws'
+const DEFAULT_ATTESTOR_HOST_PORT = 'wss://attestor.reclaimprotocol.org/ws'
 const PRIVATE_KEY_HEX = getEnvVariable('PRIVATE_KEY_HEX')
 	// demo private key
 	|| '0x0123788edad59d7c013cdc85e4372f350f828e2cec62d9a2de4560e69aec7f89'
@@ -38,21 +38,21 @@ export async function main<T extends ProviderName>(
 
 	assertValidateProviderParams<'http'>(paramsJson.name, paramsJson.params)
 
-	let witnessHostPort = getCliArgument('witness')
-        || DEFAULT_WITNESS_HOST_PORT
+	let attestorHostPort = getCliArgument('attestor')
+        || DEFAULT_ATTESTOR_HOST_PORT
 	let server: WebSocketServer | undefined
-	if(witnessHostPort === 'local') {
-		console.log('starting local witness server...')
+	if(attestorHostPort === 'local') {
+		console.log('starting local attestor server...')
 		server = await createServer()
-		witnessHostPort = `ws://localhost:${API_SERVER_PORT}${WS_PATHNAME}`
+		attestorHostPort = `ws://localhost:${API_SERVER_PORT}${WS_PATHNAME}`
 	}
 
-	const receipt = await createClaimOnWitness({
+	const receipt = await createClaimOnAttestor({
 		name: paramsJson.name,
 		secretParams: paramsJson.secretParams,
 		params: paramsJson.params,
 		ownerPrivateKey: PRIVATE_KEY_HEX,
-		client: { url: witnessHostPort },
+		client: { url: attestorHostPort },
 		logger,
 		zkEngine:'snarkJS',
 	})
@@ -77,7 +77,7 @@ export async function main<T extends ProviderName>(
 	const transcriptStr = getTranscriptString(decTranscript)
 	console.log('receipt:\n', transcriptStr)
 
-	const client = getWitnessClientFromPool(witnessHostPort)
+	const client = getAttestorClientFromPool(attestorHostPort)
 	await client.terminateConnection()
 	server?.close()
 }

@@ -1,14 +1,14 @@
 # Browser RPC
 
-Platforms like React Native don't have all the capabilities of a browser that are required to run the witness SDK. Namely:
+Platforms like React Native don't have all the capabilities of a browser that are required to run the attestor SDK. Namely:
  - Workers
  - DOMParser
 
-In order to run on React Native, Flutter & other platforms that don't have these capabilities, you'll need to run the witness SDK in a WebView & communicate with it via postMessage.
+In order to run on React Native, Flutter & other platforms that don't have these capabilities, you'll need to run the attestor SDK in a WebView & communicate with it via postMessage.
 
-Generally, this is a painful process -- but we've tried our best to make this easy for ya'll. We host the SDK with preconfigured code for you to RPC with. This browser RPC SDK is hosted automatically on every witness node.
+Generally, this is a painful process -- but we've tried our best to make this easy for ya'll. We host the SDK with preconfigured code for you to RPC with. This browser RPC SDK is hosted automatically on every attestor node.
 
-This is available on `https://witness.reclaimprotocol.org/browser-rpc`
+This is available on `https://attestor.reclaimprotocol.org/browser-rpc`
 
 ## Setup on React Native
 
@@ -29,12 +29,12 @@ This is available on `https://witness.reclaimprotocol.org/browser-rpc`
 	```
 3. postMessage to createClaim:
 	```ts
-	import type { WindowRPCIncomingMsg } from '@reclaimprotocol/witness-sdk'
+	import type { WindowRPCIncomingMsg } from '@reclaimprotocol/attestor-core'
 
 	const req: WindowRPCIncomingMsg = {
 		// lets the window know this is a request
 		// intended for it
-		module: 'witness-sdk',
+		module: 'attestor-core',
 		// this is a random ID you generate,
 		// use to match the response to the request
 		id: '123',
@@ -67,7 +67,7 @@ This is available on `https://witness.reclaimprotocol.org/browser-rpc`
 	```
 4. Handle the response from createClaim & optionally the step updates:
 	``` ts
-	import type { WindowRPCOutgoingMsg } from '@reclaimprotocol/witness-sdk'
+	import type { WindowRPCOutgoingMsg } from '@reclaimprotocol/attestor-core'
 
 	function onMessageHandler(data) {
 		const rpcRes: WindowRPCOutgoingMsg = data.nativeEvent.data
@@ -82,7 +82,7 @@ This is available on `https://witness.reclaimprotocol.org/browser-rpc`
 			console.log('got createClaim response', rpcRes.response)
 		}
 
-		// the witness will send you updates on the claim creation process
+		// the attestor will send you updates on the claim creation process
 		// these will have the type 'createClaimStep'
 		if(rpcRes.type === 'createClaimStep') {
 			// this is an update on the claim creation process
@@ -103,18 +103,18 @@ This is available on `https://witness.reclaimprotocol.org/browser-rpc`
 The full implementation can be accessed [here](/src/window-rpc/)
 The SDK is built using the `window.postMessage` API.
 
-The "app" is the React Native app or any other app that wants to interact with the witness. Whereas the "witness" is the witness SDK running in the webview browser environment.
+The "app" is the React Native app or any other app that wants to interact with the attestor. Whereas the "attestor" is the attestor-core client running in the webview browser environment.
 
-Besides the `createClaim` method, the SDK also exposes other methods that the app can call on the witness. These are:
+Besides the `createClaim` method, the SDK also exposes other methods that the app can call on the attestor. These are:
 
 ``` ts
 /**
- * Fns the app calls on the witness.
- * These are things done inside the witness
+ * Fns the app calls on the attestor.
+ * These are things done inside the attestor
  */
 export type WindowRPCClient = {
 	/**
-	 * Create a claim on the witness where the RPC SDK is hosted.
+	 * Create a claim on the attestor where the RPC SDK is hosted.
 	 */
 	createClaim(options: RPCCreateClaimOptions): Promise<CreateClaimResponse>
 	/**
@@ -127,7 +127,7 @@ export type WindowRPCClient = {
 		content: string
 	}>
 	/**
-	 * Set the log level for the witness,
+	 * Set the log level for the attestor,
 	 * optionally set "sendLogsToApp" to true to send logs
 	 * back to the app
 	 */
@@ -135,5 +135,5 @@ export type WindowRPCClient = {
 }
 ```
 
-From the above schema, you can see that the app can also set the log level for the witness & optionally send logs back to the app. This is useful to know each step of the claim creation process & debug any issues that might arise.
+From the above schema, you can see that the app can also set the log level for the attestor & optionally send logs back to the app. This is useful to know each step of the claim creation process & debug any issues that might arise.
 

@@ -47,13 +47,13 @@ message RPCMessage {
 		 * The party sending this message should close the connection
 		 * immediately after sending this message.
 		 */
-		WitnessErrorData connectionTerminationAlert = 3;
+		AttestorErrorData connectionTerminationAlert = 3;
 		/**
-		 * Data representing an error in the witness's
+		 * Data representing an error in the attestor's
 		 * request to the server. This should be sent in case
 		 * there was an error in processing the request.
 		 */
-		WitnessErrorData requestError = 5;
+		AttestorErrorData requestError = 5;
 		/**
 		 * Using the transcript of a tunnel, make a claim.
 		 * The tunnel must be disconnected before making a claim.
@@ -73,7 +73,7 @@ In practise, we use `RPCMessages` to send multiple messages in a single packet. 
 
 Let's look at an example flow:
 
-1. Client prepares the `InitRequest` message (which contains metadata about the witness version & signature scheme), and serialises in an `RPCMessages` packet.
+1. Client prepares the `InitRequest` message (which contains metadata about the attestor version & signature scheme), and serialises in an `RPCMessages` packet.
 2. The aforementioned packet is then sent to the server initially with the WebSocket connection request in the query parameter. So, now our URL looks like `wss://server.com/ws?messages=<base64 encoded RPCMessages packet>`.
 	- Note: the `messages` query parameter is optional & can contain multiple messages. The advantage of this is that we can not only initialise the connection but also create a tunnel & send a TLS packet in the same request that establishes the connection. Thus, helping reduce multiple round trips to just 1.
 2. Now, the server parses the `messages` query parameter & validates it:
@@ -89,21 +89,21 @@ For browser clients, we use the native browser WebSocket.
 
 If you'd still like to use the native WebSocket API in NodeJS, you can do so using the following code:
 ```ts
-import { setWebsocket } from '@reclaimprotocol/witness-sdk'
+import { setWebsocket } from '@reclaimprotocol/attestor-core'
 setWebsocket(WebSocket)
 ```
 
 The implementation is broken down into 3 layered parts:
-1. [WitnessSocket](src/client/socket.ts): this is the base class that handles basic functions required on the client & server side -- such as sending & receiving messages, handling errors, etc.
-2. [WitnessClient](src/client/index.ts): this is the client implementation that extends `WitnessSocket` & adds functions to make RPC calls among other things.
-3. [`WitnessServerSocket`](src/server/socket.ts): this is the implementation of a client connected on the server side. It extends `WitnessSocket` and adds functions to store & manage tunnels created by the client.
+1. [AttestorSocket](src/client/socket.ts): this is the base class that handles basic functions required on the client & server side -- such as sending & receiving messages, handling errors, etc.
+2. [AttestorClient](src/client/index.ts): this is the client implementation that extends `AttestorSocket` & adds functions to make RPC calls among other things.
+3. [`AttestorServerSocket`](src/server/socket.ts): this is the implementation of a client connected on the server side. It extends `AttestorSocket` and adds functions to store & manage tunnels created by the client.
 
 ### Creating a Client
 
 ``` ts
-import { WitnessClient } from '@reclaimprotocol/witness-sdk'
+import { AttestorClient } from '@reclaimprotocol/attestor-core'
 
-const client = new WitnessClient({
+const client = new AttestorClient({
 	url: 'wss://server.com/ws',
 })
 // wait for the connection to be successfully established
@@ -187,7 +187,7 @@ client.addEventListener('tunnel-message', ({ data }) => {
 		...
 	}
 	```
-4. You can now call this RPC from the client using the `WitnessClient` class. For eg.
+4. You can now call this RPC from the client using the `AttestorClient` class. For eg.
 	```ts
 	const response = await client.rpc('abcd', { ... })
 	```

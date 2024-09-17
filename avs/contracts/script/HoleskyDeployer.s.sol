@@ -33,7 +33,7 @@ contract HoleskyDeployer is Script, Utils {
     ReclaimServiceManager public serviceManagerProxy;
     ReclaimServiceManager public serviceManagerImplementation;
 
-    string public constant METADATA_URI = "https://raw.githubusercontent.com/reclaimprotocol/witness-sdk/main/avs/metadata.json";
+    string public constant METADATA_URI = "https://raw.githubusercontent.com/reclaimprotocol/attestor-core/main/avs/metadata.json";
 
     function run() external {
         // Manually pasted addresses of Eigenlayer contracts

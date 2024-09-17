@@ -4,10 +4,10 @@ import { IReclaimServiceManager, NewTaskCreatedEventObject, TaskCompletedEventOb
 import { CreateClaimOnAvsOpts } from 'src/avs/types'
 import { initialiseContracts } from 'src/avs/utils/contracts'
 import { createNewClaimRequestOnChain, signClaimRequest } from 'src/avs/utils/tasks'
-import { createClaimOnWitness as _createClaimOnWitness, getWitnessClientFromPool } from 'src/client'
+import { createClaimOnAttestor as _createClaimOnAttestor, getAttestorClientFromPool } from 'src/client'
 import { ClaimRequestData, ClaimTunnelResponse, ProviderClaimData } from 'src/proto/api'
 import { ProviderName } from 'src/types'
-import { canonicalStringify, getIdentifierFromClaimInfo, logger as LOGGER, unixTimestampSeconds, WitnessError } from 'src/utils'
+import { AttestorError, canonicalStringify, getIdentifierFromClaimInfo, logger as LOGGER, unixTimestampSeconds } from 'src/utils'
 
 const EMPTY_CLAIM_USER_ID = ethers.utils.hexlify(new Uint8Array(32))
 
@@ -16,7 +16,7 @@ const EMPTY_CLAIM_USER_ID = ethers.utils.hexlify(new Uint8Array(32))
  */
 export async function createClaimOnAvs<N extends ProviderName>({
 	onStep,
-	createClaimOnWitness = _createClaimOnWitness,
+	createClaimOnAttestor = _createClaimOnAttestor,
 	chainId = SELECTED_CHAIN_ID,
 	payer,
 	...opts
@@ -53,13 +53,13 @@ export async function createClaimOnAvs<N extends ProviderName>({
 	const responses: ClaimTunnelResponse[] = []
 	const timestampS = +arg.task.createdAt.toString()
 	for(const op of arg.task.operators) {
-		const res = await createClaimOnWitness({
+		const res = await createClaimOnAttestor({
 			...opts,
 			client: { url: op.url },
 			timestampS,
 			onStep: (step) => (
 				onStep?.({
-					type: 'witnessStep',
+					type: 'attestorStep',
 					data: {
 						operatorAddress: op.addr,
 						step,
@@ -75,8 +75,8 @@ export async function createClaimOnAvs<N extends ProviderName>({
 
 		const diff = getClaimRequestDifference(res.request?.data!, res.claim!)
 		if(diff) {
-			throw new WitnessError(
-				'WITNESS_ERROR_INVALID_CLAIM',
+			throw new AttestorError(
+				'ERROR_INVALID_CLAIM',
 				`Claim request does not match the claim res data: ${diff}`,
 				{
 					diff,
@@ -88,13 +88,10 @@ export async function createClaimOnAvs<N extends ProviderName>({
 
 		responses.push(res)
 
-		logger.info(
-			{ operator: op.addr },
-			'witness signature generated'
-		)
+		logger.info({ operator: op.addr }, 'signature generated')
 
 		onStep?.({
-			type: 'witnessDone',
+			type: 'attestorDone',
 			data: {
 				task: arg,
 				responsesDone: responses,
@@ -144,7 +141,7 @@ export async function createClaimOnAvs<N extends ProviderName>({
 			wallet!,
 			chainId
 		)
-		const client = getWitnessClientFromPool(payer.witness)
+		const client = getAttestorClientFromPool(payer.attestor)
 		await client.waitForInit()
 		const rslt = await client.rpc('createClaimOnChain', {
 			chainId: +chainId!,
@@ -175,7 +172,7 @@ export async function createClaimOnAvs<N extends ProviderName>({
 			}
 		}
 
-		const client = getWitnessClientFromPool(payer.witness)
+		const client = getAttestorClientFromPool(payer.attestor)
 		await client.waitForInit()
 		const rslt = await client.rpc('completeClaimOnChain', {
 			chainId: +chainId!,

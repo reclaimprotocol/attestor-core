@@ -1,4 +1,4 @@
-import { createClaimOnWitness } from 'src/client'
+import { createClaimOnAttestor } from 'src/client'
 import { describeWithServer } from 'src/tests/describe-with-server'
 import { verifyNoDirectRevealLeaks } from 'src/tests/utils'
 
@@ -11,7 +11,7 @@ describeWithServer('HTTP Provider', opts => {
 	})
 
 	it('should create claim with template params', async() => {
-		const resp = await createClaimOnWitness({
+		const resp = await createClaimOnAttestor({
 			name: 'http',
 			params: {
 				url: 'https://example.{{param1}}/',

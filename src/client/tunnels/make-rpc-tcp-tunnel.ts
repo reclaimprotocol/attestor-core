@@ -1,13 +1,13 @@
 import { CreateTunnelRequest } from 'src/proto/api'
-import { IWitnessClient, MakeTunnelFn, RPCEvent } from 'src/types'
-import { WitnessError } from 'src/utils'
+import { IAttestorClient, MakeTunnelFn, RPCEvent } from 'src/types'
+import { AttestorError } from 'src/utils'
 
 export type TCPTunnelCreateOpts = {
 	/**
 	 * The tunnel ID to communicate with.
 	 */
 	tunnelId: CreateTunnelRequest['id']
-	client: IWitnessClient
+	client: IAttestorClient
 }
 
 /**
@@ -58,7 +58,7 @@ export const makeRpcTcpTunnel: MakeTunnelFn<TCPTunnelCreateOpts> = ({
 
 		onErrorRecv(
 			data.error?.code
-				? WitnessError.fromProto(data.error)
+				? AttestorError.fromProto(data.error)
 				: undefined
 		)
 	}

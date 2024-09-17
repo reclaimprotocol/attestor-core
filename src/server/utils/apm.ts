@@ -25,7 +25,7 @@ export function getApm(): Agent | undefined {
 			|| '0.1'
 		)
 		apm = ElasticAPM.start({
-			serviceName: 'reclaim_witness',
+			serviceName: 'reclaim_attestor',
 			serviceVersion: '2.0.0',
 			transactionSampleRate: sampleRate,
 			instrumentIncomingHTTPRequests: false,

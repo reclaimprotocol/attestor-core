@@ -14,7 +14,7 @@ export let Websocket: AnyWebSocketConstructor = (
 
 /**
  * Replace the default WebSocket implementation utilised
- * by the Witness client.
+ * by the Attestor client.
  */
 export function setWebsocket(ws: AnyWebSocketConstructor) {
 	Websocket = ws

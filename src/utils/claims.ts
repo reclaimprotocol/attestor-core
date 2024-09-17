@@ -8,7 +8,7 @@ import { SIGNATURES } from 'src/utils/signatures'
 
 /**
  * Creates the standard string to sign for a claim.
- * This data is what the witness will sign when it successfully
+ * This data is what the attestor will sign when it successfully
  * verifies a claim.
  */
 export function createSignDataForClaim(data: CompleteClaimData) {
@@ -28,14 +28,14 @@ export function createSignDataForClaim(data: CompleteClaimData) {
 }
 
 /**
- * Verify the claim tunnel response from a witness.
+ * Verify the claim tunnel response from a attestor.
  *
  * If you'd only like to verify the claim signature, you can
  * optionally only pass "claim" & "signatures.claimSignature"
  * to this function.
  *
  * The successful run of this function means that the claim
- * is valid, and the witness that signed the claim is valid.
+ * is valid, and the attestor that signed the claim is valid.
  */
 export async function assertValidClaimSignatures(
 	{
@@ -51,7 +51,7 @@ export async function assertValidClaimSignatures(
 	const {
 		resultSignature,
 		claimSignature,
-		witnessAddress
+		attestorAddress
 	} = signatures
 
 	const { verify } = SIGNATURES[metadata.signatureType]
@@ -62,7 +62,7 @@ export async function assertValidClaimSignatures(
 		const verified = await verify(
 			resBytes,
 			resultSignature,
-			witnessAddress
+			attestorAddress
 		)
 		if(!verified) {
 			throw new Error('Invalid result signature')
@@ -79,7 +79,7 @@ export async function assertValidClaimSignatures(
 	const verifiedClaim = await verify(
 		strToUint8Array(signData),
 		claimSignature,
-		witnessAddress
+		attestorAddress
 	)
 	if(!verifiedClaim) {
 		throw new Error('Invalid claim signature')

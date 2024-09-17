@@ -6,17 +6,16 @@ RUN apt update -y && apt upgrade -y && apt install git -y
 ARG GL_TOKEN
 RUN git config --global url."https://git-push-pull:${GL_TOKEN}@gitlab.reclaimprotocol.org".insteadOf "https://gitlab.reclaimprotocol.org"
 
-COPY ./package.json /witness/
-COPY ./package-lock.json /witness/
-RUN mkdir -p /witness/src/scripts
-RUN echo '' > /witness/src/scripts/prepare.sh
+COPY ./package.json /app/
+COPY ./package-lock.json /app/
+RUN mkdir -p /app/src/scripts
+RUN echo '' > /app/src/scripts/prepare.sh
 
-# install our witness node
-WORKDIR /witness
+WORKDIR /app
 
 RUN npm i
 
-COPY ./ /witness
+COPY ./ /app
 
 RUN npm run build
 RUN npm run build:browser

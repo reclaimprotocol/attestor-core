@@ -26,11 +26,10 @@ import {
 } from 'src/types'
 import {
 	assertValidateProviderParams,
+	AttestorError,
 	canonicalStringify,
 	extractApplicationDataFromTranscript, hashProviderParams,
-	verifyZkPacket,
-	WitnessError
-} from 'src/utils'
+	verifyZkPacket } from 'src/utils'
 import { SIGNATURES } from 'src/utils/signatures'
 
 /**
@@ -57,15 +56,15 @@ export async function assertValidClaimRequest(
 		zkEngine
 	} = request
 	if(!data) {
-		throw new WitnessError(
-			'WITNESS_ERROR_INVALID_CLAIM',
+		throw new AttestorError(
+			'ERROR_INVALID_CLAIM',
 			'No info provided on claim request'
 		)
 	}
 
 	if(!requestSignature?.length) {
-		throw new WitnessError(
-			'WITNESS_ERROR_INVALID_CLAIM',
+		throw new AttestorError(
+			'ERROR_INVALID_CLAIM',
 			'No signature provided on claim request'
 		)
 	}
@@ -81,8 +80,8 @@ export async function assertValidClaimRequest(
 		data.owner
 	)
 	if(!verified) {
-		throw new WitnessError(
-			'WITNESS_ERROR_INVALID_CLAIM',
+		throw new AttestorError(
+			'ERROR_INVALID_CLAIM',
 			'Invalid signature on claim request'
 		)
 	}
@@ -122,8 +121,8 @@ export async function assertValidProviderTranscript<T extends ProviderClaimInfo>
 	const providerName = info.provider as ProviderName
 	const provider = providers[providerName]
 	if(!provider) {
-		throw new WitnessError(
-			'WITNESS_ERROR_INVALID_CLAIM',
+		throw new AttestorError(
+			'ERROR_INVALID_CLAIM',
 			`Unsupported provider: ${providerName}`
 		)
 	}
@@ -173,7 +172,7 @@ export function assertTranscriptsMatch(
 	)
 
 	if(!areUint8ArraysEqual(clientSends, tunnelSends)) {
-		throw WitnessError.badRequest(
+		throw AttestorError.badRequest(
 			'Outgoing messages from client do not match the tunnel transcript'
 		)
 	}
@@ -195,7 +194,7 @@ export function assertTranscriptsMatch(
 		// not present in the tunnel transcript, it's fine
 		.slice(0, clientRecvs.length)
 	if(!areUint8ArraysEqual(clientRecvs, tunnelRecvs)) {
-		throw WitnessError.badRequest(
+		throw AttestorError.badRequest(
 			'Incoming messages from server do not match the tunnel transcript'
 		)
 	}
@@ -306,8 +305,8 @@ export async function decryptTranscript(
 		}
 
 		logger?.error({ i, err: r.reason }, 'error in handling packet')
-		throw new WitnessError(
-			'WITNESS_ERROR_INVALID_CLAIM',
+		throw new AttestorError(
+			'ERROR_INVALID_CLAIM',
 			`error in handling packet at idx ${i}: ${r.reason.message}`,
 			{
 				packetIdx: i,

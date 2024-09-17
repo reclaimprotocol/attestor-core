@@ -1,5 +1,5 @@
 syntax = "proto3";
-package reclaim_witness;
+package reclaim_attestor;
 
 enum TranscriptMessageSenderType {
 	TRANSCRIPT_MESSAGE_SENDER_TYPE_UNKNOWN = 0;
@@ -17,33 +17,33 @@ enum ServiceSignatureType {
 	SERVICE_SIGNATURE_TYPE_ETH = 1;
 }
 
-enum WitnessVersion {
-	WITNESS_VERSION_UNKNOWN = 0;
-	WITNESS_VERSION_1_0_0 = 1;
-	WITNESS_VERSION_1_1_0 = 2;
-	WITNESS_VERSION_2_0_0 = 3;
+enum AttestorVersion {
+	ATTESTOR_VERSION_UNKNOWN = 0;
+	ATTESTOR_VERSION_1_0_0 = 1;
+	ATTESTOR_VERSION_1_1_0 = 2;
+	ATTESTOR_VERSION_2_0_0 = 3;
 }
 
-enum WitnessErrorCode {
+enum ErrorCode {
 	// 0 should be treated as the absence of an error
 	// should be used when gracefully closing the connection
-	WITNESS_ERROR_NO_ERROR = 0;
-	// internal error in the witness -- all "Error/TypeError"
+	ERROR_NO_ERROR = 0;
+	// internal error in the attestor -- all "Error/TypeError"
 	// messages are mapped to this
-	WITNESS_ERROR_INTERNAL = 1;
+	ERROR_INTERNAL = 1;
 	// bad request from the client
-	WITNESS_ERROR_BAD_REQUEST = 2;
+	ERROR_BAD_REQUEST = 2;
 	// the item requested was not found
-	WITNESS_ERROR_NOT_FOUND = 3;
+	ERROR_NOT_FOUND = 3;
 	// error in the proxy
-	WITNESS_ERROR_PROXY_ERROR = 4;
+	ERROR_PROXY_ERROR = 4;
 	// claim creation failed -- i.e. the transcript
 	// did not result in a valid claim
-	WITNESS_ERROR_INVALID_CLAIM = 5;
+	ERROR_INVALID_CLAIM = 5;
 	// any network error
-	WITNESS_ERROR_NETWORK_ERROR = 6;
-	// witness refused to pay the costs
-	WITNESS_ERROR_PAYMENT_REFUSED = 7;
+	ERROR_NETWORK_ERROR = 6;
+	// attestor refused to pay the costs
+	ERROR_PAYMENT_REFUSED = 7;
 }
 
 enum ZKProofEngine {
@@ -109,8 +109,8 @@ message ProviderClaimInfo {
 	string context = 6;
 }
 
-message WitnessErrorData {
-	WitnessErrorCode code = 1;
+message ErrorData {
+	ErrorCode code = 1;
 	string message = 2;
 	string data = 3;
 }
@@ -151,7 +151,7 @@ message TunnelMessage {
 
 message TunnelDisconnectEvent {
 	uint32 tunnelId = 1;
-	WitnessErrorData error = 2;
+	ErrorData error = 2;
 }
 
 message MessageReveal {
@@ -264,15 +264,15 @@ message ClaimTunnelResponse {
 	ClaimTunnelRequest request = 1;
 	oneof result {
 		ProviderClaimData claim = 2;
-		WitnessErrorData error = 3;
+		ErrorData error = 3;
 	}
 	Signatures signatures = 4;
 
 	message Signatures {
 		/**
-		 * Address of the witness that has signed the claim
+		 * Address of the attestor that has signed the claim
 		 */
-		string witnessAddress = 1;
+		string attestorAddress = 1;
 		/** 
 		* signature of `stringifyProviderClaimData(claim)`,
 		* if the claim was successful
@@ -324,8 +324,8 @@ message CompleteClaimOnAvsResponse {
 }
 
 message InitRequest {
-	/** Witness client version */
-	WitnessVersion clientVersion = 2;
+	/** Attestor client version */
+	AttestorVersion clientVersion = 2;
 	/** Signature type used & expected by the user */
 	ServiceSignatureType signatureType = 3;
 }
@@ -351,13 +351,13 @@ message RPCMessage {
 		 * The party sending this message should close the connection
 		 * immediately after sending this message.
 		 */
-		WitnessErrorData connectionTerminationAlert = 4;
+		ErrorData connectionTerminationAlert = 4;
 		/**
-		 * Data representing an error in the witness's
+		 * Data representing an error in the attestor's
 		 * request to the server. This should be sent in case
 		 * there was an error in processing the request.
 		 */
-		WitnessErrorData requestError = 5;
+		ErrorData requestError = 5;
 		/**
 		 * Create a tunnel to the specified host & port.
 		 */
@@ -387,8 +387,8 @@ message RPCMessage {
 		ClaimTunnelResponse claimTunnelResponse = 13;
 		
 		/**
-		 * Request the witness to pay for the claim on the chain.
-		 * The Witness can choose to reject the request.
+		 * Request the attestor to pay for the claim on the chain.
+		 * The Attestor can choose to reject the request.
 		 */
 		RequestClaimOnAvsRequest createClaimOnChainRequest = 14;
 		RequestClaimOnAvsResponse createClaimOnChainResponse = 15;

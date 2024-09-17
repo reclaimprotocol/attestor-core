@@ -2,9 +2,9 @@
 
 ## Folder Structure
 
-- `src`: Contains the source code for the witness server.
-	- `server`: Code to run a witness server. Code here runs entirely on the server, importing code from here in a browser environment will not work.
-	- `client`: Contains the client code. This code is run on a client interacting with the witness server.
+- `src`: Contains the source code for the attestor server.
+	- `server`: Code to run a attestor server. Code here runs entirely on the server, importing code from here in a browser environment will not work.
+	- `client`: Contains the client code. This code is run on a client interacting with the attestor server.
 	- `avs`: Contains the code for the Eigen AVS used to decentralize the Reclaim protocol.
 		- `client`: Contains code to create claims via the AVS.
 	- `window-rpc`: Contains code to setup a listener on the browser for a mobile app to interact with the SDK. More on this in the [docs](docs/browser-rpc.md). Entirely client-side code.
@@ -13,12 +13,12 @@
 - `proto`: Protobuf spec for client-server communication.
 
 
-## Running a Witness Locally
+## Running a Attestor Locally
 
 1. Of course, clone this repository.
 2. Ensure you have an env file with at least the `PRIVATE_KEY` set. See the [.env.sample](.env.sample) file to see all available options.
 3. Optional: build the browser RPC files with `npm run build:browser`. More on this in the [docs](docs/browser-rpc.md).
-4. Run the witness server with `npm run start:tsc`. This will start the server on port 8001 by default.
+4. Run the attestor server with `npm run start:tsc`. This will start the server on port 8001 by default.
 
 ## Deploying to the Cloud
 

@@ -6,7 +6,7 @@ module.exports = {
 	target: 'web',
 	output: {
 		libraryTarget: 'commonjs2',
-		filename: 'reclaim-witness.min.js',
+		filename: 'attestor.min.js',
 		path: process.env.BUNDLE_PATH
 			|| path.resolve(__dirname, 'browser/resources')
 	},

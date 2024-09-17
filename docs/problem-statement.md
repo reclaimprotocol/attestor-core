@@ -48,10 +48,10 @@ Right now, most of the world's data is locked up in web2 servers and there is no
 		}
 		```
 	
-3. The Reclaim protocol allows you to fire an API request to gmail proxied through a "witness" node that observes the traffic sent & received. 
-4. The protocol enables you to hide certain packets from the witness (which contain your password or API secret -- in the eg. above it'll be "{secret-token}").
-5. Once the witness observes that the response from Google's servers matches the response you claim to have received, it'll sign your "claim" to the email address.
+3. The Reclaim protocol allows you to fire an API request to gmail proxied through a "attestor" node that observes the traffic sent & received. 
+4. The protocol enables you to hide certain packets from the attestor (which contain your password or API secret -- in the eg. above it'll be "{secret-token}").
+5. Once the attestor observes that the response from Google's servers matches the response you claim to have received, it'll sign your "claim" to the email address.
 6. This signed claim can then be used to prove to anyone that you have access to the email address without revealing your password or API secret.
-7. Thus, trustlessly prove you've access to an email address. Of course, one has to still trust the witness to not collude with you -- but we solve this by decentralising the witness network.
+7. Thus, trustlessly prove you've access to an email address. Of course, one has to still trust the attestor to not collude with you -- but we solve this by decentralising the attestor network.
 
 Read the whitepaper [here](TODO)

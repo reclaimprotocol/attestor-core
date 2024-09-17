@@ -3,20 +3,20 @@ import type { TaskCompletedEventObject } from 'src/avs/contracts/ReclaimServiceM
 import type { CreateClaimOnAvsOpts, CreateClaimOnAvsStep } from 'src/avs/types'
 import type { extractHTMLElement, extractJSONValueIndex } from 'src/providers/http/utils'
 import type {
+	AttestorData,
 	CompleteClaimData,
-	CreateClaimOnWitnessOpts,
+	CreateClaimOnAttestorOpts,
 	LogLevel,
 	ProofGenerationStep,
 	ProviderName,
 	ProviderParams,
 	ProviderSecretParams,
-	WitnessData,
 	ZKEngine
 } from 'src/types'
 import { HttpRequest, HttpResponse } from 'src/utils'
 
 type IdentifiedMessage = {
-	module: 'witness-sdk'
+	module: 'attestor-core'
 	/**
 	 * Optionally, name of the channel to respond to
 	 * Useful for specifying 'flutter_webview'
@@ -41,7 +41,7 @@ type CreateClaimRPCBaseOpts = {
 }
 
 export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<
-	CreateClaimOnWitnessOpts<N>,
+	CreateClaimOnAttestorOpts<N>,
 	'zkOperators' | 'context'
 > & CreateClaimRPCBaseOpts
 
@@ -49,7 +49,7 @@ export type RPCCreateClaimOnAvsOptions<N extends ProviderName = any> = Omit<
 	CreateClaimOnAvsOpts<N>,
 	'zkOperators' | 'context' | 'payer'
 > & {
-	payer?: 'witness'
+	payer?: 'attestor'
 } & CreateClaimRPCBaseOpts
 
 type ExtractHTMLElementOptions = {
@@ -66,7 +66,7 @@ type ExtractJSONValueIndexOptions = {
 type ZKProveOpts = {
 	algorithm: EncryptionAlgorithm
 	input: {
-		/** Base64 encoded witness */
+		/** Base64 encoded attestor */
 		witnessB64: string
 	}
 }
@@ -103,16 +103,16 @@ export type CreateClaimResponse = {
 	identifier: string
 	claimData: CompleteClaimData
 	signatures: string[]
-	witnesses: WitnessData[]
+	attestors: AttestorData[]
 }
 
 /**
- * Fns the app calls on the witness.
- * These are things done inside the witness
+ * Fns the app calls on the attestor.
+ * These are things done inside the attestor
  */
 export type WindowRPCClient = {
 	/**
-	 * Create a claim on the witness where the RPC SDK is hosted.
+	 * Create a claim on the attestor where the RPC SDK is hosted.
 	 */
 	createClaim(options: RPCCreateClaimOptions): Promise<CreateClaimResponse>
 	/**
@@ -129,7 +129,7 @@ export type WindowRPCClient = {
 		content: string
 	}>
 	/**
-	 * Set the log level for the witness,
+	 * Set the log level for the attestor,
 	 * optionally set "sendLogsToApp" to true to send logs
 	 * back to the app
 	 */
@@ -139,7 +139,7 @@ export type WindowRPCClient = {
 }
 
 /**
- * Fns the witness calls on the app
+ * Fns the attestor calls on the app
  */
 export type WindowRPCAppClient = {
 	zkProve(opts: ZKProveOpts): ReturnType<ZKOperator['groth16Prove']>
@@ -173,7 +173,7 @@ export type WindowRPCErrorResponse = {
 type AsResponse<T> = T & { isResponse: true }
 
 /**
- * Data sent to the witness from the window/application
+ * Data sent to the attestor from the window/application
  */
 // spread out each key because TS can't handle
 export type WindowRPCIncomingMsg = (
@@ -191,8 +191,8 @@ export type WindowRPCIncomingMsg = (
 ) & IdentifiedMessage
 
 /**
- * Data sent back from the witness to
- * the window/application containing the witness
+ * Data sent back from the attestor to
+ * the window/application containing the attestor
  */
 export type WindowRPCOutgoingMsg = (
 	AsResponse<WindowRPCResponse<WindowRPCClient, 'createClaim'>>
@@ -209,7 +209,7 @@ export type WindowRPCOutgoingMsg = (
 		{
 			type: 'createClaimStep'
 			step: {
-				name: 'witness-progress'
+				name: 'attestor-progress'
 				step: ProofGenerationStep
 			}
 		}

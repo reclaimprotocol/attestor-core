@@ -1,10 +1,10 @@
-import { WitnessClient } from 'src/client/utils/client-socket'
+import { AttestorClient } from 'src/client/utils/client-socket'
 import { WS_PATHNAME } from 'src/config'
 import { createServer } from 'src/server'
 import { createMockServer } from 'src/tests/mock-provider-server'
 import { SPY_PREPARER } from 'src/tests/mocks'
 import { getRandomPort, randomPrivateKey } from 'src/tests/utils'
-import { IWitnessServerSocket, ZKEngine } from 'src/types'
+import { IAttestorServerSocket, ZKEngine } from 'src/types'
 import { logger } from 'src/utils'
 import { WebSocket, type WebSocketServer } from 'ws'
 
@@ -12,8 +12,8 @@ type ServerOpts = {
 	/**
 	 * Get the client's connection on the server.
 	 */
-	getClientOnServer(): IWitnessServerSocket | undefined
-	client: WitnessClient
+	getClientOnServer(): IAttestorServerSocket | undefined
+	client: AttestorClient
 	privateKeyHex: string
 	mockHttpsServer: ReturnType<typeof createMockServer>
 	mockhttpsServerPort: number
@@ -23,7 +23,7 @@ type ServerOpts = {
 
 
 /**
- * Boots up a witness server, a mock https server,
+ * Boots up a attestor server, a mock https server,
  * and a client that is renewed for each test.
  */
 export const describeWithServer = (
@@ -35,7 +35,7 @@ export const describeWithServer = (
 	let wsServerUrl: string
 
 	let privateKeyHex: string
-	let client: WitnessClient
+	let client: AttestorClient
 
 	const wsServerPort = getRandomPort()
 	const httpsServerPort = getRandomPort()
@@ -56,7 +56,7 @@ export const describeWithServer = (
 		SPY_PREPARER.mockClear()
 
 		privateKeyHex = randomPrivateKey()
-		client = new WitnessClient({
+		client = new AttestorClient({
 			logger: logger.child({ client: 1 }),
 			url: wsServerUrl,
 			Websocket: WebSocket
