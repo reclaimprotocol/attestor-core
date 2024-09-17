@@ -15,6 +15,11 @@ class WindowRPCEvent extends Event {
 	}
 }
 
+const VALID_MODULES = [
+	'attestor-core',
+	'witness-sdk'
+]
+
 let logger = makeLogger(true)
 
 /**
@@ -43,7 +48,7 @@ export function setupWindowRpc() {
 					: event.data
 			)
 			// ignore any messages not for us
-			if(req.module !== 'attestor-core') {
+			if(!VALID_MODULES.includes(req.module)) {
 				return
 			}
 
@@ -85,11 +90,13 @@ export function setupWindowRpc() {
 								name: 'attestor-progress',
 								step,
 							},
-							module: 'attestor-core',
+							module: req.module,
 							id: req.id,
 						})
 					},
-					updateProviderParams : req.request.updateProviderParams ? updateProviderParams : undefined
+					updateProviderParams : req.request.updateProviderParams
+						? updateProviderParams
+						: undefined
 				})
 				const response = mapToCreateClaimResponse(
 					claimTunnelRes
@@ -116,7 +123,7 @@ export function setupWindowRpc() {
 						sendMessage({
 							type: 'createClaimOnAvsStep',
 							step,
-							module: 'attestor-core',
+							module: req.module,
 							id: req.id,
 						})
 					},
@@ -161,7 +168,7 @@ export function setupWindowRpc() {
 								type: 'log',
 								level,
 								message,
-								module: 'attestor-core',
+								module: req.module,
 								id: req.id,
 							})
 						)
@@ -265,7 +272,10 @@ export function setupWindowRpc() {
 			params: Partial<ProviderParams<'http'>>
 			secretParams: Partial<ProviderSecretParams<'http'>>
 		}> {
-			const { req, res } = generateRequstAndResponseFromTranscript(transcript, tlsVersion)
+			const { req, res } = generateRequstAndResponseFromTranscript(
+				transcript,
+				tlsVersion
+			)
 			const bridge = makeCommunicationBridge()
 			const id = generateRpcRequestId()
 			const waitForRes = waitForResponse('updateProviderParams', id, bridge)
@@ -273,7 +283,12 @@ export function setupWindowRpc() {
 				type: 'updateProviderParams',
 				id,
 				request: {
-					request: { ...req, body: req.body ? uint8ArrayToStr(req.body) : undefined },
+					request: {
+						...req,
+						body: req.body
+							? uint8ArrayToStr(req.body)
+							: undefined
+					},
 					response: { ...res, body:  uint8ArrayToStr(res.body) },
 				},
 				module: 'attestor-core'
