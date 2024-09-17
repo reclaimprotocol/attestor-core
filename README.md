@@ -1,8 +1,4 @@
-<div>
-    <div>
-        <img src="https://raw.githubusercontent.com/reclaimprotocol/.github/main/assets/banners/Witness-SDK.png"  />
-    </div>
-</div>
+# Reclaim Attestor Core
 
 ## Getting Started
 
