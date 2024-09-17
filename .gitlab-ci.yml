@@ -36,7 +36,7 @@ deploy:
       - main
   script:
     # copy prod env files in
-    - echo -e "$WITNESS_ENV" > .env.production
+    - echo -e "$ENV" > .env.production
     # copy in GL token into docker-compose
     - sed -i 's/${GL_TOKEN}/'$GL_TOKEN'/g' docker-compose.yaml
     - export FILE=pkg-$(date +%s%N).zip
