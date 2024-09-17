@@ -209,7 +209,7 @@ export type WindowRPCOutgoingMsg = (
 		{
 			type: 'createClaimStep'
 			step: {
-				name: 'attestor-progress'
+				name: 'attestor-progress' | 'witness-progress'
 				step: ProofGenerationStep
 			}
 		}

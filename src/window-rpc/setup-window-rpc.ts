@@ -87,7 +87,10 @@ export function setupWindowRpc() {
 						sendMessage({
 							type: 'createClaimStep',
 							step: {
-								name: 'attestor-progress',
+								name: req.module.includes('witness')
+									// backwards compatibility
+									? 'witness-progress'
+									: 'attestor-progress',
 								step,
 							},
 							module: req.module,
