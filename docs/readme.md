@@ -12,7 +12,11 @@ This repository contains **Typescript** implementation of the attestor server & 
 
 ## Install
 
-`npm install git+https://gitlab.reclaimprotocol.org/reclaim-clients/attestor-core`
+`npm install git+https://gitlab.reclaimprotocol.org/protocol/attestor-core`
+
+or
+
+`npm install git+https://github.com/reclaimprotocol/attestor-core`
 
 **Note:** this approach is only advised for NodeJS projects or projects meant to run directly in a modern browser. For React Native or any solution running in a mobile app, refer to our doc [here](docs/browser-rpc.md).
 
