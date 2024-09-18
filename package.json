@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && tsc-alias",
     "build:browser": "sh ./src/scripts/build-browser.sh",
-    "run:tsc": "node -r @swc-node/register",
+    "run:tsc": "SWC_NODE_IGNORE_DYNAMIC=true node -r @swc-node/register",
     "start:tsc": "npm run run:tsc -- src/scripts/start-server",
     "start": "node lib/scripts/start-server",
     "prepare": "sh ./src/scripts/prepare.sh",
