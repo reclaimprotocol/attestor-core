@@ -75,8 +75,8 @@ export function extractHTMLElementIndex(
 	}
 
 	if(contentsOnly) {
-		const start = nodeLocation.startTag.endOffset
-		const end = nodeLocation.endTag.startOffset
+		const start = nodeLocation.startTag ? nodeLocation.startTag.endOffset : nodeLocation.startOffset
+		const end = nodeLocation.endTag ? nodeLocation.endTag.startOffset : nodeLocation.endOffset
 		return { start, end }
 	} else {
 		return { start:nodeLocation.startOffset, end: nodeLocation.endOffset }
