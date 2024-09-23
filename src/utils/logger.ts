@@ -1,6 +1,6 @@
 import P, { LoggerOptions } from 'pino'
-import type { LogLevel } from '../types'
-import { getEnvVariable } from './env'
+import type { LogLevel } from 'src/types'
+import { getEnvVariable } from 'src/utils/env'
 
 const PII_PROPERTIES = ['ownerPrivateKey', 'secretParams']
 const redactedText = '[REDACTED]'
@@ -97,9 +97,9 @@ export function redact(json) {
 		}
 
 		if(Array.isArray(redacted[prop])) {
-			redacted[prop].forEach((value, index) => {
+			for(const [index, value] of redacted[prop].entries()) {
 				redacted[prop][index] = redact(value)
-			})
+			}
 		} else if(isObjectProperty(redacted[prop])) {
 			redacted[prop] = redact(redacted[prop])
 		}

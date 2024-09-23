@@ -1,8 +1,8 @@
 import { ethers } from 'ethers'
-import { WS_PATHNAME } from '../config'
-import { ClaimTunnelResponse } from '../proto/api'
-import { getIdentifierFromClaimInfo, WitnessError } from '../utils'
-import { CreateClaimResponse } from './types'
+import { WS_PATHNAME } from 'src/config'
+import { ClaimTunnelResponse } from 'src/proto/api'
+import { getIdentifierFromClaimInfo, WitnessError } from 'src/utils'
+import { CreateClaimResponse } from 'src/window-rpc/types'
 
 // track memory usage
 export async function getCurrentMemoryUsage() {
@@ -56,7 +56,7 @@ export function mapToCreateClaimResponse(
 	res: ClaimTunnelResponse
 ): CreateClaimResponse {
 	if(!res.claim) {
-		throw WitnessError.fromProto(res.error!)
+		throw WitnessError.fromProto(res.error)
 	}
 
 	return {

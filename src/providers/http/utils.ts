@@ -1,5 +1,6 @@
 // noinspection ExceptionCaughtLocallyJS
 
+import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
 import {
 	ArrayExpression,
 	Expression,
@@ -10,9 +11,8 @@ import {
 	Syntax
 } from 'esprima-next'
 import { JSONPath } from 'jsonpath-plus'
-import { ArraySlice, CompleteTLSPacket, ProviderParams, Transcript } from '../../types'
-import { getHttpRequestDataFromTranscript, HttpRequest, HttpResponse, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from '../../utils'
-import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
+import { ArraySlice, CompleteTLSPacket, ProviderParams, Transcript } from 'src/types'
+import { getHttpRequestDataFromTranscript, HttpRequest, HttpResponse, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from 'src/utils'
 
 export type JSONIndex = {
     start: number
@@ -126,33 +126,28 @@ function traverse(
 ): JSONIndex | null {
 	if(o instanceof ObjectExpression) {
 		for(const p of o.properties) {
-			if(p instanceof Property) {
-				let localPath
-				if(p.key.type === Syntax.Literal) {
-					localPath = path + '/' + p.key.value
-				} else {
-					localPath = path
-				}
+			if(!(p instanceof Property)) {
+				continue
+			}
 
-				if(pointers.includes(localPath) && 'range' in p && Array.isArray(p.range)) {
-					return {
-						start: p.range[0],
-						end: p.range[1],
-					}
-				}
+			const localPath = p.key.type === Syntax.Literal
+				? path + '/' + p.key.value
+				: path
 
-				if(p.value instanceof ObjectExpression) {
-					const res = traverse(p.value, localPath, pointers)
-					if(res) {
-						return res
-					}
+			if(pointers.includes(localPath) && 'range' in p && Array.isArray(p.range)) {
+				return {
+					start: p.range[0],
+					end: p.range[1],
 				}
+			}
 
-				if(p.value instanceof ArrayExpression) {
-					const res = traverse(p.value, localPath, pointers)
-					if(res) {
-						return res
-					}
+			if(
+				p.value instanceof ObjectExpression
+				|| p.value instanceof ArrayExpression
+			) {
+				const res = traverse(p.value, localPath, pointers)
+				if(res) {
+					return res
 				}
 			}
 		}
@@ -353,15 +348,16 @@ export function matchRedactedStrings(templateString: Uint8Array, redactedString?
 	return ts === templateString.length && rs === redactedString.length
 }
 
-export function generateRequstAndResponseFromTranscript(transcript: Transcript<CompleteTLSPacket>,tlsVersion: string): { req: HttpRequest; res: HttpResponse } {
+export function generateRequstAndResponseFromTranscript(transcript: Transcript<CompleteTLSPacket>, tlsVersion: string): { req: HttpRequest, res: HttpResponse } {
 	const allPackets = transcript
-	
+
 	const packets: Transcript<Uint8Array> = []
-	for (const b of allPackets) {
-		if (b.message.type !== 'ciphertext'
+	for(const b of allPackets) {
+		if(b.message.type !== 'ciphertext'
 			|| !isApplicationData(b.message, tlsVersion)) {
 			continue
 		}
+
 		const plaintext = tlsVersion === 'TLS1_3'
 			? b.message.plaintext.slice(0, -1)
 			: b.message.plaintext
@@ -372,10 +368,10 @@ export function generateRequstAndResponseFromTranscript(transcript: Transcript<C
 		})
 	}
 
-	const req = getHttpRequestDataFromTranscript(packets)	
+	const req = getHttpRequestDataFromTranscript(packets)
 
-	let responsePackets = concatenateUint8Arrays(packets.filter(p => p.sender === 'server').map(p => p.message).filter(b => !b.every(b => b === REDACTION_CHAR_CODE)))
-	const res  = parseHttpResponse(responsePackets) 
+	const responsePackets = concatenateUint8Arrays(packets.filter(p => p.sender === 'server').map(p => p.message).filter(b => !b.every(b => b === REDACTION_CHAR_CODE)))
+	const res = parseHttpResponse(responsePackets)
 
 	return { req, res }
 }

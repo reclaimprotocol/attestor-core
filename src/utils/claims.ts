@@ -1,10 +1,10 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
 import canonicalize from 'canonicalize'
 import { utils } from 'ethers'
-import { DEFAULT_METADATA } from '../config'
-import { ClaimTunnelResponse } from '../proto/api'
-import { SIGNATURES } from '../signatures'
-import { ClaimID, ClaimInfo, CompleteClaimData, ProviderParams } from '../types'
+import { DEFAULT_METADATA } from 'src/config'
+import { ClaimTunnelResponse } from 'src/proto/api'
+import { ClaimID, ClaimInfo, CompleteClaimData, ProviderParams } from 'src/types'
+import { SIGNATURES } from 'src/utils/signatures'
 
 /**
  * Creates the standard string to sign for a claim.
@@ -131,7 +131,7 @@ export function hashProviderParams(params: ProviderParams<'http'>): string {
 		geoLocation:params.geoLocation
 	}
 
-	const serializedParams = canonicalStringify(filteredParams)!
+	const serializedParams = canonicalStringify(filteredParams)
 	return utils.keccak256(
 		strToUint8Array(serializedParams)
 	).toLowerCase()

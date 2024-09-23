@@ -1,5 +1,5 @@
-import { AnyWebSocketConstructor } from '../types'
-import { detectEnvironment } from './env'
+import { AnyWebSocketConstructor } from 'src/types'
+import { detectEnvironment } from 'src/utils/env'
 
 /**
  * Default WebSocket implementation, uses `ws` package

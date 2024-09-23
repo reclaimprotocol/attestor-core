@@ -18,13 +18,6 @@ This repository contains **Typescript** implementation of the witness server & t
 
 Note for devs: the "prepare" script which is run after `npm install` is configured to only build when there are files in the `src` directory. This is to prevent errors when building the Docker image.
 
-## Running your own witness
-
-1. Of course, clone this repository.
-2. Ensure you have an env file with at least the `PRIVATE_KEY` set. See the [.env.sample](.env.sample) file to see all available options.
-3. Optional: build the browser RPC files with `npm run build:browser`. More on this in the [docs](docs/browser-rpc.md).
-4. Run the witness server with `npm run start:tsc`. This will start the server on port 8001 by default.
-
 ## Getting Started
 
 We'd recommend you go through our documentation in the following order:
@@ -33,3 +26,5 @@ We'd recommend you go through our documentation in the following order:
 3. [Browser RPC/React Native](docs/browser-rpc.md): How to setup the witness SDK for environments like React Native or any other mobile app.
 4. [Provider](docs/provider.md): What is a provider in the Reclaim context, how to create one & details on the HTTP provider.
 5. [Internals of Claim Creation](docs/claim-creation.md): In-depth description of the full flow of creating a claim with a witness.
+6. [Working with the Codebase](docs/project.md): Understand how to work with the codebase & how to deploy a witness server.
+6. [AVS](docs/avs.md): Understand how we use an Eigen AVS to decentralize the witness server.

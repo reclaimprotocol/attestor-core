@@ -1,7 +1,7 @@
 import { REDACTION_CHAR_CODE } from '@reclaimprotocol/circom-symmetric-crypto'
 import { areUint8ArraysEqual, CipherSuite, CONTENT_TYPE_MAP, crypto, PACKET_TYPE, strToUint8Array, SUPPORTED_CIPHER_SUITE_MAP, uint8ArrayToDataView } from '@reclaimprotocol/tls'
-import { RPCMessage, RPCMessages } from '../proto/api'
-import { CompleteTLSPacket, IDecryptedTranscript, ProviderField, RPCEvent, RPCEventMap, RPCEventType, RPCType, Transcript } from '../types'
+import { RPCMessage, RPCMessages } from 'src/proto/api'
+import { CompleteTLSPacket, IDecryptedTranscript, ProviderField, RPCEvent, RPCEventMap, RPCEventType, RPCType, Transcript } from 'src/types'
 
 const DEFAULT_REDACTION_DATA = new Uint8Array(4)
 	.fill(REDACTION_CHAR_CODE)
@@ -340,4 +340,29 @@ export function packRpcMessages(...msgs: Partial<RPCMessage>[]) {
 			})
 		))
 	})
+}
+
+/**
+ * Converts an Ethers struct (an array w named keys) to
+ * a plain object. Recursively converts all structs inside.
+ * Required to correctly JSON.stringify the struct.
+ */
+export function ethersStructToPlainObject<T>(struct: T): T {
+	if(!Array.isArray(struct)) {
+		return struct
+	}
+
+	const namedKeys = Object.keys(struct)
+		.filter(key => isNaN(Number(key)))
+	// seems to be an actual array
+	if(!namedKeys.length) {
+		return struct.map(ethersStructToPlainObject) as any
+	}
+
+	const obj: any = {}
+	for(const key of namedKeys) {
+		obj[key] = ethersStructToPlainObject(struct[key])
+	}
+
+	return obj
 }

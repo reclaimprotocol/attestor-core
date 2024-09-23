@@ -1,6 +1,6 @@
-# Reclaim Protocol - Witness SDK
+# Witness SDK
 
-The witness server securely intermediates internet data exchange, using TLS and zero-knowledge proofs to verify and sign user claims with minimal information disclosure.
+This project has been moved to [Attestor Core](https://gitlab.reclaimprotocol.org/protocol/attestor-core). Please use the same in your project.
 
 ## Getting Started
 
@@ -10,7 +10,7 @@ For an intro to this package & how it works, check out our [Getting Started Guid
 
 ## Try It Out Yourself
 
-Ready to dive in? Follow our installation guide to set up Reclaim,
+Ready to dive in? Follow our installation guide to set up Reclaim.
 
 [Install Reclaim](https://docs.reclaimprotocol.org/install)
 

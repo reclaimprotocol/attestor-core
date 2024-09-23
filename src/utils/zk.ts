@@ -10,15 +10,15 @@ import {
 } from '@reclaimprotocol/circom-symmetric-crypto'
 import { makeLocalGnarkZkOperator } from '@reclaimprotocol/circom-symmetric-crypto/lib/gnark'
 import { CipherSuite, crypto } from '@reclaimprotocol/tls'
-import { DEFAULT_REMOTE_ZK_PARAMS, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from '../config'
-import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof } from '../proto/api'
-import { CompleteTLSPacket, Logger, PrepareZKProofsBaseOpts, ZKEngine, ZKOperators, ZKRevealInfo } from '../types'
-import { detectEnvironment, getEnvVariable } from './env'
-import { WitnessError } from './error'
-import { getPureCiphertext, getZkAlgorithmForCipherSuite } from './generics'
-import { logger as LOGGER } from './logger'
-import { isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from './redactions'
-import { executeWithRetries } from './retries'
+import { DEFAULT_REMOTE_ZK_PARAMS, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from 'src/config'
+import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof } from 'src/proto/api'
+import { CompleteTLSPacket, Logger, PrepareZKProofsBaseOpts, ZKEngine, ZKOperators, ZKRevealInfo } from 'src/types'
+import { detectEnvironment, getEnvVariable } from 'src/utils/env'
+import { WitnessError } from 'src/utils/error'
+import { getPureCiphertext, getZkAlgorithmForCipherSuite } from 'src/utils/generics'
+import { logger as LOGGER } from 'src/utils/logger'
+import { isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from 'src/utils/redactions'
+import { executeWithRetries } from 'src/utils/retries'
 
 type GenerateZKChunkProofOpts = {
 	key: Uint8Array
@@ -200,46 +200,6 @@ export async function makeZkProofGenerator(
 			const zkOperator = await getZkOperatorForAlgorithm(alg)
 			zkOperator.release?.()
 		},
-	}
-
-	function getProofGenerationParamsForChunk(
-		algorithm: EncryptionAlgorithm,
-		{
-			key,
-			iv,
-			ciphertext,
-			redactedPlaintext,
-			offsetChunks,
-		}: GenerateZKChunkProofOpts,
-	): ZKProofToGenerate | undefined {
-		const chunkSize = getChunkSizeBytes(algorithm)
-
-		const startIdx = offsetChunks * chunkSize
-		const endIdx = (offsetChunks + 1) * chunkSize
-		const ciphertextChunk = ciphertext
-			.slice(startIdx, endIdx)
-		const plaintextChunk = redactedPlaintext
-			.slice(startIdx, endIdx)
-		if(isFullyRedacted(plaintextChunk)) {
-			return
-		}
-
-		// redact ciphertext if plaintext is redacted
-		// to prepare for decryption in ZK circuit
-		// the ZK circuit will take in the redacted ciphertext,
-		// which shall produce the redacted plaintext
-		for(let i = 0;i < ciphertextChunk.length;i++) {
-			if(plaintextChunk[i] === REDACTION_CHAR_CODE) {
-				ciphertextChunk[i] = REDACTION_CHAR_CODE
-			}
-		}
-
-		return {
-			startIdx,
-			redactedPlaintext: plaintextChunk,
-			privateInput: { key, iv, offset: offsetChunks },
-			publicInput: { ciphertext: ciphertextChunk },
-		}
 	}
 
 	async function generateProofForChunk(
@@ -475,6 +435,46 @@ function makeRemoteSnarkJsZkOperator(
 		)
 
 		return new Uint8Array(res)
+	}
+}
+
+function getProofGenerationParamsForChunk(
+	algorithm: EncryptionAlgorithm,
+	{
+		key,
+		iv,
+		ciphertext,
+		redactedPlaintext,
+		offsetChunks,
+	}: GenerateZKChunkProofOpts,
+): ZKProofToGenerate | undefined {
+	const chunkSize = getChunkSizeBytes(algorithm)
+
+	const startIdx = offsetChunks * chunkSize
+	const endIdx = (offsetChunks + 1) * chunkSize
+	const ciphertextChunk = ciphertext
+		.slice(startIdx, endIdx)
+	const plaintextChunk = redactedPlaintext
+		.slice(startIdx, endIdx)
+	if(isFullyRedacted(plaintextChunk)) {
+		return
+	}
+
+	// redact ciphertext if plaintext is redacted
+	// to prepare for decryption in ZK circuit
+	// the ZK circuit will take in the redacted ciphertext,
+	// which shall produce the redacted plaintext
+	for(let i = 0;i < ciphertextChunk.length;i++) {
+		if(plaintextChunk[i] === REDACTION_CHAR_CODE) {
+			ciphertextChunk[i] = REDACTION_CHAR_CODE
+		}
+	}
+
+	return {
+		startIdx,
+		redactedPlaintext: plaintextChunk,
+		privateInput: { key, iv, offset: offsetChunks },
+		publicInput: { ciphertext: ciphertextChunk },
 	}
 }
 

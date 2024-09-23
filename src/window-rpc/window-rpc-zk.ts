@@ -1,9 +1,9 @@
 import { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-symmetric-crypto'
 import { base64 } from 'ethers/lib/utils'
-import { ZKEngine } from '../types'
-import { logger, makeDefaultZkOperator } from '../utils'
-import { CommunicationBridge, WindowRPCAppClient } from './types'
-import { generateRpcRequestId } from './utils'
+import { ZKEngine } from 'src/types'
+import { logger, makeDefaultZkOperator } from 'src/utils'
+import { CommunicationBridge, WindowRPCAppClient } from 'src/window-rpc/types'
+import { generateRpcRequestId } from 'src/window-rpc/utils'
 
 export const ALL_ENC_ALGORITHMS: EncryptionAlgorithm[] = [
 	'aes-256-ctr',
@@ -61,7 +61,7 @@ export function makeWindowRpcZkOperator(
 		},
 	}
 
-	
+
 }
 
 export function waitForResponse<T extends keyof WindowRPCAppClient>(

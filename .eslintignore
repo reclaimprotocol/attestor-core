@@ -6,3 +6,5 @@ coverage
 jest.config.js
 webpack.config.js
 browser
+src/avs/abis
+src/avs/contracts

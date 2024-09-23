@@ -1,6 +1,6 @@
 import { CipherSuite, crypto, encryptWrappedRecord, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
-import { MessageReveal_ZKProof as ZKProof } from '../proto/api'
-import { CompleteTLSPacket, ZKEngine } from '../types'
+import { MessageReveal_ZKProof as ZKProof } from 'src/proto/api'
+import { CompleteTLSPacket, ZKEngine } from 'src/types'
 import {
 	getBlocksToReveal,
 	logger,
@@ -8,7 +8,7 @@ import {
 	redactSlices,
 	uint8ArrayToStr,
 	verifyZkPacket
-} from '../utils'
+} from 'src/utils'
 
 const ZK_CIPHER_SUITES: CipherSuite[] = [
 	'TLS_CHACHA20_POLY1305_SHA256',
@@ -88,10 +88,10 @@ describe('ZK Tests', () => {
 			}
 
 			expect(realOutput).toHaveLength(output.length)
-			for(let i = 0; i < output.length; i++) {
+			for(const [i, element] of output.entries()) {
 				expect(
 					uint8ArrayToStr(realOutput[i].redactedPlaintext)
-				).toEqual(output[i])
+				).toEqual(element)
 			}
 		}
 	})

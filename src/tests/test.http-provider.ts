@@ -1,6 +1,6 @@
-import { createClaimOnWitness } from '../create-claim'
-import { describeWithServer } from './describe-with-server'
-import { verifyNoDirectRevealLeaks } from './utils'
+import { createClaimOnWitness } from 'src/client'
+import { describeWithServer } from 'src/tests/describe-with-server'
+import { verifyNoDirectRevealLeaks } from 'src/tests/utils'
 
 jest.setTimeout(300_000)
 

@@ -1,0 +1,12 @@
+[submodule "avs/contracts/lib/forge-std"]
+	path = avs/contracts/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+	branch = v1.8.2
+[submodule "avs/contracts/lib/openzeppelin-contracts"]
+	path = avs/contracts/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+	branch = v4.7.3
+[submodule "avs/contracts/lib/eigenlayer-middleware"]
+	path = avs/contracts/lib/eigenlayer-middleware
+	url = https://github.com/layr-Labs/eigenlayer-middleware
+	branch = v0.2.0-rc1-holesky-preprod-payments

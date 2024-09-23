@@ -1,8 +1,8 @@
+import type { InitRequest, RPCMessage, RPCMessages, ServiceSignatureType, TunnelMessage } from 'src/proto/api'
+import type { Logger } from 'src/types/general'
+import type { RPCEvent, RPCEventMap, RPCEventType, RPCRequestData, RPCResponseData, RPCType } from 'src/types/rpc'
+import type { TCPSocketProperties, Tunnel } from 'src/types/tunnel'
 import type { WebSocket as WSWebSocket } from 'ws'
-import type { InitRequest, RPCMessage, RPCMessages, ServiceSignatureType, TunnelMessage } from '../proto/api'
-import type { Logger } from './general'
-import type { RPCEvent, RPCEventMap, RPCEventType, RPCRequestData, RPCResponseData, RPCType } from './rpc'
-import type { TCPSocketProperties, Tunnel } from './tunnel'
 
 /**
  * Any WebSocket implementation -- either the native

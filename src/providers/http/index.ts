@@ -1,14 +1,6 @@
 import { concatenateUint8Arrays, strToUint8Array, TLSConnectionOptions } from '@reclaimprotocol/tls'
 import { base64 } from 'ethers/lib/utils'
-import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '../../config'
-import { ArraySlice, Provider, ProviderParams, ProviderSecretParams } from '../../types'
-import {
-	findIndexInUint8Array,
-	getHttpRequestDataFromTranscript, logger,
-	REDACTION_CHAR_CODE,
-	uint8ArrayToBinaryStr,
-	uint8ArrayToStr,
-} from '../../utils'
+import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from 'src/config'
 import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
@@ -17,7 +9,15 @@ import {
 	makeRegex,
 	matchRedactedStrings,
 	parseHttpResponse,
-} from './utils'
+} from 'src/providers/http/utils'
+import { ArraySlice, Provider, ProviderParams, ProviderSecretParams } from 'src/types'
+import {
+	findIndexInUint8Array,
+	getHttpRequestDataFromTranscript, logger,
+	REDACTION_CHAR_CODE,
+	uint8ArrayToBinaryStr,
+	uint8ArrayToStr,
+} from 'src/utils'
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
 const dateHeaderRegex = '[dD]ate: ((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (?:[0-3][0-9]) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?:[0-9]{4}) (?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2} GMT)'
@@ -371,20 +371,23 @@ const HTTP_PROVIDER: Provider<'http'> = {
 				const match = regexRes !== null
 				if(match === inv) { // if both true or both false then fail
 					logTranscript()
-					throw new Error(`Invalid receipt. Regex "${value}" ${invert ? 'matched' : "didn't match"}`)
+					throw new Error(
+						'Invalid receipt.'
+						+ ` Regex "${value}" ${invert ? 'matched' : "didn't match"}`
+					)
 				}
 
-				if(match) {
-					const groups = regexRes?.groups
-					if(groups) {
-						for(const paramName in groups) {
-							if(paramName in extractedParams) {
-								throw new Error(`Duplicate parameter ${paramName}`)
-							}
+				if(!match) {
+					continue
+				}
 
-							extractedParams[paramName] = groups[paramName]
-						}
+				const groups = regexRes?.groups
+				for(const paramName in groups || []) {
+					if(paramName in extractedParams) {
+						throw new Error(`Duplicate parameter ${paramName}`)
 					}
+
+					extractedParams[paramName] = groups[paramName]
 				}
 
 				break
@@ -408,27 +411,28 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			const totalSize = bufs.reduce((acc, e) => acc + e.length, 0)
 			const merged = new Uint8Array(totalSize)
 
-			bufs.forEach((array, i, arrays) => {
-				const offset = arrays.slice(0, i).reduce((acc, e) => acc + e.length, 0)
-				merged.set(array, offset)
-			})
+			let lenDone = 0
+			for(const array of bufs) {
+				merged.set(array, lenDone)
+				lenDone += array.length
+			}
 
 			return merged
 
 		}
 
 		return { extractedParameters: extractedParams }
-
-		function logTranscript() {
-			/*const clientMsgs = receipt.filter(s => s.sender === 'client').map(m => m.message)
-			const serverMsgs = receipt.filter(s => s.sender === 'server').map(m => m.message)
-
-			const clientTranscript = uint8ArrayToStr(concatenateUint8Arrays(clientMsgs))
-			const serverTranscript = uint8ArrayToStr(concatenateUint8Arrays(serverMsgs))
-
-			logger.error({ request: clientTranscript, response:serverTranscript, params:paramsAny })*/
-		}
 	},
+}
+
+function logTranscript() {
+	/*const clientMsgs = receipt.filter(s => s.sender === 'client').map(m => m.message)
+	const serverMsgs = receipt.filter(s => s.sender === 'server').map(m => m.message)
+
+	const clientTranscript = uint8ArrayToStr(concatenateUint8Arrays(clientMsgs))
+	const serverTranscript = uint8ArrayToStr(concatenateUint8Arrays(serverMsgs))
+
+	logger.error({ request: clientTranscript, response:serverTranscript, params:paramsAny })*/
 }
 
 function getHostPort(params: ProviderParams<'http'>) {

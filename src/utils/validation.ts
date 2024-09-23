@@ -1,7 +1,7 @@
 import Ajv, { ValidateFunction } from 'ajv'
-import { ProviderName, ProviderParams } from '../types'
-import { PROVIDER_SCHEMAS } from '../types/providers.gen'
-import { WitnessError } from './error'
+import { ProviderName, ProviderParams } from 'src/types'
+import { PROVIDER_SCHEMAS } from 'src/types/providers.gen'
+import { WitnessError } from 'src/utils/error'
 
 const PROVIDER_VALIDATOR_MAP: { [N in ProviderName]?: ValidateFunction } = {}
 

@@ -12,9 +12,10 @@ import {
 	ProviderClaimInfo,
 	TranscriptMessageSenderType,
 	ZKProofEngine
-} from '../../proto/api'
-import { providers } from '../../providers'
-import { SIGNATURES } from '../../signatures'
+} from 'src/proto/api'
+import { providers } from 'src/providers'
+import { niceParseJsonObject } from 'src/server/utils/generics'
+import { verifyServerCertificates } from 'src/server/utils/verify-server-certificates'
 import {
 	IDecryptedTranscript,
 	IDecryptedTranscriptMessage,
@@ -22,16 +23,15 @@ import {
 	ProviderName,
 	TCPSocketProperties,
 	Transcript, ZKEngine
-} from '../../types'
+} from 'src/types'
 import {
 	assertValidateProviderParams,
 	canonicalStringify,
 	extractApplicationDataFromTranscript, hashProviderParams,
 	verifyZkPacket,
 	WitnessError
-} from '../../utils'
-import { niceParseJsonObject } from './generics'
-import { verifyServerCertificates } from './verify-server-certificates'
+} from 'src/utils'
+import { SIGNATURES } from 'src/utils/signatures'
 
 /**
  * Asserts that the claim request is valid.

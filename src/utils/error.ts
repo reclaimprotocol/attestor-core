@@ -1,4 +1,4 @@
-import { WitnessErrorCode, WitnessErrorData } from '../proto/api'
+import { WitnessErrorCode, WitnessErrorData } from 'src/proto/api'
 
 /**
  * Represents an error that can be thrown by the Witness SDK
@@ -29,7 +29,7 @@ export class WitnessError extends Error {
 		})
 	}
 
-	static fromProto(data: WitnessErrorData) {
+	static fromProto(data = WitnessErrorData.fromJSON({})) {
 		return new WitnessError(
 			WitnessErrorCode[data.code] as keyof typeof WitnessErrorCode,
 			data.message,

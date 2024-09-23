@@ -1,7 +1,7 @@
-import { RPCHandler } from '../../types'
-import { WitnessError } from '../../utils'
-import { makeTcpTunnel } from '../tunnels/make-tcp-tunnel'
-import { getApm } from '../utils/apm'
+import { makeTcpTunnel } from 'src/server/tunnels/make-tcp-tunnel'
+import { getApm } from 'src/server/utils/apm'
+import { RPCHandler } from 'src/types'
+import { WitnessError } from 'src/utils'
 
 export const createTunnel: RPCHandler<'createTunnel'> = async(
 	{ id, ...opts },

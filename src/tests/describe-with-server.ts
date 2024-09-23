@@ -1,12 +1,12 @@
+import { WitnessClient } from 'src/client/utils/client-socket'
+import { WS_PATHNAME } from 'src/config'
+import { createServer } from 'src/server'
+import { createMockServer } from 'src/tests/mock-provider-server'
+import { SPY_PREPARER } from 'src/tests/mocks'
+import { getRandomPort, randomPrivateKey } from 'src/tests/utils'
+import { IWitnessServerSocket, ZKEngine } from 'src/types'
+import { logger } from 'src/utils'
 import { WebSocket, type WebSocketServer } from 'ws'
-import { WitnessClient } from '../client'
-import { WS_PATHNAME } from '../config'
-import { createServer } from '../server'
-import { IWitnessServerSocket, ZKEngine } from '../types'
-import { logger } from '../utils'
-import { createMockServer } from './mock-provider-server'
-import { SPY_PREPARER } from './mocks'
-import { getRandomPort, randomPrivateKey } from './utils'
 
 type ServerOpts = {
 	/**
@@ -29,7 +29,7 @@ type ServerOpts = {
 export const describeWithServer = (
 	name: string,
 	fn: (opts: ServerOpts) => void
-) => {
+) => describe(name, () => {
 	let wsServer: WebSocketServer
 
 	let wsServerUrl: string
@@ -88,4 +88,4 @@ export const describeWithServer = (
 		const serverSockets = [...wsServer.clients.values()] as WebSocket[]
 		return serverSockets.at(-1)?.serverSocket
 	}
-}
+})

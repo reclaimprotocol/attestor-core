@@ -7,10 +7,12 @@ module.exports = {
 		'/node_modules/'
 	],
 	testMatch: [
-		'**/tests/test.*.+(ts|tsx)',
+		'**/src/tests/test.*.+(ts|tsx)',
 	],
 	transform: {
-		'^.+\\.(js|ts|tsx)?$': '@swc/jest'
+		'^.+\\.(js|ts|tsx)?$': [
+			'@swc/jest',
+		]
 	},
 	transformIgnorePatterns: [
 		'"node_modules/(?!p-queue/.*)"'
@@ -18,4 +20,7 @@ module.exports = {
 	setupFiles: [
 		'./src/tests/mocks.ts',
 	],
+	moduleNameMapper: {
+		'^src/(.*)': '<rootDir>/src/$1',
+	}
 }

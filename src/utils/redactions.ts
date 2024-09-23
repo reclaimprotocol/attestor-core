@@ -1,5 +1,5 @@
 import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
-import type { ArraySlice } from '../types'
+import type { ArraySlice } from 'src/types'
 
 export const REDACTION_CHAR = '*'
 export const REDACTION_CHAR_CODE = REDACTION_CHAR.charCodeAt(0)
@@ -9,11 +9,16 @@ export const REDACTION_CHAR_CODE = REDACTION_CHAR.charCodeAt(0)
  * @param redacted the redacted content, redacted content is replaced by '*'
  * @param original the original content
  */
-export function isRedactionCongruent<T extends string | Uint8Array>(redacted: T, original: T): boolean {
+export function isRedactionCongruent<T extends string | Uint8Array>(
+	redacted: T,
+	original: T
+): boolean {
+	// eslint-disable-next-line unicorn/no-for-loop
 	for(let i = 0;i < redacted.length;i++) {
-		const areSame = redacted[i] === original[i]
-			|| (typeof redacted[i] === 'string' && redacted[i] === REDACTION_CHAR)
-			|| (typeof redacted[i] === 'number' && redacted[i] === REDACTION_CHAR_CODE)
+		const element = redacted[i]
+		const areSame = element === original[i]
+			|| (typeof element === 'string' && element === REDACTION_CHAR)
+			|| (typeof element === 'number' && element === REDACTION_CHAR_CODE)
 		if(!areSame) {
 			return false
 		}
@@ -25,11 +30,13 @@ export function isRedactionCongruent<T extends string | Uint8Array>(redacted: T,
 /**
  * Is the string fully redacted?
  */
-export function isFullyRedacted<T extends string | Uint8Array>(redacted: T): boolean {
-	for(let i = 0;i < redacted.length;i++) {
+export function isFullyRedacted<T extends string | Uint8Array>(
+	redacted: T
+): boolean {
+	for(const element of redacted) {
 		if(
-			redacted[i] !== REDACTION_CHAR
-			&& redacted[i] !== REDACTION_CHAR_CODE
+			element !== REDACTION_CHAR
+			&& element !== REDACTION_CHAR_CODE
 		) {
 			return false
 		}

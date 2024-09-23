@@ -1,4 +1,4 @@
-import type { preparePacketsForReveal } from '../utils/prepare-packets'
+import type { preparePacketsForReveal } from 'src/utils/prepare-packets'
 
 /**
  * Spies on the preparePacketsForReveal function

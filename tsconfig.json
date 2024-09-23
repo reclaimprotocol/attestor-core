@@ -16,14 +16,19 @@
     "lib": [
       "es2021",
       "DOM"
-    ]
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "src/*": [
+        "./src/*"
+      ]
+    }
   },
   "include": [
     "src/*.ts",
     "src/**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "src/tests"
+    "node_modules"
   ]
 }

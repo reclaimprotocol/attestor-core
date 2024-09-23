@@ -1,5 +1,5 @@
 import { CipherSuite, SUPPORTED_NAMED_CURVES, TLSConnectionOptions } from '@reclaimprotocol/tls'
-import { detectEnvironment } from './env'
+import { detectEnvironment } from 'src/utils/env'
 
 // we only support the following cipher suites
 // for ZK proof generation

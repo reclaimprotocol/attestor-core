@@ -1,9 +1,9 @@
 import { readFile } from 'fs/promises'
+import { createServer, decryptTranscript } from 'src/server'
+import { assertValidateProviderParams } from 'src/utils'
+import { getEnvVariable } from 'src/utils/env'
 import { WebSocketServer } from 'ws'
-import '../server/utils/config-env'
-import { createServer, decryptTranscript } from '../server'
-import { assertValidateProviderParams } from '../utils'
-import { getEnvVariable } from '../utils/env'
+import 'src/server/utils/config-env'
 import {
 	API_SERVER_PORT,
 	createClaimOnWitness,
