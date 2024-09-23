@@ -238,6 +238,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		return redactions
 	},
 	assertValidProviderReceipt(receipt, paramsAny) {
+		logTranscript()
 		let extractedParams: { [_: string]: string } = {}
 		const secretParams = ('secretParams' in paramsAny) ? paramsAny.secretParams as ProviderSecretParams<'http'> : undefined
 		const newParams = substituteParamValues(paramsAny, secretParams, false)
@@ -246,7 +247,6 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		const req = getHttpRequestDataFromTranscript(receipt)
 		if(req.method !== params.method.toLowerCase()) {
-			logTranscript()
 			throw new Error(`Invalid method: ${req.method}`)
 		}
 
@@ -255,7 +255,6 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		if(protocol !== 'https:') {
 			logger.error('params URL: %s', params.url)
-			logTranscript()
 			throw new Error(`Expected protocol: https, found: ${protocol}`)
 		}
 
@@ -263,19 +262,16 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const expectedPath = pathname + (searchParams?.length ? '?' + searchParams : '')
 		if(req.url !== expectedPath) {
 			logger.error('params URL: %s', params.url)
-			logTranscript()
 			throw new Error(`Expected path: ${expectedPath}, found: ${req.url}`)
 		}
 
 		const expectedHostStr = getHostHeaderString(url)
 		if(req.headers.host !== expectedHostStr) {
-			logTranscript()
 			throw new Error(`Expected host: ${expectedHostStr}, found: ${req.headers.host}`)
 		}
 
 		const connectionHeader = req.headers['connection']
 		if(connectionHeader !== 'close') {
-			logTranscript()
 			throw new Error(`Connection header must be "close", got "${connectionHeader}"`)
 		}
 
@@ -286,25 +282,20 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const response = concatArrays(...serverBlocks)
 
 		let res: string
-		let pureRes: Uint8Array
 		let bodyStart = OK_HTTP_HEADER.length
 		if(secretParams) { //means we're on client doing preliminary checks
 			const parsedResp = parseHttpResponse(response) // to deal with chunked responses
 
 			if(parsedResp.statusCode !== 200) {
-				logTranscript()
 				throw new Error(
 					`Provider returned error ${parsedResp.statusCode} ${parsedResp.statusMessage}"`
 				)
 			}
 
-			pureRes = parsedResp.body
 			res = uint8ArrayToStr(parsedResp.body)
 		} else {
-			pureRes = response
 			res = uint8ArrayToStr(response)
 			if(!res.startsWith(OK_HTTP_HEADER)) {
-				logTranscript()
 				const statusRegex = makeRegex('^HTTP\\/1.1 (\\d{3})')
 				const matchRes = statusRegex.exec(res)
 				if(matchRes && matchRes.length > 1) {
@@ -322,7 +313,6 @@ const HTTP_PROVIDER: Provider<'http'> = {
 					lineEnd = OK_HTTP_HEADER.length
 				}
 
-				logger.error({ res: base64.encode(pureRes), params:paramsAny })
 				throw new Error(
 					`Response did not start with "${OK_HTTP_HEADER}" got "${res.slice(0, lineEnd)}"`
 				)
@@ -352,7 +342,6 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			: strToUint8Array(params.body || '')
 
 		if(paramBody.length > 0 && !matchRedactedStrings(paramBody, req.body)) {
-			logTranscript()
 			throw new Error('request body mismatch')
 		}
 
@@ -370,7 +359,6 @@ const HTTP_PROVIDER: Provider<'http'> = {
 				const regexRes = makeRegex(value).exec(res)
 				const match = regexRes !== null
 				if(match === inv) { // if both true or both false then fail
-					logTranscript()
 					throw new Error(
 						'Invalid receipt.'
 						+ ` Regex "${value}" ${invert ? 'matched' : "didn't match"}`
@@ -394,8 +382,6 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			case 'contains':
 				const includes = res.includes(value)
 				if(includes === inv) {
-					logTranscript()
-					logger.error({ res: base64.encode(pureRes) })
 					throw new Error(
 						`Invalid receipt. Response ${invert ? 'contains' : 'does not contain'} "${value}"`
 					)
@@ -422,18 +408,21 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		return { extractedParameters: extractedParams }
+
+		function logTranscript() {
+			if(logger.isLevelEnabled('debug')) {
+				const clientMsgs = receipt.filter(s => s.sender === 'client').map(m => m.message)
+				const serverMsgs = receipt.filter(s => s.sender === 'server').map(m => m.message)
+
+				const clientTranscript = base64.encode(concatenateUint8Arrays(clientMsgs))
+				const serverTranscript = base64.encode(concatenateUint8Arrays(serverMsgs))
+
+				logger.debug({ request: clientTranscript, response:serverTranscript, params:paramsAny })
+			}
+		}
 	},
 }
 
-function logTranscript() {
-	/*const clientMsgs = receipt.filter(s => s.sender === 'client').map(m => m.message)
-	const serverMsgs = receipt.filter(s => s.sender === 'server').map(m => m.message)
-
-	const clientTranscript = uint8ArrayToStr(concatenateUint8Arrays(clientMsgs))
-	const serverTranscript = uint8ArrayToStr(concatenateUint8Arrays(serverMsgs))
-
-	logger.error({ request: clientTranscript, response:serverTranscript, params:paramsAny })*/
-}
 
 function getHostPort(params: ProviderParams<'http'>) {
 	const { host } = new URL(getURL(params))
