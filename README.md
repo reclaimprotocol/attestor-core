@@ -1,6 +1,9 @@
-# Witness SDK
+<div>
+    <div>
+        <img src="https://raw.githubusercontent.com/reclaimprotocol/.github/main/assets/banners/Attestor-Core.png"  />
+    </div>
+</div>
 
-This project has been moved to [Attestor Core](https://gitlab.reclaimprotocol.org/protocol/attestor-core). Please use the same in your project.
 
 ## Getting Started
 
