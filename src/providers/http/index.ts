@@ -410,15 +410,13 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		return { extractedParameters: extractedParams }
 
 		function logTranscript() {
-			if(logger.isLevelEnabled('debug')) {
-				const clientMsgs = receipt.filter(s => s.sender === 'client').map(m => m.message)
-				const serverMsgs = receipt.filter(s => s.sender === 'server').map(m => m.message)
+			const clientMsgs = receipt.filter(s => s.sender === 'client').map(m => m.message)
+			const serverMsgs = receipt.filter(s => s.sender === 'server').map(m => m.message)
 
-				const clientTranscript = base64.encode(concatenateUint8Arrays(clientMsgs))
-				const serverTranscript = base64.encode(concatenateUint8Arrays(serverMsgs))
+			const clientTranscript = base64.encode(concatenateUint8Arrays(clientMsgs))
+			const serverTranscript = base64.encode(concatenateUint8Arrays(serverMsgs))
 
-				logger.debug({ request: clientTranscript, response:serverTranscript, params:paramsAny })
-			}
+			logger.debug({ request: clientTranscript, response:serverTranscript, params:paramsAny })
 		}
 	},
 }
