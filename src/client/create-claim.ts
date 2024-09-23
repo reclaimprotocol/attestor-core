@@ -1,11 +1,24 @@
-import { strToUint8Array, TLSPacketContext } from '@reclaimprotocol/tls'
+import { concatenateUint8Arrays, strToUint8Array, TLSPacketContext } from '@reclaimprotocol/tls'
+import { base64 } from 'ethers/lib/utils'
 import { makeRpcTlsTunnel } from 'src/client/tunnels/make-rpc-tls-tunnel'
 import { getAttestorClientFromPool } from 'src/client/utils/attestor-pool'
 import { DEFAULT_HTTPS_PORT } from 'src/config'
 import { ClaimTunnelRequest, ZKProofEngine } from 'src/proto/api'
 import { providers } from 'src/providers'
 import { CreateClaimOnAttestorOpts, IAttestorClient, MessageRevealInfo, ProviderName, Transcript } from 'src/types'
-import { AttestorError, canonicalStringify, generateTunnelId, getBlocksToReveal, getProviderValue, isApplicationData, logger as LOGGER, makeHttpResponseParser, preparePacketsForReveal, redactSlices, unixTimestampSeconds } from 'src/utils'
+import {
+	AttestorError,
+	canonicalStringify,
+	generateTunnelId,
+	getBlocksToReveal,
+	getProviderValue,
+	isApplicationData,
+	logger as LOGGER,
+	makeHttpResponseParser,
+	preparePacketsForReveal,
+	redactSlices,
+	unixTimestampSeconds
+} from 'src/utils'
 import { executeWithRetries } from 'src/utils/retries'
 import { SIGNATURES } from 'src/utils/signatures'
 import { getDefaultTlsOptions } from 'src/utils/tls'
@@ -418,6 +431,12 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 					type: 'zk',
 					redactedPlaintext
 				})
+			}
+
+			if(Array.isArray(serverPacketsToReveal)) {
+				const msgs = serverPacketsToReveal.map(m => m.redactedPlaintext)
+				const serverTranscript = base64.encode(concatenateUint8Arrays(msgs))
+				logger.debug({ redactedResponse:serverTranscript })
 			}
 		}
 
