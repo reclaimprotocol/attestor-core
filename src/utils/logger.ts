@@ -6,10 +6,13 @@ const PII_PROPERTIES = ['ownerPrivateKey', 'secretParams']
 const redactedText = '[REDACTED]'
 const envLevel = getEnvVariable('LOG_LEVEL') as LogLevel
 
-export const logger = makeLogger(false, envLevel)
+export let logger = P()
+
+makeLogger(false, envLevel)
 
 /**
  * Creates a logger instance with optional redaction of PII.
+ * Replaces default logger
  * See PII_PROPERTIES for the list of properties that will be redacted.
  *
  * @param redactPii - whether to redact PII from logs
@@ -40,10 +43,11 @@ export function makeLogger(
 		}
 	}
 
-	const logger = P(opts)
-	logger.level = level || 'info'
+	const pLogger = P(opts)
+	pLogger.level = level || 'info'
 
-	return logger
+	logger = pLogger
+	return pLogger
 
 	function writeLog(level: LogLevel, log: any) {
 		log = redact(log)
