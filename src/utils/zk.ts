@@ -9,13 +9,13 @@ import {
 	ZKOperator,
 } from '@reclaimprotocol/circom-symmetric-crypto'
 import { makeLocalGnarkZkOperator } from '@reclaimprotocol/circom-symmetric-crypto/lib/gnark'
-import { CipherSuite, crypto } from '@reclaimprotocol/tls'
+import { CipherSuite, concatenateUint8Arrays, crypto, generateIV } from '@reclaimprotocol/tls'
 import { DEFAULT_REMOTE_ZK_PARAMS, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from 'src/config'
 import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof } from 'src/proto/api'
 import { CompleteTLSPacket, Logger, PrepareZKProofsBaseOpts, ZKEngine, ZKOperators, ZKRevealInfo } from 'src/types'
 import { detectEnvironment, getEnvVariable } from 'src/utils/env'
 import { AttestorError } from 'src/utils/error'
-import { getPureCiphertext, getZkAlgorithmForCipherSuite } from 'src/utils/generics'
+import { getPureCiphertext, getRecordIV, getZkAlgorithmForCipherSuite } from 'src/utils/generics'
 import { logger as LOGGER } from 'src/utils/logger'
 import { isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from 'src/utils/redactions'
 import { executeWithRetries } from 'src/utils/retries'
@@ -45,6 +45,8 @@ type ZKVerifyOpts = {
 	/** get ZK operator for specified algorithm */
 	zkOperators?: ZKOperators
 	zkEngine?: ZKEngine
+	iv: Uint8Array
+	recordNumber: number
 }
 
 type ZKProofToGenerate = {
@@ -58,6 +60,7 @@ type ZKPacketToProve = {
 	onGeneratedProofs(proofs: ZKProof[]): void
 	algorithm: EncryptionAlgorithm
 	proofsToGenerate: ZKProofToGenerate[]
+	iv: Uint8Array
 }
 
 const ZK_CONCURRENCY = +(
@@ -118,6 +121,7 @@ export async function makeZkProofGenerator(
 				onGeneratedProofs,
 				algorithm: alg,
 				proofsToGenerate: [],
+				iv: packet.fixedIv
 			}
 
 			for(let i = 0;i < chunks;i++) {
@@ -128,7 +132,7 @@ export async function makeZkProofGenerator(
 						iv,
 						ciphertext,
 						redactedPlaintext,
-						offsetChunks: i
+						offsetChunks: i,
 					},
 				)
 				if(!proof) {
@@ -166,7 +170,7 @@ export async function makeZkProofGenerator(
 						zkQueue.add(async() => {
 							const proof = await generateProofForChunk(
 								algorithm,
-								proofToGen,
+								proofToGen
 							)
 
 							onChunkDone?.()
@@ -226,7 +230,7 @@ export async function makeZkProofGenerator(
 			proofJson: proof.proofJson,
 			decryptedRedactedCiphertext: proof.plaintext,
 			redactedPlaintext,
-			startIdx,
+			startIdx
 		}
 	}
 
@@ -246,7 +250,9 @@ export async function verifyZkPacket(
 		zkReveal,
 		zkOperators,
 		logger = LOGGER,
-		zkEngine = 'snarkJS'
+		zkEngine = 'snarkJS',
+		iv,
+		recordNumber
 	}: ZKVerifyOpts,
 ) {
 	if(!zkReveal) {
@@ -258,6 +264,7 @@ export async function verifyZkPacket(
 	const operator = zkOperators?.[algorithm]
 		|| await makeDefaultZkOperator(algorithm, zkEngine, logger)
 
+	const recordIV = getRecordIV(ciphertext, cipherSuite)
 	ciphertext = getPureCiphertext(ciphertext, cipherSuite)
 	/**
 	 * to verify if the user has given us the correct redacted plaintext,
@@ -270,12 +277,16 @@ export async function verifyZkPacket(
 		ciphertext.length,
 	).fill(REDACTION_CHAR_CODE)
 
+	const alg = getZkAlgorithmForCipherSuite(cipherSuite)
+	const chunkSizeBytes = getChunkSizeBytes(alg)
+	const { blocksPerChunk } = ZK_CONFIG[algorithm]
+
 	await Promise.all(
 		proofs.map(async({
 			proofJson,
 			decryptedRedactedCiphertext,
 			redactedPlaintext,
-			startIdx,
+			startIdx
 		}, i) => {
 			// get the ciphertext chunk we received from the server
 			// the ZK library, will verify that the decrypted redacted
@@ -301,6 +312,13 @@ export async function verifyZkPacket(
 				throw new Error(`redacted ciphertext (${i}) not congruent`)
 			}
 
+			const chunkIndex = startIdx / chunkSizeBytes * blocksPerChunk
+			let nonce = concatenateUint8Arrays([iv, recordIV])
+
+			if(!recordIV.length) {
+				nonce = generateIV(nonce, recordNumber)
+			}
+
 			await verifyProof(
 				{
 					proof: {
@@ -308,7 +326,7 @@ export async function verifyZkPacket(
 						proofJson,
 						plaintext: decryptedRedactedCiphertext,
 					},
-					publicInput: { ciphertext: ciphertextChunk },
+					publicInput: { ciphertext: ciphertextChunk, iv:nonce, offset:chunkIndex },
 					operator,
 					logger,
 				}
@@ -473,8 +491,8 @@ function getProofGenerationParamsForChunk(
 	return {
 		startIdx,
 		redactedPlaintext: plaintextChunk,
-		privateInput: { key, iv, offset: offsetChunks },
-		publicInput: { ciphertext: ciphertextChunk },
+		privateInput: { key },
+		publicInput: { ciphertext: ciphertextChunk, iv, offset: offsetChunks }
 	}
 }
 

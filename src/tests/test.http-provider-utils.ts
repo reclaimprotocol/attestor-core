@@ -477,7 +477,7 @@ Content-Type: text/html; charset=utf-8\r
 		const temp = cloneObject(transcript)
 		// changes the status ("OK") text to something else
 		// it'll be in the first server response packet
-		const firstServerMsg = temp.find((x) => x.sender === 'server')!
+		const firstServerMsg = temp.find((x, index) => x.sender === 'server' && index !== 0)!
 		firstServerMsg.message[0] = 32
 		expect(() => {
 			assertValidProviderReceipt(temp, {

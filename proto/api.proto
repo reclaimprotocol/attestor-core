@@ -240,6 +240,10 @@ message ClaimTunnelRequest {
   /** type of ZK engine used. SnarkJS or Gnark */
   ZKProofEngine zkEngine = 5;
 
+	/** server and client fixed IVs needed for ZK validation*/
+	bytes fixedServerIV = 6;
+	bytes fixedClientIV = 7;
+
 	message Signatures {
 		/**
 		* signature of ClaimTunnelRequest

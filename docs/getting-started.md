@@ -155,3 +155,7 @@ Pass `local` to use the local attestor. This'll be run automatically when you ru
 npm run create:claim --json some-claim-params.json --attestor local
 ```
 
+You can use `gnark` engine for faster proofs if your system is supported (Linux X64 or Linux AMR64). SnarkJS is used by default
+``` sh
+npm run create:claim --json some-claim-params.json --zk gnark
+```

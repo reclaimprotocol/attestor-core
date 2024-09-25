@@ -47,6 +47,7 @@ export async function main<T extends ProviderName>(
 		attestorHostPort = `ws://localhost:${API_SERVER_PORT}${WS_PATHNAME}`
 	}
 
+	const zkEngine = getCliArgument('zk') === 'gnark' ? 'gnark' : 'snarkJS'
 	const receipt = await createClaimOnAttestor({
 		name: paramsJson.name,
 		secretParams: paramsJson.secretParams,
@@ -54,7 +55,7 @@ export async function main<T extends ProviderName>(
 		ownerPrivateKey: PRIVATE_KEY_HEX,
 		client: { url: attestorHostPort },
 		logger,
-		zkEngine:'snarkJS',
+		zkEngine
 	})
 
 	if(receipt.error) {
@@ -72,7 +73,9 @@ export async function main<T extends ProviderName>(
 	const decTranscript = await decryptTranscript(
 		receipt.request?.transcript!,
 		logger,
-		'snarkJS',
+		zkEngine,
+		receipt.request?.fixedServerIV!,
+		receipt.request?.fixedClientIV!
 	)
 	const transcriptStr = getTranscriptString(decTranscript)
 	console.log('receipt:\n', transcriptStr)
@@ -80,6 +83,7 @@ export async function main<T extends ProviderName>(
 	const client = getAttestorClientFromPool(attestorHostPort)
 	await client.terminateConnection()
 	server?.close()
+
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -234,6 +234,19 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 
 	const signatureAlg = SIGNATURES[client!.metadata.signatureType]
 
+	let serverIV: Uint8Array
+	let clientIV: Uint8Array
+	const serverBlock = getLastBlock('server')
+	if(serverBlock && serverBlock.message.type === 'ciphertext') {
+		serverIV = serverBlock.message.fixedIv
+	}
+
+	const clientBlock = getLastBlock('client')
+	if(clientBlock && clientBlock.message.type === 'ciphertext') {
+		clientIV = clientBlock.message.fixedIv
+	}
+
+
 	// now that we have the full transcript, we need
 	// to generate the ZK proofs & send them to the attestor
 	// to verify & sign our claim
@@ -247,7 +260,9 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			owner: getAddress(),
 		},
 		transcript: await generateTranscript(),
-		zkEngine: zkOpts.zkEngine ? (zkOpts.zkEngine === 'snarkJS' ? ZKProofEngine.ZK_ENGINE_SNARKJS : ZKProofEngine.ZK_ENGINE_GNARK) : ZKProofEngine.ZK_ENGINE_SNARKJS
+		zkEngine: zkOpts.zkEngine === 'gnark' ? ZKProofEngine.ZK_ENGINE_GNARK : ZKProofEngine.ZK_ENGINE_SNARKJS,
+		fixedServerIV: serverIV!,
+		fixedClientIV: clientIV!,
 	})
 
 	onStep?.({ name: 'waiting-for-verification' })
@@ -440,6 +455,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			}
 		}
 
+
 		// reveal all handshake blocks
 		// so the attestor can verify there was no
 		// hanky-panky
@@ -454,14 +470,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 				break
 			}
 
-			if(redactionMode === 'zk') {
-				setRevealOfMessage(p.message, {
-					type: 'zk',
-					redactedPlaintext: p.message.plaintext
-				})
-			} else {
-				setRevealOfMessage(p.message, { type: 'complete' })
-			}
+			setRevealOfMessage(p.message, { type: 'complete' })
 		}
 	}
 
