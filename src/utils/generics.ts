@@ -1,7 +1,25 @@
 import { REDACTION_CHAR_CODE } from '@reclaimprotocol/circom-symmetric-crypto'
-import { areUint8ArraysEqual, CipherSuite, CONTENT_TYPE_MAP, crypto, PACKET_TYPE, strToUint8Array, SUPPORTED_CIPHER_SUITE_MAP, uint8ArrayToDataView } from '@reclaimprotocol/tls'
+import {
+	areUint8ArraysEqual,
+	CipherSuite,
+	CONTENT_TYPE_MAP,
+	crypto, decryptWrappedRecord,
+	PACKET_TYPE,
+	strToUint8Array,
+	SUPPORTED_CIPHER_SUITE_MAP, TLSProtocolVersion,
+	uint8ArrayToDataView
+} from '@reclaimprotocol/tls'
 import { RPCMessage, RPCMessages } from 'src/proto/api'
-import { CompleteTLSPacket, IDecryptedTranscript, ProviderField, RPCEvent, RPCEventMap, RPCEventType, RPCType, Transcript } from 'src/types'
+import {
+	CompleteTLSPacket,
+	IDecryptedTranscript, IDecryptedTranscriptMessage,
+	ProviderField,
+	RPCEvent,
+	RPCEventMap,
+	RPCEventType,
+	RPCType,
+	Transcript
+} from 'src/types'
 
 const DEFAULT_REDACTION_DATA = new Uint8Array(4)
 	.fill(REDACTION_CHAR_CODE)
@@ -34,7 +52,7 @@ export function findIndexInUint8Array(
 	haystack: Uint8Array,
 	needle: Uint8Array,
 ) {
-	for(let i = 0;i < haystack.length;i++) {
+	for(let i = 0; i < haystack.length; i++) {
 		if(areUint8ArraysEqual(haystack.slice(i, i + needle.length), needle)) {
 			return i
 		}
@@ -111,6 +129,27 @@ export function getPureCiphertext(
 	return content
 }
 
+
+/**
+ * Get the 8 byte IV part that's stored in the record for some cipher suites
+ * @param content content w/o header
+ * @param cipherSuite
+ */
+export function getRecordIV(
+	content: Uint8Array,
+	cipherSuite: CipherSuite
+) {
+	// assert that the cipher suite is supported
+	getZkAlgorithmForCipherSuite(cipherSuite)
+
+	const {
+		ivLength: fixedIvLength,
+	} = SUPPORTED_CIPHER_SUITE_MAP[cipherSuite]
+	// 12 => total IV length
+	const recordIvLength = 12 - fixedIvLength
+	return content.slice(0, recordIvLength)
+}
+
 export function getProviderValue<P, T>(params: P, fn: ProviderField<P, T>) {
 	return typeof fn === 'function'
 		// @ts-ignore
@@ -150,7 +189,7 @@ export function makeRpcEvent<T extends RPCEventType>(
 /**
  * Get the RPC type from the key.
  * For eg. "claimTunnelRequest" ->
- * 	{ type: 'claimTunnel', direction: 'request' }
+ *    { type: 'claimTunnel', direction: 'request' }
  */
 export function getRpcTypeFromKey(key: string) {
 	if(key.endsWith('Request')) {
@@ -293,12 +332,21 @@ export function extractApplicationDataFromTranscript(
 	return msgs
 }
 
+export type HandshakeTranscript<T> = {
+	sender: 'client' | 'server'
+	index: number
+	message: T
+}[]
+
 export function extractHandshakeFromTranscript(
-	{ transcript, tlsVersion }: IDecryptedTranscript,
+	{ transcript, tlsVersion }: { transcript: IDecryptedTranscriptMessage[], tlsVersion: TLSProtocolVersion }
 ) {
-	const msgs: Transcript<Uint8Array> = []
-	let lastMsgIndex
+	const msgs: HandshakeTranscript<Uint8Array> = []
 	for(const [i, m] of transcript.entries()) {
+		if(m.redacted) {
+			break // stop at first encrypted message
+		}
+
 		let message: Uint8Array
 		if(m.recordHeader[0] === PACKET_TYPE.HELLO) {
 			message = m.message
@@ -321,14 +369,28 @@ export function extractHandshakeFromTranscript(
 			throw new Error('unsupported handshake message')
 		}
 
-		msgs.push({ message, sender: m.sender })
-		lastMsgIndex = i
+		msgs.push({ message, sender: m.sender, index: i })
+
 	}
 
-	return {
-		messages: msgs,
-		lastMsgIndex: lastMsgIndex,
-	}
+	return msgs
+}
+
+export async function decryptDirect(directReveal, cipherSuite: CipherSuite, recordHeader: Uint8Array, serverTlsVersion: TLSProtocolVersion, content: Uint8Array) {
+	const { key, iv, recordNumber } = directReveal
+	const { cipher } = SUPPORTED_CIPHER_SUITE_MAP[cipherSuite]
+	const importedKey = await crypto.importKey(cipher, key)
+	return await decryptWrappedRecord(
+		content,
+		{
+			iv,
+			key: importedKey,
+			recordHeader,
+			recordNumber,
+			version: serverTlsVersion,
+			cipherSuite,
+		}
+	)
 }
 
 export function packRpcMessages(...msgs: Partial<RPCMessage>[]) {

@@ -19,10 +19,12 @@ const TLS_VERSIONS: TLSProtocolVersion[] = [
 
 jest.setTimeout(90_000)
 
-jest.mock('../server/utils/verify-server-certificates', () => {
+jest.mock('@reclaimprotocol/tls/lib/utils/parse-certificate', () => {
+	const actual = jest.requireActual('@reclaimprotocol/tls/lib/utils/parse-certificate')
 	return {
 		__esModule: true,
-		verifyServerCertificates: jest.fn().mockImplementation(receipt => receipt)
+		...actual,
+		verifyCertificateChain: jest.fn().mockImplementation()
 	}
 })
 
@@ -78,8 +80,9 @@ describeWithServer('Claim Creation', opts => {
 		// decrypt the transcript and check we didn't accidentally
 		// leak our secrets in the application data
 		const transcript = result.request!.transcript
+
 		const applMsgs = extractApplicationDataFromTranscript(
-			await decryptTranscript(transcript, logger, opts.zkEngine)
+			await decryptTranscript(transcript, logger, opts.zkEngine, result.request?.fixedServerIV!, result.request?.fixedClientIV!)
 		)
 
 		const requestData = applMsgs

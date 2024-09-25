@@ -1,10 +1,6 @@
 import {
 	areUint8ArraysEqual,
-	concatenateUint8Arrays,
-	crypto,
-	decryptWrappedRecord,
-	PACKET_TYPE, parseClientHello,
-	parseServerHello, SUPPORTED_CIPHER_SUITE_MAP
+	concatenateUint8Arrays
 } from '@reclaimprotocol/tls'
 import {
 	ClaimTunnelRequest,
@@ -15,21 +11,22 @@ import {
 } from 'src/proto/api'
 import { providers } from 'src/providers'
 import { niceParseJsonObject } from 'src/server/utils/generics'
-import { verifyServerCertificates } from 'src/server/utils/verify-server-certificates'
+import { processHandshake } from 'src/server/utils/process-handshake'
 import {
-	IDecryptedTranscript,
-	IDecryptedTranscriptMessage,
+	IDecryptedTranscript, IDecryptedTranscriptMessage,
 	Logger,
 	ProviderName,
 	TCPSocketProperties,
-	Transcript, ZKEngine
+	Transcript,
+	ZKEngine
 } from 'src/types'
 import {
 	assertValidateProviderParams,
 	AttestorError,
-	canonicalStringify,
-	extractApplicationDataFromTranscript, hashProviderParams,
-	verifyZkPacket } from 'src/utils'
+	canonicalStringify, decryptDirect,
+	extractApplicationDataFromTranscript,
+	hashProviderParams, verifyZkPacket
+} from 'src/utils'
 import { SIGNATURES } from 'src/utils/signatures'
 
 /**
@@ -53,7 +50,9 @@ export async function assertValidClaimRequest(
 	const {
 		data,
 		signatures: { requestSignature } = {},
-		zkEngine
+		zkEngine,
+		fixedServerIV,
+		fixedClientIV
 	} = request
 	if(!data) {
 		throw new AttestorError(
@@ -86,10 +85,12 @@ export async function assertValidClaimRequest(
 		)
 	}
 
-	let receipt = await decryptTranscript(
+	const receipt = await decryptTranscript(
 		request.transcript,
 		logger,
-		zkEngine === ZKProofEngine.ZK_ENGINE_GNARK ? 'gnark' : 'snarkJS'
+		zkEngine === ZKProofEngine.ZK_ENGINE_GNARK ? 'gnark' : 'snarkJS',
+		fixedServerIV,
+		fixedClientIV
 	)
 	const reqHost = request.request?.host
 	if(receipt.hostname !== reqHost) {
@@ -98,7 +99,6 @@ export async function assertValidClaimRequest(
 		)
 	}
 
-	receipt = await verifyServerCertificates(receipt, logger)
 
 	// get all application data messages
 	const applData = extractApplicationDataFromTranscript(receipt)
@@ -203,71 +203,55 @@ export function assertTranscriptsMatch(
 export async function decryptTranscript(
 	transcript: ClaimTunnelRequest['transcript'],
 	logger: Logger,
-	zkEngine: ZKEngine
+	zkEngine: ZKEngine,
+	serverIV: Uint8Array,
+	clientIV: Uint8Array,
 ): Promise<IDecryptedTranscript> {
-	// first server packet is hello packet
-	const { serverTlsVersion, cipherSuite, } = await getServerHello()
 
-	logger.info(
-		{ serverTlsVersion, cipherSuite },
-		'extracted server hello params'
-	)
+	const { tlsVersion, cipherSuite, hostname, nextMsgIndex } = await processHandshake(transcript, logger)
 
-	const clientHello = getClientHello()
-	const { SERVER_NAME: sni } = clientHello.extensions
-	const hostname = sni?.serverName
-	if(!hostname) {
-		throw new Error('client hello has no SNI')
+	let clientRecordNumber = tlsVersion === 'TLS1_3' ? -1 : 0 // TLS 1.3 has already one record encrypted at this point
+	let serverRecordNumber = clientRecordNumber
+
+	transcript = transcript.slice(nextMsgIndex)
+
+	const decryptedTranscript: IDecryptedTranscriptMessage[] = []
+
+	for(const [i, {
+		sender,
+		message,
+		reveal: { zkReveal, directReveal } = {}
+	}] of transcript.entries()) { //start with first message after last handshake message
+		await getDecryptedMessage(sender, message, directReveal, zkReveal, i)
 	}
 
-	// use this to determine encrypted packets on TLS1.2
-	const changeCipherSpecMsgIdx = serverTlsVersion === 'TLS1_2'
-		? transcript.findIndex(p => (
-			p.message[0] === PACKET_TYPE['CHANGE_CIPHER_SPEC']
-		))
-		: -1
-	const mappedTranscriptResults = await Promise.allSettled(
-		transcript.map(async({
-			sender,
-			message,
-			reveal: { zkReveal, directReveal } = {}
-		}, i): Promise<IDecryptedTranscriptMessage> => {
-			const isEncrypted = isEncryptedPacket(i)
 
-			if(
-				// if someone provided a reveal, but the packet
-				// is not encrypted, it's probably a mistake
-				!isEncrypted
-				&& (zkReveal?.proofs?.length || directReveal?.key?.length)
-			) {
-				throw new Error('packet not encrypted, but has a reveal')
-			}
+	return {
+		transcript: decryptedTranscript,
+		hostname: hostname,
+		tlsVersion: tlsVersion,
+	}
 
-			let redacted = isEncrypted
-			let plaintext: Uint8Array
-			let plaintextLength: number
 
+	async function getDecryptedMessage(sender: TranscriptMessageSenderType, message: Uint8Array, directReveal, zkReveal, i: number) {
+		try {
+			const isServer = sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER
 			const recordHeader = message.slice(0, 5)
 			const content = getWithoutHeader(message)
+			if(isServer) {
+				serverRecordNumber++
+			} else {
+				clientRecordNumber++
+			}
+
+			let redacted = true
+			let plaintext: Uint8Array | undefined = undefined
+			let plaintextLength: number
 
 			if(directReveal?.key?.length) {
-				const { key, iv, recordNumber } = directReveal
-				const { cipher } = SUPPORTED_CIPHER_SUITE_MAP[cipherSuite]
-				const importedKey = await crypto.importKey(cipher, key)
-				const result = await decryptWrappedRecord(
-					content,
-					{
-						iv,
-						key: importedKey,
-						recordHeader,
-						recordNumber,
-						version: serverTlsVersion,
-						cipherSuite,
-					}
-				)
-
-				redacted = false
+				const result = await decryptDirect(directReveal, cipherSuite, recordHeader, tlsVersion, content)
 				plaintext = result.plaintext
+				redacted = false
 				plaintextLength = plaintext.length
 			} else if(zkReveal?.proofs?.length) {
 				const result = await verifyZkPacket(
@@ -276,18 +260,20 @@ export async function decryptTranscript(
 						zkReveal,
 						logger,
 						cipherSuite,
-						zkEngine: zkEngine
+						zkEngine: zkEngine,
+						iv: sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER ? serverIV : clientIV,
+						recordNumber: isServer ? serverRecordNumber : clientRecordNumber
 					}
 				)
 				plaintext = result.redactedPlaintext
 				redacted = false
 				plaintextLength = plaintext.length
 			} else {
-				plaintext = getWithoutHeader(message)
+				plaintext = content
 				plaintextLength = plaintext.length
 			}
 
-			return {
+			decryptedTranscript.push({
 				sender: sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
 					? 'client'
 					: 'server',
@@ -295,64 +281,18 @@ export async function decryptTranscript(
 				message: plaintext,
 				recordHeader,
 				plaintextLength,
-			}
-		})
-	)
+			})
 
-	const mappedTranscript = mappedTranscriptResults.map((r, i) => {
-		if(r.status === 'fulfilled') {
-			return r.value
+		} catch(error) {
+			throw new AttestorError(
+				'ERROR_INVALID_CLAIM',
+				`error in handling packet at idx ${i}: ${error}`,
+				{
+					packetIdx: i,
+					error: error,
+				}
+			)
 		}
-
-		logger?.error({ i, err: r.reason }, 'error in handling packet')
-		throw new AttestorError(
-			'ERROR_INVALID_CLAIM',
-			`error in handling packet at idx ${i}: ${r.reason.message}`,
-			{
-				packetIdx: i,
-				error: r.reason,
-			}
-		)
-	})
-
-	return {
-		transcript: mappedTranscript,
-		hostname,
-		tlsVersion: serverTlsVersion,
-	}
-
-	function isEncryptedPacket(pktIdx: number) {
-		const { message } = transcript[pktIdx]
-		if(message[0] === PACKET_TYPE['WRAPPED_RECORD']) {
-			return true
-		}
-
-		// msg is after change cipher spec
-		return changeCipherSpecMsgIdx >= 0
-			&& pktIdx > changeCipherSpecMsgIdx
-	}
-
-	function getServerHello() {
-		// first server packet is hello packet
-		const serverHelloPacket = transcript.find(
-			p => p.sender === TranscriptMessageSenderType
-				.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER
-		)
-		if(!serverHelloPacket) {
-			throw new Error('session has no server hello params')
-		}
-
-		// strip the record header & packet prefix (02 00 00 97)
-		// & parse the message
-		const message = getWithoutHeader(serverHelloPacket.message)
-			.slice(4)
-		return parseServerHello(message)
-	}
-
-	function getClientHello() {
-		// first client packet is hello packet
-		const message = getWithoutHeader(transcript[0].message)
-		return parseClientHello(message)
 	}
 }
 

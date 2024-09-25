@@ -12,8 +12,8 @@ import {
 
 const ZK_CIPHER_SUITES: CipherSuite[] = [
 	'TLS_CHACHA20_POLY1305_SHA256',
+	'TLS_AES_128_GCM_SHA256',
 	'TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384',
-	'TLS_AES_128_GCM_SHA256'
 ]
 
 const ZK_ENGINES: ZKEngine[] = [
@@ -156,7 +156,7 @@ describe.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some cipherte
 					{
 						key: encKey,
 						iv: fixedIv,
-						recordNumber: 0,
+						recordNumber: 1234,
 						recordHeaderOpts: {
 							type: 'WRAPPED_RECORD'
 						},
@@ -171,10 +171,10 @@ describe.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some cipherte
 					type: 'ciphertext',
 					encKey,
 					iv,
-					recordNumber: 0,
+					recordNumber: 1234,
 					plaintext: plaintextArr,
 					ciphertext,
-					fixedIv: new Uint8Array(0),
+					fixedIv: fixedIv,
 					data: ciphertext
 				}
 
@@ -194,7 +194,9 @@ describe.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some cipherte
 						zkReveal: { proofs: proofs! },
 						logger,
 						cipherSuite,
-						zkEngine: zkEngine
+						zkEngine: zkEngine,
+						recordNumber: 1234,
+						iv:fixedIv
 					},
 				)
 
