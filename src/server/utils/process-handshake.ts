@@ -1,5 +1,5 @@
 import {
-	CipherSuite,
+	CipherSuite, concatenateUint8Arrays,
 	getSignatureDataTls12,
 	getSignatureDataTls13,
 	PACKET_TYPE,
@@ -8,9 +8,8 @@ import {
 	parseServerCertificateVerify,
 	parseServerHello,
 	processServerKeyShare,
-	readWithLength,
 	SUPPORTED_RECORD_TYPE_MAP,
-	TLSProtocolVersion,
+	TLSProtocolVersion, uint8ArrayToDataView,
 	verifyCertificateSignature,
 	X509Certificate
 } from '@reclaimprotocol/tls'
@@ -28,10 +27,9 @@ const RECORD_LENGTH_BYTES = 3
  * @param logger
  */
 export async function processHandshake(receipt: ClaimTunnelRequest['transcript'], logger: Logger) {
-	//const handshakeMessages = extractHandshakeFromTranscript(receipt)
 	let currentPacketIdx = 0
 	let readPacketIdx = 0
-	let handshakeData: Uint8Array
+	let handshakeData: Uint8Array = Uint8Array.from([])
 	let packetData: Awaited<ReturnType<typeof readPacket>>
 	const handshakeRawMessages: Uint8Array[] = []
 	const certificates: X509Certificate[] = []
@@ -150,7 +148,7 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 	}
 
 
-	async function readPacket() {
+	async function readPacket(getMoreData = false) {
 		if(currentPacketIdx > (receipt.length - 1)) {
 			return
 		}
@@ -160,7 +158,8 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 		}
 
 		readPacketIdx = currentPacketIdx
-		if(!handshakeData?.length) {
+		if(!handshakeData?.length || getMoreData) {
+			let newHandshakeData: Uint8Array
 			const { message, reveal, sender } = receipt[currentPacketIdx]
 			const recordHeader = message.slice(0, 5)
 			const content = getWithoutHeader(message)
@@ -192,14 +191,16 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 
 
 				const { plaintext } = await decryptDirect(reveal?.directReveal, cipherSuite, recordHeader, tlsVersion, content)
-				handshakeData = plaintext
+				newHandshakeData = plaintext
 
 				if(tlsVersion === 'TLS1_3') {
-					handshakeData = handshakeData.slice(0, -1)
+					newHandshakeData = newHandshakeData.slice(0, -1)
 				}
 			} else {
-				handshakeData = content
+				newHandshakeData = content
 			}
+
+			handshakeData = concatenateUint8Arrays([handshakeData, newHandshakeData])
 		}
 
 
@@ -207,7 +208,8 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 		const content = readWithLength(handshakeData.slice(1), RECORD_LENGTH_BYTES)
 		if(!content) {
 			logger.warn('missing bytes from packet')
-			return
+			currentPacketIdx++
+			return await readPacket(true)
 		}
 
 		const totalLength = 1 + RECORD_LENGTH_BYTES + content.length
@@ -233,4 +235,16 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 function getWithoutHeader(message: Uint8Array) {
 	// strip the record header (xx 03 03 xx xx)
 	return message.slice(5)
+}
+
+function readWithLength(data: Uint8Array, lengthBytes = 2) {
+	const dataView = uint8ArrayToDataView(data)
+	const length = lengthBytes === 1
+		? dataView.getUint8(0)
+		: dataView.getUint16(lengthBytes === 3 ? 1 : 0)
+	if(data.length < lengthBytes + length) {
+		return undefined
+	}
+
+	return data.slice(lengthBytes, lengthBytes + length)
 }
