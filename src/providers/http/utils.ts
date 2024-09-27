@@ -41,6 +41,12 @@ if(typeof window !== 'undefined') {
 	jsd = require('jsdom')
 }
 
+/**
+ * Returns only first extracted element
+ * @param html
+ * @param xpathExpression
+ * @param contentsOnly
+ */
 export function extractHTMLElement(
 	html: string,
 	xpathExpression: string,
@@ -50,11 +56,51 @@ export function extractHTMLElement(
 	return html.slice(start, end)
 }
 
+/**
+ * Returns all extracted elements
+ * @param html
+ * @param xpathExpression
+ * @param contentsOnly
+ */
+export function extractHTMLElements(
+	html: string,
+	xpathExpression: string,
+	contentsOnly: boolean
+): string[] {
+	const indexes = extractHTMLElementsIndexes(html, xpathExpression, contentsOnly)
+	const res: string[] = []
+	for(const { start, end } of indexes) {
+		res.push(html.slice(start, end))
+	}
+
+	return res
+}
+
+/**
+ * returns a single index of extracted element
+ * @param html
+ * @param xpathExpression
+ * @param contentsOnly
+ */
 export function extractHTMLElementIndex(
 	html: string,
 	xpathExpression: string,
 	contentsOnly: boolean
 ): { start: number, end: number } {
+	return extractHTMLElementsIndexes(html, xpathExpression, contentsOnly)[0]
+}
+
+/**
+ * Returns indexes of all extracted elements
+ * @param html
+ * @param xpathExpression
+ * @param contentsOnly
+ */
+export function extractHTMLElementsIndexes(
+	html: string,
+	xpathExpression: string,
+	contentsOnly: boolean
+): { start: number, end: number }[] {
 
 	const dom = new jsd.JSDOM(html, {
 		contentType: 'text/html',
@@ -62,28 +108,45 @@ export function extractHTMLElementIndex(
 	})
 
 	const document = dom.window.document
-	const node = document
-		.evaluate(xpathExpression, document, null, dom.window.XPathResult.FIRST_ORDERED_NODE_TYPE, null)
-		?.singleNodeValue
-	if(!node) {
+	const xpathResult = document.evaluate(xpathExpression, document, null, dom.window.XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)
+	const nodes: Node[] = []
+	if(xpathResult?.resultType === dom.window.XPathResult.ORDERED_NODE_SNAPSHOT_TYPE &&
+		xpathResult?.snapshotLength) {
+		for(let i = 0; i < xpathResult.snapshotLength; ++i) {
+			nodes.push(xpathResult.snapshotItem(i))
+		}
+	}
+
+	if(!nodes.length) {
 		throw new Error(`Failed to find XPath: "${xpathExpression}"`)
 	}
 
-	const nodeLocation = dom.nodeLocation(node)
-	if(!nodeLocation) {
-		throw new Error(`Failed to find XPath node location: "${xpathExpression}"`)
+
+	const res: { start: number, end: number }[] = []
+
+	for(const node of nodes) {
+		const nodeLocation = dom.nodeLocation(node)
+		if(!nodeLocation) {
+			throw new Error(`Failed to find XPath node location: "${xpathExpression}"`)
+		}
+
+		if(contentsOnly) {
+			const start = nodeLocation.startTag ? nodeLocation.startTag.endOffset : nodeLocation.startOffset
+			const end = nodeLocation.endTag ? nodeLocation.endTag.startOffset : nodeLocation.endOffset
+			res.push({ start, end })
+		} else {
+			res.push({ start:nodeLocation.startOffset, end: nodeLocation.endOffset })
+		}
 	}
 
-	if(contentsOnly) {
-		const start = nodeLocation.startTag ? nodeLocation.startTag.endOffset : nodeLocation.startOffset
-		const end = nodeLocation.endTag ? nodeLocation.endTag.startOffset : nodeLocation.endOffset
-		return { start, end }
-	} else {
-		return { start:nodeLocation.startOffset, end: nodeLocation.endOffset }
-	}
+	return res
 }
 
 export function extractJSONValueIndex(json: string, jsonPath: string) {
+	return extractJSONValueIndexes(json, jsonPath)[0]
+}
+
+export function extractJSONValueIndexes(json: string, jsonPath: string): { start: number, end: number }[] {
 	const pointers = JSONPath({
 		path: jsonPath,
 		json: JSON.parse(json),
@@ -100,14 +163,18 @@ export function extractJSONValueIndex(json: string, jsonPath: string) {
 		&& (tree.body[0].expression instanceof ObjectExpression || tree.body[0].expression instanceof ArrayExpression)) {
 
 		const traversePointers = Array.isArray(pointers) ? pointers : [pointers]
-
-		const index = traverse(tree.body[0].expression, '', traversePointers)
-		if(index) {
-			return {
-				start: index.start - 1, //account for '('
-				end: index.end - 1,
+		const res: { start: number, end: number }[] = []
+		for(const pointer of traversePointers) {
+			const index = traverse(tree.body[0].expression, '', [pointer])
+			if(index) {
+				res.push({
+					start: index.start - 1, //account for '('
+					end: index.end - 1,
+				})
 			}
 		}
+
+		return res
 	}
 
 	throw new Error('jsonPath not found')

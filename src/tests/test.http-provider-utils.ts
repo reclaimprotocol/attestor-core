@@ -2,8 +2,8 @@ import { strToUint8Array } from '@reclaimprotocol/tls'
 import { providers } from 'src/providers'
 import httpProvider from 'src/providers/http'
 import {
-	extractHTMLElement,
-	extractJSONValueIndex,
+	extractHTMLElement, extractHTMLElements,
+	extractJSONValueIndex, extractJSONValueIndexes,
 	makeRegex,
 	matchRedactedStrings
 } from 'src/providers/http/utils'
@@ -50,6 +50,51 @@ describe('HTTP Provider Utils tests', () => {
 		expect(content).toEqual('This is <span>some</span> text!')
 		content = extractHTMLElement(html, "//div[contains(@id, 'content456')]", false)
 		expect(content).toEqual('<div id="content456">This is <span>some</span> other text!</div>')
+	})
+
+
+	it('should get multiple elements', () => {
+		const html = `<body>
+			  <div id="content123">This is <span>some</span> text!</div>
+			  <div id="content456">This is <span>some</span> other text!</div>
+			  <div id="content789">This is <span>some</span> irrelevant text!</div>
+			</body>`
+
+		const contents = extractHTMLElements(html, '//body/div', true)
+		expect(contents).toEqual(['This is <span>some</span> text!', 'This is <span>some</span> other text!', 'This is <span>some</span> irrelevant text!'])
+	})
+
+
+	it('should get multiple JSONPaths', () => {
+		const jsonData = `{
+    "firstName": "John",
+    "lastName": "doe",
+    "age": 26,
+    "address": {
+        "streetAddress": "naist street",
+        "city": "Nara",
+        "postalCode": "630-0192"
+    },
+    "phoneNumbers": [
+        {
+            "type": "iPhone",
+            "number": "0123-4567-8888"
+        },
+        {
+            "type": "home",
+            "number": "0123-4567-8910"
+        }
+    ]
+}`
+
+		const contents = extractJSONValueIndexes(jsonData, '$.phoneNumbers[*].number')
+
+		const res: string[] = []
+		for(const { start, end } of contents) {
+			res.push(jsonData.slice(start, end))
+		}
+
+		expect(res).toEqual(['"number": "0123-4567-8888"', '"number": "0123-4567-8910"'])
 	})
 
 	it('should error on incorrect jsonPath', () => {
@@ -107,6 +152,175 @@ describe('HTTP Provider Utils tests', () => {
 			expect(str).toEqual('HTTP/1.1 200 OKchunk 1, chunk 2')
 		}
 
+	})
+
+	it('should perform complex redactions', () => {
+		const provider = httpProvider
+		const response = Buffer.from('HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\ncontent-length: 222\r\nConnection: close\r\n\r\n<body> <div id="c1">{"ages":[{"age":"26"},{"age":"27"},{"age":"28"}]}</div> <div id="c2">{"ages":[{"age":"27"},{"age":"28"},{"age":"29"}]}</div> <div id="c3">{"ages":[{"age":"29"},{"age":"30"},{"age":"31"}]}</div></body>\r\n')
+
+		if(provider.getResponseRedactions) {
+			const redactions = provider.getResponseRedactions(response, {
+				method: 'GET',
+				url: 'https://test.com',
+				'responseMatches': [
+
+				],
+				'responseRedactions': [
+					{
+						'xPath': '//body/div',
+						'jsonPath':'$.ages[*].age',
+						'regex':'(2|3)\\d'
+					}
+				],
+			})
+			expect(redactions).toEqual([
+				{
+					'fromIndex': 15,
+					'toIndex': 122
+				},
+				{
+					'fromIndex': 124,
+					'toIndex': 135
+				},
+				{
+					'fromIndex': 137,
+					'toIndex': 148
+				},
+				{
+					'fromIndex': 150,
+					'toIndex': 191
+				},
+				{
+					'fromIndex': 193,
+					'toIndex': 204
+				},
+				{
+					'fromIndex': 206,
+					'toIndex': 217
+				},
+				{
+					'fromIndex': 219,
+					'toIndex': 260
+				},
+				{
+					'fromIndex': 262,
+					'toIndex': 273
+				},
+				{
+					'fromIndex': 275,
+					'toIndex': 286
+				},
+				{
+					'fromIndex': 288,
+					'toIndex': 307
+				}
+			])
+
+			let start = 0
+			let str = ''
+			for(const red of redactions) {
+				str += response.subarray(start, red.fromIndex)
+				start = red.toIndex
+			}
+
+			expect(str).toEqual('HTTP/1.1 200 OK262728272829293031')
+		}
+
+	})
+
+	it('should perform complex redactions 2', () => {
+		const provider = httpProvider
+		const response = Buffer.from('HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\ncontent-length: 51\r\nConnection: close\r\n\r\n{"ages":[{"age":"26"},{"age":"27"},{"age":"28"}]}\r\n')
+
+		if(provider.getResponseRedactions) {
+			const redactions = provider.getResponseRedactions(response, {
+				method: 'GET',
+				url: 'https://test.com',
+				'responseMatches': [
+
+				],
+				'responseRedactions': [
+					{
+						'jsonPath':'$.ages[*].age',
+						'regex':'(2|3)\\d'
+					}
+				],
+			})
+			expect(redactions).toEqual([
+				{
+					'fromIndex': 15,
+					'toIndex': 101
+				},
+				{
+					'fromIndex': 103,
+					'toIndex': 114
+				},
+				{
+					'fromIndex': 116,
+					'toIndex': 127
+				},
+				{
+					'fromIndex': 129,
+					'toIndex': 135
+				}
+			])
+
+			let start = 0
+			let str = ''
+			for(const red of redactions) {
+				str += response.subarray(start, red.fromIndex)
+				start = red.toIndex
+			}
+
+			expect(str).toEqual('HTTP/1.1 200 OK262728')
+		}
+
+	})
+
+	it('should perform complex redactions 3', () => {
+		const provider = httpProvider
+		const response = Buffer.from('HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\ncontent-length: 222\r\nConnection: close\r\n\r\n<body> <div id="c1">{"ages":[{"age":"26"},{"age":"27"},{"age":"28"}]}</div> <div id="c2">{"ages":[{"age":"27"},{"age":"28"},{"age":"29"}]}</div> <div id="c3">{"ages":[{"age":"29"},{"age":"30"},{"age":"31"}]}</div></body>\r\n')
+
+		if(provider.getResponseRedactions) {
+			const redactions = provider.getResponseRedactions(response, {
+				method: 'GET',
+				url: 'https://test.com',
+				'responseMatches': [],
+				'responseRedactions': [
+					{
+						'xPath': '//body/div',
+						'regex': '"age":"\\d{2}"'
+					}
+				],
+			})
+			expect(redactions).toEqual([
+				{
+					'fromIndex': 15,
+					'toIndex': 115
+				},
+				{
+					'fromIndex': 125,
+					'toIndex': 184
+				},
+				{
+					'fromIndex': 194,
+					'toIndex': 253
+				},
+				{
+					'fromIndex': 263,
+					'toIndex': 307
+				}
+			])
+
+			let start = 0
+			let str = ''
+			for(const red of redactions) {
+				str += response.subarray(start, red.fromIndex)
+				start = red.toIndex
+			}
+
+			expect(str).toEqual('HTTP/1.1 200 OK"age":"26""age":"27""age":"29"')
+		}
 	})
 
 	it('should get redactions from chunked response', () => {

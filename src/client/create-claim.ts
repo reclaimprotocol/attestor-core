@@ -418,11 +418,6 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			}
 		}
 
-		provider.assertValidProviderReceipt(packets, {
-			...params,
-			secretParams:secretParams //provide secret params for proper request body validation
-		})
-
 		if(provider.getResponseRedactions) {
 			serverPacketsToReveal = getBlocksToReveal(
 				serverBlocks,
@@ -433,6 +428,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			)
 		}
 
+		const revealedPackets: Transcript<Uint8Array> = packets.filter(p => p.sender === 'client')
 		if(serverPacketsToReveal === 'all') {
 			// reveal all server side blocks
 			for(const { message, sender } of allPackets) {
@@ -440,21 +436,22 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 					setRevealOfMessage(message, { type: 'complete' })
 				}
 			}
+
+			revealedPackets.push(...packets.filter(p => p.sender === 'server'))
 		} else {
 			for(const { block, redactedPlaintext } of serverPacketsToReveal) {
 				setRevealOfMessage(block.message, {
 					type: 'zk',
 					redactedPlaintext
 				})
-			}
-
-			if(Array.isArray(serverPacketsToReveal)) {
-				const msgs = serverPacketsToReveal.map(m => m.redactedPlaintext)
-				const serverTranscript = base64.encode(concatenateUint8Arrays(msgs))
-				logger.debug({ redactedResponse:serverTranscript })
+				revealedPackets.push({ sender:'server', message:redactedPlaintext })
 			}
 		}
 
+		provider.assertValidProviderReceipt(revealedPackets, {
+			...params,
+			secretParams:secretParams //provide secret params for proper request body validation
+		})
 
 		// reveal all handshake blocks
 		// so the attestor can verify there was no

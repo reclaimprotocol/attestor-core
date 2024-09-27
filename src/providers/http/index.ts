@@ -4,8 +4,8 @@ import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from 'src/config'
 import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
-	extractHTMLElementIndex,
-	extractJSONValueIndex, getRedactionsForChunkHeaders,
+	extractHTMLElementsIndexes,
+	extractJSONValueIndexes, getRedactionsForChunkHeaders,
 	makeRegex,
 	matchRedactedStrings,
 	parseHttpResponse,
@@ -167,23 +167,55 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			let elementLength = -1
 
 			if(rs.xPath) {
-				const { start, end } = extractHTMLElementIndex(body, rs.xPath, !!rs.jsonPath)
-				element = body.slice(start, end)
-				elementIdx = start
-				elementLength = end - start
+				const indexes = extractHTMLElementsIndexes(body, rs.xPath, !!rs.jsonPath)
+				for(const { start, end } of indexes) {
+					element = body.slice(start, end)
+					elementIdx = start
+					elementLength = end - start
+					if(rs.jsonPath) {
+						processJsonPath()
+					} else if(rs.regex) {
+						processRegexp()
+					} else {
+						addRedaction()
+					}
+				}
+			} else if(rs.jsonPath) {
+				processJsonPath()
+				if(rs.regex) {
+					processRegexp()
+				} else {
+					addRedaction()
+				}
+			} else if(rs.regex) {
+				processRegexp()
 			}
 
-			if(rs.jsonPath) {
-				const { start, end } = extractJSONValueIndex(element, rs.jsonPath)
-				element = body.slice(elementIdx + start, elementIdx + end)
-				elementIdx += start
-				elementLength = end - start
+
+			function processJsonPath() {
+				const jsonPathIndexes = extractJSONValueIndexes(element, rs.jsonPath!)
+				// eslint-disable-next-line max-depth
+				const eIndex = elementIdx
+				for(const ji of jsonPathIndexes) {
+					const jStart = ji.start
+					const jEnd = ji.end
+					element = body.slice(eIndex + jStart, eIndex + jEnd)
+					elementIdx = eIndex + jStart
+					elementLength = jEnd - jStart
+					// eslint-disable-next-line max-depth
+					if(rs.regex) {
+						processRegexp()
+					} else {
+						addRedaction()
+					}
+				}
 			}
 
-			if(rs.regex) {
-				const regexp = makeRegex(rs.regex)
+			function processRegexp() {
+				const regexp = makeRegex(rs.regex!)
 				const elem = element || body
 				const match = regexp.exec(elem)
+				// eslint-disable-next-line max-depth
 				if(!match?.[0]) {
 					logger.error({ response: uint8ArrayToBinaryStr(res.body) })
 					throw new Error(
@@ -194,21 +226,25 @@ const HTTP_PROVIDER: Provider<'http'> = {
 				elementIdx += match.index
 				elementLength = regexp.lastIndex - match.index
 				element = match[0]
+				addRedaction()
 			}
 
-			if(elementIdx >= 0 && elementLength > 0) {
-				const from = convertResponsePosToAbsolutePos(
-					elementIdx,
-					bodyStartIdx,
-					res.chunks
-				)
-				const to = convertResponsePosToAbsolutePos(
-					elementIdx + elementLength,
-					bodyStartIdx,
-					res.chunks
-				)
-				reveals.push({ fromIndex: from, toIndex: to })
-				redactions.push(...getRedactionsForChunkHeaders(from, to, res.chunks))
+			// eslint-disable-next-line unicorn/consistent-function-scoping
+			function addRedaction() {
+				if(elementIdx >= 0 && elementLength > 0) {
+					const from = convertResponsePosToAbsolutePos(
+						elementIdx,
+						bodyStartIdx,
+						res.chunks
+					)
+					const to = convertResponsePosToAbsolutePos(
+						elementIdx + elementLength,
+						bodyStartIdx,
+						res.chunks
+					)
+					reveals.push({ fromIndex: from, toIndex: to })
+					redactions.push(...getRedactionsForChunkHeaders(from, to, res.chunks))
+				}
 			}
 		}
 
@@ -283,40 +319,28 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		let res: string
 		let bodyStart = OK_HTTP_HEADER.length
-		if(secretParams) { //means we're on client doing preliminary checks
-			const parsedResp = parseHttpResponse(response) // to deal with chunked responses
-
-			if(parsedResp.statusCode !== 200) {
+		res = uint8ArrayToStr(response)
+		if(!res.startsWith(OK_HTTP_HEADER)) {
+			const statusRegex = makeRegex('^HTTP\\/1.1 (\\d{3})')
+			const matchRes = statusRegex.exec(res)
+			if(matchRes && matchRes.length > 1) {
 				throw new Error(
-					`Provider returned error ${parsedResp.statusCode} ${parsedResp.statusMessage}"`
+					`Provider returned error ${matchRes[1]}"`
 				)
 			}
 
-			res = uint8ArrayToStr(parsedResp.body)
-		} else {
-			res = uint8ArrayToStr(response)
-			if(!res.startsWith(OK_HTTP_HEADER)) {
-				const statusRegex = makeRegex('^HTTP\\/1.1 (\\d{3})')
-				const matchRes = statusRegex.exec(res)
-				if(matchRes && matchRes.length > 1) {
-					throw new Error(
-						`Provider returned error ${matchRes[1]}"`
-					)
-				}
-
-				let lineEnd = res.indexOf('*')
-				if(lineEnd === -1) {
-					lineEnd = res.indexOf('\n')
-				}
-
-				if(lineEnd === -1) {
-					lineEnd = OK_HTTP_HEADER.length
-				}
-
-				throw new Error(
-					`Response did not start with "${OK_HTTP_HEADER}" got "${res.slice(0, lineEnd)}"`
-				)
+			let lineEnd = res.indexOf('*')
+			if(lineEnd === -1) {
+				lineEnd = res.indexOf('\n')
 			}
+
+			if(lineEnd === -1) {
+				lineEnd = OK_HTTP_HEADER.length
+			}
+
+			throw new Error(
+				`Response did not start with "${OK_HTTP_HEADER}" got "${res.slice(0, lineEnd)}"`
+			)
 		}
 
 
