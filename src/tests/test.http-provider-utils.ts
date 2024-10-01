@@ -39,6 +39,27 @@ describe('HTTP Provider Utils tests', () => {
 	})
 
 
+	it('should extract complex JSON path', () => {
+		const json = `{
+    "items":[
+        {
+            "name": "John Doe",
+            "country": "USA"
+        },
+        {
+          "country": "USA",
+          "age":25
+        }
+    ]
+}`
+		const val = extractJSONValueIndex(json, '$.items[?(@.name.match(/.*oe/))].name')
+		const rm = '"name": "John Doe"'
+		const regexp = new RegExp(rm, 'gim')
+
+		expect(regexp.test(json.slice(val.start, val.end))).toBe(true)
+	})
+
+
 	it('should get inner & outer tag contents', () => {
 		const html = `<body>
 			  <div id="content123">This is <span>some</span> text!</div>

@@ -153,6 +153,8 @@ export function extractJSONValueIndexes(json: string, jsonPath: string): { start
 		wrap: false,
 		resultType: 'pointer',
 		eval:'safe',
+		// @ts-ignore
+		ignoreEvalErrors: true
 	})
 	if(!pointers) {
 		throw new Error('jsonPath not found')
