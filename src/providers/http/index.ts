@@ -137,6 +137,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 	},
 	getResponseRedactions(response, rawParams) {
+		logger.debug({ response:base64.encode(response), params:rawParams })
+
 		const res = parseHttpResponse(response)
 		if(!rawParams.responseRedactions?.length) {
 			return []
