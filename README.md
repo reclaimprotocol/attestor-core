@@ -1,4 +1,10 @@
 # Reclaim Attestor Core
+<div>
+    <div>
+        <img src="https://raw.githubusercontent.com/reclaimprotocol/.github/main/assets/banners/Attestor-Core.png"  />
+    </div>
+</div>
+
 
 ## Getting Started
 
