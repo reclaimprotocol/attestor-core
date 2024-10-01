@@ -144,6 +144,11 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			return []
 		}
 
+		if(((res.statusCode / 100) >> 0) !== 2) {
+			logger.error({ response:base64.encode(response), params:rawParams })
+			throw new Error(`Provider returned ${res.statusCode} ${res.statusMessage} error`)
+		}
+
 		const newParams = substituteParamValues(rawParams, undefined, true)
 		const params = newParams.newParams
 
