@@ -5,6 +5,10 @@
     </div>
 </div>
 
+![Test status](https://github.com/ReclaimProtocol/attestor-core/actions/workflows/ci-cd.yml/badge.svg?job=test)
+
+
+![Build status](https://github.com/ReclaimProtocol/attestor-core/actions/workflows/ci-cd.yml/badge.svg?job=build)
 
 ## Getting Started
 
