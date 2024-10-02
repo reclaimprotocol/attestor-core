@@ -137,9 +137,16 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 	},
 	getResponseRedactions(response, rawParams) {
+		logger.debug({ response:base64.encode(response), params:rawParams })
+
 		const res = parseHttpResponse(response)
 		if(!rawParams.responseRedactions?.length) {
 			return []
+		}
+
+		if(((res.statusCode / 100) >> 0) !== 2) {
+			logger.error({ response:base64.encode(response), params:rawParams })
+			throw new Error(`Provider returned ${res.statusCode} ${res.statusMessage} error`)
 		}
 
 		const newParams = substituteParamValues(rawParams, undefined, true)
