@@ -13,3 +13,7 @@ coverage/
 ngrok.yml
 src/test.ts
 .env.*
+# secrets for running ci locally
+.secrets
+# test proivder files
+*.json
