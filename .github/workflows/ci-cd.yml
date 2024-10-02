@@ -1,0 +1,72 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.head_commit.message, 'wip') && !contains(github.event.head_commit.message, 'docs') }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 'current'
+
+      - name: Configure Git
+        run: git config --global url."https://git-push-pull:$GL_TOKEN@gitlab.reclaimprotocol.org".insteadOf "https://gitlab.reclaimprotocol.org"
+        env:
+          GL_TOKEN: ${{ secrets.GL_TOKEN }}
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm run test
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    if: ${{ !contains(github.event.head_commit.message, 'wip') && !contains(github.event.head_commit.message, 'docs') }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up AWS CLI
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install zip -y
+          sudo apt-get install awscli -y
+
+      - name: Prepare environment
+        run: echo -e "$ENV" > .env.production
+
+      - name: Replace GL_TOKEN in docker-compose
+        run: sed -i 's/${GL_TOKEN}/'$GL_TOKEN'/g' docker-compose.yaml
+
+      - name: Create deployment package
+        run: |
+          export FILE=pkg-$(date +%s%N).zip
+          zip -r $FILE * .* -x '*.git*'
+
+      - name: Configure AWS credentials
+        run: |
+          mkdir -p ~/.aws/
+          echo "[default]" > ~/.aws/credentials
+          echo "aws_access_key_id = $AWS_ACCESS_KEY_ID" >> ~/.aws/credentials
+          echo "aws_secret_access_key = $AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
+
+      - name: Deploy to AWS
+        run: |
+          export BUCKET=elasticbeanstalk-ap-south-1-342772716647
+          export APP_NAME=reclaim-protocol
+          export ENV_NAME=witness
+          export VERSION=${{ github.sha }}
+          aws s3 cp $FILE s3://$BUCKET/$FILE
+          aws elasticbeanstalk create-application-version --application-name $APP_NAME --version-label $VERSION --source-bundle S3Bucket=$BUCKET,S3Key=$FILE
+          aws elasticbeanstalk update-environment --application-name $APP_NAME --environment-name $ENV_NAME --version-label $VERSION
