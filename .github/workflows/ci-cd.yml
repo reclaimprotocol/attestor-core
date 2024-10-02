@@ -18,13 +18,10 @@ jobs:
         with:
           node-version: 'current'
 
-      - name: Configure Git
-        run: git config --global url."https://git-push-pull:$GL_TOKEN@gitlab.reclaimprotocol.org".insteadOf "https://gitlab.reclaimprotocol.org"
-        env:
-          GL_TOKEN: ${{ secrets.GL_TOKEN }}
-
       - name: Install dependencies
-        run: npm install
+        run: |
+          npm install
+          npm install koffi
 
       - name: Run tests
         run: npm run test
@@ -45,9 +42,6 @@ jobs:
 
       - name: Prepare environment
         run: echo -e "$ENV" > .env.production
-
-      - name: Replace GL_TOKEN in docker-compose
-        run: sed -i 's/${GL_TOKEN}/'$GL_TOKEN'/g' docker-compose.yaml
 
       - name: Create deployment package
         run: |
