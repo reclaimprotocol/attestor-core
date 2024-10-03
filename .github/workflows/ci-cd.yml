@@ -8,7 +8,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    if: ${{ !contains(github.event.head_commit.message, 'wip') && !contains(github.event.head_commit.message, 'docs') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,18 +17,28 @@ jobs:
         with:
           node-version: 'current'
 
+      - name: Set commit message
+        run: echo "COMMIT_MESSAGE=$(git log -1 --pretty=%B)" >> $GITHUB_ENV
+
       - name: Install dependencies
         run: |
           npm install
           npm install koffi
 
       - name: Run tests
-        run: npm run test
+        if: ${{ !contains(env.COMMIT_MESSAGE, 'wip') && !contains(env.COMMIT_MESSAGE, 'docs') }}
+        run: |
+          npm run test || echo "Tests failed" && exit 1
+
+      - name: Cleanup
+        if: ${{ always() }}
+        run: |
+          echo "Cleaning up..."
+          
 
   deploy:
     runs-on: ubuntu-latest
     needs: test
-    if: ${{ !contains(github.event.head_commit.message, 'wip') && !contains(github.event.head_commit.message, 'docs') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
