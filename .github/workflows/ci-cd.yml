@@ -34,7 +34,6 @@ jobs:
         if: ${{ always() }}
         run: |
           echo "Cleaning up..."
-          
 
   deploy:
     runs-on: ubuntu-latest
@@ -48,21 +47,19 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install zip -y
           sudo apt-get install awscli -y
+          mkdir ~/.aws/
+          touch ~/.aws/credentials
+          printf "[default]\nregion=ap-south-1\naws_access_key_id = %s\naws_secret_access_key = %s\n" "${{ secrets.AWS_ACCESS_KEY_ID }}" "${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> ~/.aws/credentials
+          touch ~/.aws/config
 
-      - name: Prepare environment
-        run: echo -e "$ENV" > .env.production
+      - name: Set up environment
+        run: |
+          echo -e "${{ secrets.ENV }}" > .env.production
 
       - name: Create deployment package
         run: |
           export FILE=pkg-$(date +%s%N).zip
           zip -r $FILE * .* -x '*.git*'
-
-      - name: Configure AWS credentials
-        run: |
-          mkdir -p ~/.aws/
-          echo "[default]" > ~/.aws/credentials
-          echo "aws_access_key_id = $AWS_ACCESS_KEY_ID" >> ~/.aws/credentials
-          echo "aws_secret_access_key = $AWS_SECRET_ACCESS_KEY" >> ~/.aws/credentials
 
       - name: Deploy to AWS
         run: |
