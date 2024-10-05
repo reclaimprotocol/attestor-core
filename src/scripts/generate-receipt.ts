@@ -1,4 +1,5 @@
 import { readFile } from 'fs/promises'
+import { getCliArgument } from 'src/scripts/utils'
 import { createServer, decryptTranscript } from 'src/server'
 import { assertValidateProviderParams } from 'src/utils'
 import { getEnvVariable } from 'src/utils/env'
@@ -113,15 +114,6 @@ async function getInputParameters(): Promise<ProviderReceiptGenerationParams<any
 	}
 
 	return JSON.parse(fileContents)
-}
-
-function getCliArgument(arg: string) {
-	const index = process.argv.indexOf(`--${arg}`)
-	if(index === -1) {
-		return undefined
-	}
-
-	return process.argv[index + 1]
 }
 
 if(require.main === module) {
