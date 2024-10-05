@@ -102,10 +102,17 @@ export async function registerOperator({
 	}
 
 	const existingMetadata = await contract.getMetadataForOperator(addr)
+		.catch(err => {
+			if(err.message.includes('Operator not found')) {
+				return undefined
+			}
+
+			throw err
+		})
 	const metadata = { addr, url: reclaimRpcUrl }
 	if(
-		existingMetadata.addr === metadata.addr
-		&& existingMetadata.url === metadata.url
+		existingMetadata?.addr === metadata.addr
+		&& existingMetadata?.url === metadata.url
 	) {
 		logger.info('operator metadata already up to date')
 		return
