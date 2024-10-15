@@ -1,1 +1,2 @@
 tsc
+tsc-alias
