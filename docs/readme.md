@@ -31,4 +31,4 @@ We'd recommend you go through our documentation in the following order:
 4. [Provider](./provider.md): What is a provider in the Reclaim context, how to create one & details on the HTTP provider.
 5. [Internals of Claim Creation](./claim-creation.md): In-depth description of the full flow of creating a claim with a attestor.
 6. [Working with the Codebase](./project.md): Understand how to work with the codebase & how to deploy an attestor server.
-6. [AVS](./avs.md): Understand how we use an Eigen AVS to decentralize the attestor server.
+7. [AVS](./avs.md): Understand how we use an Eigen AVS to decentralize the attestor server.
