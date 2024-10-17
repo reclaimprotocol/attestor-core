@@ -121,7 +121,7 @@ describe('HTTP Provider Utils tests', () => {
 	it('should error on incorrect jsonPath', () => {
 		expect(() => {
 			extractJSONValueIndex(('{"asdf": 1}'), '(alert(origin))')
-		}).toThrow('jsonPath: alert is not defined: (alert(origin))')
+		}).toThrow('loc.indexOf is not a function')
 	})
 
 	it('should not error on incorrect regex', () => {

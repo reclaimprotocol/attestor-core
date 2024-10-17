@@ -1,5 +1,7 @@
-import { getContracts } from 'src/avs/utils/contracts'
+// eslint-disable-next-line simple-import-sort/imports
 import 'src/server/utils/config-env'
+import { getContracts } from 'src/avs/utils/contracts'
+
 
 async function main() {
 	const { wallet, contract } = getContracts()

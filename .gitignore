@@ -13,3 +13,4 @@ coverage/
 ngrok.yml
 src/test.ts
 .env.*
+.cache
