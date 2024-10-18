@@ -284,7 +284,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		logTranscript()
 		let extractedParams: { [_: string]: string } = {}
 		const secretParams = ('secretParams' in paramsAny) ? paramsAny.secretParams as ProviderSecretParams<'http'> : undefined
-		const newParams = substituteParamValues(paramsAny, secretParams, false)
+		const newParams = substituteParamValues(paramsAny, secretParams, !secretParams)
 		const params = newParams.newParams
 		extractedParams = { ...extractedParams, ...newParams.extractedValues }
 
