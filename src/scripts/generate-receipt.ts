@@ -48,7 +48,7 @@ export async function main<T extends ProviderName>(
 		attestorHostPort = `ws://localhost:${API_SERVER_PORT}${WS_PATHNAME}`
 	}
 
-	const zkEngine = getCliArgument('zk') === 'gnark' ? 'gnark' : 'snarkJS'
+	const zkEngine = getCliArgument('zk') === 'gnark' ? 'gnark' : 'snarkjs'
 	const receipt = await createClaimOnAttestor({
 		name: paramsJson.name,
 		secretParams: paramsJson.secretParams,

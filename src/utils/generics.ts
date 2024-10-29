@@ -1,4 +1,3 @@
-import { REDACTION_CHAR_CODE } from '@reclaimprotocol/circom-symmetric-crypto'
 import {
 	areUint8ArraysEqual,
 	CipherSuite,
@@ -9,6 +8,7 @@ import {
 	SUPPORTED_CIPHER_SUITE_MAP, TLSProtocolVersion,
 	uint8ArrayToDataView
 } from '@reclaimprotocol/tls'
+import { REDACTION_CHAR_CODE } from '@reclaimprotocol/zk-symmetric-crypto'
 import { RPCMessage, RPCMessages } from 'src/proto/api'
 import {
 	CompleteTLSPacket,

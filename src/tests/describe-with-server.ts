@@ -1,10 +1,11 @@
+import { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import { AttestorClient } from 'src/client/utils/client-socket'
 import { WS_PATHNAME } from 'src/config'
 import { createServer } from 'src/server'
 import { createMockServer } from 'src/tests/mock-provider-server'
 import { SPY_PREPARER } from 'src/tests/mocks'
 import { getRandomPort, randomPrivateKey } from 'src/tests/utils'
-import { IAttestorServerSocket, ZKEngine } from 'src/types'
+import { IAttestorServerSocket } from 'src/types'
 import { logger } from 'src/utils'
 import { WebSocket, type WebSocketServer } from 'ws'
 
@@ -81,7 +82,7 @@ export const describeWithServer = (
 		},
 		mockHttpsServer,
 		mockhttpsServerPort: httpsServerPort,
-		zkEngine: 'snarkJS'
+		zkEngine: 'snarkjs'
 	})
 
 	function getClientOnServer() {

@@ -12,10 +12,7 @@ export const WS_PATHNAME = '/ws'
 
 export const BROWSER_RPC_PATHNAME = '/browser-rpc'
 
-export const DEFAULT_REMOTE_ZK_PARAMS = {
-	zkeyUrl: `${BROWSER_RPC_PATHNAME}/resources/{algorithm}/circuit_final.zkey`,
-	circuitWasmUrl: `${BROWSER_RPC_PATHNAME}/resources/{algorithm}/circuit.wasm`,
-}
+export const DEFAULT_REMOTE_FILE_FETCH_BASE_URL = '/resources'
 
 export const API_SERVER_PORT = 8001
 

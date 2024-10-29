@@ -27,7 +27,8 @@
     "whitelist:operator": "npm run run:tsc -- src/scripts/whitelist-operator.ts", 
     "generate:avs": "typechain -- --target ethers-v5 --out-dir src/avs/contracts avs/contracts/out/ReclaimServiceManager.sol/*.json",
     "start:chain": "bash ./avs/utils/anvil/start-anvil-chain-with-el-and-avs-deployed.sh",
-    "commitlint": "commitlint --edit"
+    "commitlint": "commitlint --edit",
+    "download:zk-files": "node node_modules/@reclaimprotocol/zk-symmetric-crypto/lib/scripts/download-files"
   },
   "files": [
     "lib/*"
@@ -62,7 +63,7 @@
     "@bufbuild/protobuf": "^2.0.0",
     "@commitlint/cli": "^17.7.1",
     "@commitlint/config-conventional": "^17.7.0",
-    "@reclaimprotocol/circom-symmetric-crypto": "github:reclaimprotocol/circom-symmetric-crypto",
+    "@reclaimprotocol/zk-symmetric-crypto": "^2.0.0",
     "@reclaimprotocol/tls": "github:reclaimprotocol/tls",
     "ajv": "^8.17.1",
     "canonicalize": "^2.0.0",

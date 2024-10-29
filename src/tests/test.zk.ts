@@ -1,6 +1,7 @@
 import { CipherSuite, crypto, encryptWrappedRecord, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
+import { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import { MessageReveal_ZKProof as ZKProof } from 'src/proto/api'
-import { CompleteTLSPacket, ZKEngine } from 'src/types'
+import { CompleteTLSPacket } from 'src/types'
 import {
 	getBlocksToReveal,
 	logger,
@@ -18,7 +19,7 @@ const ZK_CIPHER_SUITES: CipherSuite[] = [
 
 const ZK_ENGINES: ZKEngine[] = [
 	'gnark',
-	'snarkJS'
+	'snarkjs'
 ]
 
 jest.setTimeout(90_000) // 90s

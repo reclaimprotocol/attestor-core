@@ -2,6 +2,7 @@ import {
 	areUint8ArraysEqual,
 	concatenateUint8Arrays
 } from '@reclaimprotocol/tls'
+import { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import {
 	ClaimTunnelRequest,
 	InitRequest,
@@ -18,7 +19,6 @@ import {
 	ProviderName,
 	TCPSocketProperties,
 	Transcript,
-	ZKEngine
 } from 'src/types'
 import {
 	assertValidateProviderParams,
@@ -88,7 +88,7 @@ export async function assertValidClaimRequest(
 	const receipt = await decryptTranscript(
 		request.transcript,
 		logger,
-		zkEngine === ZKProofEngine.ZK_ENGINE_GNARK ? 'gnark' : 'snarkJS',
+		zkEngine === ZKProofEngine.ZK_ENGINE_GNARK ? 'gnark' : 'snarkjs',
 		fixedServerIV,
 		fixedClientIV
 	)
