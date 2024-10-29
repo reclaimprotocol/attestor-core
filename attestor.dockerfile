@@ -18,9 +18,9 @@ RUN npm i
 COPY ./ /app
 
 RUN npm run build
+RUN npm run download:zk-files
 RUN npm run build:browser
 RUN npm prune --production
-RUN npm run download:zk-files
 
 CMD ["npm", "run", "start"]
 EXPOSE 8001
