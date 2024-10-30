@@ -14,11 +14,10 @@ const rslt = await createClaimOnAttestor({
 	params: {
 		"url": "https://bookface.ycombinator.com/home",
 		"method": "GET",
-		"responseSelections": [
+		"responseMatches": [
 			{
-				"jsonPath": "$.currentUser",
-				"xPath": "//*[@id='js-react-on-rails-context']",
-				"responseMatch": "{\"id\":111111,.*?waas_admin.*?:{.*?}.*?:{.*?}.*?(?:full_name|first_name).*?}"
+				"type": "regex",
+				"value": "{\"id\":111111,.*?waas_admin.*?:{.*?}.*?:{.*?}.*?(?:full_name|first_name).*?}"
 			}
 		]
 	},
@@ -128,11 +127,10 @@ The JSON is a file containing the claim parameters. The JSON should look like th
 	"params": {
 		"url": "https://bookface.ycombinator.com/home",
 		"method": "GET",
-		"responseSelections": [
+		"responseMatches": [
 			{
-				"jsonPath": "$.currentUser",
-				"xPath": "//*[@id='js-react-on-rails-context']",
-				"responseMatch": "{\"id\":111111,.*?waas_admin.*?:{.*?}.*?:{.*?}.*?(?:full_name|first_name).*?}"
+				"type": "regex",
+				"value": "{\"id\":111111,.*?waas_admin.*?:{.*?}.*?:{.*?}.*?(?:full_name|first_name).*?}"
 			}
 		]
 	},
