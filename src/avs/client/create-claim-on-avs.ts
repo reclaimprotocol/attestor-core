@@ -106,7 +106,7 @@ export async function createClaimOnAvs<N extends ProviderName>({
 		'claim submitted & validated'
 	)
 
-	return rslt
+	return { ...rslt, claimData: responses[0].claim! }
 
 	async function requestClaimCreation() {
 		const request: IReclaimServiceManager.ClaimRequestStruct = {
