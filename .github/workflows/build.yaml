@@ -1,7 +1,6 @@
 name: Build & Publish Docker Image
 
 on:
-  pull_request: {}
   workflow_run:
     workflows: ["Test"]
     branches:
