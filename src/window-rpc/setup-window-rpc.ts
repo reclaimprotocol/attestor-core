@@ -1,8 +1,9 @@
 import { uint8ArrayToStr } from '@reclaimprotocol/tls'
+import { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import { createClaimOnAvs } from 'src/avs/client/create-claim-on-avs'
 import { createClaimOnAttestor } from 'src/client'
 import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from 'src/providers/http/utils'
-import { ProviderParams, ProviderSecretParams, ZKEngine, ZKOperators } from 'src/types'
+import { ProviderParams, ProviderSecretParams, ZKOperators } from 'src/types'
 import { makeLogger } from 'src/utils'
 import { Benchmark } from 'src/utils/benchmark'
 import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from 'src/window-rpc/types'
@@ -208,7 +209,7 @@ export function setupWindowRpc() {
 		function getZkOperators(
 			zkOperatorMode: RPCCreateClaimOptions['zkOperatorMode']
 			= 'default',
-			zkEngine: ZKEngine = 'snarkJS'
+			zkEngine: ZKEngine = 'snarkjs'
 		) {
 			// use default snarkJS ops
 			if(zkOperatorMode === 'default') {

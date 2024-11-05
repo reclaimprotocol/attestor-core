@@ -1,24 +1,25 @@
+import { CipherSuite, concatenateUint8Arrays, crypto, generateIV } from '@reclaimprotocol/tls'
 import {
 	CONFIG as ZK_CONFIG,
 	EncryptionAlgorithm,
-	generateProof, makeLocalSnarkJsZkOperator,
+	generateProof,
+	makeGnarkZkOperator,
+	makeLocalFileFetch,
+	makeRemoteFileFetch,
 	makeSnarkJsZKOperator,
+	MakeZKOperatorOpts,
 	PrivateInput,
 	PublicInput,
 	verifyProof,
-	ZKOperator,
-} from '@reclaimprotocol/circom-symmetric-crypto'
-import { makeLocalGnarkZkOperator } from '@reclaimprotocol/circom-symmetric-crypto/lib/gnark'
-import { CipherSuite, concatenateUint8Arrays, crypto, generateIV } from '@reclaimprotocol/tls'
-import { DEFAULT_REMOTE_ZK_PARAMS, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from 'src/config'
+	ZKEngine,
+	ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
+import { DEFAULT_REMOTE_FILE_FETCH_BASE_URL, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from 'src/config'
 import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof } from 'src/proto/api'
-import { CompleteTLSPacket, Logger, PrepareZKProofsBaseOpts, ZKEngine, ZKOperators, ZKRevealInfo } from 'src/types'
+import { CompleteTLSPacket, Logger, PrepareZKProofsBaseOpts, ZKOperators, ZKRevealInfo } from 'src/types'
 import { detectEnvironment, getEnvVariable } from 'src/utils/env'
-import { AttestorError } from 'src/utils/error'
 import { getPureCiphertext, getRecordIV, getZkAlgorithmForCipherSuite } from 'src/utils/generics'
 import { logger as LOGGER } from 'src/utils/logger'
 import { isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from 'src/utils/redactions'
-import { executeWithRetries } from 'src/utils/retries'
 
 type GenerateZKChunkProofOpts = {
 	key: Uint8Array
@@ -75,7 +76,7 @@ export async function makeZkProofGenerator(
 		zkProofConcurrency = ZK_CONCURRENCY,
 		maxZkChunks = MAX_ZK_CHUNKS,
 		cipherSuite,
-		zkEngine = 'snarkJS'
+		zkEngine = 'snarkjs'
 	}: PrepareZKProofsOpts
 ) {
 
@@ -250,7 +251,7 @@ export async function verifyZkPacket(
 		zkReveal,
 		zkOperators,
 		logger = LOGGER,
-		zkEngine = 'snarkJS',
+		zkEngine = 'snarkjs',
 		iv,
 		recordNumber
 	}: ZKVerifyOpts,
@@ -357,12 +358,12 @@ function getChunkSizeBytes(alg: EncryptionAlgorithm) {
 }
 
 const zkEngines: {
-	[z in ZKEngine]?: { [E in EncryptionAlgorithm]?: Promise<ZKOperator> }
+	[z in ZKEngine]?: { [E in EncryptionAlgorithm]?: ZKOperator }
 } = {}
 
-const operatorMakers: { [z in ZKEngine]: (algorithm: EncryptionAlgorithm, logger: Logger) => Promise<ZKOperator> } = {
-	'snarkJS': snarkJSOperator,
-	'gnark':makeLocalGnarkZkOperator
+const operatorMakers: { [z in ZKEngine]: (opts: MakeZKOperatorOpts<{}>) => ZKOperator } = {
+	'snarkjs': makeSnarkJsZKOperator,
+	'gnark': makeGnarkZkOperator
 }
 
 export function makeDefaultZkOperator(
@@ -370,90 +371,36 @@ export function makeDefaultZkOperator(
 	zkEngine: ZKEngine,
 	logger: Logger,
 ) {
-	const engine = zkEngine || 'snarkJS'
-
-	let zkOperators = zkEngines[engine]
+	let zkOperators = zkEngines[zkEngine]
 	if(!zkOperators) {
-		zkEngines[engine] = {}
-		zkOperators = zkEngines[engine]
+		zkEngines[zkEngine] = {}
+		zkOperators = zkEngines[zkEngine]
 	}
 
 	if(!zkOperators[algorithm]) {
-		zkOperators[algorithm] = operatorMakers[engine](algorithm, logger)
+		const isNode = detectEnvironment() === 'node'
+		const opType = isNode ? 'local' : 'remote'
+		logger?.info(
+			{
+				type: opType,
+				algorithm
+			},
+			'fetching zk operator'
+		)
+
+		const fetcher = opType === 'local'
+			? makeLocalFileFetch()
+			: makeRemoteFileFetch({
+				baseUrl: DEFAULT_REMOTE_FILE_FETCH_BASE_URL,
+			})
+
+		zkOperators[algorithm] = operatorMakers[zkEngine]({
+			algorithm,
+			fetcher
+		})
 	}
 
 	return zkOperators[algorithm]
-}
-
-function snarkJSOperator(algorithm: EncryptionAlgorithm, logger: Logger) {
-	const isNode = detectEnvironment() === 'node'
-	const opType = isNode ? 'local' : 'remote'
-	logger?.info(
-		{
-			type: opType,
-			algorithm
-		},
-		'fetching zk operator'
-	)
-
-	if(isNode) {
-		return makeLocalSnarkJsZkOperator(algorithm)
-	} else {
-		const { zkeyUrl, circuitWasmUrl } = DEFAULT_REMOTE_ZK_PARAMS
-		const operator = makeRemoteSnarkJsZkOperator(
-			zkeyUrl.replace('{algorithm}', algorithm),
-			circuitWasmUrl.replace('{algorithm}', algorithm),
-			logger
-		)
-		return Promise.resolve(operator)
-	}
-
-
-}
-
-function makeRemoteSnarkJsZkOperator(
-	zkeyUrl: string,
-	wasmUrl: string,
-	logger: Logger
-) {
-	return makeSnarkJsZKOperator(
-		{
-			getCircuitWasm: () => fetchArrayBuffer('wasm', wasmUrl),
-			getZkey: () => (
-				fetchArrayBuffer('zkey', zkeyUrl)
-					.then(data => ({ data }))
-			),
-		}
-	)
-
-	async function fetchArrayBuffer(type: string, url: string) {
-		const res = await executeWithRetries(
-			async() => {
-				const res = await fetch(url)
-				if(!res.ok) {
-					throw new AttestorError(
-						'ERROR_NETWORK_ERROR',
-						`${type} fetch failed with code: ${res.status}`,
-						{ url, status: res.status }
-					)
-				}
-
-				return await res.arrayBuffer()
-			},
-			{
-				logger: logger.child({ type }),
-				maxRetries: 3,
-				shouldRetry(error) {
-					// network errors are TypeErrors
-					// in fetch
-					// https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API#concepts_and_usage
-					return error instanceof TypeError
-				},
-			}
-		)
-
-		return new Uint8Array(res)
-	}
 }
 
 function getProofGenerationParamsForChunk(

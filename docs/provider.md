@@ -191,12 +191,11 @@ The parameters of the request would be:
                 "xPath": "",
             }
         ],
-		// this is the response selection. This tells the attestor
-		// what to look for in the response. If the response doesn't
-		// match this -- the attestor will reject the claim.
-		// This selection can be done either by a simple string match
+		// This tells the attestor what to look for in the response.
+		// If the response doesn't match this -- the attestor will reject the claim.
+		// This match can be done either by a simple string match
 		// or regex
-		"responseSelections": [
+		"responseMatches": [
 			{
 				"type": "regex",
 				"value": "(?<dob>\\d{4}-\\d{2}-\\d{2})"

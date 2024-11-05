@@ -43,7 +43,10 @@ From GitHub:
 From NPM:
 `npm install @reclaimprotocol/attestor-core`
 
-Note: installation can take a couple minutes, so grab a coffee while you wait.
+**Note:** if you plan on running the package on NodeJS or any non-browser environment, download the ZK files required to generate & verify ZK proofs:
+```bash
+npm run download:zk-files
+```
 
 **Note:** this approach is only advised for NodeJS projects or projects meant to run directly in a modern browser. For React Native or any solution running in a mobile app, refer to our doc [here](/docs/browser-rpc.md).
 

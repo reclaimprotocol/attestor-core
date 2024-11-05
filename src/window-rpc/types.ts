@@ -1,4 +1,4 @@
-import type { EncryptionAlgorithm, ZKOperator } from '@reclaimprotocol/circom-symmetric-crypto'
+import type { EncryptionAlgorithm, ZKEngine, ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
 import type { TaskCompletedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
 import type { CreateClaimOnAvsOpts, CreateClaimOnAvsStep } from 'src/avs/types'
 import type { extractHTMLElement, extractJSONValueIndex } from 'src/providers/http/utils'
@@ -11,7 +11,6 @@ import type {
 	ProviderName,
 	ProviderParams,
 	ProviderSecretParams,
-	ZKEngine
 } from 'src/types'
 import { HttpRequest, HttpResponse } from 'src/utils'
 
@@ -79,7 +78,7 @@ type UpdateProviderParamsOpts = {
 type ZKVerifyOpts = {
 	algorithm: EncryptionAlgorithm
 	publicSignals: number[]
-	proof: { [key: string]: string } | string
+	proof: { [key: string]: unknown } | string
 }
 
 type LogLevelOptions = {
