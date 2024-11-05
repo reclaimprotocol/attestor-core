@@ -25,6 +25,9 @@ jobs:
           key: ${{runner.os}}-modules-${{hashFiles('**/package-lock.json')}}
       - name: Install packages
         run: npm i
+      - name: Download ZK files
+        run: npm run download:zk-files
+      
       - name: Build package
         run: npm run build
       - name: Lint
