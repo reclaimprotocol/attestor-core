@@ -2,11 +2,13 @@ name: Build & Publish Docker Image
 
 on:
   pull_request: {}
-  # workflow_run:
-  #   workflows: ["Test"]
-  #   branches: [main]
-  #   types: 
-  #     - completed
+  workflow_run:
+    workflows: ["Test"]
+    branches:
+      # change to main when merging to main
+      - ci
+    types: 
+      - completed
 
 jobs:
   build:
