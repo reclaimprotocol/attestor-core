@@ -1,12 +1,11 @@
 name: Build & Publish Docker Image
 
 on:
-  workflow_dispatch: {}
   workflow_run:
     workflows: ["Test"]
-    branches:
-      # change to main when merging to main
-      - ci
+    # branches:
+    #   # change to main when merging to main
+    #   - ci
     types: 
       - completed
 
@@ -17,7 +16,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       packages: write
-    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout
