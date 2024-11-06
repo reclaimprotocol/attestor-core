@@ -25,6 +25,7 @@
     "register:avs-operator": "npm run run:tsc -- src/scripts/register-avs-operator.ts",
     "check:avs-registration": "npm run run:tsc -- src/scripts/check-avs-registration.ts",
     "whitelist:operator": "npm run run:tsc -- src/scripts/whitelist-operator.ts",
+    "update:avs-metadata": "npm run run:tsc -- src/scripts/update-avs-metadata.ts",
     "generate:avs": "typechain -- --target ethers-v5 --out-dir src/avs/contracts avs/contracts/out/ReclaimServiceManager.sol/*.json",
     "start:chain": "bash ./avs/utils/anvil/start-anvil-chain-with-el-and-avs-deployed.sh",
     "commitlint": "commitlint --edit",
