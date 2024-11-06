@@ -1,6 +1,7 @@
 name: Build & Publish Docker Image
 
 on:
+  workflow_dispatch: {}
   workflow_run:
     workflows: ["Test"]
     branches:
