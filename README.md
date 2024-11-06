@@ -86,6 +86,6 @@ For Indie Hackers: [Check out our guidelines and potential grant opportunities](
 
 ## License
 
-This project is licensed under a [custom license](https://github.com/reclaimprotocol/.github/blob/main/LICENSE). By contributing to this project, you agree that your contributions will be licensed under its terms.
+This project is licensed under a [AGPL v3](./LICENSE). By contributing to this project, you agree that your contributions will be licensed under its terms.
 
 Thank you for your contributions!
