@@ -1,9 +1,6 @@
 name: Build & Publish Docker Image
 
 on:
-  pull_request:
-    branches:
-      - main
   workflow_run:
     workflows: ["Test"]
     # branches:
@@ -19,7 +16,7 @@ jobs:
     timeout-minutes: 30
     permissions:
       packages: write
-    #if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout
