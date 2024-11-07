@@ -1,0 +1,38 @@
+# Generated CI for Github Actions
+# Do NOT edit directly
+# Generated using rest-api-builder
+name: Test
+'on':
+  pull_request: {}
+  push:
+    branches:
+      - main
+      - master
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: "!contains(github.event.head_commit.message, 'docs') && !contains(github.event.head_commit.message, 'wip')"
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+      - uses: actions/cache@v2
+        with:
+          path: '**/node_modules'
+          key: ${{runner.os}}-modules-${{hashFiles('**/package-lock.json')}}
+      - name: Install packages
+        run: npm i
+      - name: Download ZK files
+        run: npm run download:zk-files
+      
+      - name: Build package
+        run: npm run build
+      - name: Lint
+        run: npm run lint
+      - name: Run tests
+        run: npm run test
