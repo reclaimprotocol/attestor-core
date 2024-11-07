@@ -6,6 +6,10 @@
     </div>
 </div>
 
+
+![Test status](https://github.com/ReclaimProtocol/attestor-core/actions/workflows/ci-cd.yml/badge.svg?job=test)
+![Deploy status](https://github.com/ReclaimProtocol/attestor-core/actions/workflows/ci-cd.yml/badge.svg?job=deploy)
+
 ## What is the Reclaim Protocol?
 
 Reclaim enables you to bring user activity, reputation, and identity from external websites into your own platform.
@@ -86,6 +90,6 @@ For Indie Hackers: [Check out our guidelines and potential grant opportunities](
 
 ## License
 
-This project is licensed under a [custom license](https://github.com/reclaimprotocol/.github/blob/main/LICENSE). By contributing to this project, you agree that your contributions will be licensed under its terms.
+This project is licensed under a [AGPL v3](./LICENSE). By contributing to this project, you agree that your contributions will be licensed under its terms.
 
 Thank you for your contributions!

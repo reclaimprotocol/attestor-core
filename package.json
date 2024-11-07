@@ -59,7 +59,7 @@
   },
   "homepage": "https://github.com/reclaimprotocol/attestor-core",
   "author": "Adhiraj Singh",
-  "license": "See License in <https://github.com/reclaimprotocol/.github/blob/main/LICENSE>",
+  "license": "AGPL-3.0-only",
   "dependencies": {
     "@bufbuild/protobuf": "^2.2.0",
     "@commitlint/cli": "^17.8.1",
