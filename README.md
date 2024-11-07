@@ -6,6 +6,10 @@
     </div>
 </div>
 
+
+![Test status](https://github.com/ReclaimProtocol/attestor-core/actions/workflows/ci-cd.yml/badge.svg?job=test)
+![Deploy status](https://github.com/ReclaimProtocol/attestor-core/actions/workflows/ci-cd.yml/badge.svg?job=deploy)
+
 ## What is the Reclaim Protocol?
 
 Reclaim enables you to bring user activity, reputation, and identity from external websites into your own platform.
