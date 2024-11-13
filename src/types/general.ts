@@ -8,6 +8,16 @@ export type ArraySlice = {
 	toIndex: number
 }
 
+export type RedactedOrHashedArraySlice = {
+	fromIndex: number
+	toIndex: number
+	/**
+	 * If the data is redacted, this will be 'redacted'
+	 * @default 'redacted'
+	 */
+	type?: 'redacted' | 'hashed'
+}
+
 export type Logger = TLSLogger & {
 	child: (opts: { [_: string]: any }) => Logger
 }

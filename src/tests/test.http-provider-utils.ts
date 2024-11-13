@@ -8,7 +8,7 @@ import {
 	matchRedactedStrings
 } from 'src/providers/http/utils'
 import { ProviderParams, Transcript } from 'src/types'
-import { assertValidateProviderParams, getProviderValue, hashProviderParams, uint8ArrayToStr } from 'src/utils'
+import { assertValidateProviderParams, getProviderValue, hashProviderParams, logger, uint8ArrayToStr } from 'src/utils'
 import { deserialize, serialize } from 'v8'
 
 jest.setTimeout(60_000)
@@ -147,7 +147,7 @@ describe('HTTP Provider Utils tests', () => {
 						'regex': 'chunk 1, chunk 2'
 					}
 				],
-			})
+			}, logger)
 			expect(redactions).toEqual([
 				{
 					'fromIndex': 15,
@@ -193,7 +193,7 @@ describe('HTTP Provider Utils tests', () => {
 						'regex':'(2|3)\\d'
 					}
 				],
-			})
+			}, logger)
 			expect(redactions).toEqual([
 				{
 					'fromIndex': 15,
@@ -266,7 +266,7 @@ describe('HTTP Provider Utils tests', () => {
 						'regex':'(2|3)\\d'
 					}
 				],
-			})
+			}, logger)
 			expect(redactions).toEqual([
 				{
 					'fromIndex': 15,
@@ -313,7 +313,7 @@ describe('HTTP Provider Utils tests', () => {
 						'regex': '"age":"\\d{2}"'
 					}
 				],
-			})
+			}, logger)
 			expect(redactions).toEqual([
 				{
 					'fromIndex': 15,
@@ -366,7 +366,7 @@ describe('HTTP Provider Utils tests', () => {
 						'regex': 'code_version:\\s"[0-9a-f]{40}\\sruby'
 					}
 				],
-			})
+			}, logger)
 			expect(redactions).toEqual([
 				{
 					'fromIndex': 15,
@@ -532,7 +532,7 @@ describe('HTTP Provider Utils tests', () => {
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'GET'
-			})
+			}, logger)
 		}).toThrow('auth parameters are not set')
 	})
 
@@ -550,7 +550,7 @@ Content-Type: text/html; charset=utf-8\r
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'GET'
-			})
+			}, logger)
 			: undefined
 		expect(redactions).toHaveLength(0)
 	})
@@ -572,7 +572,7 @@ Content-Type: text/html; charset=utf-8\r
 						regex: 'abc'
 					}],
 					method: 'GET'
-				})
+				}, logger)
 			}
 		}).toThrow('Failed to find response body')
 	})
@@ -594,7 +594,7 @@ Content-Type: text/html; charset=utf-8\r
 						xPath: 'abc'
 					}],
 					method: 'GET'
-				})
+				}, logger)
 			}
 		}).toThrow('Failed to find XPath: \"abc\"')
 	})
@@ -616,7 +616,7 @@ Content-Type: text/html; charset=utf-8\r
 						jsonPath: 'abc'
 					}],
 					method: 'GET'
-				})
+				}, logger)
 			}
 		}).toThrow('jsonPath not found')
 	})
@@ -638,7 +638,7 @@ Content-Type: text/html; charset=utf-8\r
 						regex: 'abc'
 					}],
 					method: 'GET'
-				})
+				}, logger)
 			}
 		}).toThrow('regexp abc does not match found element \'1\'')
 	})
@@ -651,7 +651,7 @@ Content-Type: text/html; charset=utf-8\r
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'POST'
-			})
+			}, logger)
 		}).toThrow('Invalid method: get')
 	})
 
@@ -663,7 +663,7 @@ Content-Type: text/html; charset=utf-8\r
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'GET'
-			})
+			}, logger)
 		}).toThrow('Expected protocol: https, found: http:')
 	})
 
@@ -681,7 +681,7 @@ Content-Type: text/html; charset=utf-8\r
 				paramValues: {
 					'abc': 'org'
 				}
-			})
+			}, logger)
 		}).toThrow('Duplicate parameter abc')
 	})
 
@@ -693,7 +693,7 @@ Content-Type: text/html; charset=utf-8\r
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'GET'
-			})
+			}, logger)
 		}).toThrow('Expected path: /abc, found: /')
 	})
 
@@ -704,7 +704,7 @@ Content-Type: text/html; charset=utf-8\r
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'GET'
-			})
+			}, logger)
 		}).toThrow('Expected host: abc.com, found: xargs.org')
 	})
 
@@ -720,7 +720,7 @@ Content-Type: text/html; charset=utf-8\r
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'GET'
-			})
+			}, logger)
 		}).toThrow('Response did not start with \"HTTP/1.1 200\"')
 	})
 
@@ -741,7 +741,7 @@ Content-Type: text/html; charset=utf-8\r
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'GET'
-			})
+			}, logger)
 		}).toThrow('Connection header must be \"close\"')
 	})
 
@@ -753,7 +753,7 @@ Content-Type: text/html; charset=utf-8\r
 				responseRedactions: [],
 				method: 'GET',
 				body: 'abc'
-			})
+			}, logger)
 		}).toThrow('request body mismatch')
 	})
 
@@ -767,7 +767,7 @@ Content-Type: text/html; charset=utf-8\r
 				}],
 				responseRedactions: [],
 				method: 'GET',
-			})
+			}, logger)
 		}).toThrow('Invalid receipt. Regex \"abc\" didn\'t match')
 	})
 
@@ -781,7 +781,7 @@ Content-Type: text/html; charset=utf-8\r
 				}],
 				responseRedactions: [],
 				method: 'GET',
-			})
+			}, logger)
 		}).toThrow('Invalid receipt. Response does not contain \"abc\"')
 	})
 
@@ -855,7 +855,7 @@ Content-Type: text/html; charset=utf-8\r
 				method: 'GET',
 			}
 			// @ts-ignore
-			assertValidProviderReceipt(transcript, params)
+			assertValidProviderReceipt(transcript, params, logger)
 		}).toThrow('Invalid response match type abc')
 	})
 
@@ -869,7 +869,7 @@ Content-Type: text/html; charset=utf-8\r
 				}],
 				responseRedactions: [],
 				method: 'GET',
-			})
+			}, logger)
 		}).toThrow('parameter\'s \"org\" value not found in paramValues')
 	})
 
@@ -883,7 +883,7 @@ Content-Type: text/html; charset=utf-8\r
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'GET'
-			})
+			}, logger)
 		}).toThrow('parameter\'s \"com\" value not found in paramValues and secret parameter\'s paramValues')
 	})
 
@@ -923,7 +923,7 @@ Content-Type: text/html; charset=utf-8\r
 			},
 			authorisationHeader: 'abc'
 		}
-		const req = createRequest(secretParams, params)
+		const req = createRequest(secretParams, params, logger)
 
 		const reqText = uint8ArrayToStr(req.data as Uint8Array)
 		expect(reqText).toContain('hello crazy aaaaa crazy1 crazy2 {{b}} crazy1 crazy {{b}} crazy2 {{b}} aaaaa world')
@@ -972,7 +972,7 @@ Content-Type: text/html; charset=utf-8\r
 			authorisationHeader: 'abc'
 		}
 
-		const req = createRequest(secretParams, params)
+		const req = createRequest(secretParams, params, logger)
 
 		const reqText = uint8ArrayToStr(req.data as Uint8Array)
 		expect(reqText).toContain('{\"includeGroups\":false,\"includeLogins\":false,\"includeVerificationStatus\":false}')

@@ -39,3 +39,5 @@ export const PING_INTERVAL_MS = 10_000
  * @default 30s
  */
 export const MAX_NO_DATA_INTERVAL_MS = 30_000
+
+export const TOPRF_DOMAIN_SEPARATOR = 'reclaim-toprf'

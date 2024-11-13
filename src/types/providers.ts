@@ -1,6 +1,6 @@
 import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
 import type { ProviderClaimData } from 'src/proto/api'
-import type { ArraySlice } from 'src/types/general'
+import type { ArraySlice, Logger, RedactedOrHashedArraySlice } from 'src/types/general'
 import type { ProvidersConfig } from 'src/types/providers.gen'
 import type { Transcript } from 'src/types/tunnel'
 
@@ -79,7 +79,8 @@ export interface Provider<
   /** generate the raw request to be sent to through the TLS receipt */
   createRequest(
     secretParams: SecretParams,
-    params: Params
+    params: Params,
+    logger: Logger
   ): CreateRequestResult
   /**
    * Return the slices of the response to redact
@@ -90,7 +91,11 @@ export interface Provider<
    * This is run on the client side, to selct which portions of
    * the server response to send to the attestor
    * */
-  getResponseRedactions?(response: Uint8Array, params: Params): ArraySlice[]
+  getResponseRedactions?(
+    response: Uint8Array,
+    params: Params,
+    logger: Logger
+  ): RedactedOrHashedArraySlice[]
   /**
    * verify a generated TLS receipt against given parameters
    * to ensure the receipt does contain the claims the
@@ -106,7 +111,8 @@ export interface Provider<
    * */
   assertValidProviderReceipt(
     receipt: Transcript<Uint8Array>,
-    params: Params
+    params: Params,
+    logger: Logger
   ): void | Promise<void> | { extractedParameters: { [key: string]: string } }
 }
 

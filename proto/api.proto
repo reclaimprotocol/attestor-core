@@ -193,7 +193,27 @@ message MessageReveal {
 		* in the redactedPlaintext
 		*/
 		uint32 startIdx = 4;
+
+		/**
+		 * If this block's proof contains an OPRF'd piece of data,
+		 * then provide the OPRF data here
+		 */
+		TOPRFPayload toprf = 5;
 	}
+
+	message TOPRFPayload {
+		/** Location of the data in the chunk that was masked */
+		DataSlice dataLocation = 1;
+		/** OPRF hash of the data */
+		bytes nullifier = 2;
+
+		repeated TOPRFResponse responses = 3;
+	}
+}
+
+message DataSlice {
+	uint32 startIdx = 1;
+	uint32 length = 2;
 }
 
 message ClaimRequestData {
@@ -334,6 +354,17 @@ message InitRequest {
 	ServiceSignatureType signatureType = 3;
 }
 
+message TOPRFRequest {
+	bytes maskedData = 1;
+}
+
+message TOPRFResponse {
+	// OPRF output
+	bytes evaluated = 1;
+	bytes c = 2;
+	bytes r = 3;
+}
+
 message RPCMessage {
 	/**
 	 * Per connection unique RPC message ID. Either party sending a
@@ -402,6 +433,12 @@ message RPCMessage {
 		 */
 		CompleteClaimOnAvsRequest completeClaimOnChainRequest = 16;
 		CompleteClaimOnAvsResponse completeClaimOnChainResponse = 17;
+
+		/**
+		 * Request to perform thresholded OPRF
+		 */
+		TOPRFRequest toprfRequest = 18;
+		TOPRFResponse toprfResponse = 19;
 	}
 }
 
