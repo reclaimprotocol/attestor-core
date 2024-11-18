@@ -235,12 +235,12 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 
 	let serverIV: Uint8Array
 	let clientIV: Uint8Array
-	const serverBlock = getLastBlocks('server', 1)[0]
+	const [serverBlock] = getLastBlocks('server', 1)
 	if(serverBlock && serverBlock.message.type === 'ciphertext') {
 		serverIV = serverBlock.message.fixedIv
 	}
 
-	const clientBlock = getLastBlocks('client', 1)[0]
+	const [clientBlock] = getLastBlocks('client', 1)
 	if(clientBlock && clientBlock.message.type === 'ciphertext') {
 		clientIV = clientBlock.message.fixedIv
 	}
@@ -306,7 +306,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		let blocksWritten = tunnel.transcript.length
 		await tunnel.tls.write(requestData)
 		blocksWritten = tunnel.transcript.length - blocksWritten
-		setRevealOfLastSentBlock(
+		setRevealOfLastSentBlocks(
 			{
 				type: 'zk',
 				redactedPlaintext: redactSlices(requestData, redactions)
@@ -331,15 +331,15 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		await tunnel.write(data)
 		blocksWritten = tunnel.transcript.length - blocksWritten
 		// now we mark the packet to be revealed to the attestor
-		setRevealOfLastSentBlock(reveal ? { type: 'complete' } : undefined, blocksWritten)
+		setRevealOfLastSentBlocks(reveal ? { type: 'complete' } : undefined, blocksWritten)
 		lastMsgRevealed = reveal
 	}
 
-	function setRevealOfLastSentBlock(
+	function setRevealOfLastSentBlocks(
 		reveal: MessageRevealInfo | undefined,
-		nBlocks: number
+		nBlocks = 1
 	) {
-		const lastBlocks = getLastBlocks('client', nBlocks === 0 ? 1 : nBlocks)
+		const lastBlocks = getLastBlocks('client', nBlocks)
 		if(!lastBlocks.length) {
 			return
 		}
@@ -352,7 +352,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 
 	function getLastBlocks(sender: 'client' | 'server', nBlocks: number) {
 		// set the correct index for the server blocks
-		const lastBlocks: any = []
+		const lastBlocks: typeof tunnel.transcript = []
 		for(let i = tunnel.transcript.length - 1;i >= 0;i--) {
 			const block = tunnel.transcript[i]
 			if(block.sender === sender) {
