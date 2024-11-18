@@ -235,12 +235,12 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 
 	let serverIV: Uint8Array
 	let clientIV: Uint8Array
-	const serverBlock = getLastBlock('server')
+	const serverBlock = getLastBlock('server', 1)[0]
 	if(serverBlock && serverBlock.message.type === 'ciphertext') {
 		serverIV = serverBlock.message.fixedIv
 	}
 
-	const clientBlock = getLastBlock('client')
+	const clientBlock = getLastBlock('client', 1)[0]
 	if(clientBlock && clientBlock.message.type === 'ciphertext') {
 		clientIV = clientBlock.message.fixedIv
 	}
@@ -303,12 +303,15 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 	}
 
 	async function writeRedactedZk() {
+		let blocksWritten = tunnel.transcript.length
 		await tunnel.tls.write(requestData)
+		blocksWritten = tunnel.transcript.length - blocksWritten
 		setRevealOfLastSentBlock(
 			{
 				type: 'zk',
 				redactedPlaintext: redactSlices(requestData, redactions)
-			}
+			},
+			blocksWritten
 		)
 	}
 
@@ -324,31 +327,42 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			await tunnel.tls.updateTrafficKeys()
 		}
 
+		let blocksWritten = tunnel.transcript.length
 		await tunnel.write(data)
+		blocksWritten = tunnel.transcript.length - blocksWritten
 		// now we mark the packet to be revealed to the attestor
-		setRevealOfLastSentBlock(reveal ? { type: 'complete' } : undefined)
+		setRevealOfLastSentBlock(reveal ? { type: 'complete' } : undefined, blocksWritten)
 		lastMsgRevealed = reveal
 	}
 
 	function setRevealOfLastSentBlock(
-		reveal: MessageRevealInfo | undefined
+		reveal: MessageRevealInfo | undefined,
+		nBlocks: number
 	) {
-		const lastBlock = getLastBlock('client')
-		if(!lastBlock) {
+		const lastBlocks = getLastBlock('client',nBlocks === 0 ? 1 :nBlocks)
+		if(!lastBlocks.length) {
 			return
 		}
 
-		setRevealOfMessage(lastBlock.message, reveal)
+		for (const block of lastBlocks) {
+			setRevealOfMessage(block.message, reveal)
+		}
+
 	}
 
-	function getLastBlock(sender: 'client' | 'server') {
+	function getLastBlock(sender: 'client' | 'server', nBlocks:number) {
 		// set the correct index for the server blocks
+		const lastBlocks:any = []
 		for(let i = tunnel.transcript.length - 1;i >= 0;i--) {
 			const block = tunnel.transcript[i]
 			if(block.sender === sender) {
-				return block
+				lastBlocks.push(block)
+				if (lastBlocks.length === nBlocks){
+					break
+				}
 			}
 		}
+		return lastBlocks
 	}
 
 	/**
