@@ -339,29 +339,30 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		reveal: MessageRevealInfo | undefined,
 		nBlocks: number
 	) {
-		const lastBlocks = getLastBlock('client',nBlocks === 0 ? 1 :nBlocks)
+		const lastBlocks = getLastBlock('client', nBlocks === 0 ? 1 : nBlocks)
 		if(!lastBlocks.length) {
 			return
 		}
 
-		for (const block of lastBlocks) {
+		for(const block of lastBlocks) {
 			setRevealOfMessage(block.message, reveal)
 		}
 
 	}
 
-	function getLastBlock(sender: 'client' | 'server', nBlocks:number) {
+	function getLastBlock(sender: 'client' | 'server', nBlocks: number) {
 		// set the correct index for the server blocks
-		const lastBlocks:any = []
+		const lastBlocks: any = []
 		for(let i = tunnel.transcript.length - 1;i >= 0;i--) {
 			const block = tunnel.transcript[i]
 			if(block.sender === sender) {
 				lastBlocks.push(block)
-				if (lastBlocks.length === nBlocks){
+				if(lastBlocks.length === nBlocks) {
 					break
 				}
 			}
 		}
+
 		return lastBlocks
 	}
 
