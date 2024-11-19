@@ -385,7 +385,10 @@ export interface MessageReveal_MessageRevealZk {
 }
 
 export interface MessageReveal_ZKProof {
-  /** JSON encoded snarkJS proof */
+  /**
+   * JSON encoded snarkJS proof
+   * @deprecated -- use `proofData` instead
+   */
   proofJson: string;
   /** the decrypted ciphertext as output by the ZK proof */
   decryptedRedactedCiphertext: Uint8Array;
@@ -396,14 +399,15 @@ export interface MessageReveal_ZKProof {
    * in the redactedPlaintext
    */
   startIdx: number;
+  proofData: Uint8Array;
   /**
    * If this block's proof contains an OPRF'd piece of data,
    * then provide the OPRF data here
    */
-  toprf: MessageReveal_TOPRFPayload | undefined;
+  toprf: TOPRFPayload | undefined;
 }
 
-export interface MessageReveal_TOPRFPayload {
+export interface TOPRFPayload {
   /** Location of the data in the chunk that was masked */
   dataLocation:
     | DataSlice
@@ -414,7 +418,7 @@ export interface MessageReveal_TOPRFPayload {
 }
 
 export interface DataSlice {
-  startIdx: number;
+  fromIndex: number;
   length: number;
 }
 
@@ -547,11 +551,17 @@ export interface InitRequest {
   signatureType: ServiceSignatureType;
 }
 
+export interface InitResponse {
+  toprfPublicKey: Uint8Array;
+}
+
 export interface TOPRFRequest {
   maskedData: Uint8Array;
+  engine: ZKProofEngine;
 }
 
 export interface TOPRFResponse {
+  publicKeyShare: Uint8Array;
   /** OPRF output */
   evaluated: Uint8Array;
   c: Uint8Array;
@@ -572,7 +582,7 @@ export interface RPCMessage {
     | undefined;
   /** Response to the init request. */
   initResponse?:
-    | Empty
+    | InitResponse
     | undefined;
   /**
    * Data representing an error in the WebSocket connection.
@@ -1764,6 +1774,7 @@ function createBaseMessageReveal_ZKProof(): MessageReveal_ZKProof {
     decryptedRedactedCiphertext: new Uint8Array(0),
     redactedPlaintext: new Uint8Array(0),
     startIdx: 0,
+    proofData: new Uint8Array(0),
     toprf: undefined,
   };
 }
@@ -1782,8 +1793,11 @@ export const MessageReveal_ZKProof: MessageFns<MessageReveal_ZKProof> = {
     if (message.startIdx !== 0) {
       writer.uint32(32).uint32(message.startIdx);
     }
+    if (message.proofData.length !== 0) {
+      writer.uint32(42).bytes(message.proofData);
+    }
     if (message.toprf !== undefined) {
-      MessageReveal_TOPRFPayload.encode(message.toprf, writer.uint32(42).fork()).join();
+      TOPRFPayload.encode(message.toprf, writer.uint32(50).fork()).join();
     }
     return writer;
   },
@@ -1832,7 +1846,15 @@ export const MessageReveal_ZKProof: MessageFns<MessageReveal_ZKProof> = {
             break;
           }
 
-          message.toprf = MessageReveal_TOPRFPayload.decode(reader, reader.uint32());
+          message.proofData = reader.bytes();
+          continue;
+        }
+        case 6: {
+          if (tag !== 50) {
+            break;
+          }
+
+          message.toprf = TOPRFPayload.decode(reader, reader.uint32());
           continue;
         }
       }
@@ -1854,7 +1876,8 @@ export const MessageReveal_ZKProof: MessageFns<MessageReveal_ZKProof> = {
         ? bytesFromBase64(object.redactedPlaintext)
         : new Uint8Array(0),
       startIdx: isSet(object.startIdx) ? globalThis.Number(object.startIdx) : 0,
-      toprf: isSet(object.toprf) ? MessageReveal_TOPRFPayload.fromJSON(object.toprf) : undefined,
+      proofData: isSet(object.proofData) ? bytesFromBase64(object.proofData) : new Uint8Array(0),
+      toprf: isSet(object.toprf) ? TOPRFPayload.fromJSON(object.toprf) : undefined,
     };
   },
 
@@ -1872,8 +1895,11 @@ export const MessageReveal_ZKProof: MessageFns<MessageReveal_ZKProof> = {
     if (message.startIdx !== 0) {
       obj.startIdx = Math.round(message.startIdx);
     }
+    if (message.proofData.length !== 0) {
+      obj.proofData = base64FromBytes(message.proofData);
+    }
     if (message.toprf !== undefined) {
-      obj.toprf = MessageReveal_TOPRFPayload.toJSON(message.toprf);
+      obj.toprf = TOPRFPayload.toJSON(message.toprf);
     }
     return obj;
   },
@@ -1887,19 +1913,20 @@ export const MessageReveal_ZKProof: MessageFns<MessageReveal_ZKProof> = {
     message.decryptedRedactedCiphertext = object.decryptedRedactedCiphertext ?? new Uint8Array(0);
     message.redactedPlaintext = object.redactedPlaintext ?? new Uint8Array(0);
     message.startIdx = object.startIdx ?? 0;
+    message.proofData = object.proofData ?? new Uint8Array(0);
     message.toprf = (object.toprf !== undefined && object.toprf !== null)
-      ? MessageReveal_TOPRFPayload.fromPartial(object.toprf)
+      ? TOPRFPayload.fromPartial(object.toprf)
       : undefined;
     return message;
   },
 };
 
-function createBaseMessageReveal_TOPRFPayload(): MessageReveal_TOPRFPayload {
+function createBaseTOPRFPayload(): TOPRFPayload {
   return { dataLocation: undefined, nullifier: new Uint8Array(0), responses: [] };
 }
 
-export const MessageReveal_TOPRFPayload: MessageFns<MessageReveal_TOPRFPayload> = {
-  encode(message: MessageReveal_TOPRFPayload, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+export const TOPRFPayload: MessageFns<TOPRFPayload> = {
+  encode(message: TOPRFPayload, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.dataLocation !== undefined) {
       DataSlice.encode(message.dataLocation, writer.uint32(10).fork()).join();
     }
@@ -1912,10 +1939,10 @@ export const MessageReveal_TOPRFPayload: MessageFns<MessageReveal_TOPRFPayload> 
     return writer;
   },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): MessageReveal_TOPRFPayload {
+  decode(input: BinaryReader | Uint8Array, length?: number): TOPRFPayload {
     const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseMessageReveal_TOPRFPayload();
+    const message = createBaseTOPRFPayload();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -1952,7 +1979,7 @@ export const MessageReveal_TOPRFPayload: MessageFns<MessageReveal_TOPRFPayload> 
     return message;
   },
 
-  fromJSON(object: any): MessageReveal_TOPRFPayload {
+  fromJSON(object: any): TOPRFPayload {
     return {
       dataLocation: isSet(object.dataLocation) ? DataSlice.fromJSON(object.dataLocation) : undefined,
       nullifier: isSet(object.nullifier) ? bytesFromBase64(object.nullifier) : new Uint8Array(0),
@@ -1962,7 +1989,7 @@ export const MessageReveal_TOPRFPayload: MessageFns<MessageReveal_TOPRFPayload> 
     };
   },
 
-  toJSON(message: MessageReveal_TOPRFPayload): unknown {
+  toJSON(message: TOPRFPayload): unknown {
     const obj: any = {};
     if (message.dataLocation !== undefined) {
       obj.dataLocation = DataSlice.toJSON(message.dataLocation);
@@ -1976,11 +2003,11 @@ export const MessageReveal_TOPRFPayload: MessageFns<MessageReveal_TOPRFPayload> 
     return obj;
   },
 
-  create(base?: DeepPartial<MessageReveal_TOPRFPayload>): MessageReveal_TOPRFPayload {
-    return MessageReveal_TOPRFPayload.fromPartial(base ?? {});
+  create(base?: DeepPartial<TOPRFPayload>): TOPRFPayload {
+    return TOPRFPayload.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<MessageReveal_TOPRFPayload>): MessageReveal_TOPRFPayload {
-    const message = createBaseMessageReveal_TOPRFPayload();
+  fromPartial(object: DeepPartial<TOPRFPayload>): TOPRFPayload {
+    const message = createBaseTOPRFPayload();
     message.dataLocation = (object.dataLocation !== undefined && object.dataLocation !== null)
       ? DataSlice.fromPartial(object.dataLocation)
       : undefined;
@@ -1991,13 +2018,13 @@ export const MessageReveal_TOPRFPayload: MessageFns<MessageReveal_TOPRFPayload> 
 };
 
 function createBaseDataSlice(): DataSlice {
-  return { startIdx: 0, length: 0 };
+  return { fromIndex: 0, length: 0 };
 }
 
 export const DataSlice: MessageFns<DataSlice> = {
   encode(message: DataSlice, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.startIdx !== 0) {
-      writer.uint32(8).uint32(message.startIdx);
+    if (message.fromIndex !== 0) {
+      writer.uint32(8).uint32(message.fromIndex);
     }
     if (message.length !== 0) {
       writer.uint32(16).uint32(message.length);
@@ -2017,7 +2044,7 @@ export const DataSlice: MessageFns<DataSlice> = {
             break;
           }
 
-          message.startIdx = reader.uint32();
+          message.fromIndex = reader.uint32();
           continue;
         }
         case 2: {
@@ -2039,15 +2066,15 @@ export const DataSlice: MessageFns<DataSlice> = {
 
   fromJSON(object: any): DataSlice {
     return {
-      startIdx: isSet(object.startIdx) ? globalThis.Number(object.startIdx) : 0,
+      fromIndex: isSet(object.fromIndex) ? globalThis.Number(object.fromIndex) : 0,
       length: isSet(object.length) ? globalThis.Number(object.length) : 0,
     };
   },
 
   toJSON(message: DataSlice): unknown {
     const obj: any = {};
-    if (message.startIdx !== 0) {
-      obj.startIdx = Math.round(message.startIdx);
+    if (message.fromIndex !== 0) {
+      obj.fromIndex = Math.round(message.fromIndex);
     }
     if (message.length !== 0) {
       obj.length = Math.round(message.length);
@@ -2060,7 +2087,7 @@ export const DataSlice: MessageFns<DataSlice> = {
   },
   fromPartial(object: DeepPartial<DataSlice>): DataSlice {
     const message = createBaseDataSlice();
-    message.startIdx = object.startIdx ?? 0;
+    message.fromIndex = object.fromIndex ?? 0;
     message.length = object.length ?? 0;
     return message;
   },
@@ -3156,14 +3183,77 @@ export const InitRequest: MessageFns<InitRequest> = {
   },
 };
 
+function createBaseInitResponse(): InitResponse {
+  return { toprfPublicKey: new Uint8Array(0) };
+}
+
+export const InitResponse: MessageFns<InitResponse> = {
+  encode(message: InitResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.toprfPublicKey.length !== 0) {
+      writer.uint32(10).bytes(message.toprfPublicKey);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): InitResponse {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseInitResponse();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.toprfPublicKey = reader.bytes();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): InitResponse {
+    return {
+      toprfPublicKey: isSet(object.toprfPublicKey) ? bytesFromBase64(object.toprfPublicKey) : new Uint8Array(0),
+    };
+  },
+
+  toJSON(message: InitResponse): unknown {
+    const obj: any = {};
+    if (message.toprfPublicKey.length !== 0) {
+      obj.toprfPublicKey = base64FromBytes(message.toprfPublicKey);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<InitResponse>): InitResponse {
+    return InitResponse.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<InitResponse>): InitResponse {
+    const message = createBaseInitResponse();
+    message.toprfPublicKey = object.toprfPublicKey ?? new Uint8Array(0);
+    return message;
+  },
+};
+
 function createBaseTOPRFRequest(): TOPRFRequest {
-  return { maskedData: new Uint8Array(0) };
+  return { maskedData: new Uint8Array(0), engine: 0 };
 }
 
 export const TOPRFRequest: MessageFns<TOPRFRequest> = {
   encode(message: TOPRFRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.maskedData.length !== 0) {
       writer.uint32(10).bytes(message.maskedData);
+    }
+    if (message.engine !== 0) {
+      writer.uint32(16).int32(message.engine);
     }
     return writer;
   },
@@ -3183,6 +3273,14 @@ export const TOPRFRequest: MessageFns<TOPRFRequest> = {
           message.maskedData = reader.bytes();
           continue;
         }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.engine = reader.int32() as any;
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -3193,13 +3291,19 @@ export const TOPRFRequest: MessageFns<TOPRFRequest> = {
   },
 
   fromJSON(object: any): TOPRFRequest {
-    return { maskedData: isSet(object.maskedData) ? bytesFromBase64(object.maskedData) : new Uint8Array(0) };
+    return {
+      maskedData: isSet(object.maskedData) ? bytesFromBase64(object.maskedData) : new Uint8Array(0),
+      engine: isSet(object.engine) ? zKProofEngineFromJSON(object.engine) : 0,
+    };
   },
 
   toJSON(message: TOPRFRequest): unknown {
     const obj: any = {};
     if (message.maskedData.length !== 0) {
       obj.maskedData = base64FromBytes(message.maskedData);
+    }
+    if (message.engine !== 0) {
+      obj.engine = zKProofEngineToJSON(message.engine);
     }
     return obj;
   },
@@ -3210,24 +3314,33 @@ export const TOPRFRequest: MessageFns<TOPRFRequest> = {
   fromPartial(object: DeepPartial<TOPRFRequest>): TOPRFRequest {
     const message = createBaseTOPRFRequest();
     message.maskedData = object.maskedData ?? new Uint8Array(0);
+    message.engine = object.engine ?? 0;
     return message;
   },
 };
 
 function createBaseTOPRFResponse(): TOPRFResponse {
-  return { evaluated: new Uint8Array(0), c: new Uint8Array(0), r: new Uint8Array(0) };
+  return {
+    publicKeyShare: new Uint8Array(0),
+    evaluated: new Uint8Array(0),
+    c: new Uint8Array(0),
+    r: new Uint8Array(0),
+  };
 }
 
 export const TOPRFResponse: MessageFns<TOPRFResponse> = {
   encode(message: TOPRFResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.publicKeyShare.length !== 0) {
+      writer.uint32(10).bytes(message.publicKeyShare);
+    }
     if (message.evaluated.length !== 0) {
-      writer.uint32(10).bytes(message.evaluated);
+      writer.uint32(18).bytes(message.evaluated);
     }
     if (message.c.length !== 0) {
-      writer.uint32(18).bytes(message.c);
+      writer.uint32(26).bytes(message.c);
     }
     if (message.r.length !== 0) {
-      writer.uint32(26).bytes(message.r);
+      writer.uint32(34).bytes(message.r);
     }
     return writer;
   },
@@ -3244,7 +3357,7 @@ export const TOPRFResponse: MessageFns<TOPRFResponse> = {
             break;
           }
 
-          message.evaluated = reader.bytes();
+          message.publicKeyShare = reader.bytes();
           continue;
         }
         case 2: {
@@ -3252,11 +3365,19 @@ export const TOPRFResponse: MessageFns<TOPRFResponse> = {
             break;
           }
 
-          message.c = reader.bytes();
+          message.evaluated = reader.bytes();
           continue;
         }
         case 3: {
           if (tag !== 26) {
+            break;
+          }
+
+          message.c = reader.bytes();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
             break;
           }
 
@@ -3274,6 +3395,7 @@ export const TOPRFResponse: MessageFns<TOPRFResponse> = {
 
   fromJSON(object: any): TOPRFResponse {
     return {
+      publicKeyShare: isSet(object.publicKeyShare) ? bytesFromBase64(object.publicKeyShare) : new Uint8Array(0),
       evaluated: isSet(object.evaluated) ? bytesFromBase64(object.evaluated) : new Uint8Array(0),
       c: isSet(object.c) ? bytesFromBase64(object.c) : new Uint8Array(0),
       r: isSet(object.r) ? bytesFromBase64(object.r) : new Uint8Array(0),
@@ -3282,6 +3404,9 @@ export const TOPRFResponse: MessageFns<TOPRFResponse> = {
 
   toJSON(message: TOPRFResponse): unknown {
     const obj: any = {};
+    if (message.publicKeyShare.length !== 0) {
+      obj.publicKeyShare = base64FromBytes(message.publicKeyShare);
+    }
     if (message.evaluated.length !== 0) {
       obj.evaluated = base64FromBytes(message.evaluated);
     }
@@ -3299,6 +3424,7 @@ export const TOPRFResponse: MessageFns<TOPRFResponse> = {
   },
   fromPartial(object: DeepPartial<TOPRFResponse>): TOPRFResponse {
     const message = createBaseTOPRFResponse();
+    message.publicKeyShare = object.publicKeyShare ?? new Uint8Array(0);
     message.evaluated = object.evaluated ?? new Uint8Array(0);
     message.c = object.c ?? new Uint8Array(0);
     message.r = object.r ?? new Uint8Array(0);
@@ -3339,7 +3465,7 @@ export const RPCMessage: MessageFns<RPCMessage> = {
       InitRequest.encode(message.initRequest, writer.uint32(18).fork()).join();
     }
     if (message.initResponse !== undefined) {
-      Empty.encode(message.initResponse, writer.uint32(26).fork()).join();
+      InitResponse.encode(message.initResponse, writer.uint32(26).fork()).join();
     }
     if (message.connectionTerminationAlert !== undefined) {
       ErrorData.encode(message.connectionTerminationAlert, writer.uint32(34).fork()).join();
@@ -3420,7 +3546,7 @@ export const RPCMessage: MessageFns<RPCMessage> = {
             break;
           }
 
-          message.initResponse = Empty.decode(reader, reader.uint32());
+          message.initResponse = InitResponse.decode(reader, reader.uint32());
           continue;
         }
         case 4: {
@@ -3564,7 +3690,7 @@ export const RPCMessage: MessageFns<RPCMessage> = {
     return {
       id: isSet(object.id) ? globalThis.Number(object.id) : 0,
       initRequest: isSet(object.initRequest) ? InitRequest.fromJSON(object.initRequest) : undefined,
-      initResponse: isSet(object.initResponse) ? Empty.fromJSON(object.initResponse) : undefined,
+      initResponse: isSet(object.initResponse) ? InitResponse.fromJSON(object.initResponse) : undefined,
       connectionTerminationAlert: isSet(object.connectionTerminationAlert)
         ? ErrorData.fromJSON(object.connectionTerminationAlert)
         : undefined,
@@ -3617,7 +3743,7 @@ export const RPCMessage: MessageFns<RPCMessage> = {
       obj.initRequest = InitRequest.toJSON(message.initRequest);
     }
     if (message.initResponse !== undefined) {
-      obj.initResponse = Empty.toJSON(message.initResponse);
+      obj.initResponse = InitResponse.toJSON(message.initResponse);
     }
     if (message.connectionTerminationAlert !== undefined) {
       obj.connectionTerminationAlert = ErrorData.toJSON(message.connectionTerminationAlert);
@@ -3680,7 +3806,7 @@ export const RPCMessage: MessageFns<RPCMessage> = {
       ? InitRequest.fromPartial(object.initRequest)
       : undefined;
     message.initResponse = (object.initResponse !== undefined && object.initResponse !== null)
-      ? Empty.fromPartial(object.initResponse)
+      ? InitResponse.fromPartial(object.initResponse)
       : undefined;
     message.connectionTerminationAlert =
       (object.connectionTerminationAlert !== undefined && object.connectionTerminationAlert !== null)

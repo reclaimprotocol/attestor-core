@@ -1,20 +1,22 @@
-import { CipherSuite, concatenateUint8Arrays, crypto, generateIV } from '@reclaimprotocol/tls'
+import { CipherSuite, concatenateUint8Arrays, crypto, generateIV, strToUint8Array } from '@reclaimprotocol/tls'
 import {
 	CONFIG as ZK_CONFIG,
 	EncryptionAlgorithm,
 	generateProof,
+	makeGnarkOPRFOperator,
 	makeGnarkZkOperator,
 	makeLocalFileFetch,
+	MakeOPRFOperator,
 	makeRemoteFileFetch,
 	makeSnarkJsZKOperator,
 	MakeZKOperatorOpts,
-	PrivateInput,
+	OPRFOperator,	PrivateInput,
 	PublicInput,
 	verifyProof,
 	ZKEngine,
 	ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
 import { DEFAULT_REMOTE_FILE_FETCH_BASE_URL, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from 'src/config'
-import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof } from 'src/proto/api'
+import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof, TOPRFPayload, ZKProofEngine } from 'src/proto/api'
 import { CompleteTLSPacket, Logger, PrepareZKProofsBaseOpts, ZKOperators, ZKRevealInfo } from 'src/types'
 import { detectEnvironment, getEnvVariable } from 'src/utils/env'
 import { getPureCiphertext, getRecordIV, getZkAlgorithmForCipherSuite } from 'src/utils/generics'
@@ -55,6 +57,7 @@ type ZKProofToGenerate = {
 	redactedPlaintext: Uint8Array
 	privateInput: PrivateInput
 	publicInput: PublicInput
+	toprf?: TOPRFPayload
 }
 
 type ZKPacketToProve = {
@@ -100,7 +103,7 @@ export async function makeZkProofGenerator(
 		 */
 		async addPacketToProve(
 			packet: CompleteTLSPacket,
-			reveal: ZKRevealInfo,
+			{ redactedPlaintext, toprf }: ZKRevealInfo,
 			onGeneratedProofs: ZKPacketToProve['onGeneratedProofs']
 		) {
 			if(packet.type === 'plaintext') {
@@ -110,7 +113,7 @@ export async function makeZkProofGenerator(
 			const alg = getZkAlgorithmForCipherSuite(cipherSuite)
 			const chunkSizeBytes = getChunkSizeBytes(alg)
 
-			const { redactedPlaintext } = reveal
+			//const { redactedPlaintext } = reveal
 			const key = await crypto.exportKey(packet.encKey)
 			const iv = packet.iv
 			const ciphertext = getPureCiphertext(
@@ -122,7 +125,7 @@ export async function makeZkProofGenerator(
 				onGeneratedProofs,
 				algorithm: alg,
 				proofsToGenerate: [],
-				iv: packet.fixedIv
+				iv: packet.fixedIv,
 			}
 
 			for(let i = 0;i < chunks;i++) {
@@ -167,22 +170,20 @@ export async function makeZkProofGenerator(
 
 				let proofsLeft = proofsToGenerate.length
 				for(const proofToGen of proofsToGenerate) {
-					tasks.push(
-						zkQueue.add(async() => {
-							const proof = await generateProofForChunk(
-								algorithm,
-								proofToGen
-							)
+					tasks.push(zkQueue.add(async() => {
+						const proof = await generateProofForChunk(
+							algorithm,
+							proofToGen
+						)
 
-							onChunkDone?.()
-							proofs.push(proof)
+						onChunkDone?.()
+						proofs.push(proof)
 
-							proofsLeft -= 1
-							if(proofsLeft === 0) {
-								onGeneratedProofs(proofs)
-							}
-						}, { throwOnTimeout: true })
-					)
+						proofsLeft -= 1
+						if(proofsLeft === 0) {
+							onGeneratedProofs(proofs)
+						}
+					}, { throwOnTimeout: true }))
 				}
 			}
 
@@ -211,11 +212,11 @@ export async function makeZkProofGenerator(
 		algorithm: EncryptionAlgorithm,
 		{
 			startIdx, redactedPlaintext,
-			privateInput, publicInput
+			privateInput, publicInput,
+			toprf,
 		}: ZKProofToGenerate
 	): Promise<ZKProof> {
-		const operator = await getZkOperatorForAlgorithm(algorithm)
-
+		const operator = getZkOperatorForAlgorithm(algorithm)
 		const proof = await generateProof(
 			{
 				algorithm,
@@ -227,17 +228,23 @@ export async function makeZkProofGenerator(
 		)
 
 		logger?.debug({ startIdx }, 'generated proof for chunk')
+
 		return {
-			proofJson: proof.proofJson,
+			// backwards compatibility
+			proofJson: '',
+			proofData: typeof proof.proofData === 'string'
+				? strToUint8Array(proof.proofData)
+				: proof.proofData,
+			toprf,
 			decryptedRedactedCiphertext: proof.plaintext,
 			redactedPlaintext,
 			startIdx
 		}
 	}
 
-	async function getZkOperatorForAlgorithm(algorithm: EncryptionAlgorithm) {
+	function getZkOperatorForAlgorithm(algorithm: EncryptionAlgorithm) {
 		return zkOperators?.[algorithm]
-			|| await makeDefaultZkOperator(algorithm, zkEngine, logger)
+			|| makeDefaultZkOperator(algorithm, zkEngine, logger)
 	}
 }
 
@@ -263,7 +270,7 @@ export async function verifyZkPacket(
 	const { proofs } = zkReveal
 	const algorithm = getZkAlgorithmForCipherSuite(cipherSuite)
 	const operator = zkOperators?.[algorithm]
-		|| await makeDefaultZkOperator(algorithm, zkEngine, logger)
+		|| makeDefaultZkOperator(algorithm, zkEngine, logger)
 
 	const recordIV = getRecordIV(ciphertext, cipherSuite)
 	ciphertext = getPureCiphertext(ciphertext, cipherSuite)
@@ -280,10 +287,10 @@ export async function verifyZkPacket(
 
 	const alg = getZkAlgorithmForCipherSuite(cipherSuite)
 	const chunkSizeBytes = getChunkSizeBytes(alg)
-	const { blocksPerChunk } = ZK_CONFIG[algorithm]
 
 	await Promise.all(
 		proofs.map(async({
+			proofData,
 			proofJson,
 			decryptedRedactedCiphertext,
 			redactedPlaintext,
@@ -313,7 +320,7 @@ export async function verifyZkPacket(
 				throw new Error(`redacted ciphertext (${i}) not congruent`)
 			}
 
-			const chunkIndex = startIdx / chunkSizeBytes * blocksPerChunk
+			const chunkIndex = startIdx / chunkSizeBytes
 			let nonce = concatenateUint8Arrays([iv, recordIV])
 
 			if(!recordIV.length) {
@@ -324,14 +331,23 @@ export async function verifyZkPacket(
 				{
 					proof: {
 						algorithm,
-						proofJson,
+						proofData: proofData.length
+							? proofData
+							: strToUint8Array(proofJson),
 						plaintext: decryptedRedactedCiphertext,
 					},
-					publicInput: { ciphertext: ciphertextChunk, iv:nonce, offset:chunkIndex },
+					publicInput: {
+						ciphertext: ciphertextChunk,
+						iv: nonce,
+						offset: chunkIndex
+					},
 					operator,
 					logger,
 				}
-			)
+			).catch(err => {
+				err.message += ` (chunk ${i}, startIdx ${startIdx})`
+				throw err
+			})
 
 			logger?.debug(
 				{ startIdx, endIdx: startIdx + redactedPlaintext.length },
@@ -361,9 +377,17 @@ const zkEngines: {
 	[z in ZKEngine]?: { [E in EncryptionAlgorithm]?: ZKOperator }
 } = {}
 
-const operatorMakers: { [z in ZKEngine]: (opts: MakeZKOperatorOpts<{}>) => ZKOperator } = {
+const oprfEngines: {
+	[z in ZKEngine]?: { [E in EncryptionAlgorithm]?: OPRFOperator }
+} = {}
+
+const operatorMakers: { [z in ZKEngine]?: (opts: MakeZKOperatorOpts<{}>) => ZKOperator } = {
 	'snarkjs': makeSnarkJsZKOperator,
-	'gnark': makeGnarkZkOperator
+	'gnark': makeGnarkZkOperator,
+}
+
+const OPRF_OPERATOR_MAKERS: { [z in ZKEngine]?: MakeOPRFOperator<{}> } = {
+	'gnark': makeGnarkOPRFOperator
 }
 
 export function makeDefaultZkOperator(
@@ -393,14 +417,65 @@ export function makeDefaultZkOperator(
 			: makeRemoteFileFetch({
 				baseUrl: DEFAULT_REMOTE_FILE_FETCH_BASE_URL,
 			})
+		const maker = operatorMakers[zkEngine]
+		if(!maker) {
+			throw new Error(`No operator maker for ${zkEngine}`)
+		}
 
-		zkOperators[algorithm] = operatorMakers[zkEngine]({
-			algorithm,
-			fetcher
-		})
+		zkOperators[algorithm] = maker({ algorithm, fetcher })
 	}
 
 	return zkOperators[algorithm]
+}
+
+export function makeDefaultOPRFOperator(
+	algorithm: EncryptionAlgorithm,
+	zkEngine: ZKEngine,
+	logger: Logger,
+) {
+	let operators = oprfEngines[zkEngine]
+	if(!operators) {
+		oprfEngines[zkEngine] = {}
+		operators = oprfEngines[zkEngine]
+	}
+
+	if(!operators[algorithm]) {
+		const isNode = detectEnvironment() === 'node'
+		const opType = isNode ? 'local' : 'remote'
+		logger?.info(
+			{
+				type: opType,
+				algorithm
+			},
+			'fetching zk operator'
+		)
+
+		const fetcher = opType === 'local'
+			? makeLocalFileFetch()
+			: makeRemoteFileFetch({
+				baseUrl: DEFAULT_REMOTE_FILE_FETCH_BASE_URL,
+			})
+		const maker = OPRF_OPERATOR_MAKERS[zkEngine]
+		if(!maker) {
+			throw new Error(`No operator maker for ${zkEngine}`)
+		}
+
+		operators[algorithm] = maker({ algorithm, fetcher })
+	}
+
+	return operators[algorithm]
+}
+
+export function getEngineString(engine: ZKProofEngine) {
+	if(engine === ZKProofEngine.ZK_ENGINE_GNARK) {
+		return 'gnark'
+	}
+
+	if(engine === ZKProofEngine.ZK_ENGINE_SNARKJS) {
+		return 'snarkjs'
+	}
+
+	throw new Error(`Unknown ZK engine: ${engine}`)
 }
 
 function getProofGenerationParamsForChunk(

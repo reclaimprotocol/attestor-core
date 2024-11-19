@@ -1,6 +1,6 @@
 import { base64 } from 'ethers/lib/utils'
 import { DEFAULT_METADATA } from 'src/config'
-import { RPCMessages } from 'src/proto/api'
+import { InitResponse, RPCMessages } from 'src/proto/api'
 import { IAttestorClient, IAttestorClientCreateOpts, RPCEvent, RPCRequestData, RPCResponseData, RPCType } from 'src/types'
 import { AttestorError, getRpcRequestType, logger as LOGGER, packRpcMessages } from 'src/utils'
 import { AttestorSocket } from 'src/utils/socket-base'
@@ -9,6 +9,8 @@ import { Websocket as DefaultWebsocket } from 'src/utils/ws'
 export class AttestorClient extends AttestorSocket implements IAttestorClient {
 
 	private waitForInitPromise: Promise<void>
+
+	public initResponse?: InitResponse
 
 	constructor({
 		url,
@@ -34,9 +36,10 @@ export class AttestorClient extends AttestorSocket implements IAttestorClient {
 		const initReqId = msg.messages[0].id
 		this.waitForInitPromise = this
 			.waitForResponse<'init'>(initReqId)
-			.then(() => {
+			.then(res => {
 				logger.info('client initialised')
 				this.isInitialised = true
+				this.initResponse = res
 			})
 
 		this.addEventListener('connection-terminated', ev => (

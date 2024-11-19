@@ -28,7 +28,6 @@ jest.mock('@reclaimprotocol/tls/lib/utils/parse-certificate', () => {
 	}
 })
 
-
 describeWithServer('Claim Creation', opts => {
 
 	let client: AttestorClient
@@ -45,8 +44,6 @@ describeWithServer('Claim Creation', opts => {
 	})
 
 	it.each(TLS_VERSIONS)('should successfully create a claim (%s)', async version => {
-		// we need to disable certificate verification
-		// for testing purposes
 		providers.http.additionalClientOptions = {
 			...providers.http.additionalClientOptions,
 			supportedProtocolVersions: [version]
@@ -71,7 +68,7 @@ describeWithServer('Claim Creation', opts => {
 			},
 			ownerPrivateKey: opts.privateKeyHex,
 			client,
-			zkEngine:opts.zkEngine
+			zkEngine: opts.zkEngine,
 		})
 
 		expect(result.error).toBeUndefined()
@@ -82,7 +79,10 @@ describeWithServer('Claim Creation', opts => {
 		const transcript = result.request!.transcript
 
 		const applMsgs = extractApplicationDataFromTranscript(
-			await decryptTranscript(transcript, logger, opts.zkEngine, result.request?.fixedServerIV!, result.request?.fixedClientIV!)
+			await decryptTranscript(
+				transcript, logger, opts.zkEngine,
+				result.request?.fixedServerIV!, result.request?.fixedClientIV!
+			)
 		)
 
 		const requestData = applMsgs
@@ -102,6 +102,11 @@ describeWithServer('Claim Creation', opts => {
 		// were not meant to be revealed.
 		expect(SPY_PREPARER).toHaveBeenCalledTimes(1)
 		await verifyNoDirectRevealLeaks()
+	})
+
+	// OPRF is only available on gnark
+	opts.zkEngine === 'gnark' && it('should create a claim with an OPRF redaction', async() => {
+
 	})
 
 	it('should not create a claim with invalid response', async() => {

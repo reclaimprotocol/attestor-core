@@ -6,6 +6,8 @@ import { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import {
 	ClaimTunnelRequest,
 	InitRequest,
+	MessageReveal_MessageRevealDirect as MessageRevealDirect,
+	MessageReveal_MessageRevealZk as MessageRevealZk,
 	ProviderClaimInfo,
 	TranscriptMessageSenderType,
 	ZKProofEngine
@@ -102,7 +104,9 @@ export async function assertValidClaimRequest(
 
 	// get all application data messages
 	const applData = extractApplicationDataFromTranscript(receipt)
-	const newData = await assertValidProviderTranscript(applData, data)
+	const newData = await assertValidProviderTranscript(
+		applData, data, logger
+	)
 	if(newData !== data) {
 		logger.info({ newData }, 'updated claim info')
 	}
@@ -117,6 +121,7 @@ export async function assertValidClaimRequest(
 export async function assertValidProviderTranscript<T extends ProviderClaimInfo>(
 	applData: Transcript<Uint8Array>,
 	info: T,
+	logger: Logger
 ) {
 	const providerName = info.provider as ProviderName
 	const provider = providers[providerName]
@@ -134,7 +139,8 @@ export async function assertValidProviderTranscript<T extends ProviderClaimInfo>
 
 	const rslt = await provider.assertValidProviderReceipt(
 		applData,
-		params
+		params,
+		logger
 	)
 
 	const extractedParameters = rslt?.extractedParameters || {}
@@ -221,10 +227,10 @@ export async function decryptTranscript(
 		sender,
 		message,
 		reveal: { zkReveal, directReveal } = {}
-	}] of transcript.entries()) { //start with first message after last handshake message
+	}] of transcript.entries()) {
+		//start with first message after last handshake message
 		await getDecryptedMessage(sender, message, directReveal, zkReveal, i)
 	}
-
 
 	return {
 		transcript: decryptedTranscript,
@@ -232,10 +238,16 @@ export async function decryptTranscript(
 		tlsVersion: tlsVersion,
 	}
 
-
-	async function getDecryptedMessage(sender: TranscriptMessageSenderType, message: Uint8Array, directReveal, zkReveal, i: number) {
+	async function getDecryptedMessage(
+		sender: TranscriptMessageSenderType,
+		message: Uint8Array,
+		directReveal: MessageRevealDirect | undefined,
+		zkReveal: MessageRevealZk | undefined,
+		i: number
+	) {
 		try {
-			const isServer = sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER
+			const isServer = sender === TranscriptMessageSenderType
+				.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER
 			const recordHeader = message.slice(0, 5)
 			const content = getWithoutHeader(message)
 			if(isServer) {
@@ -249,7 +261,10 @@ export async function decryptTranscript(
 			let plaintextLength: number
 
 			if(directReveal?.key?.length) {
-				const result = await decryptDirect(directReveal, cipherSuite, recordHeader, tlsVersion, content)
+				const result = await decryptDirect(
+					directReveal, cipherSuite, recordHeader,
+					tlsVersion, content
+				)
 				plaintext = result.plaintext
 				redacted = false
 				plaintextLength = plaintext.length
@@ -261,8 +276,13 @@ export async function decryptTranscript(
 						logger,
 						cipherSuite,
 						zkEngine: zkEngine,
-						iv: sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER ? serverIV : clientIV,
-						recordNumber: isServer ? serverRecordNumber : clientRecordNumber
+						iv: sender === TranscriptMessageSenderType
+							.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER
+							? serverIV
+							: clientIV,
+						recordNumber: isServer
+							? serverRecordNumber
+							: clientRecordNumber
 					}
 				)
 				plaintext = result.redactedPlaintext
@@ -274,7 +294,8 @@ export async function decryptTranscript(
 			}
 
 			decryptedTranscript.push({
-				sender: sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
+				sender: sender === TranscriptMessageSenderType
+					.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
 					? 'client'
 					: 'server',
 				redacted,

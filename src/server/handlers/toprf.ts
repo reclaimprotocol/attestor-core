@@ -1,17 +1,23 @@
 import { ethers } from 'ethers'
-import { TOPRF_GENERATOR } from 'src/server/utils/toprf'
 import { RPCHandler } from 'src/types'
+import { getEngineString, makeDefaultOPRFOperator } from 'src/utils'
 import { getEnvVariable } from 'src/utils/env'
 
-export const toprfRequest: RPCHandler<'toprf'> = async({ maskedData }) => {
-	const PRIVATE_KEY_STR = getEnvVariable('TOPRF_PRIVATE_KEY')
-	if(!PRIVATE_KEY_STR) {
-		throw new Error('TOPRF_PRIVATE_KEY not set. Cannot execute OPRF')
+export const toprf: RPCHandler<'toprf'> = async(
+	{ maskedData, engine },
+	{ logger }
+) => {
+	const PRIVATE_KEY_STR = getEnvVariable('TOPRF_SHARE_PRIVATE_KEY')
+	const PUBLIC_KEY_STR = getEnvVariable('TOPRF_SHARE_PUBLIC_KEY')
+	if(!PRIVATE_KEY_STR || !PUBLIC_KEY_STR) {
+		throw new Error('private/public keys not set. Cannot execute OPRF')
 	}
 
 	const PRIVATE_KEY = ethers.utils.arrayify(PRIVATE_KEY_STR)
+	const PUBLIC_KEY = ethers.utils.arrayify(PUBLIC_KEY_STR)
 
-
-	const res = await TOPRF_GENERATOR.evaluateOPRF(PRIVATE_KEY, maskedData)
-	return res
+	const engineStr = getEngineString(engine)
+	const operator = makeDefaultOPRFOperator('chacha20', engineStr, logger)
+	const res = await operator.evaluateOPRF(PRIVATE_KEY, maskedData)
+	return { ...res, publicKeyShare: PUBLIC_KEY }
 }

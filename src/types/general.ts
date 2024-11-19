@@ -1,4 +1,5 @@
 import type { Logger as TLSLogger, TLSPacketContext, TLSProtocolVersion } from '@reclaimprotocol/tls'
+import { TOPRFPayload } from 'src/proto/api'
 
 /**
  * Represents a slice of any array or string
@@ -29,6 +30,7 @@ export type LogLevel = 'debug' | 'info'
 export type ZKRevealInfo = {
 	type: 'zk'
 	redactedPlaintext: Uint8Array
+	toprf?: TOPRFPayload
 }
 
 export type MessageRevealInfo = { type: 'complete' } | ZKRevealInfo

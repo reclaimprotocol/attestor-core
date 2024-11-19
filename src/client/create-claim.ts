@@ -1,8 +1,8 @@
 import { strToUint8Array, TLSPacketContext } from '@reclaimprotocol/tls'
 import { makeRpcTlsTunnel } from 'src/client/tunnels/make-rpc-tls-tunnel'
 import { getAttestorClientFromPool } from 'src/client/utils/attestor-pool'
-import { DEFAULT_HTTPS_PORT } from 'src/config'
-import { ClaimTunnelRequest, ZKProofEngine } from 'src/proto/api'
+import { DEFAULT_HTTPS_PORT, TOPRF_DOMAIN_SEPARATOR } from 'src/config'
+import { ClaimTunnelRequest, TOPRFPayload, ZKProofEngine } from 'src/proto/api'
 import { providers } from 'src/providers'
 import { CreateClaimOnAttestorOpts, IAttestorClient, MessageRevealInfo, ProviderName, Transcript } from 'src/types'
 import {
@@ -13,9 +13,11 @@ import {
 	getProviderValue,
 	isApplicationData,
 	logger as LOGGER,
+	makeDefaultOPRFOperator,
 	makeHttpResponseParser,
 	preparePacketsForReveal,
 	redactSlices,
+	RevealedSlices,
 	unixTimestampSeconds
 } from 'src/utils'
 import { executeWithRetries } from 'src/utils/retries'
@@ -87,6 +89,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		...getDefaultTlsOptions(),
 		...providerTlsOpts,
 	}
+	const { zkEngine = 'snarkjs' } = zkOpts
 
 	let redactionMode = getProviderValue(params, provider.writeRedactionMode)
 
@@ -177,7 +180,8 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 	} = provider.createRequest(
 		// @ts-ignore
 		secretParams,
-		params
+		params,
+		logger
 	)
 	const requestData = typeof requestStr === 'string'
 		? strToUint8Array(requestStr)
@@ -259,7 +263,9 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			owner: getAddress(),
 		},
 		transcript: await generateTranscript(),
-		zkEngine: zkOpts.zkEngine === 'gnark' ? ZKProofEngine.ZK_ENGINE_GNARK : ZKProofEngine.ZK_ENGINE_SNARKJS,
+		zkEngine: zkEngine === 'gnark'
+			? ZKProofEngine.ZK_ENGINE_GNARK
+			: ZKProofEngine.ZK_ENGINE_SNARKJS,
 		fixedServerIV: serverIV!,
 		fixedClientIV: clientIV!,
 	})
@@ -355,7 +361,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 	 * Generate transcript with reveal data for the attestor to verify
 	 */
 	async function generateTranscript() {
-		addServerSideReveals()
+		await addServerSideReveals()
 
 		const startMs = Date.now()
 		const revealedMessages = await preparePacketsForReveal(
@@ -387,9 +393,9 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 	 * the provider's redaction function if available.
 	 * Otherwise, opts to reveal all server side blocks.
 	 */
-	function addServerSideReveals() {
+	async function addServerSideReveals() {
 		const allPackets = tunnel.transcript
-		let serverPacketsToReveal: ReturnType<typeof getBlocksToReveal<ServerAppDataPacket>> = 'all'
+		let serverPacketsToReveal: RevealedSlices<ServerAppDataPacket> = 'all'
 
 		const packets: Transcript<Uint8Array> = []
 		const serverBlocks: ServerAppDataPacket[] = []
@@ -406,7 +412,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 
 			packets.push({
 				message: plaintext,
-				sender:b.sender
+				sender: b.sender
 			})
 
 			if(b.sender === 'server') {
@@ -418,16 +424,19 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		}
 
 		if(provider.getResponseRedactions) {
-			serverPacketsToReveal = getBlocksToReveal(
+			serverPacketsToReveal = await getBlocksToReveal(
 				serverBlocks,
 				total => provider.getResponseRedactions!(
 					total,
-					params
-				)
+					params,
+					logger
+				),
+				performOprf
 			)
 		}
 
-		const revealedPackets: Transcript<Uint8Array> = packets.filter(p => p.sender === 'client')
+		const revealedPackets: Transcript<Uint8Array> = packets
+			.filter(p => p.sender === 'client')
 		if(serverPacketsToReveal === 'all') {
 			// reveal all server side blocks
 			for(const { message, sender } of allPackets) {
@@ -438,19 +447,28 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 
 			revealedPackets.push(...packets.filter(p => p.sender === 'server'))
 		} else {
-			for(const { block, redactedPlaintext } of serverPacketsToReveal) {
+			for(const { block, redactedPlaintext, toprf } of serverPacketsToReveal) {
 				setRevealOfMessage(block.message, {
 					type: 'zk',
-					redactedPlaintext
+					redactedPlaintext,
+					toprf
 				})
-				revealedPackets.push({ sender:'server', message:redactedPlaintext })
+				revealedPackets.push(
+					{ sender: 'server', message: redactedPlaintext }
+				)
 			}
 		}
 
-		provider.assertValidProviderReceipt(revealedPackets, {
-			...params,
-			secretParams:secretParams //provide secret params for proper request body validation
-		})
+		await provider.assertValidProviderReceipt(
+			revealedPackets,
+			{
+				...params,
+				// provide secret params for proper
+				// request body validation
+				secretParams,
+			},
+			logger
+		)
 
 		// reveal all handshake blocks
 		// so the attestor can verify there was no
@@ -468,6 +486,35 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 
 			setRevealOfMessage(p.message, { type: 'complete' })
 		}
+	}
+
+	async function performOprf(plaintext: Uint8Array) {
+		logger.info({ length: plaintext.length }, 'generating OPRF...')
+
+		const oprfOperator = makeDefaultOPRFOperator(
+			'chacha20',
+			zkEngine,
+			logger
+		)
+		const reqData = await oprfOperator.generateOPRFRequestData(
+			plaintext,
+			TOPRF_DOMAIN_SEPARATOR,
+			logger
+		)
+		const res = await client.rpc('toprf', reqData)
+		const nullifier = await oprfOperator.finaliseOPRF(
+			client.initResponse!.toprfPublicKey,
+			reqData,
+			[res]
+		)
+
+		const data: TOPRFPayload = {
+			nullifier,
+			responses: [res],
+			dataLocation: undefined
+		}
+
+		return data
 	}
 
 	function setRevealOfMessage(message: TLSPacketContext, reveal: MessageRevealInfo | undefined) {
