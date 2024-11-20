@@ -113,11 +113,7 @@ export interface ProvidersConfig {
 	http: {
 		parameters: HttpProviderParameters
 		secretParameters: HttpProviderSecretParameters
-	},
-    httpb64: {
-      parameters: HttpProviderParameters
-      secretParameters: HttpProviderSecretParameters
-    },
+	}
 }
 
 export const PROVIDER_SCHEMAS = {
@@ -125,8 +121,4 @@ export const PROVIDER_SCHEMAS = {
 		parameters: HttpProviderParametersJson,
 		secretParameters: HttpProviderSecretParametersJson
 	},
-  httpb64: {
-    parameters: HttpProviderParametersJson,
-    secretParameters: HttpProviderSecretParametersJson
-  },
 }
