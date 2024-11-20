@@ -15,10 +15,11 @@ import {
 	verifyProof,
 	ZKEngine,
 	ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
-import { DEFAULT_REMOTE_FILE_FETCH_BASE_URL, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS } from 'src/config'
-import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof, TOPRFPayload, ZKProofEngine } from 'src/proto/api'
-import { CompleteTLSPacket, Logger, PrepareZKProofsBaseOpts, ZKOperators, ZKRevealInfo } from 'src/types'
+import { DEFAULT_REMOTE_FILE_FETCH_BASE_URL, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS, TOPRF_DOMAIN_SEPARATOR } from 'src/config'
+import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof, ZKProofEngine } from 'src/proto/api'
+import { CompleteTLSPacket, Logger, OPRFOperators, PrepareZKProofsBaseOpts, TOPRFProofParams, ZKOperators, ZKRevealInfo } from 'src/types'
 import { detectEnvironment, getEnvVariable } from 'src/utils/env'
+import { AttestorError } from 'src/utils/error'
 import { getPureCiphertext, getRecordIV, getZkAlgorithmForCipherSuite } from 'src/utils/generics'
 import { logger as LOGGER } from 'src/utils/logger'
 import { isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from 'src/utils/redactions'
@@ -33,6 +34,7 @@ type GenerateZKChunkProofOpts = {
 	ciphertext: Uint8Array
 	redactedPlaintext: Uint8Array
 	offsetChunks: number
+	toprf?: TOPRFProofParams
 }
 
 type PrepareZKProofsOpts = {
@@ -47,6 +49,7 @@ type ZKVerifyOpts = {
 	logger?: Logger
 	/** get ZK operator for specified algorithm */
 	zkOperators?: ZKOperators
+	oprfOperators?: OPRFOperators
 	zkEngine?: ZKEngine
 	iv: Uint8Array
 	recordNumber: number
@@ -57,7 +60,7 @@ type ZKProofToGenerate = {
 	redactedPlaintext: Uint8Array
 	privateInput: PrivateInput
 	publicInput: PublicInput
-	toprf?: TOPRFPayload
+	toprf?: TOPRFProofParams
 }
 
 type ZKPacketToProve = {
@@ -75,6 +78,7 @@ const ZK_CONCURRENCY = +(
 export async function makeZkProofGenerator(
 	{
 		zkOperators,
+		oprfOperators,
 		logger = LOGGER,
 		zkProofConcurrency = ZK_CONCURRENCY,
 		maxZkChunks = MAX_ZK_CHUNKS,
@@ -103,7 +107,7 @@ export async function makeZkProofGenerator(
 		 */
 		async addPacketToProve(
 			packet: CompleteTLSPacket,
-			{ redactedPlaintext, toprf }: ZKRevealInfo,
+			{ redactedPlaintext, toprfs }: ZKRevealInfo,
 			onGeneratedProofs: ZKPacketToProve['onGeneratedProofs']
 		) {
 			if(packet.type === 'plaintext') {
@@ -127,33 +131,82 @@ export async function makeZkProofGenerator(
 				proofsToGenerate: [],
 				iv: packet.fixedIv,
 			}
+			const chunksDone = new Set<number>()
+
+			// first we'll handle all TOPRF blocks
+			// we do these first, because they can span multiple chunks
+			// & we need to be able to span the right chunks
+			for(const toprf of toprfs || []) {
+				const startChunk = Math.floor(
+					toprf.dataLocation!.fromIndex / chunkSizeBytes
+				)
+				if(chunksDone.has(startChunk)) {
+					throw new AttestorError(
+						'ERROR_BAD_REQUEST',
+						`Chunk ${startChunk} contains more than one TOPRF,`
+						+ ' which is not supported'
+					)
+				}
+
+				addProofToGenerate(
+					startChunk,
+					{
+						...toprf,
+						dataLocation: {
+							...toprf.dataLocation!,
+							fromIndex: toprf.dataLocation!.fromIndex % chunkSizeBytes
+						}
+					}
+				)
+			}
 
 			for(let i = 0;i < chunks;i++) {
-				const proof = getProofGenerationParamsForChunk(
+				// ignore any TOPRF chunks
+				if(chunksDone.has(i)) {
+					continue
+				}
+
+				addProofToGenerate(i)
+			}
+
+			// generate proofs in order of start index
+			packetToProve.proofsToGenerate
+				.sort((a, b) => a.startIdx - b.startIdx)
+
+			packetsToProve.push(packetToProve)
+
+			function addProofToGenerate(
+				offsetChunks: number,
+				toprf?: TOPRFProofParams
+			) {
+				chunksDone.add(offsetChunks)
+
+				const proofParams = getProofGenerationParamsForChunk(
 					alg,
 					{
 						key,
 						iv,
 						ciphertext,
 						redactedPlaintext,
-						offsetChunks: i,
+						offsetChunks,
+						toprf,
 					},
 				)
-				if(!proof) {
-					continue
+
+				if(!proofParams) {
+					return
 				}
 
-				packetToProve.proofsToGenerate.push(proof)
+				packetToProve.proofsToGenerate.push(proofParams)
 				zkChunksToProve += 1
 
 				if(zkChunksToProve > maxZkChunks) {
 					throw new Error(
-						`Too many chunks to prove: ${zkChunksToProve} > ${maxZkChunks}`
+						'Too many chunks to prove:'
+						+ ` ${zkChunksToProve} > ${maxZkChunks}`
 					)
 				}
 			}
-
-			packetsToProve.push(packetToProve)
 		},
 		getTotalChunksToProve() {
 			return zkChunksToProve
@@ -216,16 +269,53 @@ export async function makeZkProofGenerator(
 			toprf,
 		}: ZKProofToGenerate
 	): Promise<ZKProof> {
-		const operator = getZkOperatorForAlgorithm(algorithm)
+		const operator = toprf
+			? getOprfOperatorForAlgorithm(algorithm)
+			: getZkOperatorForAlgorithm(algorithm)
 		const proof = await generateProof(
 			{
 				algorithm,
 				privateInput,
 				publicInput,
 				operator,
-				logger
+				logger,
+				...(
+					toprf
+						? {
+							toprf: {
+								pos: toprf.dataLocation!.fromIndex,
+								len: toprf.dataLocation!.length,
+								output: toprf.nullifier,
+								responses: toprf.responses,
+								domainSeparator: TOPRF_DOMAIN_SEPARATOR
+							},
+							mask: toprf.mask,
+						}
+						: {}
+				)
 			}
 		)
+
+		await verifyProof({
+			proof,
+			publicInput,
+			operator,
+			logger,
+			...(
+				toprf
+					? {
+						toprf: {
+							pos: toprf.dataLocation!.fromIndex,
+							len: toprf.dataLocation!.length,
+							output: toprf.nullifier,
+							responses: toprf.responses,
+							domainSeparator: TOPRF_DOMAIN_SEPARATOR
+						},
+						mask: toprf.mask,
+					}
+					: {}
+			)
+		})
 
 		logger?.debug({ startIdx }, 'generated proof for chunk')
 
@@ -246,6 +336,11 @@ export async function makeZkProofGenerator(
 		return zkOperators?.[algorithm]
 			|| makeDefaultZkOperator(algorithm, zkEngine, logger)
 	}
+
+	function getOprfOperatorForAlgorithm(algorithm: EncryptionAlgorithm) {
+		return oprfOperators?.[algorithm]
+			|| makeDefaultOPRFOperator(algorithm, zkEngine, logger)
+	}
 }
 
 /**
@@ -257,6 +352,7 @@ export async function verifyZkPacket(
 		ciphertext,
 		zkReveal,
 		zkOperators,
+		oprfOperators,
 		logger = LOGGER,
 		zkEngine = 'snarkjs',
 		iv,
@@ -269,8 +365,6 @@ export async function verifyZkPacket(
 
 	const { proofs } = zkReveal
 	const algorithm = getZkAlgorithmForCipherSuite(cipherSuite)
-	const operator = zkOperators?.[algorithm]
-		|| makeDefaultZkOperator(algorithm, zkEngine, logger)
 
 	const recordIV = getRecordIV(ciphertext, cipherSuite)
 	ciphertext = getPureCiphertext(ciphertext, cipherSuite)
@@ -294,7 +388,8 @@ export async function verifyZkPacket(
 			proofJson,
 			decryptedRedactedCiphertext,
 			redactedPlaintext,
-			startIdx
+			startIdx,
+			toprf,
 		}, i) => {
 			// get the ciphertext chunk we received from the server
 			// the ZK library, will verify that the decrypted redacted
@@ -313,11 +408,26 @@ export async function verifyZkPacket(
 				}
 			}
 
+			// redact OPRF indices -- because they'll incorrectly
+			// be marked as incongruent
+			let comparePlaintext = redactedPlaintext
+			if(toprf) {
+				comparePlaintext = new Uint8Array(redactedPlaintext)
+				for(let i = 0;i < toprf.dataLocation!.length;i++) {
+					comparePlaintext[
+						i + toprf.dataLocation!.fromIndex
+					] = REDACTION_CHAR_CODE
+				}
+			}
+
 			if(!isRedactionCongruent(
-				redactedPlaintext,
+				comparePlaintext,
 				decryptedRedactedCiphertext
 			)) {
-				throw new Error(`redacted ciphertext (${i}) not congruent`)
+				throw new Error(
+					`redacted ciphertext (${i}, startIdx=${startIdx})`
+					+ ' not congruent'
+				)
 			}
 
 			const chunkIndex = startIdx / chunkSizeBytes
@@ -341,8 +451,21 @@ export async function verifyZkPacket(
 						iv: nonce,
 						offset: chunkIndex
 					},
-					operator,
 					logger,
+					...(
+						toprf
+							? {
+								operator: getOprfOperator(),
+								toprf: {
+									pos: toprf.dataLocation!.fromIndex,
+									len: toprf.dataLocation!.length,
+									domainSeparator: TOPRF_DOMAIN_SEPARATOR,
+									output: toprf.nullifier,
+									responses: toprf.responses,
+								}
+							}
+							: { operator: getZkOperator() }
+					)
 				}
 			).catch(err => {
 				err.message += ` (chunk ${i}, startIdx ${startIdx})`
@@ -354,14 +477,21 @@ export async function verifyZkPacket(
 				'verified proof'
 			)
 
-			realRedactedPlaintext.set(
-				redactedPlaintext,
-				startIdx,
-			)
+			realRedactedPlaintext.set(redactedPlaintext, startIdx)
 		})
 	)
 
 	return { redactedPlaintext: realRedactedPlaintext }
+
+	function getZkOperator() {
+		return zkOperators?.[algorithm]
+			|| makeDefaultZkOperator(algorithm, zkEngine, logger)
+	}
+
+	function getOprfOperator() {
+		return oprfOperators?.[algorithm]
+			|| makeDefaultOPRFOperator(algorithm, zkEngine, logger)
+	}
 }
 
 function getChunkSizeBytes(alg: EncryptionAlgorithm) {
@@ -404,13 +534,7 @@ export function makeDefaultZkOperator(
 	if(!zkOperators[algorithm]) {
 		const isNode = detectEnvironment() === 'node'
 		const opType = isNode ? 'local' : 'remote'
-		logger?.info(
-			{
-				type: opType,
-				algorithm
-			},
-			'fetching zk operator'
-		)
+		logger?.info({ type: opType, algorithm }, 'fetching zk operator')
 
 		const fetcher = opType === 'local'
 			? makeLocalFileFetch()
@@ -419,7 +543,7 @@ export function makeDefaultZkOperator(
 			})
 		const maker = operatorMakers[zkEngine]
 		if(!maker) {
-			throw new Error(`No operator maker for ${zkEngine}`)
+			throw new Error(`No ZK operator maker for ${zkEngine}`)
 		}
 
 		zkOperators[algorithm] = maker({ algorithm, fetcher })
@@ -441,23 +565,17 @@ export function makeDefaultOPRFOperator(
 
 	if(!operators[algorithm]) {
 		const isNode = detectEnvironment() === 'node'
-		const opType = isNode ? 'local' : 'remote'
-		logger?.info(
-			{
-				type: opType,
-				algorithm
-			},
-			'fetching zk operator'
-		)
+		const type = isNode ? 'local' : 'remote'
+		logger?.info({ type, algorithm }, 'fetching oprf operator')
 
-		const fetcher = opType === 'local'
+		const fetcher = type === 'local'
 			? makeLocalFileFetch()
 			: makeRemoteFileFetch({
 				baseUrl: DEFAULT_REMOTE_FILE_FETCH_BASE_URL,
 			})
 		const maker = OPRF_OPERATOR_MAKERS[zkEngine]
 		if(!maker) {
-			throw new Error(`No operator maker for ${zkEngine}`)
+			throw new Error(`No OPRF operator maker for ${zkEngine}`)
 		}
 
 		operators[algorithm] = maker({ algorithm, fetcher })
@@ -478,6 +596,19 @@ export function getEngineString(engine: ZKProofEngine) {
 	throw new Error(`Unknown ZK engine: ${engine}`)
 }
 
+
+export function getEngineProto(engine: ZKEngine) {
+	if(engine === 'gnark') {
+		return ZKProofEngine.ZK_ENGINE_GNARK
+	}
+
+	if(engine === 'snarkjs') {
+		return ZKProofEngine.ZK_ENGINE_SNARKJS
+	}
+
+	throw new Error(`Unknown ZK engine: ${engine}`)
+}
+
 function getProofGenerationParamsForChunk(
 	algorithm: EncryptionAlgorithm,
 	{
@@ -486,6 +617,7 @@ function getProofGenerationParamsForChunk(
 		ciphertext,
 		redactedPlaintext,
 		offsetChunks,
+		toprf,
 	}: GenerateZKChunkProofOpts,
 ): ZKProofToGenerate | undefined {
 	const chunkSize = getChunkSizeBytes(algorithm)
@@ -514,7 +646,8 @@ function getProofGenerationParamsForChunk(
 		startIdx,
 		redactedPlaintext: plaintextChunk,
 		privateInput: { key },
-		publicInput: { ciphertext: ciphertextChunk, iv, offset: offsetChunks }
+		publicInput: { ciphertext: ciphertextChunk, iv, offset: offsetChunks },
+		toprf
 	}
 }
 

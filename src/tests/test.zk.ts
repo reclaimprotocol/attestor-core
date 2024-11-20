@@ -118,7 +118,7 @@ describe('Redaction Tests', () => {
 					'd world'
 				],
 				redactions: [
-					{ fromIndex: 1, toIndex: 5, type: 'hashed' }
+					{ fromIndex: 1, toIndex: 5, hash: 'oprf' }
 				]
 			},
 			{
@@ -131,7 +131,7 @@ describe('Redaction Tests', () => {
 					'e world'
 				],
 				redactions: [
-					{ fromIndex: 0, toIndex: 5, type: 'hashed' }
+					{ fromIndex: 0, toIndex: 5, hash: 'oprf' }
 				]
 			},
 		]
@@ -143,7 +143,8 @@ describe('Redaction Tests', () => {
 				async() => ({
 					dataLocation: undefined,
 					nullifier: strToUint8Array('abcdefg'),
-					responses: []
+					responses: [],
+					mask: strToUint8Array('mask')
 				})
 			)
 			if(realOutput === 'all') {

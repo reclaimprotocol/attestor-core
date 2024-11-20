@@ -11,7 +11,7 @@ import {
 	Syntax
 } from 'esprima-next'
 import { JSONPath } from 'jsonpath-plus'
-import { ArraySlice, CompleteTLSPacket, ProviderParams, Transcript } from 'src/types'
+import { ArraySlice, CompleteTLSPacket, ProviderParams, RedactedOrHashedArraySlice, Transcript } from 'src/types'
 import { getHttpRequestDataFromTranscript, HttpRequest, HttpResponse, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from 'src/utils'
 
 export type JSONIndex = {
@@ -300,17 +300,22 @@ export function convertResponsePosToAbsolutePos(pos: number, bodyStartIdx: numbe
 /**
  * Returns parts of response which contain chunk headers and must be redacted out
  * of revealed response part
- * @param from
- * @param to
- * @param chunks
  */
-export function getRedactionsForChunkHeaders(from, to: number, chunks?: ArraySlice[]): ArraySlice[] {
-	const res: ArraySlice[] = []
-	if(chunks?.length) {
-		for(let i = 1; i < chunks?.length; i++) {
-			if(chunks[i].fromIndex > from && chunks[i].fromIndex < to) {
-				res.push({ fromIndex:chunks[i - 1].toIndex, toIndex:chunks[i].fromIndex })
-			}
+export function getRedactionsForChunkHeaders(
+	from: number, to: number, chunks?: ArraySlice[]
+): ArraySlice[] {
+	const res: RedactedOrHashedArraySlice[] = []
+	if(!chunks?.length) {
+		return res
+	}
+
+	for(let i = 1; i < chunks?.length; i++) {
+		const chunk = chunks[i]
+		if(chunk.fromIndex > from && chunk.fromIndex < to) {
+			res.push({
+				fromIndex: chunks[i - 1].toIndex,
+				toIndex: chunk.fromIndex,
+			})
 		}
 	}
 

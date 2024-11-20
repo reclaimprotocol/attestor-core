@@ -1,6 +1,5 @@
 import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
-import { TOPRFPayload } from 'src/proto/api'
-import type { ArraySlice, RedactedOrHashedArraySlice } from 'src/types'
+import type { ArraySlice, RedactedOrHashedArraySlice, TOPRFProofParams } from 'src/types'
 
 export const REDACTION_CHAR = '*'
 export const REDACTION_CHAR_CODE = REDACTION_CHAR.charCodeAt(0)
@@ -9,9 +8,9 @@ type SliceWithReveal<T> = {
 	block: T
 	redactedPlaintext: Uint8Array
 	/**
-	 * If the block has a TOPRF claim -- it'll be set here
+	 * If the block has some TOPRF claims -- they'll be set here
 	 */
-	toprf?: TOPRFPayload
+	toprfs?: TOPRFProofParams[]
 }
 
 export type RevealedSlices<T> = 'all' | SliceWithReveal<T>[]
@@ -78,7 +77,7 @@ export function isFullyRedacted<T extends string | Uint8Array>(
 export async function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 	blocks: T[],
 	redact: (total: Uint8Array) => RedactedOrHashedArraySlice[],
-	performOprf: (plaintext: Uint8Array) => Promise<TOPRFPayload>
+	performOprf: (plaintext: Uint8Array) => Promise<TOPRFProofParams>
 ) {
 	const slicesWithReveal: SliceWithReveal<T>[] = blocks.map(block => ({
 		block,
@@ -88,6 +87,7 @@ export async function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 	const total = concatenateUint8Arrays(
 		blocks.map(b => b.plaintext)
 	)
+
 	const redactions = redact(total)
 
 	if(!redactions.length) {
@@ -112,30 +112,26 @@ export async function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 			advance()
 		}
 
-		if(slice.type === 'hashed') {
-			// because of the nature of our ZK circuit -- we can only
-			// prove a single hash per block. So we need to make sure
-			// we don't have a TOPRF claim already
-			if(slicesWithReveal[blockIdx].toprf) {
-				throw new Error(
-					`Block (${blockIdx}) already has a TOPRF claim.`
-					+ ' Cannot add another OPRF claim again'
-				)
-			}
-
+		if(slice.hash) {
 			const plaintext = total.slice(slice.fromIndex, slice.toIndex)
-			const { nullifier, responses } = await performOprf(plaintext)
+			const {
+				nullifier, responses, mask
+			} = await performOprf(plaintext)
 
 			// set the TOPRF claim on the first blocks this
 			// redaction covers
-			slicesWithReveal[blockIdx].toprf = {
+			const toprf: TOPRFProofParams = {
 				nullifier,
 				responses,
 				dataLocation: {
 					fromIndex: cursorInBlock,
 					length: slice.toIndex - slice.fromIndex
-				}
+				},
+				mask
 			}
+			const block = slicesWithReveal[blockIdx]
+			block.toprfs ||= []
+			block.toprfs.push(toprf)
 
 			let i = 0
 			while(cursor < slice.toIndex) {

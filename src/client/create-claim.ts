@@ -2,14 +2,15 @@ import { strToUint8Array, TLSPacketContext } from '@reclaimprotocol/tls'
 import { makeRpcTlsTunnel } from 'src/client/tunnels/make-rpc-tls-tunnel'
 import { getAttestorClientFromPool } from 'src/client/utils/attestor-pool'
 import { DEFAULT_HTTPS_PORT, TOPRF_DOMAIN_SEPARATOR } from 'src/config'
-import { ClaimTunnelRequest, TOPRFPayload, ZKProofEngine } from 'src/proto/api'
+import { ClaimTunnelRequest, ZKProofEngine } from 'src/proto/api'
 import { providers } from 'src/providers'
-import { CreateClaimOnAttestorOpts, IAttestorClient, MessageRevealInfo, ProviderName, Transcript } from 'src/types'
+import { CreateClaimOnAttestorOpts, IAttestorClient, MessageRevealInfo, ProviderName, TOPRFProofParams, Transcript } from 'src/types'
 import {
 	AttestorError,
 	canonicalStringify,
 	generateTunnelId,
 	getBlocksToReveal,
+	getEngineProto,
 	getProviderValue,
 	isApplicationData,
 	logger as LOGGER,
@@ -447,11 +448,11 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 
 			revealedPackets.push(...packets.filter(p => p.sender === 'server'))
 		} else {
-			for(const { block, redactedPlaintext, toprf } of serverPacketsToReveal) {
+			for(const { block, redactedPlaintext, toprfs } of serverPacketsToReveal) {
 				setRevealOfMessage(block.message, {
 					type: 'zk',
 					redactedPlaintext,
-					toprf
+					toprfs
 				})
 				revealedPackets.push(
 					{ sender: 'server', message: redactedPlaintext }
@@ -501,16 +502,20 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			TOPRF_DOMAIN_SEPARATOR,
 			logger
 		)
-		const res = await client.rpc('toprf', reqData)
+		const res = await client.rpc('toprf', {
+			maskedData: reqData.maskedData,
+			engine: getEngineProto(zkEngine)
+		})
 		const nullifier = await oprfOperator.finaliseOPRF(
 			client.initResponse!.toprfPublicKey,
 			reqData,
 			[res]
 		)
 
-		const data: TOPRFPayload = {
+		const data: TOPRFProofParams = {
 			nullifier,
 			responses: [res],
+			mask: reqData.mask,
 			dataLocation: undefined
 		}
 
@@ -527,10 +532,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 	}
 
 	function getAddress() {
-		const {
-			getAddress,
-			getPublicKey,
-		} = signatureAlg
+		const { getAddress, getPublicKey } = signatureAlg
 		const pubKey = getPublicKey(ownerPrivateKey)
 		return getAddress(pubKey)
 	}

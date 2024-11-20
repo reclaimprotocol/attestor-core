@@ -164,7 +164,9 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			throw new Error('Failed to find response body')
 		}
 
-		const reveals: ArraySlice[] = [{ fromIndex: 0, toIndex: headerEndIndex }]
+		const reveals: RedactedOrHashedArraySlice[] = [
+			{ fromIndex: 0, toIndex: headerEndIndex }
+		]
 
 		//reveal date header
 		if(res.headerIndices['date']) {
@@ -183,10 +185,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			}
 		}
 
-		reveals.sort((a, b) => {
-			return a.toIndex - b.toIndex
-		})
-
+		reveals.sort((a, b) => a.toIndex - b.toIndex)
 
 		if(reveals.length > 1) {
 			let currentIndex = 0
@@ -201,10 +200,15 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			redactions.push({ fromIndex: currentIndex, toIndex: response.length })
 		}
 
+		for(const r of reveals) {
+			if(!r.hash) {
+				continue
+			}
 
-		redactions.sort((a, b) => {
-			return a.toIndex - b.toIndex
-		})
+			redactions.push(r)
+		}
+
+		redactions.sort((a, b) => a.toIndex - b.toIndex)
 
 		return redactions
 	},
@@ -410,7 +414,7 @@ type ReplacedParams = {
 } | null
 
 type RedactionItem = {
-	reveal: ArraySlice
+	reveal: RedactedOrHashedArraySlice
 	redactions: RedactedOrHashedArraySlice[]
 }
 
@@ -442,11 +446,6 @@ function *processRedactionRequest(
 		}
 	} else if(rs.jsonPath) {
 		yield *processJsonPath()
-		if(rs.regex) {
-			yield *processRegexp()
-		} else {
-			yield *addRedaction()
-		}
 	} else if(rs.regex) {
 		yield *processRegexp()
 	} else {
@@ -489,6 +488,7 @@ function *processRedactionRequest(
 		elementIdx += match.index
 		elementLength = regexp.lastIndex - match.index
 		element = match[0]
+
 		yield *addRedaction()
 	}
 
@@ -510,7 +510,11 @@ function *processRedactionRequest(
 		)
 
 		yield {
-			reveal: { fromIndex: from, toIndex: to },
+			reveal: {
+				fromIndex: from,
+				toIndex: to,
+				hash: rs.hash,
+			},
 			redactions: getRedactionsForChunkHeaders(from, to, resChunks)
 		}
 	}
