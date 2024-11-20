@@ -1,4 +1,4 @@
-import { CipherSuite, concatenateUint8Arrays, crypto, generateIV, strToUint8Array } from '@reclaimprotocol/tls'
+import { areUint8ArraysEqual, CipherSuite, concatenateUint8Arrays, crypto, generateIV, strToUint8Array } from '@reclaimprotocol/tls'
 import {
 	CONFIG as ZK_CONFIG,
 	EncryptionAlgorithm,
@@ -383,105 +383,122 @@ export async function verifyZkPacket(
 	const chunkSizeBytes = getChunkSizeBytes(alg)
 
 	await Promise.all(
-		proofs.map(async({
+		proofs.map(async(proof, i) => {
+			try {
+				await verifyProofPacket(proof)
+			} catch(e) {
+				e.message += ` (chunk ${i}, startIdx ${proof.startIdx})`
+				throw e
+			}
+		})
+	)
+
+	return { redactedPlaintext: realRedactedPlaintext }
+
+	async function verifyProofPacket(
+		{
 			proofData,
 			proofJson,
 			decryptedRedactedCiphertext,
 			redactedPlaintext,
 			startIdx,
 			toprf,
-		}, i) => {
-			// get the ciphertext chunk we received from the server
-			// the ZK library, will verify that the decrypted redacted
-			// ciphertext matches the ciphertext received from the server
-			const ciphertextChunk = ciphertext.slice(
-				startIdx,
-				startIdx + redactedPlaintext.length
+		}: ZKProof,
+	) {
+		// get the ciphertext chunk we received from the server
+		// the ZK library, will verify that the decrypted redacted
+		// ciphertext matches the ciphertext received from the server
+		const ciphertextChunk = ciphertext.slice(
+			startIdx,
+			startIdx + redactedPlaintext.length
+		)
+		// redact ciphertext if plaintext is redacted
+		// to prepare for decryption in ZK circuit
+		// the ZK circuit will take in the redacted ciphertext,
+		// which shall produce the redacted plaintext
+		for(let i = 0;i < ciphertextChunk.length;i++) {
+			if(redactedPlaintext[i] === REDACTION_CHAR_CODE) {
+				ciphertextChunk[i] = REDACTION_CHAR_CODE
+			}
+		}
+
+		// redact OPRF indices -- because they'll incorrectly
+		// be marked as incongruent
+		let comparePlaintext = redactedPlaintext
+		if(toprf) {
+			comparePlaintext = new Uint8Array(redactedPlaintext)
+			for(let i = 0;i < toprf.dataLocation!.length;i++) {
+				comparePlaintext[
+					i + toprf.dataLocation!.fromIndex
+				] = REDACTION_CHAR_CODE
+			}
+
+			const eq = areUint8ArraysEqual(
+				redactedPlaintext.slice(
+					toprf.dataLocation?.fromIndex,
+					toprf.dataLocation?.fromIndex!
+						+ toprf.dataLocation?.length!
+				),
+				toprf.nullifier.slice(0, toprf.dataLocation?.length)
 			)
-			// redact ciphertext if plaintext is redacted
-			// to prepare for decryption in ZK circuit
-			// the ZK circuit will take in the redacted ciphertext,
-			// which shall produce the redacted plaintext
-			for(let i = 0;i < ciphertextChunk.length;i++) {
-				if(redactedPlaintext[i] === REDACTION_CHAR_CODE) {
-					ciphertextChunk[i] = REDACTION_CHAR_CODE
-				}
+			if(!eq) {
+				throw new Error('OPRF nullifier not congruent')
 			}
+		}
 
-			// redact OPRF indices -- because they'll incorrectly
-			// be marked as incongruent
-			let comparePlaintext = redactedPlaintext
-			if(toprf) {
-				comparePlaintext = new Uint8Array(redactedPlaintext)
-				for(let i = 0;i < toprf.dataLocation!.length;i++) {
-					comparePlaintext[
-						i + toprf.dataLocation!.fromIndex
-					] = REDACTION_CHAR_CODE
-				}
-			}
+		if(!isRedactionCongruent(
+			comparePlaintext,
+			decryptedRedactedCiphertext
+		)) {
+			throw new Error('redacted ciphertext not congruent')
+		}
 
-			if(!isRedactionCongruent(
-				comparePlaintext,
-				decryptedRedactedCiphertext
-			)) {
-				throw new Error(
-					`redacted ciphertext (${i}, startIdx=${startIdx})`
-					+ ' not congruent'
+		const chunkIndex = startIdx / chunkSizeBytes
+		let nonce = concatenateUint8Arrays([iv, recordIV])
+
+		if(!recordIV.length) {
+			nonce = generateIV(nonce, recordNumber)
+		}
+
+		await verifyProof(
+			{
+				proof: {
+					algorithm,
+					proofData: proofData.length
+						? proofData
+						: strToUint8Array(proofJson),
+					plaintext: decryptedRedactedCiphertext,
+				},
+				publicInput: {
+					ciphertext: ciphertextChunk,
+					iv: nonce,
+					offset: chunkIndex
+				},
+				logger,
+				...(
+					toprf
+						? {
+							operator: getOprfOperator(),
+							toprf: {
+								pos: toprf.dataLocation!.fromIndex,
+								len: toprf.dataLocation!.length,
+								domainSeparator: TOPRF_DOMAIN_SEPARATOR,
+								output: toprf.nullifier,
+								responses: toprf.responses,
+							}
+						}
+						: { operator: getZkOperator() }
 				)
 			}
+		)
 
-			const chunkIndex = startIdx / chunkSizeBytes
-			let nonce = concatenateUint8Arrays([iv, recordIV])
+		logger?.debug(
+			{ startIdx, endIdx: startIdx + redactedPlaintext.length },
+			'verified proof'
+		)
 
-			if(!recordIV.length) {
-				nonce = generateIV(nonce, recordNumber)
-			}
-
-			await verifyProof(
-				{
-					proof: {
-						algorithm,
-						proofData: proofData.length
-							? proofData
-							: strToUint8Array(proofJson),
-						plaintext: decryptedRedactedCiphertext,
-					},
-					publicInput: {
-						ciphertext: ciphertextChunk,
-						iv: nonce,
-						offset: chunkIndex
-					},
-					logger,
-					...(
-						toprf
-							? {
-								operator: getOprfOperator(),
-								toprf: {
-									pos: toprf.dataLocation!.fromIndex,
-									len: toprf.dataLocation!.length,
-									domainSeparator: TOPRF_DOMAIN_SEPARATOR,
-									output: toprf.nullifier,
-									responses: toprf.responses,
-								}
-							}
-							: { operator: getZkOperator() }
-					)
-				}
-			).catch(err => {
-				err.message += ` (chunk ${i}, startIdx ${startIdx})`
-				throw err
-			})
-
-			logger?.debug(
-				{ startIdx, endIdx: startIdx + redactedPlaintext.length },
-				'verified proof'
-			)
-
-			realRedactedPlaintext.set(redactedPlaintext, startIdx)
-		})
-	)
-
-	return { redactedPlaintext: realRedactedPlaintext }
+		realRedactedPlaintext.set(redactedPlaintext, startIdx)
+	}
 
 	function getZkOperator() {
 		return zkOperators?.[algorithm]

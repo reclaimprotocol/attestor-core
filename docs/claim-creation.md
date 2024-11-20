@@ -209,7 +209,7 @@ This is where TOPRF comes in -- it allows you to verify the uniqueness of the ID
 
 A simple hash such as SHA256 could work, though in certain cases, it may not be secure as hackers or malicious actors can use a rainbow table to reverse the hash.
 
-TOPRF gets around that by requiring a server (the attestor) to generate the hash, rate-limiting any attempts to build a rainbow table.
+OPRF gets around that by requiring a server (the attestor) to generate the hash, rate-limiting any attempts to build a rainbow table. Moreover, with TOPRF (threshholded OPRF), no single server can generate the hash -- it requires multiple servers to come together to generate the hash, further securing the data.
 
 ### Can the attestor see the private data I am hashing? 
 

@@ -201,7 +201,7 @@ describeWithServer('Claim Creation', opts => {
 			let hash: Uint8Array | undefined
 
 			for(let i = 0;i < 2;i++) {
-				const user = 'adhiraj'
+				const user = 'some-user'
 				const result = await createClaimOnAttestor({
 					name: 'http',
 					params: {
