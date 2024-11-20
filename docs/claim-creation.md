@@ -147,8 +147,9 @@ This entire process is facilitated by the [createClaimOnAttestor](/src/create-cl
 	- Using the ZKP method: This is the most powerful method, works with all versions of TLS, and also works on both the request and response side of things. However, it is orders of magnitude slower than the TLS Key Update method. Details on how this works can be found [here](/docs/zkp.md).
 7. Once the user has sent all the data they want to the end server, they shall wait for the response to complete. Once the response is complete, the user can close the tunnel & proceed to claim the tunnel. We utilise our own [HTTP response parser](src/utils/http-parser.ts) to parse the response & find the end of the response.
 8. Now that we have all the data sent & received over the tunnel, we can proceed to claim the tunnel. Before we do this, we must prepare the transcript of the data sent & received over the tunnel. This is done using the `generateTranscript` function.
-	- The first step is to find out which portions of the data received from the end server are to be revealed to the attestor. This is done by the provider's `getResponseRedactions` function, which returns the indices of the data to be redacted.
+	- The first step is to find out which portions of the data received from the end server are to be revealed to the attestor. This is done by the provider's `getResponseRedactions` function, which returns the indices of the data to be redacted or hashed.
 		- In the absence of this function, the entire response is revealed to the attestor via a "direct reveal".
+		- In case of particular sections to be hashed, they are done so via `OPRF` or any other hashing function we may add in the future.
 	- We also reveal all handshake messages to the attestor. This is done to ensure that the attestor can verify the handshake was done correctly & no application data was sent before the handshake was complete.
 	- The transcript is a list of each message sent & received over the tunnel, with optionally data for the attestor to see the plaintext of the message.
 	``` protobuf
@@ -195,6 +196,24 @@ This entire process is facilitated by the [createClaimOnAttestor](/src/create-cl
 	- If the claim was successful -- the attestor will additionally sign just the claim data & send it back to the user. This is the proof the user can show to anyone to prove the claim. See the [appendix](#signing-and-verifying-a-claim) for more details.
 
 There you have it! The complete flow for creating a claim on a attestor.
+
+## TOPRF
+
+We support threshholded [OPRF](https://en.wikipedia.org/wiki/Oblivious_pseudorandom_function) to obscure sensitive data in a proof in a consistent way.
+
+Let's take an example of where this may be used. Say you want your users to prove their DOB to you via some govt. ID, and simultaneously want to ensure no two users submit the same ID proof to you. To de-duplicate the data, you'll need to see their ID number, which they may not want to reveal to you.
+
+This is where TOPRF comes in -- it allows you to verify the uniqueness of the ID number without actually seeing the ID number. The hashed ID will be consistent across multiple proofs, so you can verify the uniqueness of the ID number without actually seeing the ID number.
+
+### How is this different from a hash?
+
+A simple hash such as SHA256 could work, though in certain cases, it may not be secure as hackers or malicious actors can use a rainbow table to reverse the hash.
+
+TOPRF gets around that by requiring a server (the attestor) to generate the hash, rate-limiting any attempts to build a rainbow table.
+
+### Can the attestor see the private data I am hashing? 
+
+No, the attestor cannot see the private data you are hashing, the original ata is obscured & sent to the attestor in a way that it cannot be reversed.
 
 ## Appendix
 
