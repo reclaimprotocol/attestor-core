@@ -2,7 +2,7 @@ import { createClaimOnAttestor } from 'src/client'
 import { providers } from 'src/providers'
 import { describeWithServer } from 'src/tests/describe-with-server'
 import { getFirstTOprfBlock, verifyNoDirectRevealLeaks } from 'src/tests/utils'
-import { uint8ArrayToStr } from 'src/utils'
+import { binaryHashToStr } from 'src/utils'
 
 jest.setTimeout(300_000)
 
@@ -83,9 +83,10 @@ describeWithServer('HTTP Provider', opts => {
 
 		const toprf = getFirstTOprfBlock(resp.request!)!
 		expect(toprf).toBeTruthy()
-		const toprfStr = uint8ArrayToStr(
-			toprf.nullifier.slice(0, toprf.dataLocation?.length)
+		const toprfStr = binaryHashToStr(
+			toprf.nullifier,
+			toprf.dataLocation!.length
 		)
-		expect(domainStr).toEqual(toprfStr)
+		expect(domainStr).toEqual(toprfStr.slice(0, domainStr.length))
 	})
 })

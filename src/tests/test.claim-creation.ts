@@ -10,6 +10,7 @@ import { getFirstTOprfBlock, verifyNoDirectRevealLeaks } from 'src/tests/utils'
 import {
 	assertValidClaimSignatures,
 	AttestorError,
+	binaryHashToStr,
 	extractApplicationDataFromTranscript,
 	logger } from 'src/utils'
 
@@ -191,8 +192,16 @@ describeWithServer('Claim Creation', opts => {
 				.filter(m => m.sender === 'server')
 				.map(m => uint8ArrayToStr(m.message))
 				.join('')
+
+			const toprf = getFirstTOprfBlock(result.request!)!
+			expect(toprf).toBeTruthy()
+
 			// only the user's hash should be revealed
 			expect(serverPackets).not.toContain(user)
+
+			expect(serverPackets).toContain(
+				binaryHashToStr(toprf.nullifier, toprf.dataLocation!.length)
+			)
 		})
 
 		it('should produce the same hash for the same input', async() => {

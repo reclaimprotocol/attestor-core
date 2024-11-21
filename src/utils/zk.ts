@@ -1,4 +1,4 @@
-import { areUint8ArraysEqual, CipherSuite, concatenateUint8Arrays, crypto, generateIV, strToUint8Array } from '@reclaimprotocol/tls'
+import { CipherSuite, concatenateUint8Arrays, crypto, generateIV, strToUint8Array } from '@reclaimprotocol/tls'
 import {
 	CONFIG as ZK_CONFIG,
 	EncryptionAlgorithm,
@@ -20,9 +20,9 @@ import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKP
 import { CompleteTLSPacket, Logger, OPRFOperators, PrepareZKProofsBaseOpts, TOPRFProofParams, ZKOperators, ZKRevealInfo } from 'src/types'
 import { detectEnvironment, getEnvVariable } from 'src/utils/env'
 import { AttestorError } from 'src/utils/error'
-import { getPureCiphertext, getRecordIV, getZkAlgorithmForCipherSuite } from 'src/utils/generics'
+import { getPureCiphertext, getRecordIV, getZkAlgorithmForCipherSuite, uint8ArrayToStr } from 'src/utils/generics'
 import { logger as LOGGER } from 'src/utils/logger'
-import { isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from 'src/utils/redactions'
+import { binaryHashToStr, isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from 'src/utils/redactions'
 
 type GenerateZKChunkProofOpts = {
 	key: Uint8Array
@@ -433,15 +433,23 @@ export async function verifyZkPacket(
 				] = REDACTION_CHAR_CODE
 			}
 
-			const eq = areUint8ArraysEqual(
-				redactedPlaintext.slice(
-					toprf.dataLocation?.fromIndex,
-					toprf.dataLocation?.fromIndex!
-						+ toprf.dataLocation?.length!
-				),
-				toprf.nullifier.slice(0, toprf.dataLocation?.length)
+			// the transcript will contain only the stringified
+			// nullifier. So here, we'll compare the provable
+			// binary nullifier with the stringified nullifier
+			// that the user has provided
+			const nulliferStr = binaryHashToStr(
+				toprf.nullifier,
+				toprf.dataLocation!.length
 			)
-			if(!eq) {
+			const txtHash = redactedPlaintext.slice(
+				toprf.dataLocation?.fromIndex,
+				toprf.dataLocation?.fromIndex!
+					+ toprf.dataLocation?.length!
+			)
+			if(
+				uint8ArrayToStr(txtHash) !== nulliferStr
+					.slice(0, txtHash.length)
+			) {
 				throw new Error('OPRF nullifier not congruent')
 			}
 		}

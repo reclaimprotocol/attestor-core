@@ -1,3 +1,4 @@
+import { base64Encode } from '@bufbuild/protobuf/wire'
 import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
 import type { ArraySlice, RedactedOrHashedArraySlice, TOPRFProofParams } from 'src/types'
 
@@ -133,10 +134,15 @@ export async function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 			block.toprfs ||= []
 			block.toprfs.push(toprf)
 
+			const nullifierStr = binaryHashToStr(
+				nullifier,
+				toprf.dataLocation!.length
+			)
+
 			let i = 0
 			while(cursor < slice.toIndex) {
-				slicesWithReveal[blockIdx]
-					.redactedPlaintext[cursorInBlock] = nullifier.at(i)!
+				slicesWithReveal[blockIdx].redactedPlaintext[cursorInBlock]
+					= nullifierStr.charCodeAt(i)
 				advance()
 
 				i += 1
@@ -173,4 +179,13 @@ export function redactSlices(total: Uint8Array, slices: ArraySlice[]) {
 	}
 
 	return redacted
+}
+
+/**
+ * Converts the binary hash to an ASCII string of the expected length.
+ * If the hash is shorter than the expected length, it will be padded with
+ * '0' characters. If it's longer, it will be truncated.
+ */
+export function binaryHashToStr(hash: Uint8Array, expLength: number) {
+	return base64Encode(hash).padEnd(expLength, '0').slice(0, expLength)
 }
