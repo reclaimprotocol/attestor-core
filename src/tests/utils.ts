@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto'
+import { ClaimTunnelRequest } from 'src/proto/api'
 import { SPY_PREPARER } from 'src/tests/mocks'
 
 export function delay(ms: number) {
@@ -47,5 +48,19 @@ export function verifyNoDirectRevealLeaks() {
 				&& message.contentType === 'APPLICATION_DATA'
 			))
 		expect(otherPacketsWKey).toHaveLength(0)
+	}
+}
+
+/**
+ * Gets the first TOPRF block from the transcript.
+ * Returns undefined if no TOPRF block is found.
+ */
+export function getFirstTOprfBlock({ transcript }: ClaimTunnelRequest) {
+	for(const { reveal } of transcript) {
+		for(const proof of reveal?.zkReveal?.proofs || []) {
+			if(proof.toprf)	{
+				return proof.toprf
+			}
+		}
 	}
 }

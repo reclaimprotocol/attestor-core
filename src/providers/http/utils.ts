@@ -298,8 +298,8 @@ export function convertResponsePosToAbsolutePos(pos: number, bodyStartIdx: numbe
 }
 
 /**
- * Returns parts of response which contain chunk headers and must be redacted out
- * of revealed response part
+ * If this reveal spans the boundary of two chunks, we'll
+ * 
  */
 export function getRedactionsForChunkHeaders(
 	from: number, to: number, chunks?: ArraySlice[]

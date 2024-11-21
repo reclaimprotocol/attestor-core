@@ -145,6 +145,9 @@ properties:
 
             Eg. if hash is enabled, the original value is "hello", and hashed
             is "a1b2c", then the attestor will only see "a1b2c".
+
+            Note: if a regex with named groups is provided, only
+            the named groups will be hashed.
           enum:
             - oprf
       additionalProperties: false

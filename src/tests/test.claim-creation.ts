@@ -2,12 +2,11 @@ import { TLSProtocolVersion, uint8ArrayToStr } from '@reclaimprotocol/tls'
 import { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import { AttestorClient } from 'src/client'
 import { createClaimOnAttestor, getAttestorClientFromPool } from 'src/client'
-import { ClaimTunnelRequest } from 'src/proto/api'
 import { providers } from 'src/providers'
 import { decryptTranscript } from 'src/server'
 import { describeWithServer } from 'src/tests/describe-with-server'
 import { SPY_PREPARER } from 'src/tests/mocks'
-import { verifyNoDirectRevealLeaks } from 'src/tests/utils'
+import { getFirstTOprfBlock, verifyNoDirectRevealLeaks } from 'src/tests/utils'
 import {
 	assertValidClaimSignatures,
 	AttestorError,
@@ -333,13 +332,3 @@ describeWithServer('Claim Creation', opts => {
 		})
 	}
 })
-
-function getFirstTOprfBlock({ transcript }: ClaimTunnelRequest) {
-	for(const { reveal } of transcript) {
-		for(const proof of reveal?.zkReveal?.proofs || []) {
-			if(proof.toprf)	{
-				return proof.toprf
-			}
-		}
-	}
-}

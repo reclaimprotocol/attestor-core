@@ -384,7 +384,6 @@ const HTTP_PROVIDER: Provider<'http'> = {
 	},
 }
 
-
 function getHostPort(params: ProviderParams<'http'>) {
 	const { host } = new URL(getURL(params))
 	if(!host) {
@@ -418,7 +417,7 @@ type RedactionItem = {
 	redactions: RedactedOrHashedArraySlice[]
 }
 
-const paramsRegex = /\{\{([^{}]+)}}/sgi
+const paramsRegex = /{{([^{}]+)}}/sgi
 
 function *processRedactionRequest(
 	body: string,
@@ -489,34 +488,71 @@ function *processRedactionRequest(
 		elementLength = regexp.lastIndex - match.index
 		element = match[0]
 
-		yield *addRedaction()
+		// if there are groups in the regex,
+		// we'll only hash the group values
+		if(!rs.hash || !match.groups) {
+			yield *addRedaction()
+			return
+		}
+
+		const fullStr = match[0]
+		const grp = Object.values(match.groups)[0] as string
+		const grpIdx = fullStr.indexOf(grp)
+
+		// don't hash the entire regex, we'll hash the group values
+		elementLength = grpIdx
+		element = fullStr.slice(0, grpIdx)
+		yield *addRedaction(null)
+
+		elementIdx += grpIdx
+		element = grp
+		elementLength = grp.length
+		yield *addRedaction(rs.hash)
+
+		elementIdx += grp.length
+		element = fullStr.slice(grpIdx + grp.length)
+		elementLength = element.length
+		yield *addRedaction(null)
 	}
 
 	// eslint-disable-next-line unicorn/consistent-function-scoping
-	function *addRedaction(): Generator<RedactionItem> {
+	function *addRedaction(
+		hash: RedactedOrHashedArraySlice['hash'] | null = rs.hash,
+		_resChunks = resChunks
+	): Generator<RedactionItem> {
 		if(elementIdx < 0 || !elementLength) {
 			return
 		}
 
+		const reveal = getReveal(elementIdx, elementLength, hash || undefined)
+
+		yield {
+			reveal,
+			redactions: getRedactionsForChunkHeaders(
+				reveal.fromIndex,
+				reveal.toIndex,
+				_resChunks
+			)
+		}
+	}
+
+	function getReveal(
+		startIdx: number,
+		len: number,
+		hash?: RedactedOrHashedArraySlice['hash']
+	) {
 		const from = convertResponsePosToAbsolutePos(
-			elementIdx,
+			startIdx,
 			bodyStartIdx,
 			resChunks
 		)
 		const to = convertResponsePosToAbsolutePos(
-			elementIdx + elementLength,
+			startIdx + len,
 			bodyStartIdx,
 			resChunks
 		)
 
-		yield {
-			reveal: {
-				fromIndex: from,
-				toIndex: to,
-				hash: rs.hash,
-			},
-			redactions: getRedactionsForChunkHeaders(from, to, resChunks)
-		}
+		return { fromIndex: from, toIndex: to, hash }
 	}
 }
 
