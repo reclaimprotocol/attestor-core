@@ -132,11 +132,12 @@ const RES_EMPTY_CHUNKED = [
 const CHUNKS = [
 	'{"name":"John",',
 	'"age":30,',
-	'"car":null',
-	'}'
+	'"car":null,',
+	'"house":"some',
+	'where"}'
 ]
 
-const RES_CHUNKED_PARTIAL_BODY = [
+export const RES_CHUNKED_PARTIAL_BODY = [
 	'HTTP/1.1 200 OK',
 	'Content-Type: application/json',
 	'Transfer-Encoding: chunked',

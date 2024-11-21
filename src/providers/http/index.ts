@@ -507,7 +507,22 @@ function *processRedactionRequest(
 		elementIdx += grpIdx
 		element = grp
 		elementLength = grp.length
-		yield *addRedaction(rs.hash)
+
+		const reveal = getReveal(elementIdx, elementLength, rs.hash)
+		const chunkReds = getRedactionsForChunkHeaders(
+			reveal.fromIndex,
+			reveal.toIndex,
+			resChunks
+		)
+		if(chunkReds.length) {
+			throw new Error(
+				'Hash redactions cannot be performed if '
+				+ 'the redacted string is split between 2'
+				+ ' or more HTTP chunks'
+			)
+		}
+
+		yield { reveal, redactions: chunkReds }
 
 		elementIdx += grp.length
 		element = fullStr.slice(grpIdx + grp.length)

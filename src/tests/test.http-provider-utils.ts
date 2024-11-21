@@ -1,14 +1,16 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
+import assert from 'assert'
 import { providers } from 'src/providers'
 import httpProvider from 'src/providers/http'
 import {
 	extractHTMLElement, extractHTMLElements,
 	extractJSONValueIndex, extractJSONValueIndexes,
 	makeRegex,
-	matchRedactedStrings
+	matchRedactedStrings,
 } from 'src/providers/http/utils'
+import { RES_CHUNKED_PARTIAL_BODY } from 'src/tests/test.http-parser'
 import { ProviderParams, Transcript } from 'src/types'
-import { assertValidateProviderParams, getProviderValue, hashProviderParams, logger, uint8ArrayToStr } from 'src/utils'
+import { assertValidateProviderParams, getBlocksToReveal, getProviderValue, hashProviderParams, logger, uint8ArrayToStr } from 'src/utils'
 import { deserialize, serialize } from 'v8'
 
 jest.setTimeout(60_000)
@@ -984,6 +986,104 @@ Content-Type: text/html; charset=utf-8\r
 			return uint8ArrayToStr((req.data as Uint8Array).slice(req.redactions[index].fromIndex, req.redactions[index].toIndex))
 		}
 	})
+
+	describe('OPRF', () => {
+		it('should handle OPRF replacements', async() => {
+			const params: ProviderParams<'http'> = {
+				url: 'https://example.com/',
+				method: 'GET',
+				responseMatches: [
+					{
+						type: 'regex',
+						value: '<title>(?<domain>.+)<\\/title>',
+					}
+				],
+				responseRedactions: [
+					{
+						regex: '<title>(?<domain>.+)<\\/title>',
+						hash: 'oprf'
+					}
+				],
+			}
+			const res = Buffer.from(
+				'SFRUUC8xLjEgMjAwIE9LDQpBY2NlcHQtUmFuZ2VzOiBieXRlcw0KQWdlOiAzNzIxNDcNCkNhY2hlLUNvbnRyb2w6IG1heC1hZ2U9NjA0ODAwDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD1VVEYtOA0KRGF0ZTogVGh1LCAyMSBOb3YgMjAyNCAwNTozOTo0NiBHTVQNCkV0YWc6ICIzMTQ3NTI2OTQ3Ig0KRXhwaXJlczogVGh1LCAyOCBOb3YgMjAyNCAwNTozOTo0NiBHTVQNCkxhc3QtTW9kaWZpZWQ6IFRodSwgMTcgT2N0IDIwMTkgMDc6MTg6MjYgR01UDQpTZXJ2ZXI6IEVDQWNjIChsYWMvNTVCNSkNClZhcnk6IEFjY2VwdC1FbmNvZGluZw0KWC1DYWNoZTogSElUDQpDb250ZW50LUxlbmd0aDogMTI1Ng0KQ29ubmVjdGlvbjogY2xvc2UNCg0KPCFkb2N0eXBlIGh0bWw+CjxodG1sPgo8aGVhZD4KICAgIDx0aXRsZT5FeGFtcGxlIERvbWFpbjwvdGl0bGU+CgogICAgPG1ldGEgY2hhcnNldD0idXRmLTgiIC8+CiAgICA8bWV0YSBodHRwLWVxdWl2PSJDb250ZW50LXR5cGUiIGNvbnRlbnQ9InRleHQvaHRtbDsgY2hhcnNldD11dGYtOCIgLz4KICAgIDxtZXRhIG5hbWU9InZpZXdwb3J0IiBjb250ZW50PSJ3aWR0aD1kZXZpY2Utd2lkdGgsIGluaXRpYWwtc2NhbGU9MSIgLz4KICAgIDxzdHlsZSB0eXBlPSJ0ZXh0L2NzcyI+CiAgICBib2R5IHsKICAgICAgICBiYWNrZ3JvdW5kLWNvbG9yOiAjZjBmMGYyOwogICAgICAgIG1hcmdpbjogMDsKICAgICAgICBwYWRkaW5nOiAwOwogICAgICAgIGZvbnQtZmFtaWx5OiAtYXBwbGUtc3lzdGVtLCBzeXN0ZW0tdWksIEJsaW5rTWFjU3lzdGVtRm9udCwgIlNlZ29lIFVJIiwgIk9wZW4gU2FucyIsICJIZWx2ZXRpY2EgTmV1ZSIsIEhlbHZldGljYSwgQXJpYWwsIHNhbnMtc2VyaWY7CiAgICAgICAgCiAgICB9CiAgICBkaXYgewogICAgICAgIHdpZHRoOiA2MDBweDsKICAgICAgICBtYXJnaW46IDVlbSBhdXRvOwogICAgICAgIHBhZGRpbmc6IDJlbTsKICAgICAgICBiYWNrZ3JvdW5kLWNvbG9yOiAjZmRmZGZmOwogICAgICAgIGJvcmRlci1yYWRpdXM6IDAuNWVtOwogICAgICAgIGJveC1zaGFkb3c6IDJweCAzcHggN3B4IDJweCByZ2JhKDAsMCwwLDAuMDIpOwogICAgfQogICAgYTpsaW5rLCBhOnZpc2l0ZWQgewogICAgICAgIGNvbG9yOiAjMzg0ODhmOwogICAgICAgIHRleHQtZGVjb3JhdGlvbjogbm9uZTsKICAgIH0KICAgIEBtZWRpYSAobWF4LXdpZHRoOiA3MDBweCkgewogICAgICAgIGRpdiB7CiAgICAgICAgICAgIG1hcmdpbjogMCBhdXRvOwogICAgICAgICAgICB3aWR0aDogYXV0bzsKICAgICAgICB9CiAgICB9CiAgICA8L3N0eWxlPiAgICAKPC9oZWFkPgoKPGJvZHk+CjxkaXY+CiAgICA8aDE+RXhhbXBsZSBEb21haW48L2gxPgogICAgPHA+VGhpcyBkb21haW4gaXMgZm9yIHVzZSBpbiBpbGx1c3RyYXRpdmUgZXhhbXBsZXMgaW4gZG9jdW1lbnRzLiBZb3UgbWF5IHVzZSB0aGlzCiAgICBkb21haW4gaW4gbGl0ZXJhdHVyZSB3aXRob3V0IHByaW9yIGNvb3JkaW5hdGlvbiBvciBhc2tpbmcgZm9yIHBlcm1pc3Npb24uPC9wPgogICAgPHA+PGEgaHJlZj0iaHR0cHM6Ly93d3cuaWFuYS5vcmcvZG9tYWlucy9leGFtcGxlIj5Nb3JlIGluZm9ybWF0aW9uLi4uPC9hPjwvcD4KPC9kaXY+CjwvYm9keT4KPC9odG1sPgo=',
+				'base64'
+			)
+			const redactedStr = await getRedactedStr(res, params)
+			// the transcript contained "Example Domain" in the title
+			// which should be replaced with the hash
+			expect(redactedStr).toContain('<title>AAAAAAAAAAAAAA</title>')
+		})
+
+		it('should handle OPRF replacements in a chunked res', async() => {
+			const params: ProviderParams<'http'> = {
+				url: 'https://example.com/',
+				method: 'GET',
+				responseMatches: [
+					{
+						type: 'regex',
+						value: '\"name\":\"(?<name>.+?)\"',
+					}
+				],
+				responseRedactions: [
+					{
+						regex: '\"name\":\"(?<name>.+?)\"',
+						hash: 'oprf'
+					}
+				],
+			}
+			const arr = strToUint8Array(RES_CHUNKED_PARTIAL_BODY)
+			const redactedStr = await getRedactedStr(arr, params)
+			// "name":"John" should be replaced with the hash
+			expect(redactedStr).toContain('"name":"AAAA"')
+		})
+
+		it('should gracefully error when OPRF spans multiple chunks', () => {
+			const params: ProviderParams<'http'> = {
+				url: 'https://example.com/',
+				method: 'GET',
+				responseMatches: [
+					{
+						type: 'regex',
+						value: '\"house\":\"(?<house>.+?)\"',
+					}
+				],
+				responseRedactions: [
+					{
+						regex: '\"house\":\"(?<house>.+?)\"',
+						hash: 'oprf'
+					}
+				],
+			}
+
+			const arr = strToUint8Array(RES_CHUNKED_PARTIAL_BODY)
+			expect(
+				() => getResponseRedactions!(arr, params, logger)
+			).toThrow(/cannot be performed/)
+		})
+	})
+
+	async function getRedactedStr(
+		plaintext: Uint8Array,
+		params: ProviderParams<'http'>,
+	) {
+		const hash = new Uint8Array(32)
+		const trans = await getBlocksToReveal(
+			[{ plaintext }],
+			body => getResponseRedactions!(body, params, logger),
+			async txt => ({
+				nullifier: hash,
+				dataLocation: { fromIndex: 0, length: txt.length },
+				responses: [],
+				mask: new Uint8Array(0),
+			})
+		)
+		assert(trans !== 'all', 'Expected not all blocks to be revealed')
+		const redactedStr = uint8ArrayToStr(trans[0].redactedPlaintext)
+		// the transcript contained "Example Domain" in the title
+		// which should be replaced with the hash
+		return redactedStr
+	}
 })
 
 function cloneObject<T>(obj: T): T {
