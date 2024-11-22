@@ -1,4 +1,4 @@
-import { TLSProtocolVersion, uint8ArrayToStr } from '@reclaimprotocol/tls'
+import { CipherSuite, TLSProtocolVersion, uint8ArrayToStr } from '@reclaimprotocol/tls'
 import { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import { AttestorClient } from 'src/client'
 import { createClaimOnAttestor, getAttestorClientFromPool } from 'src/client'
@@ -17,6 +17,12 @@ import {
 const TLS_VERSIONS: TLSProtocolVersion[] = [
 	'TLS1_3',
 	'TLS1_2',
+]
+
+const OPRF_CIPHER_SUITES: CipherSuite[] = [
+	'TLS_CHACHA20_POLY1305_SHA256',
+	'TLS_AES_256_GCM_SHA384',
+	'TLS_AES_128_GCM_SHA256',
 ]
 
 jest.setTimeout(90_000)
@@ -134,20 +140,17 @@ describeWithServer('Claim Creation', opts => {
 		}).rejects.toThrow('Provider returned error 401')
 	})
 
-	describe('OPRF', () => {
+	describe('OPRF via %s', () => {
 
 		const zkEngine = 'gnark'
 
-		beforeEach(() => {
+		it.each(OPRF_CIPHER_SUITES)('should create a claim with an OPRF redaction (%s)', async cipherSuite => {
 			// OPRF is only available on gnark & chacha20 right now
 			providers.http.additionalClientOptions = {
 				...providers.http.additionalClientOptions,
-				supportedProtocolVersions: ['TLS1_3'],
-				cipherSuites: ['TLS_CHACHA20_POLY1305_SHA256']
+				cipherSuites: [cipherSuite]
 			}
-		})
 
-		it('should create a claim with an OPRF redaction', async() => {
 			const user = 'adhiraj'
 			const result = await createClaimOnAttestor({
 				name: 'http',

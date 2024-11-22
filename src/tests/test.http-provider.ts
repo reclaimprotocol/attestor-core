@@ -1,5 +1,4 @@
 import { createClaimOnAttestor } from 'src/client'
-import { providers } from 'src/providers'
 import { describeWithServer } from 'src/tests/describe-with-server'
 import { getFirstTOprfBlock, verifyNoDirectRevealLeaks } from 'src/tests/utils'
 import { binaryHashToStr } from 'src/utils'
@@ -44,13 +43,6 @@ describeWithServer('HTTP Provider', opts => {
 	})
 
 	it('should create claim with OPRF template params', async() => {
-		// OPRF is only available on gnark & chacha20 right now
-		providers.http.additionalClientOptions = {
-			...providers.http.additionalClientOptions,
-			supportedProtocolVersions: ['TLS1_3'],
-			cipherSuites: ['TLS_CHACHA20_POLY1305_SHA256']
-		}
-
 		const resp = await createClaimOnAttestor({
 			name: 'http',
 			params: {
