@@ -65,7 +65,7 @@
     "@bufbuild/protobuf": "^2.2.2",
     "@commitlint/cli": "^17.8.1",
     "@commitlint/config-conventional": "^17.8.1",
-    "@reclaimprotocol/zk-symmetric-crypto": "^3.0.0",
+    "@reclaimprotocol/zk-symmetric-crypto": "^3.0.2",
     "@reclaimprotocol/tls": "github:reclaimprotocol/tls",
     "ajv": "^8.17.1",
     "canonicalize": "^2.0.0",
