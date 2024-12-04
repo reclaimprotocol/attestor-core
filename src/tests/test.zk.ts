@@ -107,6 +107,8 @@ describe('Redaction Tests', () => {
 	})
 
 	it('should correctly hash blocks', async() => {
+		const nullifer = strToUint8Array('abcdefg')
+		const base64Nullifier = Buffer.from(nullifer).toString('base64')
 		const vectors: RedactionTestVector[] = [
 			{
 				input: [
@@ -114,8 +116,8 @@ describe('Redaction Tests', () => {
 					'o world'
 				],
 				output: [
-					'habc',
-					'd world'
+					'h' + base64Nullifier.slice(0, 3),
+					base64Nullifier.slice(3, 4) + ' world'
 				],
 				redactions: [
 					{ fromIndex: 1, toIndex: 5, hash: 'oprf' }
@@ -127,8 +129,8 @@ describe('Redaction Tests', () => {
 					'o world'
 				],
 				output: [
-					'abcd',
-					'e world'
+					base64Nullifier.slice(0, 4),
+					base64Nullifier.slice(4, 5) + ' world'
 				],
 				redactions: [
 					{ fromIndex: 0, toIndex: 5, hash: 'oprf' }
@@ -142,7 +144,7 @@ describe('Redaction Tests', () => {
 				() => redactions,
 				async() => ({
 					dataLocation: undefined,
-					nullifier: strToUint8Array('abcdefg'),
+					nullifier: nullifer,
 					responses: [],
 					mask: strToUint8Array('mask')
 				})
@@ -150,8 +152,6 @@ describe('Redaction Tests', () => {
 			if(realOutput === 'all') {
 				fail('should not return "all"')
 			}
-
-			console.log(realOutput)
 
 			expect(realOutput).toHaveLength(output.length)
 			for(const [i, element] of output.entries()) {
