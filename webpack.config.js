@@ -18,7 +18,9 @@ module.exports = {
 			'jsdom': false,
 			'dotenv': false,
 			're2': false,
-            'koffi':false
+            'koffi':false,
+			[path.resolve(__dirname, 'node_modules/@reclaimprotocol/zk-symmetric-crypto/lib/expander/operator.js')]:
+                path.resolve(__dirname, 'expander-operator.js')
 		},
 		fallback: {
 			"fs": false,

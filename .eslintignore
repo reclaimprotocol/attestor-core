@@ -8,3 +8,4 @@ webpack.config.js
 browser
 src/avs/abis
 src/avs/contracts
+expander-operator.js
