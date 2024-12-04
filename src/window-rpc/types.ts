@@ -1,4 +1,4 @@
-import type { EncryptionAlgorithm, ZKEngine, ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
+import type { EncryptionAlgorithm, ZKEngine, ZKOperator, ZKProofPublicSignals } from '@reclaimprotocol/zk-symmetric-crypto'
 import type { TaskCompletedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
 import type { CreateClaimOnAvsOpts, CreateClaimOnAvsStep } from 'src/avs/types'
 import type { extractHTMLElement, extractJSONValueIndex } from 'src/providers/http/utils'
@@ -77,8 +77,8 @@ type UpdateProviderParamsOpts = {
 
 type ZKVerifyOpts = {
 	algorithm: EncryptionAlgorithm
-	publicSignals: number[]
-	proof: { [key: string]: unknown } | string
+	publicSignals: ZKProofPublicSignals
+	proof: string | Uint8Array
 }
 
 type LogLevelOptions = {

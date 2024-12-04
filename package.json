@@ -29,7 +29,8 @@
     "generate:avs": "typechain -- --target ethers-v5 --out-dir src/avs/contracts avs/contracts/out/ReclaimServiceManager.sol/*.json",
     "start:chain": "bash ./avs/utils/anvil/start-anvil-chain-with-el-and-avs-deployed.sh",
     "commitlint": "commitlint --edit",
-    "download:zk-files": "node node_modules/@reclaimprotocol/zk-symmetric-crypto/lib/scripts/download-files"
+    "download:zk-files": "node node_modules/@reclaimprotocol/zk-symmetric-crypto/lib/scripts/download-files",
+    "generate:toprf-keys": "npm run run:tsc -- src/scripts/generate-toprf-keys.ts"
   },
   "files": [
     "lib/*"
@@ -64,8 +65,8 @@
     "@bufbuild/protobuf": "^2.2.2",
     "@commitlint/cli": "^17.8.1",
     "@commitlint/config-conventional": "^17.8.1",
+    "@reclaimprotocol/zk-symmetric-crypto": "^3.0.0",
     "@reclaimprotocol/tls": "github:reclaimprotocol/tls",
-    "@reclaimprotocol/zk-symmetric-crypto": "^2.0.5",
     "ajv": "^8.17.1",
     "canonicalize": "^2.0.0",
     "dotenv": "^16.4.6",

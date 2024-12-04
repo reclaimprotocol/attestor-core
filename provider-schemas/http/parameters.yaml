@@ -132,6 +132,24 @@ properties:
           type: string
           nullable: true
           description: select a regex match from the response
+        hash:
+          type: string
+          description: >-
+            If provided, the value inside will be hashed instead of being
+            redacted. Useful for cases where the data inside is an identifiying
+            piece of information that you don't want to reveal to the attestor, eg.
+            an email address.
+
+            If the hash function produces more bytes than the original value,
+            the hash will be truncated.
+
+            Eg. if hash is enabled, the original value is "hello", and hashed
+            is "a1b2c", then the attestor will only see "a1b2c".
+
+            Note: if a regex with named groups is provided, only
+            the named groups will be hashed.
+          enum:
+            - oprf
       additionalProperties: false
   paramValues:
     type: object

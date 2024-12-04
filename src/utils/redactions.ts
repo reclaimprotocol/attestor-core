@@ -1,8 +1,20 @@
+import { base64Encode } from '@bufbuild/protobuf/wire'
 import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
-import type { ArraySlice } from 'src/types'
+import type { ArraySlice, RedactedOrHashedArraySlice, TOPRFProofParams } from 'src/types'
 
 export const REDACTION_CHAR = '*'
 export const REDACTION_CHAR_CODE = REDACTION_CHAR.charCodeAt(0)
+
+type SliceWithReveal<T> = {
+	block: T
+	redactedPlaintext: Uint8Array
+	/**
+	 * If the block has some TOPRF claims -- they'll be set here
+	 */
+	toprfs?: TOPRFProofParams[]
+}
+
+export type RevealedSlices<T> = 'all' | SliceWithReveal<T>[]
 
 /**
  * Check if a redacted string is congruent with the original string.
@@ -63,14 +75,12 @@ export function isFullyRedacted<T extends string | Uint8Array>(
  * @param redact function that returns the redactions
  * @returns blocks to reveal
  */
-export function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
+export async function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 	blocks: T[],
-	redact: (total: Uint8Array) => ArraySlice[]
+	redact: (total: Uint8Array) => RedactedOrHashedArraySlice[],
+	performOprf: (plaintext: Uint8Array) => Promise<TOPRFProofParams>
 ) {
-	const slicesWithReveal: {
-		block: T
-		redactedPlaintext: Uint8Array
-	}[] = blocks.map(block => ({
+	const slicesWithReveal: SliceWithReveal<T>[] = blocks.map(block => ({
 		block,
 		// copy the plaintext to avoid mutating the original
 		redactedPlaintext: new Uint8Array(block.plaintext)
@@ -78,6 +88,7 @@ export function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 	const total = concatenateUint8Arrays(
 		blocks.map(b => b.plaintext)
 	)
+
 	const redactions = redact(total)
 
 	if(!redactions.length) {
@@ -89,7 +100,7 @@ export function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 	let cursor = 0
 
 	for(const redaction of redactions) {
-		redactBlocks(redaction)
+		await redactBlocks(redaction)
 	}
 
 	// only reveal blocks that have some data to reveal,
@@ -97,9 +108,45 @@ export function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 	return slicesWithReveal
 		.filter(s => !isFullyRedacted(s.redactedPlaintext))
 
-	function redactBlocks(slice: ArraySlice) {
+	async function redactBlocks(slice: RedactedOrHashedArraySlice) {
 		while(cursor < slice.fromIndex) {
 			advance()
+		}
+
+		if(slice.hash) {
+			const plaintext = total.slice(slice.fromIndex, slice.toIndex)
+			const {
+				nullifier, responses, mask
+			} = await performOprf(plaintext)
+
+			// set the TOPRF claim on the first blocks this
+			// redaction covers
+			const toprf: TOPRFProofParams = {
+				nullifier,
+				responses,
+				dataLocation: {
+					fromIndex: cursorInBlock,
+					length: slice.toIndex - slice.fromIndex
+				},
+				mask
+			}
+			const block = slicesWithReveal[blockIdx]
+			block.toprfs ||= []
+			block.toprfs.push(toprf)
+
+			const nullifierStr = binaryHashToStr(
+				nullifier,
+				toprf.dataLocation!.length
+			)
+
+			let i = 0
+			while(cursor < slice.toIndex) {
+				slicesWithReveal[blockIdx].redactedPlaintext[cursorInBlock]
+					= nullifierStr.charCodeAt(i)
+				advance()
+
+				i += 1
+			}
 		}
 
 		while(cursor < slice.toIndex) {
@@ -132,4 +179,13 @@ export function redactSlices(total: Uint8Array, slices: ArraySlice[]) {
 	}
 
 	return redacted
+}
+
+/**
+ * Converts the binary hash to an ASCII string of the expected length.
+ * If the hash is shorter than the expected length, it will be padded with
+ * '0' characters. If it's longer, it will be truncated.
+ */
+export function binaryHashToStr(hash: Uint8Array, expLength: number) {
+	return base64Encode(hash).padEnd(expLength, '0').slice(0, expLength)
 }

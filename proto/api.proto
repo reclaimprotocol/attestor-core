@@ -182,7 +182,10 @@ message MessageReveal {
 	}
 
 	message ZKProof {
-		/** JSON encoded snarkJS proof */
+		/**
+		 * JSON encoded snarkJS proof
+		 * @deprecated -- use `proofData` instead
+		 */
 		string proofJson = 1;
 		/** the decrypted ciphertext as output by the ZK proof */
 		bytes decryptedRedactedCiphertext = 2;
@@ -193,7 +196,29 @@ message MessageReveal {
 		* in the redactedPlaintext
 		*/
 		uint32 startIdx = 4;
+
+		bytes proofData = 5;
+
+		/**
+		 * If this block's proof contains an OPRF'd piece of data,
+		 * then provide the OPRF data here
+		 */
+		TOPRFPayload toprf = 6;
 	}
+}
+
+message TOPRFPayload {
+	/** Location of the data in the chunk that was masked */
+	DataSlice dataLocation = 1;
+	/** OPRF hash of the data */
+	bytes nullifier = 2;
+
+	repeated TOPRFResponse responses = 3;
+}
+
+message DataSlice {
+	uint32 fromIndex = 1;
+	uint32 length = 2;
 }
 
 message ClaimRequestData {
@@ -334,6 +359,23 @@ message InitRequest {
 	ServiceSignatureType signatureType = 3;
 }
 
+message InitResponse {
+	bytes toprfPublicKey = 1;
+}
+
+message TOPRFRequest {
+	bytes maskedData = 1;
+	ZKProofEngine engine = 2;
+}
+
+message TOPRFResponse {
+	bytes publicKeyShare = 1;
+	// OPRF output
+	bytes evaluated = 2;
+	bytes c = 3;
+	bytes r = 4;
+}
+
 message RPCMessage {
 	/**
 	 * Per connection unique RPC message ID. Either party sending a
@@ -349,7 +391,7 @@ message RPCMessage {
 		/**
 		 * Response to the init request.
 		 * */
-		Empty initResponse = 3;
+		InitResponse initResponse = 3;
 		/**
 		 * Data representing an error in the WebSocket connection.
 		 * The party sending this message should close the connection
@@ -402,6 +444,12 @@ message RPCMessage {
 		 */
 		CompleteClaimOnAvsRequest completeClaimOnChainRequest = 16;
 		CompleteClaimOnAvsResponse completeClaimOnChainResponse = 17;
+
+		/**
+		 * Request to perform thresholded OPRF
+		 */
+		TOPRFRequest toprfRequest = 18;
+		TOPRFResponse toprfResponse = 19;
 	}
 }
 

@@ -1,20 +1,28 @@
-import { TLSProtocolVersion, uint8ArrayToStr } from '@reclaimprotocol/tls'
+import { CipherSuite, TLSProtocolVersion, uint8ArrayToStr } from '@reclaimprotocol/tls'
+import { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import { AttestorClient } from 'src/client'
 import { createClaimOnAttestor, getAttestorClientFromPool } from 'src/client'
 import { providers } from 'src/providers'
 import { decryptTranscript } from 'src/server'
 import { describeWithServer } from 'src/tests/describe-with-server'
 import { SPY_PREPARER } from 'src/tests/mocks'
-import { verifyNoDirectRevealLeaks } from 'src/tests/utils'
+import { getFirstTOprfBlock, verifyNoDirectRevealLeaks } from 'src/tests/utils'
 import {
 	assertValidClaimSignatures,
 	AttestorError,
+	binaryHashToStr,
 	extractApplicationDataFromTranscript,
 	logger } from 'src/utils'
 
 const TLS_VERSIONS: TLSProtocolVersion[] = [
 	'TLS1_3',
 	'TLS1_2',
+]
+
+const OPRF_CIPHER_SUITES: CipherSuite[] = [
+	'TLS_CHACHA20_POLY1305_SHA256',
+	'TLS_AES_256_GCM_SHA384',
+	'TLS_AES_128_GCM_SHA256',
 ]
 
 jest.setTimeout(90_000)
@@ -28,8 +36,9 @@ jest.mock('@reclaimprotocol/tls/lib/utils/parse-certificate', () => {
 	}
 })
 
-
 describeWithServer('Claim Creation', opts => {
+
+	const zkEngine: ZKEngine = 'gnark'
 
 	let client: AttestorClient
 	let claimUrl: string
@@ -45,8 +54,6 @@ describeWithServer('Claim Creation', opts => {
 	})
 
 	it.each(TLS_VERSIONS)('should successfully create a claim (%s)', async version => {
-		// we need to disable certificate verification
-		// for testing purposes
 		providers.http.additionalClientOptions = {
 			...providers.http.additionalClientOptions,
 			supportedProtocolVersions: [version]
@@ -71,7 +78,7 @@ describeWithServer('Claim Creation', opts => {
 			},
 			ownerPrivateKey: opts.privateKeyHex,
 			client,
-			zkEngine:opts.zkEngine
+			zkEngine,
 		})
 
 		expect(result.error).toBeUndefined()
@@ -82,7 +89,10 @@ describeWithServer('Claim Creation', opts => {
 		const transcript = result.request!.transcript
 
 		const applMsgs = extractApplicationDataFromTranscript(
-			await decryptTranscript(transcript, logger, opts.zkEngine, result.request?.fixedServerIV!, result.request?.fixedClientIV!)
+			await decryptTranscript(
+				transcript, logger, zkEngine,
+				result.request?.fixedServerIV!, result.request?.fixedClientIV!
+			)
 		)
 
 		const requestData = applMsgs
@@ -96,11 +106,11 @@ describeWithServer('Claim Creation', opts => {
 			assertValidClaimSignatures(result, client.metadata)
 		).resolves.toBeUndefined()
 
+		expect(SPY_PREPARER).toHaveBeenCalledTimes(1)
 		// check all direct message reveals and
 		// ensure we've not accidentally re-used a key
 		// for multiple application data messages that
 		// were not meant to be revealed.
-		expect(SPY_PREPARER).toHaveBeenCalledTimes(1)
 		await verifyNoDirectRevealLeaks()
 	})
 
@@ -125,8 +135,117 @@ describeWithServer('Claim Creation', opts => {
 				},
 				ownerPrivateKey: opts.privateKeyHex,
 				client,
+				zkEngine,
 			})
 		}).rejects.toThrow('Provider returned error 401')
+	})
+
+	describe('OPRF via %s', () => {
+
+		const zkEngine = 'gnark'
+
+		it.each(OPRF_CIPHER_SUITES)('should create a claim with an OPRF redaction (%s)', async cipherSuite => {
+			// OPRF is only available on gnark & chacha20 right now
+			providers.http.additionalClientOptions = {
+				...providers.http.additionalClientOptions,
+				cipherSuites: [cipherSuite]
+			}
+
+			const user = 'adhiraj'
+			const result = await createClaimOnAttestor({
+				name: 'http',
+				params: {
+					url: claimUrl,
+					method: 'GET',
+					responseRedactions: [
+						{
+							regex: user,
+							hash: 'oprf'
+						}
+					],
+					responseMatches: [
+						{
+							type: 'contains',
+							value: ''
+						}
+					]
+				},
+				secretParams: {
+					authorisationHeader: `Bearer ${user}`
+				},
+				ownerPrivateKey: opts.privateKeyHex,
+				client,
+				zkEngine,
+			})
+
+			expect(result.error).toBeUndefined()
+			// decrypt the transcript and check we didn't accidentally
+			// leak our secrets in the application data
+			const transcript = result.request!.transcript
+			expect(transcript).toBeTruthy()
+
+			const applMsgs = extractApplicationDataFromTranscript(
+				await decryptTranscript(
+					transcript, logger, zkEngine,
+					result.request?.fixedServerIV!, result.request?.fixedClientIV!
+				)
+			)
+
+			const serverPackets = applMsgs
+				.filter(m => m.sender === 'server')
+				.map(m => uint8ArrayToStr(m.message))
+				.join('')
+
+			const toprf = getFirstTOprfBlock(result.request!)!
+			expect(toprf).toBeTruthy()
+
+			// only the user's hash should be revealed
+			expect(serverPackets).not.toContain(user)
+
+			expect(serverPackets).toContain(
+				binaryHashToStr(toprf.nullifier, toprf.dataLocation!.length)
+			)
+		})
+
+		it('should produce the same hash for the same input', async() => {
+
+			let hash: Uint8Array | undefined
+
+			for(let i = 0;i < 2;i++) {
+				const user = 'some-user'
+				const result = await createClaimOnAttestor({
+					name: 'http',
+					params: {
+						url: claimUrl,
+						method: 'GET',
+						responseRedactions: [
+							{
+								regex: user,
+								hash: 'oprf'
+							}
+						],
+						responseMatches: [
+							{
+								type: 'contains',
+								value: ''
+							}
+						]
+					},
+					secretParams: {
+						authorisationHeader: `Bearer ${user}`
+					},
+					ownerPrivateKey: opts.privateKeyHex,
+					client,
+					zkEngine,
+				})
+
+				const toprf = getFirstTOprfBlock(result.request!)
+				expect(toprf).toBeTruthy()
+				hash ||= toprf!.nullifier
+
+				expect(toprf!.nullifier).toEqual(hash)
+			}
+		})
 	})
 
 	describe('Pool', () => {
@@ -150,7 +269,8 @@ describeWithServer('Claim Creation', opts => {
 						authorisationHeader: 'Bearer abcd'
 					},
 					ownerPrivateKey: opts.privateKeyHex,
-					client: { url: opts.serverUrl }
+					client: { url: opts.serverUrl },
+					zkEngine
 				})
 			).rejects.toMatchObject({
 				message: /ENOTFOUND/

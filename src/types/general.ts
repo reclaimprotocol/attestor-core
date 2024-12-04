@@ -1,4 +1,5 @@
 import type { Logger as TLSLogger, TLSPacketContext, TLSProtocolVersion } from '@reclaimprotocol/tls'
+import type { TOPRFProofParams } from 'src/types/zk'
 
 /**
  * Represents a slice of any array or string
@@ -6,6 +7,17 @@ import type { Logger as TLSLogger, TLSPacketContext, TLSProtocolVersion } from '
 export type ArraySlice = {
 	fromIndex: number
 	toIndex: number
+}
+
+export type RedactedOrHashedArraySlice = {
+	fromIndex: number
+	toIndex: number
+	/**
+	 * By default, the the data is redacted. Instead if you'd like
+	 * a deterministic hash, set this to 'oprf'
+	 * @default undefined
+	 */
+	hash?: 'oprf'
 }
 
 export type Logger = TLSLogger & {
@@ -19,6 +31,7 @@ export type LogLevel = 'debug' | 'info'
 export type ZKRevealInfo = {
 	type: 'zk'
 	redactedPlaintext: Uint8Array
+	toprfs?: TOPRFProofParams[]
 }
 
 export type MessageRevealInfo = { type: 'complete' } | ZKRevealInfo

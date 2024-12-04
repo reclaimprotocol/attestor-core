@@ -1,7 +1,7 @@
-import { CipherSuite, crypto, encryptWrappedRecord, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
+import { CipherSuite, crypto, encryptWrappedRecord, strToUint8Array, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 import { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import { MessageReveal_ZKProof as ZKProof } from 'src/proto/api'
-import { CompleteTLSPacket } from 'src/types'
+import { CompleteTLSPacket, RedactedOrHashedArraySlice } from 'src/types'
 import {
 	getBlocksToReveal,
 	logger,
@@ -22,12 +22,18 @@ const ZK_ENGINES: ZKEngine[] = [
 	'snarkjs'
 ]
 
+type RedactionTestVector = {
+	input: string[]
+	output: string[]
+	redactions: RedactedOrHashedArraySlice[]
+}
+
 jest.setTimeout(90_000) // 90s
 
-describe('ZK Tests', () => {
+describe('Redaction Tests', () => {
 
-	it('should correctly redact blocks', () => {
-		const vectors = [
+	it('should correctly redact blocks', async() => {
+		const vectors: RedactionTestVector[] = [
 			{
 				input: [
 					'hell',
@@ -79,13 +85,72 @@ describe('ZK Tests', () => {
 		]
 
 		for(const { input, output, redactions } of vectors) {
-			const realOutput = getBlocksToReveal(
+			const realOutput = await getBlocksToReveal(
 				input.map(i => ({ plaintext: Buffer.from(i) })),
-				() => redactions
+				() => redactions,
+				() => {
+					throw new Error('should not call this')
+				}
 			)
 			if(realOutput === 'all') {
 				fail('should not return "all"')
 				continue
+			}
+
+			expect(realOutput).toHaveLength(output.length)
+			for(const [i, element] of output.entries()) {
+				expect(
+					uint8ArrayToStr(realOutput[i].redactedPlaintext)
+				).toEqual(element)
+			}
+		}
+	})
+
+	it('should correctly hash blocks', async() => {
+		const nullifer = strToUint8Array('abcdefg')
+		const base64Nullifier = Buffer.from(nullifer).toString('base64')
+		const vectors: RedactionTestVector[] = [
+			{
+				input: [
+					'hell',
+					'o world'
+				],
+				output: [
+					'h' + base64Nullifier.slice(0, 3),
+					base64Nullifier.slice(3, 4) + ' world'
+				],
+				redactions: [
+					{ fromIndex: 1, toIndex: 5, hash: 'oprf' }
+				]
+			},
+			{
+				input: [
+					'hell',
+					'o world'
+				],
+				output: [
+					base64Nullifier.slice(0, 4),
+					base64Nullifier.slice(4, 5) + ' world'
+				],
+				redactions: [
+					{ fromIndex: 0, toIndex: 5, hash: 'oprf' }
+				]
+			},
+		]
+
+		for(const { input, output, redactions } of vectors) {
+			const realOutput = await getBlocksToReveal(
+				input.map(i => ({ plaintext: Buffer.from(i) })),
+				() => redactions,
+				async() => ({
+					dataLocation: undefined,
+					nullifier: nullifer,
+					responses: [],
+					mask: strToUint8Array('mask')
+				})
+			)
+			if(realOutput === 'all') {
+				fail('should not return "all"')
 			}
 
 			expect(realOutput).toHaveLength(output.length)

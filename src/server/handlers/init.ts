@@ -1,6 +1,10 @@
+import { ethers } from 'ethers'
 import { RPCHandler } from 'src/types'
 import { AttestorError } from 'src/utils'
+import { getEnvVariable } from 'src/utils/env'
 import { SIGNATURES } from 'src/utils/signatures'
+
+const TOPRF_PUBLIC_KEY = getEnvVariable('TOPRF_PUBLIC_KEY')
 
 export const init: RPCHandler<'init'> = async(
 	initRequest,
@@ -21,5 +25,9 @@ export const init: RPCHandler<'init'> = async(
 	client.metadata = initRequest
 	client.isInitialised = true
 
-	return {}
+	return {
+		toprfPublicKey: TOPRF_PUBLIC_KEY
+			? ethers.utils.arrayify(TOPRF_PUBLIC_KEY)
+			: new Uint8Array()
+	}
 }

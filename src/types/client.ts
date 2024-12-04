@@ -1,4 +1,4 @@
-import type { InitRequest, RPCMessage, RPCMessages, ServiceSignatureType, TunnelMessage } from 'src/proto/api'
+import type { InitRequest, InitResponse, RPCMessage, RPCMessages, ServiceSignatureType, TunnelMessage } from 'src/proto/api'
 import type { Logger } from 'src/types/general'
 import type { RPCEvent, RPCEventMap, RPCEventType, RPCRequestData, RPCResponseData, RPCType } from 'src/types/rpc'
 import type { TCPSocketProperties, Tunnel } from 'src/types/tunnel'
@@ -128,6 +128,9 @@ export declare class IAttestorServerSocket extends IAttestorSocket {
 }
 
 export declare class IAttestorClient extends IAttestorSocket {
+
+	public initResponse?: InitResponse
+
 	constructor(opts: IAttestorClientCreateOpts)
 
 	/**

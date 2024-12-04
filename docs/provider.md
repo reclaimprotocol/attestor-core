@@ -188,7 +188,17 @@ The parameters of the request would be:
             {
 				// json path for date of birth
                 "jsonPath": "$.responseData.dob",
-                "xPath": "",
+            },
+			// if TOPRF is enabled (which is for the official attestor from
+			// Reclaim), you can consistently hash the data here
+			// instead of redacting it.
+			// This allows you to de-duplicate proofs without seeing
+			// the true identity of the user, as the hash is
+			// consistent across all proofs.
+			{
+				// json path for date of UUID
+                "jsonPath": "$.responseData.uuid",
+                "hash": "oprf"
             }
         ],
 		// This tells the attestor what to look for in the response.
@@ -263,6 +273,8 @@ Therefore, upon a successful claim -- the claim object will look like:
 ```
 
 And there you have it! You can now use this claim to prove the age of a person without revealing any other information.
+
+For more info on how TOPRF works to hide sensitive data in a consistent way, refer to the [TOPRF section](/docs/claim-creation.md#toprf)
 
 You can read the full types of the HTTP provider [here](/src/providers/http-provider/types.ts?ref_type=heads#L55)
 

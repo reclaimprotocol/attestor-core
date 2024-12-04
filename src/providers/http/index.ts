@@ -10,10 +10,10 @@ import {
 	matchRedactedStrings,
 	parseHttpResponse,
 } from 'src/providers/http/utils'
-import { ArraySlice, Provider, ProviderParams, ProviderSecretParams } from 'src/types'
+import { ArraySlice, Provider, ProviderParams, ProviderSecretParams, RedactedOrHashedArraySlice } from 'src/types'
 import {
 	findIndexInUint8Array,
-	getHttpRequestDataFromTranscript, logger,
+	getHttpRequestDataFromTranscript,
 	REDACTION_CHAR_CODE,
 	uint8ArrayToBinaryStr,
 	uint8ArrayToStr,
@@ -22,7 +22,10 @@ import {
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
 const dateHeaderRegex = '[dD]ate: ((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (?:[0-3][0-9]) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?:[0-9]{4}) (?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2} GMT)'
 const dateDiff = 1000 * 60 * 10 // allow 10 min difference
+
 type HTTPProviderParams = ProviderParams<'http'>
+
+type HTTPResponseRedaction = Exclude<HTTPProviderParams['responseRedactions'], undefined>[number]
 
 const HTTP_PROVIDER: Provider<'http'> = {
 	hostPort: getHostPort,
@@ -49,7 +52,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		return defaultOptions
 	},
-	createRequest(secretParams, params) {
+	createRequest(secretParams, params, logger) {
 		if(
 			!secretParams.cookieStr &&
             !secretParams.authorisationHeader &&
@@ -136,7 +139,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			redactions: redactions,
 		}
 	},
-	getResponseRedactions(response, rawParams) {
+	getResponseRedactions(response, rawParams, logger) {
 		logger.debug({ response:base64.encode(response), params:rawParams })
 
 		const res = parseHttpResponse(response)
@@ -146,7 +149,9 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		if(((res.statusCode / 100) >> 0) !== 2) {
 			logger.error({ response:base64.encode(response), params:rawParams })
-			throw new Error(`Provider returned ${res.statusCode} ${res.statusMessage} error`)
+			throw new Error(
+				`Expected status ${res.statusCode} (${res.statusMessage})`
+			)
 		}
 
 		const newParams = substituteParamValues(rawParams, undefined, true)
@@ -159,7 +164,9 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			throw new Error('Failed to find response body')
 		}
 
-		const reveals: ArraySlice[] = [{ fromIndex: 0, toIndex: headerEndIndex }]
+		const reveals: RedactedOrHashedArraySlice[] = [
+			{ fromIndex: 0, toIndex: headerEndIndex }
+		]
 
 		//reveal date header
 		if(res.headerIndices['date']) {
@@ -167,98 +174,18 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		const body = uint8ArrayToBinaryStr(res.body)
-		const redactions: ArraySlice[] = []
+		const redactions: RedactedOrHashedArraySlice[] = []
 		for(const rs of params.responseRedactions || []) {
-			let element = body
-			let elementIdx = 0
-			let elementLength = -1
-
-			if(rs.xPath) {
-				const indexes = extractHTMLElementsIndexes(body, rs.xPath, !!rs.jsonPath)
-				for(const { start, end } of indexes) {
-					element = body.slice(start, end)
-					elementIdx = start
-					elementLength = end - start
-					if(rs.jsonPath) {
-						processJsonPath()
-					} else if(rs.regex) {
-						processRegexp()
-					} else {
-						addRedaction()
-					}
-				}
-			} else if(rs.jsonPath) {
-				processJsonPath()
-				if(rs.regex) {
-					processRegexp()
-				} else {
-					addRedaction()
-				}
-			} else if(rs.regex) {
-				processRegexp()
-			}
-
-
-			function processJsonPath() {
-				const jsonPathIndexes = extractJSONValueIndexes(element, rs.jsonPath!)
-				// eslint-disable-next-line max-depth
-				const eIndex = elementIdx
-				for(const ji of jsonPathIndexes) {
-					const jStart = ji.start
-					const jEnd = ji.end
-					element = body.slice(eIndex + jStart, eIndex + jEnd)
-					elementIdx = eIndex + jStart
-					elementLength = jEnd - jStart
-					// eslint-disable-next-line max-depth
-					if(rs.regex) {
-						processRegexp()
-					} else {
-						addRedaction()
-					}
-				}
-			}
-
-			function processRegexp() {
-				const regexp = makeRegex(rs.regex!)
-				const elem = element || body
-				const match = regexp.exec(elem)
-				// eslint-disable-next-line max-depth
-				if(!match?.[0]) {
-					logger.error({ response: uint8ArrayToBinaryStr(res.body) })
-					throw new Error(
-						`regexp ${rs.regex} does not match found element '${elem}'`
-					)
-				}
-
-				elementIdx += match.index
-				elementLength = regexp.lastIndex - match.index
-				element = match[0]
-				addRedaction()
-			}
-
-			// eslint-disable-next-line unicorn/consistent-function-scoping
-			function addRedaction() {
-				if(elementIdx >= 0 && elementLength > 0) {
-					const from = convertResponsePosToAbsolutePos(
-						elementIdx,
-						bodyStartIdx,
-						res.chunks
-					)
-					const to = convertResponsePosToAbsolutePos(
-						elementIdx + elementLength,
-						bodyStartIdx,
-						res.chunks
-					)
-					reveals.push({ fromIndex: from, toIndex: to })
-					redactions.push(...getRedactionsForChunkHeaders(from, to, res.chunks))
-				}
+			const processor = processRedactionRequest(
+				body, rs, bodyStartIdx, res.chunks
+			)
+			for(const { reveal, redactions: reds } of processor) {
+				reveals.push(reveal)
+				redactions.push(...reds)
 			}
 		}
 
-		reveals.sort((a, b) => {
-			return a.toIndex - b.toIndex
-		})
-
+		reveals.sort((a, b) => a.toIndex - b.toIndex)
 
 		if(reveals.length > 1) {
 			let currentIndex = 0
@@ -273,14 +200,19 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			redactions.push({ fromIndex: currentIndex, toIndex: response.length })
 		}
 
+		for(const r of reveals) {
+			if(!r.hash) {
+				continue
+			}
 
-		redactions.sort((a, b) => {
-			return a.toIndex - b.toIndex
-		})
+			redactions.push(r)
+		}
+
+		redactions.sort((a, b) => a.toIndex - b.toIndex)
 
 		return redactions
 	},
-	assertValidProviderReceipt(receipt, paramsAny) {
+	assertValidProviderReceipt(receipt, paramsAny, logger) {
 		logTranscript()
 		let extractedParams: { [_: string]: string } = {}
 		const secretParams = ('secretParams' in paramsAny) ? paramsAny.secretParams as ProviderSecretParams<'http'> : undefined
@@ -452,7 +384,6 @@ const HTTP_PROVIDER: Provider<'http'> = {
 	},
 }
 
-
 function getHostPort(params: ProviderParams<'http'>) {
 	const { host } = new URL(getURL(params))
 	if(!host) {
@@ -481,7 +412,164 @@ type ReplacedParams = {
     hiddenParts: { index: number, length: number } []
 } | null
 
-const paramsRegex = /\{\{([^{}]+)}}/sgi
+type RedactionItem = {
+	reveal: RedactedOrHashedArraySlice
+	redactions: RedactedOrHashedArraySlice[]
+}
+
+const paramsRegex = /{{([^{}]+)}}/sgi
+
+function *processRedactionRequest(
+	body: string,
+	rs: HTTPResponseRedaction,
+	bodyStartIdx: number,
+	resChunks: ArraySlice[] | undefined,
+): Generator<RedactionItem> {
+	let element = body
+	let elementIdx = 0
+	let elementLength = -1
+
+	if(rs.xPath) {
+		const indexes = extractHTMLElementsIndexes(body, rs.xPath, !!rs.jsonPath)
+		for(const { start, end } of indexes) {
+			element = body.slice(start, end)
+			elementIdx = start
+			elementLength = end - start
+			if(rs.jsonPath) {
+				yield *processJsonPath()
+			} else if(rs.regex) {
+				yield *processRegexp()
+			} else {
+				yield *addRedaction()
+			}
+		}
+	} else if(rs.jsonPath) {
+		yield *processJsonPath()
+	} else if(rs.regex) {
+		yield *processRegexp()
+	} else {
+		throw new Error(
+			'Expected either xPath, jsonPath or regex for redaction'
+		)
+	}
+
+	function *processJsonPath() {
+		const jsonPathIndexes = extractJSONValueIndexes(element, rs.jsonPath!)
+		// eslint-disable-next-line max-depth
+		const eIndex = elementIdx
+		for(const ji of jsonPathIndexes) {
+			const jStart = ji.start
+			const jEnd = ji.end
+			element = body.slice(eIndex + jStart, eIndex + jEnd)
+			elementIdx = eIndex + jStart
+			elementLength = jEnd - jStart
+			// eslint-disable-next-line max-depth
+			if(rs.regex) {
+				yield *processRegexp()
+			} else {
+				yield *addRedaction()
+			}
+		}
+	}
+
+	function *processRegexp() {
+		const regexp = makeRegex(rs.regex!)
+		const elem = element || body
+		const match = regexp.exec(elem)
+		// eslint-disable-next-line max-depth
+		if(!match?.[0]) {
+			// logger.error({ response: uint8ArrayToBinaryStr(res.body) })
+			throw new Error(
+				`regexp ${rs.regex} does not match found element '${elem}'`
+			)
+		}
+
+		elementIdx += match.index
+		elementLength = regexp.lastIndex - match.index
+		element = match[0]
+
+		// if there are groups in the regex,
+		// we'll only hash the group values
+		if(!rs.hash || !match.groups) {
+			yield *addRedaction()
+			return
+		}
+
+		const fullStr = match[0]
+		const grp = Object.values(match.groups)[0] as string
+		const grpIdx = fullStr.indexOf(grp)
+
+		// don't hash the entire regex, we'll hash the group values
+		elementLength = grpIdx
+		element = fullStr.slice(0, grpIdx)
+		yield *addRedaction(null)
+
+		elementIdx += grpIdx
+		element = grp
+		elementLength = grp.length
+
+		const reveal = getReveal(elementIdx, elementLength, rs.hash)
+		const chunkReds = getRedactionsForChunkHeaders(
+			reveal.fromIndex,
+			reveal.toIndex,
+			resChunks
+		)
+		if(chunkReds.length) {
+			throw new Error(
+				'Hash redactions cannot be performed if '
+				+ 'the redacted string is split between 2'
+				+ ' or more HTTP chunks'
+			)
+		}
+
+		yield { reveal, redactions: chunkReds }
+
+		elementIdx += grp.length
+		element = fullStr.slice(grpIdx + grp.length)
+		elementLength = element.length
+		yield *addRedaction(null)
+	}
+
+	// eslint-disable-next-line unicorn/consistent-function-scoping
+	function *addRedaction(
+		hash: RedactedOrHashedArraySlice['hash'] | null = rs.hash,
+		_resChunks = resChunks
+	): Generator<RedactionItem> {
+		if(elementIdx < 0 || !elementLength) {
+			return
+		}
+
+		const reveal = getReveal(elementIdx, elementLength, hash || undefined)
+
+		yield {
+			reveal,
+			redactions: getRedactionsForChunkHeaders(
+				reveal.fromIndex,
+				reveal.toIndex,
+				_resChunks
+			)
+		}
+	}
+
+	function getReveal(
+		startIdx: number,
+		len: number,
+		hash?: RedactedOrHashedArraySlice['hash']
+	) {
+		const from = convertResponsePosToAbsolutePos(
+			startIdx,
+			bodyStartIdx,
+			resChunks
+		)
+		const to = convertResponsePosToAbsolutePos(
+			startIdx + len,
+			bodyStartIdx,
+			resChunks
+		)
+
+		return { fromIndex: from, toIndex: to, hash }
+	}
+}
 
 function substituteParamValues(
 	currentParams: HTTPProviderParams,

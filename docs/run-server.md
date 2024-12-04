@@ -7,6 +7,14 @@
 3. Optional: build the browser RPC files with `npm run build:browser`. More on this in the [docs](docs/browser-rpc.md).
 4. Run the attestor server with `npm run start:tsc`. This will start the server on port 8001 by default.
 
+### Enabling TOPRF
+
+We support threshholded [OPRF](https://en.wikipedia.org/wiki/Oblivious_pseudorandom_function) to obscure sensitive data in a proof in a consistent way. This is optional but requires additional setup. Here is how to enable it:
+1. Create TOPRF keys with `npm run generate:toprf-keys`. This will print out environment variables required for TOPRF.
+2. From the output of the above cmd, you must add:
+	- `TOPRF_PUBLIC_KEY`
+	- One of the key shares specified by `TOPRF_SHARE_PUBLIC_KEY` & `TOPRF_SHARE_PRIVATE_KEY`
+
 ## Deploying to the Cloud
 
 You can deploy your own Reclaim server via the [docker-compose](/docker-compose.yaml). The Reclaim server is a stateless machine so you can scale it horizontally as much as you want.
