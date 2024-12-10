@@ -1,5 +1,5 @@
 import { base64 } from 'ethers/lib/utils'
-import { DEFAULT_METADATA } from 'src/config'
+import { DEFAULT_METADATA, MAX_PAYLOAD_SIZE } from 'src/config'
 import { InitResponse, RPCMessages } from 'src/proto/api'
 import { IAttestorClient, IAttestorClientCreateOpts, RPCEvent, RPCRequestData, RPCResponseData, RPCType } from 'src/types'
 import { AttestorError, getRpcRequestType, logger as LOGGER, packRpcMessages } from 'src/utils'
@@ -28,7 +28,10 @@ export class AttestorClient extends AttestorSocket implements IAttestorClient {
 		url.searchParams.set('messages', initRequestB64)
 
 		super(
-			new Websocket(url) as WebSocket,
+			new Websocket(
+				url,
+				{ maxPayload: MAX_PAYLOAD_SIZE }
+			) as WebSocket,
 			initRequest,
 			logger
 		)
