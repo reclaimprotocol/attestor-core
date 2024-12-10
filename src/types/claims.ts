@@ -56,6 +56,12 @@ export type CreateClaimOnAttestorOpts<N extends ProviderName> = {
 	timestampS?: number
 
 	logger?: Logger
+
+	/**
+	 * Maximum number of retries to attempt
+	 * @default 3
+	 */
+	maxRetries?: number
 	/**
 	 * Optionally update the provider parameters
 	 * based on the transcript
