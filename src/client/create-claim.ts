@@ -34,7 +34,9 @@ type ServerAppDataPacket = {
  * Create a claim on the attestor
  */
 export function createClaimOnAttestor<N extends ProviderName>(
-	{ logger: _logger, ...opts }: CreateClaimOnAttestorOpts<N>
+	{
+		logger: _logger, maxRetries = 3, ...opts
+	}: CreateClaimOnAttestorOpts<N>
 ) {
 	const logger = _logger
 		// if the client has already been initialised
@@ -50,7 +52,7 @@ export function createClaimOnAttestor<N extends ProviderName>(
 					: logger
 			})
 		),
-		{ logger, shouldRetry }
+		{ maxRetries, logger, shouldRetry }
 	)
 }
 
