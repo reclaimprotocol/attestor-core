@@ -246,7 +246,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		const searchParams = params.url.includes('?') ? params.url.split('?')[1] : ''
-		const expectedPath = pathname + (searchParams?.length ? '?' + searchParams : '')
+		const expectedPath = pathname.replaceAll('%7B', '{').replaceAll('%7D', '}') + (searchParams?.length ? '?' + searchParams : '')
 		if(!matchRedactedStrings(strToUint8Array(expectedPath), strToUint8Array(req.url))) {
 			logger.error('params URL: %s', params.url)
 			throw new Error(`Expected path: ${expectedPath}, found: ${req.url}`)
@@ -586,7 +586,7 @@ function *processRedactionRequest(
 function substituteParamValues(
 	currentParams: HTTPProviderParams,
 	secretParams?: ProviderSecretParams<'http'>,
-	ignoreMissingBodyParams?: boolean
+	ignoreMissingParams?: boolean
 ): {
     newParams: HTTPProviderParams
     extractedValues: { [_: string]: string }
@@ -598,13 +598,12 @@ function substituteParamValues(
 	let extractedValues: { [_: string]: string } = {}
 
 	const hiddenURLParts: { index: number, length: number } [] = []
-	const urlParams = extractAndReplaceTemplateValues(params.url, ignoreMissingBodyParams)
+	const urlParams = extractAndReplaceTemplateValues(params.url, ignoreMissingParams)
 	if(urlParams) {
 		params.url = urlParams.newParam
 		extractedValues = { ...urlParams.extractedValues }
 
 		if(urlParams.hiddenParts.length) {
-
 			const host = getHostHeaderString(new URL(params.url))
 			const offset = `https://${host}`.length - currentParams.method.length - 1 //space between method and start of the path
 			for(const hiddenURLPart of urlParams.hiddenParts) {
@@ -619,7 +618,7 @@ function substituteParamValues(
 	let hiddenBodyParts: { index: number, length: number } [] = []
 	if(params.body) {
 		const strBody = typeof params.body === 'string' ? params.body : uint8ArrayToStr(params.body)
-		bodyParams = extractAndReplaceTemplateValues(strBody, ignoreMissingBodyParams)
+		bodyParams = extractAndReplaceTemplateValues(strBody, ignoreMissingParams)
 		if(bodyParams) {
 			params.body = bodyParams.newParam
 			extractedValues = { ...extractedValues, ...bodyParams.extractedValues }

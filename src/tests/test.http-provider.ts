@@ -28,14 +28,15 @@ describeWithServer('HTTP Provider', opts => {
 					param1: 'com',
 					param2: 'Top Links | Hacker News',
 					param3: 'title',
-					param6: 'best',
+
 				}
 			},
 			secretParams: {
 				cookieStr: '<cookie-str>',
 				paramValues: {
 					param4: 'quhrfqiuherfqlireufh',
-					param5: 'sssbbbbr123'
+					param5: 'sssbbbbr123',
+					param6: 'best',
 				}
 			},
 			ownerPrivateKey: opts.privateKeyHex,
