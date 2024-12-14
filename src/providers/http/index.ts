@@ -246,6 +246,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		const searchParams = params.url.includes('?') ? params.url.split('?')[1] : ''
+		//brackets in URL path turn into %7B and %7D, so replace them back
 		const expectedPath = pathname.replaceAll('%7B', '{').replaceAll('%7D', '}') + (searchParams?.length ? '?' + searchParams : '')
 		if(!matchRedactedStrings(strToUint8Array(expectedPath), strToUint8Array(req.url))) {
 			logger.error('params URL: %s', params.url)
