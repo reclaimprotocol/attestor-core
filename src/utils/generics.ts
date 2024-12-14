@@ -150,10 +150,10 @@ export function getRecordIV(
 	return content.slice(0, recordIvLength)
 }
 
-export function getProviderValue<P, T>(params: P, fn: ProviderField<P, T>) {
+export function getProviderValue<P, S, T>(params: P, fn: ProviderField<P, S, T>, secretParams?: S) {
 	return typeof fn === 'function'
 		// @ts-ignore
-		? fn(params) as T
+		? fn(params, secretParams) as T
 		: fn
 }
 

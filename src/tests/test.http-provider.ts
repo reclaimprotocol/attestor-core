@@ -15,23 +15,29 @@ describeWithServer('HTTP Provider', opts => {
 		const resp = await createClaimOnAttestor({
 			name: 'http',
 			params: {
-				url: 'https://example.{{param1}}/',
+				url: 'https://news.ycombinator.{{param1}}/{{param6}}?token={{param4}}&token1={{param5}}',
 				method: 'GET',
 				responseMatches: [{
 					type: 'regex',
-					value: '<title.*?(?<domain>{{param2}} Domain)<\\/title>',
+					value: '<title.*?(?<domain>{{param2}})<\\/title>',
 				}],
 				responseRedactions: [{
 					xPath: './html/head/{{param3}}',
 				}],
 				paramValues: {
 					param1: 'com',
-					param2: 'Example',
-					param3: 'title'
+					param2: 'Top Links | Hacker News',
+					param3: 'title',
+
 				}
 			},
 			secretParams: {
-				cookieStr: '<cookie-str>'
+				cookieStr: '<cookie-str>',
+				paramValues: {
+					param4: 'quhrfqiuherfqlireufh',
+					param5: 'sssbbbbr123',
+					param6: 'best',
+				}
 			},
 			ownerPrivateKey: opts.privateKeyHex,
 			client: opts.client,
@@ -39,7 +45,7 @@ describeWithServer('HTTP Provider', opts => {
 		})
 		expect(resp.error).toBeUndefined()
 		expect(resp.claim?.context)
-			.toContain('0x3bfcf3bf17b83b9c37756d9becf87f76cad712304a23d3335f78e1cc96e83d1f')
+			.toContain('0x5e3e976476ded7b58120d606b33b75be52adb8345a7979c181764f00763e7b2a')
 	})
 
 	it('should create claim with OPRF template params', async() => {

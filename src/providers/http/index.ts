@@ -134,6 +134,18 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			}
 		}
 
+		if(newParams.hiddenURLParts?.length > 0) {
+			for(const hiddenURLPart of newParams.hiddenURLParts) {
+				if(hiddenURLPart.length) {
+					redactions.push({
+						fromIndex: hiddenURLPart.index,
+						toIndex: hiddenURLPart.index + hiddenURLPart.length,
+					})
+				}
+			}
+		}
+
+		redactions.sort((a, b) => a.toIndex - b.toIndex)
 		return {
 			data,
 			redactions: redactions,
@@ -150,7 +162,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		if(((res.statusCode / 100) >> 0) !== 2) {
 			logger.error({ response:base64.encode(response), params:rawParams })
 			throw new Error(
-				`Expected status ${res.statusCode} (${res.statusMessage})`
+				`Expected status 2xx, got ${res.statusCode} (${res.statusMessage})`
 			)
 		}
 
@@ -234,8 +246,9 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		const searchParams = params.url.includes('?') ? params.url.split('?')[1] : ''
-		const expectedPath = pathname + (searchParams?.length ? '?' + searchParams : '')
-		if(req.url !== expectedPath) {
+		//brackets in URL path turn into %7B and %7D, so replace them back
+		const expectedPath = pathname.replaceAll('%7B', '{').replaceAll('%7D', '}') + (searchParams?.length ? '?' + searchParams : '')
+		if(!matchRedactedStrings(strToUint8Array(expectedPath), strToUint8Array(req.url))) {
 			logger.error('params URL: %s', params.url)
 			throw new Error(`Expected path: ${expectedPath}, found: ${req.url}`)
 		}
@@ -286,13 +299,13 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		//validate server Date header if present
 		const dateHeader = makeRegex(dateHeaderRegex).exec(res)
 		if(dateHeader?.length > 1) {
-			const serverDate = Date.parse(dateHeader[1])
-			if((Date.now() - serverDate) > dateDiff) {
+			const serverDate = new Date(dateHeader[1])
+			if((Date.now() - serverDate.getTime()) > dateDiff) {
 
 				logger.info({ dateHeader:dateHeader[0], current: Date.now() }, 'date header is off')
 
 				throw new Error(
-					`Server date is off by "${(Date.now() - serverDate) / 1000} s"`
+					`Server date is off by "${(Date.now() - serverDate.getTime()) / 1000} s"`
 				)
 			}
 
@@ -384,8 +397,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 	},
 }
 
-function getHostPort(params: ProviderParams<'http'>) {
-	const { host } = new URL(getURL(params))
+function getHostPort(params: ProviderParams<'http'>, secretParams: ProviderSecretParams<'http'>) {
+	const { host } = new URL(getURL(params, secretParams))
 	if(!host) {
 		throw new Error('url is incorrect')
 	}
@@ -574,21 +587,31 @@ function *processRedactionRequest(
 function substituteParamValues(
 	currentParams: HTTPProviderParams,
 	secretParams?: ProviderSecretParams<'http'>,
-	ignoreMissingBodyParams?: boolean
+	ignoreMissingParams?: boolean
 ): {
     newParams: HTTPProviderParams
     extractedValues: { [_: string]: string }
     hiddenBodyParts: { index: number, length: number } []
+	hiddenURLParts: { index: number, length: number } []
 } {
 
 	const params = JSON.parse(JSON.stringify(currentParams))
 	let extractedValues: { [_: string]: string } = {}
 
-
-	const urlParams = extractAndReplaceTemplateValues(params.url)
+	const hiddenURLParts: { index: number, length: number } [] = []
+	const urlParams = extractAndReplaceTemplateValues(params.url, ignoreMissingParams)
 	if(urlParams) {
 		params.url = urlParams.newParam
 		extractedValues = { ...urlParams.extractedValues }
+
+		if(urlParams.hiddenParts.length) {
+			const host = getHostHeaderString(new URL(params.url))
+			const offset = `https://${host}`.length - currentParams.method.length - 1 //space between method and start of the path
+			for(const hiddenURLPart of urlParams.hiddenParts) {
+				hiddenURLParts.push({ index:hiddenURLPart.index - offset, length:hiddenURLPart.length })
+			}
+		}
+
 	}
 
 
@@ -596,7 +619,7 @@ function substituteParamValues(
 	let hiddenBodyParts: { index: number, length: number } [] = []
 	if(params.body) {
 		const strBody = typeof params.body === 'string' ? params.body : uint8ArrayToStr(params.body)
-		bodyParams = extractAndReplaceTemplateValues(strBody, ignoreMissingBodyParams)
+		bodyParams = extractAndReplaceTemplateValues(strBody, ignoreMissingParams)
 		if(bodyParams) {
 			params.body = bodyParams.newParam
 			extractedValues = { ...extractedValues, ...bodyParams.extractedValues }
@@ -643,7 +666,8 @@ function substituteParamValues(
 	return {
 		newParams: params,
 		extractedValues: extractedValues,
-		hiddenBodyParts: hiddenBodyParts
+		hiddenBodyParts: hiddenBodyParts,
+		hiddenURLParts:hiddenURLParts
 	}
 
 	function extractAndReplaceTemplateValues(param: string | undefined, ignoreMissingParams?: boolean): ReplacedParams {
@@ -716,7 +740,7 @@ function getGeoLocation(v2Params: HTTPProviderParams) {
 	return undefined
 }
 
-function getURL(v2Params: HTTPProviderParams) {
+function getURL(v2Params: HTTPProviderParams, secretParams: ProviderSecretParams<'http'>) {
 	let hostPort = v2Params?.url
 	const paramNames: Set<string> = new Set()
 
@@ -729,6 +753,8 @@ function getURL(v2Params: HTTPProviderParams) {
 	for(const pn of paramNames) {
 		if(v2Params.paramValues && pn in v2Params.paramValues) {
 			hostPort = hostPort?.replaceAll(`{{${pn}}}`, v2Params.paramValues[pn].toString())
+		} else if(secretParams?.paramValues && pn in secretParams.paramValues) {
+			hostPort = hostPort?.replaceAll(`{{${pn}}}`, secretParams.paramValues[pn].toString())
 		} else {
 			throw new Error(`parameter "${pn}" value not found in templateParams`)
 		}

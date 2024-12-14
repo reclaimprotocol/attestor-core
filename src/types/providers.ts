@@ -29,7 +29,7 @@ export type ProviderSecretParams<T extends ProviderName> = ProvidersConfig[T]['s
 
 export type RedactionMode = 'key-update' | 'zk'
 
-export type ProviderField<Params, T> = T | ((params: Params) => T)
+export type ProviderField<Params, SecretParams, T> = T | ((params: Params, secretParams?: SecretParams) => T)
 
 /**
  * Generic interface for a provider that can be used to verify
@@ -55,17 +55,17 @@ export interface Provider<
    *
    * Eg. "www.google.com:443", (p) => p.url.host
    * */
-  hostPort: ProviderField<Params, string>
+  hostPort: ProviderField<Params, SecretParams, string>
   /**
    * Which geo location to send the request from
    * Provide 2 letter country code, or a function
    * that returns the country code
    * @example "US", "IN"
    */
-  geoLocation?: ProviderField<Params, string | undefined>
+  geoLocation?: ProviderField<Params, SecretParams, string | undefined>
 
   /** extra options to pass to the client like root CA certificates */
-  additionalClientOptions?: ProviderField<Params, TLSConnectionOptions | undefined>
+  additionalClientOptions?: ProviderField<Params, SecretParams, TLSConnectionOptions | undefined>
   /**
    * default redaction mode to use. If not specified,
    * the default is 'key-update'.
@@ -75,7 +75,7 @@ export interface Provider<
    *
    * @default 'key-update'
    */
-  writeRedactionMode?: ProviderField<Params, RedactionMode | undefined>
+  writeRedactionMode?: ProviderField<Params, SecretParams, RedactionMode | undefined>
   /** generate the raw request to be sent to through the TLS receipt */
   createRequest(
     secretParams: SecretParams,

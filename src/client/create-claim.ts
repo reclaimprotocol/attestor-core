@@ -82,7 +82,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 	}: CreateClaimOnAttestorOpts<N>
 ) {
 	const provider = providers[name]
-	const hostPort = getProviderValue(params, provider.hostPort)
+	const hostPort = getProviderValue(params, provider.hostPort, secretParams)
 	const geoLocation = getProviderValue(params, provider.geoLocation)
 	const providerTlsOpts = getProviderValue(
 		params,

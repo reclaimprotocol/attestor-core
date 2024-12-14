@@ -872,7 +872,7 @@ Content-Type: text/html; charset=utf-8\r
 				responseRedactions: [],
 				method: 'GET',
 			}, logger)
-		}).toThrow('parameter\'s \"org\" value not found in paramValues')
+		}).toThrow('Expected host: xargs.{{org}}, found: xargs.org')
 	})
 
 	it('should throw on non present secret params', () => {
@@ -1061,6 +1061,51 @@ Content-Type: text/html; charset=utf-8\r
 				() => getResponseRedactions!(arr, params, logger)
 			).toThrow(/cannot be performed/)
 		})
+	})
+
+	it('should replace secret params in URL correctly', () => {
+		const params: ProviderParams<'http'> = {
+			'body': '',
+			'geoLocation': '',
+			'method': 'POST',
+			'paramValues': {
+				'username': 'testyreclaim'
+			},
+			'responseMatches': [
+				{
+					'type': 'contains',
+					'value': '"userName":"{{username}}"'
+				}
+			],
+			'responseRedactions': [
+				{
+					'jsonPath': '$.userName',
+					'regex': '"userName":"(.*)"',
+					'xPath': ''
+				}
+			],
+			'url': 'https://www.kaggle.com/{{auth_token}}?request={{param_request}}'
+		}
+		const secretParams = {
+			'paramValues': {
+				'auth_token': '1234567890',
+				'param_request':'select * from users'
+			},
+			authorisationHeader: 'abc'
+		}
+
+		const req = createRequest(secretParams, params, logger)
+
+		const reqText = uint8ArrayToStr(req.data as Uint8Array)
+		expect(reqText).toContain('POST /1234567890?request=select * from users HTTP/1.1')
+		expect(req.redactions.length).toEqual(3)
+		expect(getRedaction(2)).toEqual('Authorization: abc')
+		expect(getRedaction(0)).toEqual('1234567890')
+		expect(getRedaction(1)).toEqual('select * from users')
+
+		function getRedaction(index: number) {
+			return uint8ArrayToStr((req.data as Uint8Array).slice(req.redactions[index].fromIndex, req.redactions[index].toIndex))
+		}
 	})
 
 	async function getRedactedStr(
