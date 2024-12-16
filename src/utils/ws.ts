@@ -1,4 +1,4 @@
-import { AnyWebSocketConstructor } from 'src/types'
+import { MAX_PAYLOAD_SIZE } from 'src/config'
 import { detectEnvironment } from 'src/utils/env'
 
 /**
@@ -6,16 +6,11 @@ import { detectEnvironment } from 'src/utils/env'
  * for Node.js and the native WebSocket for the browser & other
  * environments.
  */
-export let Websocket: AnyWebSocketConstructor = (
-	detectEnvironment() === 'node'
-		? require('ws').WebSocket
-		: WebSocket
-)
+export function makeWebSocket(url: string) {
+	if(detectEnvironment() === 'node') {
+		const ws = require('ws') as typeof import('ws')
+		return new ws.WebSocket(url, { maxPayload: MAX_PAYLOAD_SIZE })
+	}
 
-/**
- * Replace the default WebSocket implementation utilised
- * by the Attestor client.
- */
-export function setWebsocket(ws: AnyWebSocketConstructor) {
-	Websocket = ws
+	return new WebSocket(url)
 }

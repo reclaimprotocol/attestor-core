@@ -58,7 +58,6 @@ export const describeWithServer = (
 		client = new AttestorClient({
 			logger: logger.child({ client: 1 }),
 			url: wsServerUrl,
-			Websocket: WebSocket
 		})
 		await client.waitForInit()
 	})

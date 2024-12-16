@@ -87,12 +87,6 @@ We utilise the `ws` package for the WebSocket implementation. The server is impl
 Note: for NodeJS clients, we use the `ws` package -- since we encountered some odd behaviour with the native experimental WebSocket API in NodeJS 22.
 For browser clients, we use the native browser WebSocket.
 
-If you'd still like to use the native WebSocket API in NodeJS, you can do so using the following code:
-```ts
-import { setWebsocket } from '@reclaimprotocol/attestor-core'
-setWebsocket(WebSocket)
-```
-
 The implementation is broken down into 3 layered parts:
 1. [AttestorSocket](src/client/socket.ts): this is the base class that handles basic functions required on the client & server side -- such as sending & receiving messages, handling errors, etc.
 2. [AttestorClient](src/client/index.ts): this is the client implementation that extends `AttestorSocket` & adds functions to make RPC calls among other things.

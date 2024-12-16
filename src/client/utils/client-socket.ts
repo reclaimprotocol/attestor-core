@@ -1,10 +1,10 @@
 import { base64 } from 'ethers/lib/utils'
-import { DEFAULT_METADATA, MAX_PAYLOAD_SIZE } from 'src/config'
+import { DEFAULT_METADATA } from 'src/config'
 import { InitResponse, RPCMessages } from 'src/proto/api'
 import { IAttestorClient, IAttestorClientCreateOpts, RPCEvent, RPCRequestData, RPCResponseData, RPCType } from 'src/types'
 import { AttestorError, getRpcRequestType, logger as LOGGER, packRpcMessages } from 'src/utils'
 import { AttestorSocket } from 'src/utils/socket-base'
-import { Websocket as DefaultWebsocket } from 'src/utils/ws'
+import { makeWebSocket as defaultMakeWebSocket } from 'src/utils/ws'
 
 export class AttestorClient extends AttestorSocket implements IAttestorClient {
 
@@ -17,7 +17,7 @@ export class AttestorClient extends AttestorSocket implements IAttestorClient {
 		initMessages = [],
 		signatureType = DEFAULT_METADATA.signatureType,
 		logger = LOGGER,
-		Websocket = DefaultWebsocket
+		makeWebSocket = defaultMakeWebSocket
 	}: IAttestorClientCreateOpts) {
 		const initRequest = { ...DEFAULT_METADATA, signatureType }
 		const msg = packRpcMessages({ initRequest }, ...initMessages)
@@ -28,10 +28,7 @@ export class AttestorClient extends AttestorSocket implements IAttestorClient {
 		url.searchParams.set('messages', initRequestB64)
 
 		super(
-			new Websocket(
-				url,
-				{ maxPayload: MAX_PAYLOAD_SIZE }
-			) as WebSocket,
+			makeWebSocket(url) as WebSocket,
 			initRequest,
 			logger
 		)

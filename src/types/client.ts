@@ -2,7 +2,7 @@ import type { InitRequest, InitResponse, RPCMessage, RPCMessages, ServiceSignatu
 import type { Logger } from 'src/types/general'
 import type { RPCEvent, RPCEventMap, RPCEventType, RPCRequestData, RPCResponseData, RPCType } from 'src/types/rpc'
 import type { TCPSocketProperties, Tunnel } from 'src/types/tunnel'
-import type { ClientOptions, WebSocket as WSWebSocket } from 'ws'
+import type { WebSocket as WSWebSocket } from 'ws'
 
 /**
  * Any WebSocket implementation -- either the native
@@ -10,10 +10,7 @@ import type { ClientOptions, WebSocket as WSWebSocket } from 'ws'
  */
 export type AnyWebSocket = WebSocket | WSWebSocket
 
-export type AnyWebSocketConstructor = new(
-	url: string | URL,
-	opts?: ClientOptions
-) => AnyWebSocket
+export type MakeWebSocket = (url: string | URL) => AnyWebSocket
 
 export type IAttestorClientCreateOpts = {
 	/**
@@ -34,7 +31,7 @@ export type IAttestorClientCreateOpts = {
 	 * Provide a custom WebSocket implementation,
 	 * will use the native WebSocket if not provided.
 	 */
-	Websocket?: AnyWebSocketConstructor
+	makeWebSocket?: MakeWebSocket
 }
 
 /**
