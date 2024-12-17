@@ -2,7 +2,7 @@ import { ethers } from 'ethers'
 import { WS_PATHNAME } from 'src/config'
 import { ClaimTunnelResponse } from 'src/proto/api'
 import { AttestorError, getIdentifierFromClaimInfo } from 'src/utils'
-import { CreateClaimResponse } from 'src/window-rpc/types'
+import { CommunicationBridge, CreateClaimResponse, WindowRPCAppClient } from 'src/window-rpc/types'
 
 // track memory usage
 export async function getCurrentMemoryUsage() {
@@ -74,4 +74,26 @@ export function mapToCreateClaimResponse(
 				.toLowerCase()
 		]
 	}
+}
+
+export function waitForResponse<T extends keyof WindowRPCAppClient>(
+	type: T,
+	requestId: string,
+	bridge: CommunicationBridge
+) {
+	type R = Awaited<ReturnType<WindowRPCAppClient[T]>>
+	const returnType = `${type}Done` as const
+	return new Promise<R>((resolve, reject) => {
+		const cancel = bridge.onMessage(msg => {
+			if(msg.id === requestId) {
+				if(msg.type === 'error') {
+					reject(new Error(msg.data.message))
+				} else if(msg.type === returnType) {
+					resolve(msg.response as R)
+				}
+
+				cancel()
+			}
+		})
+	})
 }

@@ -1,4 +1,4 @@
-import type { EncryptionAlgorithm, ZKEngine, ZKOperator, ZKProofPublicSignals } from '@reclaimprotocol/zk-symmetric-crypto'
+import type { OPRFOperator, ZKEngine, ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
 import type { TaskCompletedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
 import type { CreateClaimOnAvsOpts, CreateClaimOnAvsStep } from 'src/avs/types'
 import type { extractHTMLElement, extractJSONValueIndex } from 'src/providers/http/utils'
@@ -27,7 +27,7 @@ type IdentifiedMessage = {
 
 type CreateClaimRPCBaseOpts = {
 	/**
-	 * Specify the mode for the ZK operator,
+	 * Specify the mode for the ZK & OPRF operator,
 	 * 'default' -> will use the default ZK operator included in the SDK
 	 * (presently that's SnarkJS supported by FFs running on WASM)
 	 * 'rpc' -> if you've access to a native ZK operator, you can use this mode
@@ -62,23 +62,9 @@ type ExtractJSONValueIndexOptions = {
 	jsonPath: string
 }
 
-type ZKProveOpts = {
-	algorithm: EncryptionAlgorithm
-	input: {
-		/** Base64 encoded attestor */
-		witnessB64: string
-	}
-}
-
 type UpdateProviderParamsOpts = {
 	request: Omit<HttpRequest, 'body'> & { body: string | undefined }
 	response: Omit<HttpResponse, 'body'> & { body: string | undefined }
-}
-
-type ZKVerifyOpts = {
-	algorithm: EncryptionAlgorithm
-	publicSignals: ZKProofPublicSignals
-	proof: string | Uint8Array
 }
 
 type LogLevelOptions = {
@@ -140,12 +126,26 @@ export type WindowRPCClient = {
 	benchmarkZK(): Promise<string>
 }
 
+type AsFunction<K> = K extends (...args: any[]) => any ? K : never
+
+type FunctionalOperator<T, K extends keyof T> = {
+	fn: K
+	args: Parameters<AsFunction<T[K]>>
+}
+
+export type ExecuteZKOpts<T extends keyof ZKOperator = keyof ZKOperator>
+	= FunctionalOperator<ZKOperator, T>
+
+export type ExecuteOPRFOpts<T extends keyof OPRFOperator = keyof OPRFOperator>
+	= FunctionalOperator<OPRFOperator, T>
+
 /**
  * Fns the attestor calls on the app
  */
 export type WindowRPCAppClient = {
-	zkProve(opts: ZKProveOpts): ReturnType<ZKOperator['groth16Prove']>
-	zkVerify(opts: ZKVerifyOpts): ReturnType<ZKOperator['groth16Verify']>
+	executeZkFunctionV3(opts: ExecuteZKOpts): Promise<any>
+	executeOprfFunctionV3(opts: ExecuteOPRFOpts): Promise<any>
+
 	updateProviderParams(opts: UpdateProviderParamsOpts): Promise<{
 		params: Partial<ProviderParams<'http'>>
 		secretParams: Partial<ProviderSecretParams<'http'>>
@@ -186,8 +186,8 @@ export type WindowRPCIncomingMsg = (
 	| WindowRPCRequest<WindowRPCClient, 'getCurrentMemoryUsage'>
 	| WindowRPCRequest<WindowRPCClient, 'setLogLevel'>
     | WindowRPCRequest<WindowRPCClient, 'benchmarkZK'>
-	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'zkProve'>>
-	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'zkVerify'>>
+	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'executeZkFunctionV3'>>
+	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'executeOprfFunctionV3'>>
 	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'updateProviderParams'>>
 	| AsResponse<WindowRPCErrorResponse>
 ) & IdentifiedMessage
@@ -204,8 +204,8 @@ export type WindowRPCOutgoingMsg = (
 	| AsResponse<WindowRPCResponse<WindowRPCClient, 'getCurrentMemoryUsage'>>
 	| AsResponse<WindowRPCResponse<WindowRPCClient, 'setLogLevel'>>
     | AsResponse<WindowRPCResponse<WindowRPCClient, 'benchmarkZK'>>
-	| WindowRPCRequest<WindowRPCAppClient, 'zkProve'>
-	| WindowRPCRequest<WindowRPCAppClient, 'zkVerify'>
+	| WindowRPCRequest<WindowRPCAppClient, 'executeZkFunctionV3'>
+	| WindowRPCRequest<WindowRPCAppClient, 'executeOprfFunctionV3'>
 	| WindowRPCRequest<WindowRPCAppClient, 'updateProviderParams'>
 	| (
 		{
