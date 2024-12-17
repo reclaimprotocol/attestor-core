@@ -3,12 +3,12 @@ import { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import { createClaimOnAvs } from 'src/avs/client/create-claim-on-avs'
 import { createClaimOnAttestor } from 'src/client'
 import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from 'src/providers/http/utils'
-import { ProviderParams, ProviderSecretParams, ZKOperators } from 'src/types'
+import { OPRFOperators, ProviderParams, ProviderSecretParams, ZKOperators } from 'src/types'
 import { makeLogger } from 'src/utils'
 import { Benchmark } from 'src/utils/benchmark'
 import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from 'src/window-rpc/types'
-import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromLocation, mapToCreateClaimResponse } from 'src/window-rpc/utils'
-import { ALL_ENC_ALGORITHMS, makeWindowRpcZkOperator, waitForResponse } from 'src/window-rpc/window-rpc-zk'
+import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromLocation, mapToCreateClaimResponse, waitForResponse } from 'src/window-rpc/utils'
+import { ALL_ENC_ALGORITHMS, makeWindowRpcOprfOperator, makeWindowRpcZkOperator } from 'src/window-rpc/window-rpc-zk'
 
 class WindowRPCEvent extends Event {
 	constructor(public readonly data: WindowRPCIncomingMsg) {
@@ -122,6 +122,9 @@ export function setupWindowRpc() {
 					zkOperators: getZkOperators(
 						req.request.zkOperatorMode, req.request.zkEngine
 					),
+					oprfOperators: getOprfOperators(
+						req.request.zkOperatorMode, req.request.zkEngine
+					),
 					logger,
 					onStep(step) {
 						sendMessage({
@@ -207,12 +210,12 @@ export function setupWindowRpc() {
 		}
 
 		function getZkOperators(
-			zkOperatorMode: RPCCreateClaimOptions['zkOperatorMode']
+			mode: RPCCreateClaimOptions['zkOperatorMode']
 			= 'default',
 			zkEngine: ZKEngine = 'snarkjs'
 		) {
 			// use default snarkJS ops
-			if(zkOperatorMode === 'default') {
+			if(mode === 'default') {
 				return
 			}
 
@@ -221,6 +224,30 @@ export function setupWindowRpc() {
 			const operators: ZKOperators = {}
 			for(const alg of ALL_ENC_ALGORITHMS) {
 				operators[alg] = makeWindowRpcZkOperator(
+					alg,
+					makeCommunicationBridge(),
+					zkEngine
+				)
+			}
+
+			return operators
+		}
+
+		function getOprfOperators(
+			mode: RPCCreateClaimOptions['zkOperatorMode']
+			= 'default',
+			zkEngine: ZKEngine = 'snarkjs'
+		) {
+			// use default webview ops
+			if(mode === 'default') {
+				return
+			}
+
+			// the native app/window calling implements
+			// a ZK operator & wants to use it
+			const operators: OPRFOperators = {}
+			for(const alg of ALL_ENC_ALGORITHMS) {
+				operators[alg] = makeWindowRpcOprfOperator(
 					alg,
 					makeCommunicationBridge(),
 					zkEngine
