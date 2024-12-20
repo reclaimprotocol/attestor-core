@@ -1,0 +1,14 @@
+version: '3.7'
+services:
+  attestor:
+    # get the latest version of the attestor-core from:
+    # https://github.com/reclaimprotocol/attestor-core/pkgs/container/attestor-core
+    image: ghcr.io/reclaimprotocol/attestor-core:b6bf065067462a9bea1a786f2fda689676d6121c
+    # make sure the .production.env file is in the same directory as
+    # this file & has all the required variables. See /docs/env.md for
+    # all the required variables.
+    env_file:
+      - ".production.env"
+    ports:
+      - 8001:8001
+    restart: on-failure

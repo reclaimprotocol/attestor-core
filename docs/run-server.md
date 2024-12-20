@@ -17,11 +17,17 @@ We support threshholded [OPRF](https://en.wikipedia.org/wiki/Oblivious_pseudoran
 
 ## Deploying to the Cloud
 
-You can deploy your own Reclaim server via the [docker-compose](/docker-compose.yaml). The Reclaim server is a stateless machine so you can scale it horizontally as much as you want.
+You can deploy your own Reclaim server via the [docker-compose](/prod.docker-compose.yaml). The Reclaim server is a stateless machine so you can scale it horizontally as much as you want.
 
 With the docker compose up:
 - Expose the Reclaim HTTP server behind a reverse proxy (like nginx) to the internet.
 - Add HTTPS to the reverse proxy to ensure secure communication.
 - Since Reclaim uses a websocket, ensure that the reverse proxy is configured to handle websockets.
 
-Your final RPC URL should look something like `wss://<your-domain>/ws`. To use your server on a mobile device via browser RPC, you can load the page at: `https://<your-domain>/browser-rpc`.
+Your final RPC URL should look something like `wss://<your-domain>/ws`. 
+
+To check the use your server on a mobile device via browser RPC, you can load the page at: `https://<your-domain>/browser-rpc`. It should print out "Attestor Core RPC" on the page.
+
+Once you have your server running, you can use it to generate claims. 
+- If using the browser RPC, you can follow the steps mentioned in the [docs](/docs/browser-rpc.md) -- just replace the Reclaim attestor URL with your own.
+- If using NodeJS or running in the browser directly, see [this section](/docs/getting-started.md#Code). Just replace the official Reclaim attestor URL with your own.

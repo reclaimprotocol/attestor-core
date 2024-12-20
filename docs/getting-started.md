@@ -26,6 +26,8 @@ const rslt = await createClaimOnAttestor({
 	},
 	ownerPrivateKey: '0x1234...',
 	// specify the address of the attestor to use
+	// (below is the official Reclaim attestor -- but you can
+	// specify your own attestor as well)
 	client: { url: 'wss://attestor.reclaimprotocol.org/ws' }
 })
 
