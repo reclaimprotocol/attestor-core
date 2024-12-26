@@ -49,6 +49,12 @@ export function setupWindowRpc() {
 					? JSON.parse(event.data)
 					: event.data
 			)
+
+			logger.debug(
+				{ req, origin: event.origin },
+				'recv RPC message'
+			)
+
 			// ignore any messages not for us
 			if(!VALID_MODULES.includes(req.module)) {
 				return
