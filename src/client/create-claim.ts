@@ -509,11 +509,12 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 	async function performOprf(plaintext: Uint8Array) {
 		logger.info({ length: plaintext.length }, 'generating OPRF...')
 
-		const oprfOperator = makeDefaultOPRFOperator(
-			'chacha20',
-			zkEngine,
-			logger
-		)
+		const oprfOperator = zkOpts.oprfOperators?.['chacha20']
+			|| makeDefaultOPRFOperator(
+				'chacha20',
+				zkEngine,
+				logger
+			)
 		const reqData = await oprfOperator.generateOPRFRequestData(
 			plaintext,
 			TOPRF_DOMAIN_SEPARATOR,
