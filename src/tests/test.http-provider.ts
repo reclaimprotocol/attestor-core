@@ -56,16 +56,18 @@ describeWithServer('HTTP Provider', opts => {
 				method: 'GET',
 				responseMatches: [
 					{
-						type: 'regex',
-						value: '<title>(?<domain>.+)<\\/title>',
+						type: 'contains',
+						value: '<title>{{domain}}</title>',
 					}
 				],
 				responseRedactions: [
 					{
-						regex: '<title>(?<domain>.+)<\\/title>',
+						xPath: '/html/head/title',
+						regex: '<title>(?<domain>.*?)<\\/title>',
 						hash: 'oprf'
 					}
 				],
+				paramValues:{ domain:'A6lUfzxjmDawnX' }
 			},
 			secretParams: {
 				cookieStr: '<cookie-str>'
@@ -78,6 +80,7 @@ describeWithServer('HTTP Provider', opts => {
 
 		const ctx = JSON.parse(resp.claim!.context)
 		const domainStr = ctx.extractedParameters.domain
+		console.log(domainStr)
 
 		const toprf = getFirstTOprfBlock(resp.request!)!
 		expect(toprf).toBeTruthy()
