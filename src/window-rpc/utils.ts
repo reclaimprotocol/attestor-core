@@ -97,16 +97,20 @@ export function waitForResponse<T extends keyof WindowRPCAppClient>(
 		}, timeoutMs)
 
 		const cancel = bridge.onMessage(msg => {
-			if(msg.id === requestId) {
-				if(msg.type === 'error') {
-					reject(new Error(msg.data.message))
-				} else if(msg.type === returnType) {
-					resolve(msg.response as R)
-				}
-
-				clearTimeout(timeout)
-				cancel()
+			if(msg.id !== requestId) {
+				return
 			}
+
+			if(msg.type === 'error') {
+				reject(new Error(msg.data.message))
+			} else if(msg.type === returnType) {
+				resolve(msg.response as R)
+			} else {
+				return
+			}
+
+			clearTimeout(timeout)
+			cancel()
 		})
 	})
 }
