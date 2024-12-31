@@ -296,27 +296,6 @@ export async function makeZkProofGenerator(
 			}
 		)
 
-		await verifyProof({
-			proof,
-			publicInput,
-			operator,
-			logger,
-			...(
-				toprf
-					? {
-						toprf: {
-							pos: toprf.dataLocation!.fromIndex,
-							len: toprf.dataLocation!.length,
-							output: toprf.nullifier,
-							responses: toprf.responses,
-							domainSeparator: TOPRF_DOMAIN_SEPARATOR
-						},
-						mask: toprf.mask,
-					}
-					: {}
-			)
-		})
-
 		logger?.debug({ startIdx }, 'generated proof for chunk')
 
 		return {
