@@ -4,7 +4,14 @@ import { getAttestorClientFromPool } from 'src/client/utils/attestor-pool'
 import { DEFAULT_HTTPS_PORT, TOPRF_DOMAIN_SEPARATOR } from 'src/config'
 import { ClaimTunnelRequest, ZKProofEngine } from 'src/proto/api'
 import { providers } from 'src/providers'
-import { CreateClaimOnAttestorOpts, IAttestorClient, MessageRevealInfo, ProviderName, TOPRFProofParams, Transcript } from 'src/types'
+import type {
+	CreateClaimOnAttestorOpts,
+	IAttestorClient,
+	MessageRevealInfo,
+	ProviderName,
+	TOPRFProofParams,
+	Transcript
+} from 'src/types'
 import {
 	AttestorError,
 	canonicalStringify,
@@ -251,7 +258,6 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 	if(clientBlock && clientBlock.message.type === 'ciphertext') {
 		clientIV = clientBlock.message.fixedIv
 	}
-
 
 	// now that we have the full transcript, we need
 	// to generate the ZK proofs & send them to the attestor

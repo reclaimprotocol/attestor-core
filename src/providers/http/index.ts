@@ -227,7 +227,9 @@ const HTTP_PROVIDER: Provider<'http'> = {
 	assertValidProviderReceipt(receipt, paramsAny, logger) {
 		logTranscript()
 		let extractedParams: { [_: string]: string } = {}
-		const secretParams = ('secretParams' in paramsAny) ? paramsAny.secretParams as ProviderSecretParams<'http'> : undefined
+		const secretParams = ('secretParams' in paramsAny)
+			? paramsAny.secretParams as ProviderSecretParams<'http'>
+			: undefined
 		const newParams = substituteParamValues(paramsAny, secretParams, !secretParams)
 		const params = newParams.newParams
 		extractedParams = { ...extractedParams, ...newParams.extractedValues }
