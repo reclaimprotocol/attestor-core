@@ -113,11 +113,13 @@ export function createBgpListener(logger: Logger): BGPListener {
 			return
 		}
 
+		const asPath = data?.data?.path
+
 		for(const announcement of announcements) {
 			const prefixes = announcement?.prefixes
 			const nextHop = announcement?.['next_hop']
 
-			const hasPrefixes = prefixes?.length && nextHop
+			const hasPrefixes = prefixes?.length && (nextHop || asPath)
 			if(!hasPrefixes) {
 				return
 			}
