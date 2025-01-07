@@ -14,3 +14,4 @@ ngrok.yml
 src/test.ts
 .env.*
 .cache
+envs

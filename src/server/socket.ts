@@ -1,8 +1,7 @@
-import { IncomingMessage } from 'http'
 import { handleMessage } from 'src/client/utils/message-handler'
 import { HANDLERS } from 'src/server/handlers'
 import { getInitialMessagesFromQuery } from 'src/server/utils/generics'
-import { IAttestorServerSocket, Logger, RPCEvent, RPCHandler } from 'src/types'
+import { AcceptNewConnectionOpts, BGPListener, IAttestorServerSocket, Logger, RPCEvent, RPCHandler } from 'src/types'
 import { AttestorError, generateSessionId } from 'src/utils'
 import { AttestorSocket } from 'src/utils/socket-base'
 import { promisify } from 'util'
@@ -12,7 +11,12 @@ export class AttestorServerSocket extends AttestorSocket implements IAttestorSer
 
 	tunnels: IAttestorServerSocket['tunnels'] = {}
 
-	private constructor(socket: WS, public sessionId: number, logger: Logger) {
+	private constructor(
+		socket: WS,
+		public sessionId: number,
+		public bgpListener: BGPListener | undefined,
+		logger: Logger
+	) {
 		// @ts-ignore
 		super(socket, {}, logger)
 		// handle RPC requests
@@ -43,8 +47,7 @@ export class AttestorServerSocket extends AttestorSocket implements IAttestorSer
 
 	static async acceptConnection(
 		socket: WS,
-		req: IncomingMessage,
-		logger: Logger
+		{ req, logger, bgpListener }: AcceptNewConnectionOpts
 	) {
 		// promisify ws.send -- so the sendMessage method correctly
 		// awaits the send operation
@@ -54,7 +57,9 @@ export class AttestorServerSocket extends AttestorSocket implements IAttestorSer
 		const sessionId = generateSessionId()
 		logger = logger.child({ sessionId })
 
-		const client = new AttestorServerSocket(socket, sessionId, logger)
+		const client = new AttestorServerSocket(
+			socket, sessionId, bgpListener, logger
+		)
 		try {
 			const initMsgs = getInitialMessagesFromQuery(req)
 			logger.trace(

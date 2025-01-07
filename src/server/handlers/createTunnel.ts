@@ -1,5 +1,6 @@
 import { makeTcpTunnel } from 'src/server/tunnels/make-tcp-tunnel'
 import { getApm } from 'src/server/utils/apm'
+import { resolveHostnames } from 'src/server/utils/dns'
 import { RPCHandler } from 'src/types'
 import { AttestorError } from 'src/utils'
 
@@ -19,6 +20,27 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 	}
 
 	try {
+		let cancelBgp: (() => void) | undefined
+		if(client.bgpListener) {
+			const ips = await resolveHostnames(opts.host)
+			cancelBgp = client.bgpListener.onOverlap(ips, (info) => {
+				logger.warn(
+					{ info, host: opts.host },
+					'BGP announcement overlap detected'
+				)
+				// track how many times we've seen a BGP overlap
+				tx?.addLabels({ bgpOverlap: true, ...info })
+				tunnel?.close(
+					new AttestorError(
+						'ERROR_BGP_ANNOUNCEMENT_OVERLAP',
+						`BGP announcement overlap detected for ${opts.host}`,
+					)
+				)
+			})
+
+			logger.debug({ ips }, 'checking for BGP overlap')
+		}
+
 		const tunnel = await makeTcpTunnel({
 			...opts,
 			logger,
@@ -36,6 +58,8 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 				})
 			},
 			onClose(err) {
+				cancelBgp?.()
+
 				if(err) {
 					apm?.captureError(err, { parent: sessionTx })
 					tx?.setOutcome('failure')

@@ -1,9 +1,9 @@
-import { resolve, setServers } from 'dns'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import type { ConnectResponse } from 'https-proxy-agent/dist/parse-proxy-response'
 import { Socket } from 'net'
-import { CONNECTION_TIMEOUT_MS, DNS_SERVERS } from 'src/config'
+import { CONNECTION_TIMEOUT_MS } from 'src/config'
 import { CreateTunnelRequest } from 'src/proto/api'
+import { resolveHostnames } from 'src/server/utils/dns'
 import { isValidCountryCode } from 'src/server/utils/iso'
 import type { Logger } from 'src/types'
 import type { MakeTunnelFn, TCPSocketProperties } from 'src/types'
@@ -75,8 +75,6 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 		onClose = undefined
 	}
 }
-
-setDnsServers()
 
 async function connectTcp({ host, port, geoLocation, logger }: ExtraOpts) {
 	let connectTimeout: NodeJS.Timeout | undefined
@@ -236,24 +234,4 @@ async function _getSocket(
 	})
 
 	return proxySocket
-}
-
-async function resolveHostnames(hostname: string) {
-	return new Promise<string[]>((_resolve, reject) => {
-		resolve(hostname, (err, addresses) => {
-			if(err) {
-				reject(
-					new Error(
-						`Could not resolve hostname: ${hostname}, ${err.message}`
-					)
-				)
-			} else {
-				_resolve(addresses)
-			}
-		})
-	})
-}
-
-function setDnsServers() {
-	setServers(DNS_SERVERS)
 }
