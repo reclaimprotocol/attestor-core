@@ -1,4 +1,6 @@
+import type { IncomingMessage } from 'http'
 import type { InitRequest, InitResponse, RPCMessage, RPCMessages, ServiceSignatureType, TunnelMessage } from 'src/proto/api'
+import type { BGPListener } from 'src/types/bgp'
 import type { Logger } from 'src/types/general'
 import type { RPCEvent, RPCEventMap, RPCEventType, RPCRequestData, RPCResponseData, RPCType } from 'src/types/rpc'
 import type { TCPSocketProperties, Tunnel } from 'src/types/tunnel'
@@ -11,6 +13,12 @@ import type { WebSocket as WSWebSocket } from 'ws'
 export type AnyWebSocket = WebSocket | WSWebSocket
 
 export type MakeWebSocket = (url: string | URL) => AnyWebSocket
+
+export type AcceptNewConnectionOpts = {
+	req: IncomingMessage
+	logger: Logger
+	bgpListener?: BGPListener
+}
 
 export type IAttestorClientCreateOpts = {
 	/**
@@ -125,6 +133,8 @@ export declare class IAttestorServerSocket extends IAttestorSocket {
 	 * If the tunnel does not exist, it will throw an error.
 	 */
 	getTunnel(tunnelId: TunnelMessage['tunnelId']): Tunnel<TCPSocketProperties>
+
+	bgpListener?: BGPListener
 }
 
 export declare class IAttestorClient extends IAttestorSocket {
