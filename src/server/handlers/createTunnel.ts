@@ -22,6 +22,9 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 	try {
 		let cancelBgp: (() => void) | undefined
 		if(client.bgpListener) {
+			// listen to all IPs for the host -- in case any of them
+			// has a BGP announcement overlap, we'll close the tunnel
+			// so the user can retry
 			const ips = await resolveHostnames(opts.host)
 			cancelBgp = client.bgpListener.onOverlap(ips, (info) => {
 				logger.warn(

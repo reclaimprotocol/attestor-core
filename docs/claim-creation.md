@@ -263,6 +263,13 @@ This feature is useful for connecting to end servers that might block connection
 
 Do keep in mind, you do not have to trust the proxy server nor the attestor with any sensitive data. Using [TLS certifcate pinning](https://www.ssl.com/blogs/what-is-certificate-pinning/), the user ensures that the connection is secure with & the data is not tampered with.
 
+### BGP Announcements
+
+A possibly vulnerable point in the Reclaim protocol is the BGP announcements. If an attacker can intercept the BGP announcements & redirect the traffic to their own server, they can potentially generate a false claim. However unlikely this may be, it is a possibility. To circumvent this -- we've setup a listener on the attestor that listens for BGP announcements & terminates any active connection that has been redirected.
+
+Refer [here](/src/utils/bgp-listener.ts) for the implementation of this feature.
+More details of this attack & other mitigations can be found in this [post](https://www.reclaimprotocol.org/blog/posts/fake-website-attack).
+
 ### TLS Implementation
 
 You can find our TLS implementation [here](https://gitlab.reclaimprotocol.org/reclaim/tls). We wrote a custom implementation for a few reasons:
