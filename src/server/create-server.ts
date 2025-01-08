@@ -26,7 +26,7 @@ export async function createServer(port = PORT) {
 		'browser',
 		{ index: ['index.html'] }
 	)
-	const bgpListener = DISABLE_BGP_CHECKS
+	const bgpListener = !DISABLE_BGP_CHECKS
 		? createBgpListener(LOGGER.child({ service: 'bgp-listener' }))
 		: undefined
 
