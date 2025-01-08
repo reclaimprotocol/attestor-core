@@ -1,9 +1,8 @@
 import CIDR from 'ip-cidr'
 import type { Logger } from 'pino'
+import { BGP_WS_URL } from 'src/config'
 import { BGPAnnouncementOverlapData, BGPListener } from 'src/types'
 import { makeWebSocket } from 'src/utils/ws'
-
-const BGP_WS_URL = 'wss://ris-live.ripe.net/v1/ws/?client=reclaim-hijack-detector'
 
 const ANNOUNCEMENT_OVERLAP = 'announcement-overlap'
 

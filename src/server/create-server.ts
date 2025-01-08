@@ -79,6 +79,7 @@ export async function createServer(port = PORT) {
 	const wssClose = wss.close.bind(wss)
 	wss.close = (cb) => {
 		wssClose(() => http.close(cb))
+		bgpListener?.close()
 	}
 
 	return wss
