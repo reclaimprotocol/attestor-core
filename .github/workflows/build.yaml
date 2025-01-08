@@ -3,9 +3,9 @@ name: Build & Publish Docker Image
 on:
   workflow_run:
     workflows: ["Test"]
-    # branches:
-    #   # change to main when merging to main
-    #   - ci
+    branches:
+      # change to main when merging to main
+      - main
     types: 
       - completed
 
