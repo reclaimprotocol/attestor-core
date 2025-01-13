@@ -70,4 +70,6 @@ export type CreateClaimOnAttestorOpts<N extends ProviderName> = {
 		params: Partial<ProviderParams<N>>
 		secretParams: Partial<ProviderSecretParams<N>>
 	}>
+
+	updateParametersFromOprfData?: boolean
 } & PrepareZKProofsBaseOpts

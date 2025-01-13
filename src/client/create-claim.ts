@@ -87,6 +87,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		logger = LOGGER,
 		timestampS,
 		updateProviderParams,
+		updateParametersFromOprfData = true,
 		...zkOpts
 	}: CreateClaimOnAttestorOpts<N>
 ) {
@@ -485,7 +486,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 				revealedPackets.push(
 					{ sender: 'server', message: redactedPlaintext }
 				)
-				if(toprfs) {
+				if(updateParametersFromOprfData && toprfs) {
 					let strParams = canonicalStringify(params)
 					for(const toprf of toprfs) {
 						strParams = strParams.replaceAll(uint8ArrayToStr(toprf.plaintext), binaryHashToStr(
