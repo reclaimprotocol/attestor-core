@@ -261,7 +261,8 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		clientIV = clientBlock.message.fixedIv
 	}
 
-	const transcript = await generateTranscript() // will replace params with hashes
+	const transcript = await generateTranscript()
+
 	// now that we have the full transcript, we need
 	// to generate the ZK proofs & send them to the attestor
 	// to verify & sign our claim
@@ -464,6 +465,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 
 		const revealedPackets: Transcript<Uint8Array> = packets
 			.filter(p => p.sender === 'client')
+
 		if(serverPacketsToReveal === 'all') {
 			// reveal all server side blocks
 			for(const { message, sender } of allPackets) {
@@ -484,23 +486,15 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 					{ sender: 'server', message: redactedPlaintext }
 				)
 				if(toprfs) {
+					let strParams = canonicalStringify(params)
 					for(const toprf of toprfs) {
-						// eslint-disable-next-line max-depth
-						if(params?.paramValues) {
-							const pt = uint8ArrayToStr(toprf.plaintext)
-							// eslint-disable-next-line max-depth
-							for(const param in params.paramValues) {
-								// eslint-disable-next-line max-depth
-								if(params.paramValues[param] === pt) {
-									params.paramValues[param] = binaryHashToStr(
-										toprf.nullifier,
-										toprf.dataLocation!.length
-									)
-								}
-							}
-						}
-
+						strParams = strParams.replaceAll(uint8ArrayToStr(toprf.plaintext), binaryHashToStr(
+							toprf.nullifier,
+							toprf.dataLocation!.length
+						))
 					}
+
+					params = JSON.parse(strParams)
 				}
 
 			}
@@ -584,4 +578,5 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		const pubKey = getPublicKey(ownerPrivateKey)
 		return getAddress(pubKey)
 	}
+
 }
