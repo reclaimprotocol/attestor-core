@@ -261,6 +261,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		clientIV = clientBlock.message.fixedIv
 	}
 
+	const transcript = await generateTranscript() // will replace params with hashes
 	// now that we have the full transcript, we need
 	// to generate the ZK proofs & send them to the attestor
 	// to verify & sign our claim
@@ -273,7 +274,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			timestampS: timestampS ?? unixTimestampSeconds(),
 			owner: getAddress(),
 		},
-		transcript: await generateTranscript(),
+		transcript:transcript,
 		zkEngine: zkEngine === 'gnark'
 			? ZKProofEngine.ZK_ENGINE_GNARK
 			: ZKProofEngine.ZK_ENGINE_SNARKJS,
