@@ -1121,6 +1121,7 @@ Content-Type: text/html; charset=utf-8\r
 				dataLocation: { fromIndex: 0, length: txt.length },
 				responses: [],
 				mask: new Uint8Array(0),
+				plaintext: plaintext
 			})
 		)
 		assert(trans !== 'all', 'Expected not all blocks to be revealed')
