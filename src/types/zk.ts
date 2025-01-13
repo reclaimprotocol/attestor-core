@@ -21,4 +21,5 @@ export type PrepareZKProofsBaseOpts = {
 
 export type TOPRFProofParams = TOPRFPayload & {
 	mask: Uint8Array
+	plaintext: Uint8Array
 }

@@ -14,6 +14,7 @@ import type {
 } from 'src/types'
 import {
 	AttestorError,
+	binaryHashToStr,
 	canonicalStringify,
 	generateTunnelId,
 	getBlocksToReveal,
@@ -26,6 +27,7 @@ import {
 	preparePacketsForReveal,
 	redactSlices,
 	RevealedSlices,
+	uint8ArrayToStr,
 	unixTimestampSeconds
 } from 'src/utils'
 import { executeWithRetries } from 'src/utils/retries'
@@ -480,6 +482,26 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 				revealedPackets.push(
 					{ sender: 'server', message: redactedPlaintext }
 				)
+				if(toprfs) {
+					for(const toprf of toprfs) {
+						// eslint-disable-next-line max-depth
+						if(params?.paramValues) {
+							const pt = uint8ArrayToStr(toprf.plaintext)
+							// eslint-disable-next-line max-depth
+							for(const param in params.paramValues) {
+								// eslint-disable-next-line max-depth
+								if(params.paramValues[param] === pt) {
+									params.paramValues[param] = binaryHashToStr(
+										toprf.nullifier,
+										toprf.dataLocation!.length
+									)
+								}
+							}
+						}
+
+					}
+				}
+
 			}
 		}
 
@@ -540,7 +562,8 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			nullifier,
 			responses: [res],
 			mask: reqData.mask,
-			dataLocation: undefined
+			dataLocation: undefined,
+			plaintext
 		}
 
 		return data
