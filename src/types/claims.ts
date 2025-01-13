@@ -70,4 +70,11 @@ export type CreateClaimOnAttestorOpts<N extends ProviderName> = {
 		params: Partial<ProviderParams<N>>
 		secretParams: Partial<ProviderSecretParams<N>>
 	}>
+
+	/**
+	 * Replaces paramValue with corresponding OPRF hash before proof is made
+	 * Only if there's matching redaction exists
+	 * For example: "domain.com" -> "dv4Nrgtr"
+	 */
+	updateParametersFromOprfData?: boolean
 } & PrepareZKProofsBaseOpts

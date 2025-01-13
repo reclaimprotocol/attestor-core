@@ -14,6 +14,7 @@ import type {
 } from 'src/types'
 import {
 	AttestorError,
+	binaryHashToStr,
 	canonicalStringify,
 	generateTunnelId,
 	getBlocksToReveal,
@@ -26,6 +27,7 @@ import {
 	preparePacketsForReveal,
 	redactSlices,
 	RevealedSlices,
+	uint8ArrayToStr,
 	unixTimestampSeconds
 } from 'src/utils'
 import { executeWithRetries } from 'src/utils/retries'
@@ -85,6 +87,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		logger = LOGGER,
 		timestampS,
 		updateProviderParams,
+		updateParametersFromOprfData = true,
 		...zkOpts
 	}: CreateClaimOnAttestorOpts<N>
 ) {
@@ -259,6 +262,8 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		clientIV = clientBlock.message.fixedIv
 	}
 
+	const transcript = await generateTranscript()
+
 	// now that we have the full transcript, we need
 	// to generate the ZK proofs & send them to the attestor
 	// to verify & sign our claim
@@ -271,7 +276,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			timestampS: timestampS ?? unixTimestampSeconds(),
 			owner: getAddress(),
 		},
-		transcript: await generateTranscript(),
+		transcript:transcript,
 		zkEngine: zkEngine === 'gnark'
 			? ZKProofEngine.ZK_ENGINE_GNARK
 			: ZKProofEngine.ZK_ENGINE_SNARKJS,
@@ -461,6 +466,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 
 		const revealedPackets: Transcript<Uint8Array> = packets
 			.filter(p => p.sender === 'client')
+
 		if(serverPacketsToReveal === 'all') {
 			// reveal all server side blocks
 			for(const { message, sender } of allPackets) {
@@ -480,6 +486,18 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 				revealedPackets.push(
 					{ sender: 'server', message: redactedPlaintext }
 				)
+				if(updateParametersFromOprfData && toprfs) {
+					let strParams = canonicalStringify(params)
+					for(const toprf of toprfs) {
+						strParams = strParams.replaceAll(uint8ArrayToStr(toprf.plaintext), binaryHashToStr(
+							toprf.nullifier,
+							toprf.dataLocation!.length
+						))
+					}
+
+					params = JSON.parse(strParams)
+				}
+
 			}
 		}
 
@@ -540,7 +558,8 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			nullifier,
 			responses: [res],
 			mask: reqData.mask,
-			dataLocation: undefined
+			dataLocation: undefined,
+			plaintext
 		}
 
 		return data
@@ -560,4 +579,5 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		const pubKey = getPublicKey(ownerPrivateKey)
 		return getAddress(pubKey)
 	}
+
 }

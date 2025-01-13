@@ -67,7 +67,7 @@ describeWithServer('HTTP Provider', opts => {
 						hash: 'oprf'
 					}
 				],
-				paramValues:{ domain:'A6lUfzxjmDawnX' }
+				paramValues:{ domain:'Example Domain' }
 			},
 			secretParams: {
 				cookieStr: '<cookie-str>'

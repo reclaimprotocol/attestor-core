@@ -128,7 +128,8 @@ export async function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 					fromIndex: cursorInBlock,
 					length: slice.toIndex - slice.fromIndex
 				},
-				mask
+				mask,
+				plaintext
 			}
 			const block = slicesWithReveal[blockIdx]
 			block.toprfs ||= []

@@ -146,7 +146,8 @@ describe('Redaction Tests', () => {
 					dataLocation: undefined,
 					nullifier: nullifer,
 					responses: [],
-					mask: strToUint8Array('mask')
+					mask: strToUint8Array('mask'),
+					plaintext: strToUint8Array('abcdefg')
 				})
 			)
 			if(realOutput === 'all') {
