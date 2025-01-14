@@ -137,6 +137,11 @@ export function createBgpListener(logger: Logger): BGPListener {
 	}
 
 	function overlapsTargetIps(prefix: string): boolean {
+		// ignore all prefixes that end with /0
+		if(prefix.endsWith('/0')) {
+			return false
+		}
+
 		const cidr = new CIDR(prefix)
 		for(const ip of targetIps) {
 			if(cidr.contains(ip)) {
