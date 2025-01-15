@@ -25,6 +25,11 @@ export type IAttestorClientInitParams = {
 	 * Attestor WS URL
 	 */
 	url: string | URL
+	/**
+	 * If the attestor being connected to has authentication
+	 * enabled, provide the authentication request here, or a
+	 * function that will return the authentication request.
+	 */
 	authRequest?: AuthenticationRequest
 		| (() => Promise<AuthenticationRequest>)
 }

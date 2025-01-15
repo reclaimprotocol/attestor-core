@@ -43,6 +43,8 @@ export const MAX_NO_DATA_INTERVAL_MS = 30_000
 
 export const MAX_PAYLOAD_SIZE = 512 * 1024 * 1024 // 512MB
 
+export const DEFAULT_AUTH_EXPIRY_S = 15 * 60 // 15m
+
 export const TOPRF_DOMAIN_SEPARATOR = 'reclaim-toprf'
 
 export const BGP_WS_URL = 'wss://ris-live.ripe.net/v1/ws/?client=reclaim-hijack-detector'

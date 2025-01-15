@@ -566,6 +566,11 @@ export interface AuthenticatedUserData {
   id: string;
   createdAt: number;
   /**
+   * Unix timestamp in seconds when the user's
+   * authentication will expire.
+   */
+  expiresAt: number;
+  /**
    * List of allowed hosts the user is allowed to connect to.
    * Will throw a BAD_REQUEST error if the user tries to connect.
    * Pass an empty list to allow all hosts.
@@ -3151,7 +3156,7 @@ export const CompleteClaimOnAvsResponse: MessageFns<CompleteClaimOnAvsResponse> 
 };
 
 function createBaseAuthenticatedUserData(): AuthenticatedUserData {
-  return { id: "", createdAt: 0, hostWhitelist: [] };
+  return { id: "", createdAt: 0, expiresAt: 0, hostWhitelist: [] };
 }
 
 export const AuthenticatedUserData: MessageFns<AuthenticatedUserData> = {
@@ -3162,8 +3167,11 @@ export const AuthenticatedUserData: MessageFns<AuthenticatedUserData> = {
     if (message.createdAt !== 0) {
       writer.uint32(16).uint32(message.createdAt);
     }
+    if (message.expiresAt !== 0) {
+      writer.uint32(24).uint32(message.expiresAt);
+    }
     for (const v of message.hostWhitelist) {
-      writer.uint32(26).string(v!);
+      writer.uint32(34).string(v!);
     }
     return writer;
   },
@@ -3192,7 +3200,15 @@ export const AuthenticatedUserData: MessageFns<AuthenticatedUserData> = {
           continue;
         }
         case 3: {
-          if (tag !== 26) {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.expiresAt = reader.uint32();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
             break;
           }
 
@@ -3212,6 +3228,7 @@ export const AuthenticatedUserData: MessageFns<AuthenticatedUserData> = {
     return {
       id: isSet(object.id) ? globalThis.String(object.id) : "",
       createdAt: isSet(object.createdAt) ? globalThis.Number(object.createdAt) : 0,
+      expiresAt: isSet(object.expiresAt) ? globalThis.Number(object.expiresAt) : 0,
       hostWhitelist: globalThis.Array.isArray(object?.hostWhitelist)
         ? object.hostWhitelist.map((e: any) => globalThis.String(e))
         : [],
@@ -3226,6 +3243,9 @@ export const AuthenticatedUserData: MessageFns<AuthenticatedUserData> = {
     if (message.createdAt !== 0) {
       obj.createdAt = Math.round(message.createdAt);
     }
+    if (message.expiresAt !== 0) {
+      obj.expiresAt = Math.round(message.expiresAt);
+    }
     if (message.hostWhitelist?.length) {
       obj.hostWhitelist = message.hostWhitelist;
     }
@@ -3239,6 +3259,7 @@ export const AuthenticatedUserData: MessageFns<AuthenticatedUserData> = {
     const message = createBaseAuthenticatedUserData();
     message.id = object.id ?? "";
     message.createdAt = object.createdAt ?? 0;
+    message.expiresAt = object.expiresAt ?? 0;
     message.hostWhitelist = object.hostWhitelist?.map((e) => e) || [];
     return message;
   },

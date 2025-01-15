@@ -1,4 +1,5 @@
 import { ethers } from 'ethers'
+import { DEFAULT_AUTH_EXPIRY_S } from 'src/config'
 import { AuthenticatedUserData, AuthenticationRequest, ServiceSignatureType } from 'src/proto/api'
 import { getEnvVariable } from 'src/utils/env'
 import { AttestorError } from 'src/utils/error'
@@ -39,6 +40,13 @@ export async function assertValidAuthRequest(
 		)
 	}
 
+	if(data.expiresAt < unixTimestampSeconds()) {
+		throw new AttestorError(
+			'ERROR_AUTHENTICATION_FAILED',
+			'Authentication request has expired'
+		)
+	}
+
 	const proto = AuthenticatedUserData.encode(data).finish()
 	const signatureAlg = SIGNATURES[signatureType]
 	const address = signatureAlg.getAddress(
@@ -59,12 +67,16 @@ export async function assertValidAuthRequest(
  * which can then be used to authenticate with the service.
  */
 export async function createAuthRequest(
-	_data: Omit<AuthenticatedUserData, 'createdAt'>,
+	_data: Partial<AuthenticatedUserData>,
 	privateKey: string
 ) {
+	const createdAt = unixTimestampSeconds()
 	const data: AuthenticatedUserData = {
+		createdAt,
+		expiresAt: createdAt + DEFAULT_AUTH_EXPIRY_S,
+		id: '',
+		hostWhitelist: [],
 		..._data,
-		createdAt: unixTimestampSeconds()
 	}
 	const proto = AuthenticatedUserData.encode(data).finish()
 	const signature = await SelectedServiceSignature

@@ -362,11 +362,16 @@ message AuthenticatedUserData {
 	string id = 1;
 	uint32 createdAt = 2;
 	/**
+	 * Unix timestamp in seconds when the user's
+	 * authentication will expire.
+	 */
+	uint32 expiresAt = 3;
+	/**
 	 * List of allowed hosts the user is allowed to connect to.
 	 * Will throw a BAD_REQUEST error if the user tries to connect.
 	 * Pass an empty list to allow all hosts.
 	 */
-	repeated string hostWhitelist = 3;
+	repeated string hostWhitelist = 4;
 }
 
 message AuthenticationRequest {
