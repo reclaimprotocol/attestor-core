@@ -46,7 +46,9 @@ export class AttestorClient extends AttestorSocket implements IAttestorClient {
 				this.isInitialised = true
 				this.initResponse = res
 			})
-			// swallow the error if anything bad happens
+		// swallow the error if anything bad happens, and we've no
+		// catch block to handle it
+		this.waitForInitPromise
 			.catch(() => { })
 
 		this.addEventListener('connection-terminated', ev => (
