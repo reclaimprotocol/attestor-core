@@ -1,6 +1,7 @@
 import type { OPRFOperator, ZKEngine, ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
 import type { TaskCompletedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
 import type { CreateClaimOnAvsOpts, CreateClaimOnAvsStep } from 'src/avs/types'
+import { AuthenticationRequest } from 'src/proto/api'
 import type { extractHTMLElement, extractJSONValueIndex } from 'src/providers/http/utils'
 import type {
 	AttestorData,
@@ -37,11 +38,12 @@ type CreateClaimRPCBaseOpts = {
 	context?: string
 	zkEngine?: ZKEngine
 	updateProviderParams?: boolean
+	authRequest?: AuthenticationRequest
 }
 
 export type RPCCreateClaimOptions<N extends ProviderName = any> = Omit<
 	CreateClaimOnAttestorOpts<N>,
-	'zkOperators' | 'context'
+	'zkOperators' | 'context' | 'client'
 > & CreateClaimRPCBaseOpts
 
 export type RPCCreateClaimOnAvsOptions<N extends ProviderName = any> = Omit<
