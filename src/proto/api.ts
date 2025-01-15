@@ -162,6 +162,8 @@ export enum ErrorCode {
    * compromising the claim's authenticity
    */
   ERROR_BGP_ANNOUNCEMENT_OVERLAP = 8,
+  /** ERROR_AUTHENTICATION_FAILED - authentication failed */
+  ERROR_AUTHENTICATION_FAILED = 9,
   UNRECOGNIZED = -1,
 }
 
@@ -194,6 +196,9 @@ export function errorCodeFromJSON(object: any): ErrorCode {
     case 8:
     case "ERROR_BGP_ANNOUNCEMENT_OVERLAP":
       return ErrorCode.ERROR_BGP_ANNOUNCEMENT_OVERLAP;
+    case 9:
+    case "ERROR_AUTHENTICATION_FAILED":
+      return ErrorCode.ERROR_AUTHENTICATION_FAILED;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -221,6 +226,8 @@ export function errorCodeToJSON(object: ErrorCode): string {
       return "ERROR_PAYMENT_REFUSED";
     case ErrorCode.ERROR_BGP_ANNOUNCEMENT_OVERLAP:
       return "ERROR_BGP_ANNOUNCEMENT_OVERLAP";
+    case ErrorCode.ERROR_AUTHENTICATION_FAILED:
+      return "ERROR_AUTHENTICATION_FAILED";
     case ErrorCode.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -554,11 +561,37 @@ export interface CompleteClaimOnAvsResponse {
   taskCompletedObjectJson: string;
 }
 
+export interface AuthenticatedUserData {
+  /** Unique identifier for the user */
+  id: string;
+  createdAt: number;
+  /**
+   * List of allowed hosts the user is allowed to connect to.
+   * Will throw a BAD_REQUEST error if the user tries to connect.
+   * Pass an empty list to allow all hosts.
+   */
+  hostWhitelist: string[];
+}
+
+export interface AuthenticationRequest {
+  data:
+    | AuthenticatedUserData
+    | undefined;
+  /** Signature of the `userData` */
+  signature: Uint8Array;
+}
+
 export interface InitRequest {
   /** Attestor client version */
   clientVersion: AttestorVersion;
   /** Signature type used & expected by the user */
   signatureType: ServiceSignatureType;
+  /**
+   * Request the attestor to authenticate the user
+   * with the given data. If auth fails, will return
+   * an AUTHENTICATION_FAILED error.
+   */
+  auth: AuthenticationRequest | undefined;
 }
 
 export interface InitResponse {
@@ -3117,8 +3150,180 @@ export const CompleteClaimOnAvsResponse: MessageFns<CompleteClaimOnAvsResponse> 
   },
 };
 
+function createBaseAuthenticatedUserData(): AuthenticatedUserData {
+  return { id: "", createdAt: 0, hostWhitelist: [] };
+}
+
+export const AuthenticatedUserData: MessageFns<AuthenticatedUserData> = {
+  encode(message: AuthenticatedUserData, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.id !== "") {
+      writer.uint32(10).string(message.id);
+    }
+    if (message.createdAt !== 0) {
+      writer.uint32(16).uint32(message.createdAt);
+    }
+    for (const v of message.hostWhitelist) {
+      writer.uint32(26).string(v!);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): AuthenticatedUserData {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseAuthenticatedUserData();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.id = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.createdAt = reader.uint32();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.hostWhitelist.push(reader.string());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): AuthenticatedUserData {
+    return {
+      id: isSet(object.id) ? globalThis.String(object.id) : "",
+      createdAt: isSet(object.createdAt) ? globalThis.Number(object.createdAt) : 0,
+      hostWhitelist: globalThis.Array.isArray(object?.hostWhitelist)
+        ? object.hostWhitelist.map((e: any) => globalThis.String(e))
+        : [],
+    };
+  },
+
+  toJSON(message: AuthenticatedUserData): unknown {
+    const obj: any = {};
+    if (message.id !== "") {
+      obj.id = message.id;
+    }
+    if (message.createdAt !== 0) {
+      obj.createdAt = Math.round(message.createdAt);
+    }
+    if (message.hostWhitelist?.length) {
+      obj.hostWhitelist = message.hostWhitelist;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<AuthenticatedUserData>): AuthenticatedUserData {
+    return AuthenticatedUserData.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<AuthenticatedUserData>): AuthenticatedUserData {
+    const message = createBaseAuthenticatedUserData();
+    message.id = object.id ?? "";
+    message.createdAt = object.createdAt ?? 0;
+    message.hostWhitelist = object.hostWhitelist?.map((e) => e) || [];
+    return message;
+  },
+};
+
+function createBaseAuthenticationRequest(): AuthenticationRequest {
+  return { data: undefined, signature: new Uint8Array(0) };
+}
+
+export const AuthenticationRequest: MessageFns<AuthenticationRequest> = {
+  encode(message: AuthenticationRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.data !== undefined) {
+      AuthenticatedUserData.encode(message.data, writer.uint32(10).fork()).join();
+    }
+    if (message.signature.length !== 0) {
+      writer.uint32(18).bytes(message.signature);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): AuthenticationRequest {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseAuthenticationRequest();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.data = AuthenticatedUserData.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.signature = reader.bytes();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): AuthenticationRequest {
+    return {
+      data: isSet(object.data) ? AuthenticatedUserData.fromJSON(object.data) : undefined,
+      signature: isSet(object.signature) ? bytesFromBase64(object.signature) : new Uint8Array(0),
+    };
+  },
+
+  toJSON(message: AuthenticationRequest): unknown {
+    const obj: any = {};
+    if (message.data !== undefined) {
+      obj.data = AuthenticatedUserData.toJSON(message.data);
+    }
+    if (message.signature.length !== 0) {
+      obj.signature = base64FromBytes(message.signature);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<AuthenticationRequest>): AuthenticationRequest {
+    return AuthenticationRequest.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<AuthenticationRequest>): AuthenticationRequest {
+    const message = createBaseAuthenticationRequest();
+    message.data = (object.data !== undefined && object.data !== null)
+      ? AuthenticatedUserData.fromPartial(object.data)
+      : undefined;
+    message.signature = object.signature ?? new Uint8Array(0);
+    return message;
+  },
+};
+
 function createBaseInitRequest(): InitRequest {
-  return { clientVersion: 0, signatureType: 0 };
+  return { clientVersion: 0, signatureType: 0, auth: undefined };
 }
 
 export const InitRequest: MessageFns<InitRequest> = {
@@ -3128,6 +3333,9 @@ export const InitRequest: MessageFns<InitRequest> = {
     }
     if (message.signatureType !== 0) {
       writer.uint32(24).int32(message.signatureType);
+    }
+    if (message.auth !== undefined) {
+      AuthenticationRequest.encode(message.auth, writer.uint32(34).fork()).join();
     }
     return writer;
   },
@@ -3155,6 +3363,14 @@ export const InitRequest: MessageFns<InitRequest> = {
           message.signatureType = reader.int32() as any;
           continue;
         }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.auth = AuthenticationRequest.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -3168,6 +3384,7 @@ export const InitRequest: MessageFns<InitRequest> = {
     return {
       clientVersion: isSet(object.clientVersion) ? attestorVersionFromJSON(object.clientVersion) : 0,
       signatureType: isSet(object.signatureType) ? serviceSignatureTypeFromJSON(object.signatureType) : 0,
+      auth: isSet(object.auth) ? AuthenticationRequest.fromJSON(object.auth) : undefined,
     };
   },
 
@@ -3179,6 +3396,9 @@ export const InitRequest: MessageFns<InitRequest> = {
     if (message.signatureType !== 0) {
       obj.signatureType = serviceSignatureTypeToJSON(message.signatureType);
     }
+    if (message.auth !== undefined) {
+      obj.auth = AuthenticationRequest.toJSON(message.auth);
+    }
     return obj;
   },
 
@@ -3189,6 +3409,9 @@ export const InitRequest: MessageFns<InitRequest> = {
     const message = createBaseInitRequest();
     message.clientVersion = object.clientVersion ?? 0;
     message.signatureType = object.signatureType ?? 0;
+    message.auth = (object.auth !== undefined && object.auth !== null)
+      ? AuthenticationRequest.fromPartial(object.auth)
+      : undefined;
     return message;
   },
 };

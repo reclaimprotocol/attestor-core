@@ -1,6 +1,7 @@
 import { ethers } from 'ethers'
 import { RPCHandler } from 'src/types'
 import { AttestorError } from 'src/utils'
+import { assertValidAuthRequest } from 'src/utils/auth'
 import { getEnvVariable } from 'src/utils/env'
 import { SIGNATURES } from 'src/utils/signatures'
 
@@ -20,6 +21,17 @@ export const init: RPCHandler<'init'> = async(
 
 	if(initRequest.clientVersion <= 0) {
 		throw AttestorError.badRequest('Unsupported client version')
+	}
+
+	await assertValidAuthRequest(
+		initRequest.auth,
+		initRequest.signatureType
+	)
+
+	if(initRequest.auth?.data) {
+		client.logger = client.logger.child({
+			userId: initRequest.auth.data.id
+		})
 	}
 
 	client.metadata = initRequest

@@ -73,6 +73,7 @@ function shouldRetry(err: Error) {
 	return err instanceof AttestorError
 		&& err.code !== 'ERROR_INVALID_CLAIM'
 		&& err.code !== 'ERROR_BAD_REQUEST'
+		&& err.code !== 'ERROR_AUTHENTICATION_FAILED'
 }
 
 async function _createClaimOnAttestor<N extends ProviderName>(
@@ -124,9 +125,17 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		id: generateTunnelId()
 	}
 
+	const authRequest = 'authRequest' in clientInit
+		? (
+			typeof clientInit.authRequest === 'function'
+				? await clientInit.authRequest()
+				: clientInit.authRequest
+		)
+		: undefined
+
 	const tunnel = await makeRpcTlsTunnel({
 		tlsOpts,
-		connect: (initMessages) => {
+		connect: (connectMsgs) => {
 			let created = false
 			if('metadata' in clientInit) {
 				client = clientInit
@@ -135,7 +144,11 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 					clientInit.url,
 					() => {
 						created = true
-						return { initMessages, logger }
+						return {
+							authRequest: authRequest,
+							initMessages: connectMsgs,
+							logger
+						}
 					}
 				)
 			}
@@ -143,7 +156,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			if(!created) {
 				client
 					.waitForInit()
-					.then(() => client.sendMessage(...initMessages))
+					.then(() => client.sendMessage(...connectMsgs))
 					.catch(err => {
 						logger.error(
 							{ err },

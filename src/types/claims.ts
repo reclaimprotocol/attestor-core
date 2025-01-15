@@ -1,8 +1,8 @@
 import type { ProviderClaimData } from 'src/proto/api'
-import type { IAttestorClient } from 'src/types/client'
+import type { IAttestorClient, IAttestorClientInitParams } from 'src/types/client'
 import type { CompleteTLSPacket, Logger } from 'src/types/general'
 import type { ProofGenerationStep, ProviderName, ProviderParams, ProviderSecretParams } from 'src/types/providers'
-import { Transcript } from 'src/types/tunnel'
+import type { Transcript } from 'src/types/tunnel'
 import type { PrepareZKProofsBaseOpts } from 'src/types/zk'
 
 /**
@@ -18,7 +18,6 @@ export type AnyClaimInfo = ClaimInfo | { identifier: ClaimID }
 
 export type CompleteClaimData = Pick<ProviderClaimData, 'owner' | 'timestampS' | 'epoch'>
 	& AnyClaimInfo
-
 
 export type CreateClaimOnAttestorOpts<N extends ProviderName> = {
 	/** name of the provider to generate signed receipt for */
@@ -47,7 +46,7 @@ export type CreateClaimOnAttestorOpts<N extends ProviderName> = {
 	 *
 	 * The created client will go into the global client pool.
 	 */
-	client: IAttestorClient | { url: string | URL }
+	client: IAttestorClient | IAttestorClientInitParams
 	/**
 	 * Optionally set the timestamp of the claim
 	 * in unix seconds. If not provided, the current

@@ -1,5 +1,5 @@
 import type { IncomingMessage } from 'http'
-import type { InitRequest, InitResponse, RPCMessage, RPCMessages, ServiceSignatureType, TunnelMessage } from 'src/proto/api'
+import type { AuthenticationRequest, InitRequest, InitResponse, RPCMessage, RPCMessages, ServiceSignatureType, TunnelMessage } from 'src/proto/api'
 import type { BGPListener } from 'src/types/bgp'
 import type { Logger } from 'src/types/general'
 import type { RPCEvent, RPCEventMap, RPCEventType, RPCRequestData, RPCResponseData, RPCType } from 'src/types/rpc'
@@ -20,11 +20,22 @@ export type AcceptNewConnectionOpts = {
 	bgpListener?: BGPListener
 }
 
+export type IAttestorClientInitParams = {
+	/**
+	 * Attestor WS URL
+	 */
+	url: string | URL
+	authRequest?: AuthenticationRequest
+		| (() => Promise<AuthenticationRequest>)
+}
+
 export type IAttestorClientCreateOpts = {
 	/**
 	 * Attestor WS URL
 	 */
 	url: string | URL
+
+	authRequest?: AuthenticationRequest
 
 	signatureType?: ServiceSignatureType
 
