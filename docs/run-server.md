@@ -15,6 +15,68 @@ We support threshholded [OPRF](https://en.wikipedia.org/wiki/Oblivious_pseudoran
 	- `TOPRF_PUBLIC_KEY`
 	- One of the key shares specified by `TOPRF_SHARE_PUBLIC_KEY` & `TOPRF_SHARE_PRIVATE_KEY`
 
+### Enabling Authentication
+
+When using the attestor for a private application, you may want to enable authentication & limit some endpoints. We utilise signed, limited-time data for this. This functions almost exactly like a JWT.
+
+Enabling this will also block all un-authenticated connections to the attestor, throwing an `ERROR_AUTHENTICATION_FAILED` error.
+
+To enable authentication:
+Add the `AUTHENTICATION_PUBLIC_KEY` env flag with the public key of the signer. Note: the signature scheme is the same as the default `PRIVATE_KEY`.
+``` sh
+AUTHENTICATION_PUBLIC_KEY=0x123456789...
+```
+
+#### Creating an Auth Request
+
+When creating a claim, you'll need to pass a signed request. Here is an example of how to do it:
+``` ts
+import { createAuthRequest, createClaim } from '@reclaimprotocol/attestor-core'
+
+// this can happen on another server, on the client or anywhere you'd
+// like
+const authRequest = await createAuthRequest(
+	{
+		// optional user ID -- to identify the user
+		// all logs on the backend will be tagged with thiss
+		userId: 'optional-user-id',
+		// only allow the user to tunnel requests to one of
+		// these hosts
+		hostWhitelist: ['api.abcd.xyz']
+	},
+	MY_PRIVATE_KEY
+)
+await createClaim({
+	...otherParams,
+	client: { url: 'wss://my-private-attestor.com/ws', authRequest }
+})
+```
+
+#### Authenticating via the Browser RPC
+
+If you're using the browser RPC, you can authenticate by passing the `authRequest` in the `createClaim` function. Here is an example:
+``` ts
+webviewRef.current?.postMessage(JSON.stringify({
+	module: 'attestor-core',
+	id: '123',
+	type: 'createClaim',
+	request: {
+		name: 'http',
+		...otherParams,
+		authRequest: {
+			data: {
+				userId: 'optional-user-id',
+				hostWhitelist: ['api.abcd.xyz']
+			},
+			signature: {
+				type: 'uint8array',
+				value: 'base64-encoded-signature'
+			}
+		}
+	}
+}))
+```
+
 ## Deploying to the Cloud
 
 You can deploy your own Reclaim server via the [docker-compose](/prod.docker-compose.yaml). The Reclaim server is a stateless machine so you can scale it horizontally as much as you want.
