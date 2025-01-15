@@ -136,3 +136,28 @@ export type WindowRPCClient = {
 
 From the above schema, you can see that the app can also set the log level for the attestor & optionally send logs back to the app. This is useful to know each step of the claim creation process & debug any issues that might arise.
 
+### Passing Binary Data Back & Forth
+
+The attestor SDK can also pass binary data back & forth between the app & the attestor. This is done by encoding the binary data as base64 strings.
+
+1. The attestor client running in the webview automatically encodes binary data as base64 strings before sending it to the app. 
+2. The app can send binary data to the attestor by encoding it as a base64 string & sending it as a string.
+
+Please follow the following spec to send binary data to the attestor:
+``` json
+{ "some-field": { "type": "uint8array", "value": "base64-data" } }
+```
+
+For example: if the data is `{ "some-field": new Uint8Array([1, 2, 3, 4]) }`, the JSON to send to the attestor would be:
+``` json
+{ "some-field": { "type": "uint8array", "value": "AQIDBA==" } }
+```
+
+Refer to [this](/src/utils/b64-json.ts) for the implementation of binary data encoding & decoding. You can use this in your app to encode & decode binary data.
+``` ts 
+import { B64_JSON_REPLACER } from '@reclaimprotocol/attestor-core'
+const str = JSON.stringify(
+	{ "some-field": new Uint8Array([1, 2, 3, 4]) },
+	B64_JSON_REPLACER
+)
+```
