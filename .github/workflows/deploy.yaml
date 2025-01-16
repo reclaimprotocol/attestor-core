@@ -17,6 +17,6 @@ jobs:
             await github.rest.actions.createWorkflowDispatch({
               owner: 'reclaimprotocol',
               repo: 'attestor-deployment',
-              workflow_id: 'workflows/update-deployment.yaml',
+              workflow_id: 'update-deployment.yaml',
               ref: 'main',
             });
