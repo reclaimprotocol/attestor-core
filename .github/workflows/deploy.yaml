@@ -10,12 +10,12 @@ jobs:
 
     steps:
       - name: Deploy Stage
-        uses: actions/github-script@v5
+        uses: actions/github-script@v6
         with:
           script: |
             await github.rest.actions.createWorkflowDispatch({
-              'reclaimprotocol',
-              'attestor-deployment',
-              'workflows/update-deployment.yaml',
-              'main',
+              owner: 'reclaimprotocol',
+              repo: 'attestor-deployment',
+              workflow_id: 'workflows/update-deployment.yaml',
+              ref: 'main',
             });
