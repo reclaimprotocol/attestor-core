@@ -1,12 +1,18 @@
-name: Deploy
+name: Deploy Reclaim Attestors
+
 on:
-  push:
+  workflow_run:
+    workflows: ["Build & Publish Docker Image"]
     branches:
+      # change to main when merging to main
       - main
+    types: 
+      - completed
 jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Deploy Stage
