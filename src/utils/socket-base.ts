@@ -2,6 +2,7 @@ import { wsMessageHandler } from 'src/client/utils/message-handler'
 import { InitRequest, RPCMessage, RPCMessages } from 'src/proto/api'
 import { IAttestorSocket, Logger, RPCEvent, RPCEventMap } from 'src/types'
 import { AttestorError, makeRpcEvent, packRpcMessages } from 'src/utils'
+import type { WebSocket as WSWebSocket } from 'ws'
 
 /**
  * Common AttestorSocket class used on the client & server side as the
@@ -14,11 +15,11 @@ export class AttestorSocket implements IAttestorSocket {
 	isInitialised = false
 
 	constructor(
-		protected socket: WebSocket,
+		protected socket: WebSocket | WSWebSocket,
 		public metadata: InitRequest,
 		public logger: Logger
 	) {
-		socket.addEventListener('error', (event: ErrorEvent) => {
+		socket.addEventListener('error', (event) => {
 			const witErr = AttestorError.fromError(
 				event.error
 					|| new Error(event.message)
@@ -74,7 +75,9 @@ export class AttestorSocket implements IAttestorSocket {
 		const msg = packRpcMessages(...msgs)
 		const bytes = RPCMessages.encode(msg).finish()
 
-		await this.socket.send(bytes)
+		await this.socket.send(bytes, err => {
+			this.logger.debug({ err }, 'error sending message')
+		})
 
 		return msg
 	}
