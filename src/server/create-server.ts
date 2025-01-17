@@ -9,6 +9,7 @@ import { logger as LOGGER } from 'src/utils'
 import { createBgpListener } from 'src/utils/bgp-listener'
 import { getEnvVariable } from 'src/utils/env'
 import { SelectedServiceSignatureType } from 'src/utils/signatures'
+import { promisifySend } from 'src/utils/ws'
 import type { Duplex } from 'stream'
 import { WebSocket, WebSocketServer } from 'ws'
 
@@ -90,6 +91,7 @@ async function handleNewClient(
 	req: IncomingMessage,
 	bgpListener: BGPListener | undefined
 ) {
+	promisifySend(ws)
 	const client = await AttestorServerSocket.acceptConnection(
 		ws,
 		{ req, bgpListener, logger: LOGGER }

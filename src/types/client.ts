@@ -185,6 +185,10 @@ interface WebSocketWithServerSocket {
 	 * Our RPC socket instance
 	 */
 	serverSocket?: IAttestorServerSocket
+	/**
+	 * Just promisified send
+	 */
+	sendPromise?: (data: Uint8Array) => Promise<void>
 }
 
 declare module 'ws' {
