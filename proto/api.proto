@@ -47,6 +47,8 @@ enum ErrorCode {
 	// BGP announcement overlapped, potentially
 	// compromising the claim's authenticity
 	ERROR_BGP_ANNOUNCEMENT_OVERLAP = 8;
+	// authentication failed
+	ERROR_AUTHENTICATION_FAILED = 9;
 }
 
 enum ZKProofEngine {
@@ -355,11 +357,40 @@ message CompleteClaimOnAvsResponse {
 	string taskCompletedObjectJson = 2;
 }
 
+message AuthenticatedUserData {
+	/** Unique identifier for the user */
+	string id = 1;
+	uint32 createdAt = 2;
+	/**
+	 * Unix timestamp in seconds when the user's
+	 * authentication will expire.
+	 */
+	uint32 expiresAt = 3;
+	/**
+	 * List of allowed hosts the user is allowed to connect to.
+	 * Will throw a BAD_REQUEST error if the user tries to connect.
+	 * Pass an empty list to allow all hosts.
+	 */
+	repeated string hostWhitelist = 4;
+}
+
+message AuthenticationRequest {
+	AuthenticatedUserData data = 1;
+	/** Signature of the `userData` */
+	bytes signature = 2;
+}
+
 message InitRequest {
 	/** Attestor client version */
 	AttestorVersion clientVersion = 2;
 	/** Signature type used & expected by the user */
 	ServiceSignatureType signatureType = 3;
+	/**
+	 * Request the attestor to authenticate the user
+	 * with the given data. If auth fails, will return
+	 * an AUTHENTICATION_FAILED error.
+	 */
+	AuthenticationRequest auth = 4;
 }
 
 message InitResponse {

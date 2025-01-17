@@ -29,7 +29,8 @@ export const MAX_CLAIM_TIMESTAMP_DIFF_S = 10 * 60
 
 export const DEFAULT_METADATA: InitRequest = {
 	signatureType: ServiceSignatureType.SERVICE_SIGNATURE_TYPE_ETH,
-	clientVersion: AttestorVersion.ATTESTOR_VERSION_2_0_0
+	clientVersion: AttestorVersion.ATTESTOR_VERSION_2_0_0,
+	auth: undefined
 }
 
 export const PING_INTERVAL_MS = 10_000
@@ -41,6 +42,8 @@ export const PING_INTERVAL_MS = 10_000
 export const MAX_NO_DATA_INTERVAL_MS = 30_000
 
 export const MAX_PAYLOAD_SIZE = 512 * 1024 * 1024 // 512MB
+
+export const DEFAULT_AUTH_EXPIRY_S = 15 * 60 // 15m
 
 export const TOPRF_DOMAIN_SEPARATOR = 'reclaim-toprf'
 

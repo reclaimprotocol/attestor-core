@@ -19,6 +19,13 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 		throw AttestorError.badRequest(`Tunnel "${id}" already exists`)
 	}
 
+	const allowedHosts = client.metadata?.auth?.data?.hostWhitelist
+	if(allowedHosts?.length && !allowedHosts.includes(opts.host)) {
+		throw AttestorError.badRequest(
+			`Host "${opts.host}" not allowed by auth request`
+		)
+	}
+
 	let cancelBgp: (() => void) | undefined
 
 	try {
