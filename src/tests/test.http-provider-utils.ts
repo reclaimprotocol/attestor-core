@@ -427,7 +427,7 @@ describe('HTTP Provider Utils tests', () => {
 				'regex': 'TOTAL_FOLLOWERS&quot;,&quot;\\$recipeTypes&quot;:(.*?),&quot;analyticsTitle&quot;:{&quot;textDirection&quot;:&quot;USER_LOCALE&quot;,&quot;text&quot;:&quot;(.*?)&quot;'
 			}]
 		}
-		expect(hashProviderParams(paramsEx)).toEqual('0xeb0f5b38811b973221eb202ac60abeb41e7808034d5eb56117a367af545127c8')
+		expect(hashProviderParams(paramsEx)).toEqual('0x201909e53a408345c070b18b8a4639c89eb7a76fbfe91080e369525b1f7b5f91')
 	})
 
 	it('should match redacted strings', () => {

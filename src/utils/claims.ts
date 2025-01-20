@@ -126,9 +126,11 @@ export function hashProviderParams(params: ProviderParams<'http'>): string {
 	const filteredParams = {
 		url:params.url,
 		method:params.method,
+		headers: params.headers,
+		body: params.body,
 		responseMatches: params.responseMatches,
 		responseRedactions: params.responseRedactions,
-		geoLocation:params.geoLocation
+		geoLocation:params.geoLocation,
 	}
 
 	const serializedParams = canonicalStringify(filteredParams)
