@@ -151,7 +151,7 @@ describeWithServer('Claim Creation', opts => {
 				cipherSuites: [cipherSuite]
 			}
 
-			const user = 'adhiraj'
+			const user = '(?<test>adhiraj)'
 			const result = await createClaimOnAttestor({
 				name: 'http',
 				params: {
@@ -212,7 +212,7 @@ describeWithServer('Claim Creation', opts => {
 			let hash: Uint8Array | undefined
 
 			for(let i = 0;i < 2;i++) {
-				const user = 'some-user'
+				const user = '(?<su>some-user)'
 				const result = await createClaimOnAttestor({
 					name: 'http',
 					params: {

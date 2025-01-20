@@ -503,12 +503,19 @@ function *processRedactionRequest(
 		elementLength = regexp.lastIndex - match.index
 		element = match[0]
 
+		if(rs.hash && (!match.groups || Object.keys(match.groups).length > 1)) {
+			throw new Error(
+				'Exactly one named capture group is needed per hashed redaction'
+			)
+		}
+
 		// if there are groups in the regex,
 		// we'll only hash the group values
 		if(!rs.hash || !match.groups) {
 			yield *addRedaction()
 			return
 		}
+
 
 		const fullStr = match[0]
 		const grp = Object.values(match.groups)[0] as string
