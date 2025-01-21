@@ -408,7 +408,7 @@ describe('HTTP Provider Utils tests', () => {
 			geoLocation: 'US',
 		}
 		const hash = hashProviderParams(params)
-		expect(hash).toEqual('0x98fde00dc9f1d88c5166c3b7c911957d52e8f57ea1143ec92aebf529c1e3acd3')
+		expect(hash).toEqual('0xe9624d26421a4d898d401e98821ccd645c25b06de97746a6c24a8b12d9aec143')
 
 
 		const paramsEx: ProviderParams<'http'> = {
@@ -427,7 +427,7 @@ describe('HTTP Provider Utils tests', () => {
 				'regex': 'TOTAL_FOLLOWERS&quot;,&quot;\\$recipeTypes&quot;:(.*?),&quot;analyticsTitle&quot;:{&quot;textDirection&quot;:&quot;USER_LOCALE&quot;,&quot;text&quot;:&quot;(.*?)&quot;'
 			}]
 		}
-		expect(hashProviderParams(paramsEx)).toEqual('0xeb0f5b38811b973221eb202ac60abeb41e7808034d5eb56117a367af545127c8')
+		expect(hashProviderParams(paramsEx)).toEqual('0x6fb81ebab0fb5dca0356abfd8726af97675e4a426712377bfc6ad9a0271c913b')
 	})
 
 	it('should match redacted strings', () => {
