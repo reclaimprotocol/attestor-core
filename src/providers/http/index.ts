@@ -1,4 +1,4 @@
-import { concatenateUint8Arrays, strToUint8Array, TLSConnectionOptions } from '@reclaimprotocol/tls'
+import { areUint8ArraysEqual, concatenateUint8Arrays, strToUint8Array, TLSConnectionOptions } from '@reclaimprotocol/tls'
 import { base64 } from 'ethers/lib/utils'
 import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from 'src/config'
 import {
@@ -180,6 +180,16 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			{ fromIndex: 0, toIndex: headerEndIndex }
 		]
 
+		//reveal double CRLF which separates headers from body
+
+		const crlfs = response.slice(res.headerEndIdx, res.headerEndIdx + 4)
+		if(!areUint8ArraysEqual(crlfs, strToUint8Array('\r\n\r\n'))) {
+			logger.error({ response: uint8ArrayToBinaryStr(response) })
+			throw new Error(`Failed to find header/body separator at index ${res.headerEndIdx}`)
+		}
+
+		reveals.push({ fromIndex:res.headerEndIdx, toIndex:res.headerEndIdx + 4 })
+
 		//reveal date header
 		if(res.headerIndices['date']) {
 			reveals.push(res.headerIndices['date'])
@@ -272,7 +282,6 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const response = concatArrays(...serverBlocks)
 
 		let res: string
-		let bodyStart = OK_HTTP_HEADER.length
 		res = uint8ArrayToStr(response)
 		if(!res.startsWith(OK_HTTP_HEADER)) {
 			const statusRegex = makeRegex('^HTTP\\/1.1 (\\d{3})')
@@ -297,6 +306,10 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			)
 		}
 
+		const bodyStart = res.indexOf('\r\n\r\n', OK_HTTP_HEADER.length) + 4
+		if(bodyStart < 4) {
+			throw new Error('Response body start not found')
+		}
 
 		//validate server Date header if present
 		const dateHeader = makeRegex(dateHeaderRegex).exec(res)
@@ -310,8 +323,6 @@ const HTTP_PROVIDER: Provider<'http'> = {
 					`Server date is off by "${(Date.now() - serverDate.getTime()) / 1000} s"`
 				)
 			}
-
-			bodyStart = dateHeader.index + dateHeader[0].length
 		}
 
 
@@ -322,6 +333,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		if(paramBody.length > 0 && !matchRedactedStrings(paramBody, req.body)) {
 			throw new Error('request body mismatch')
 		}
+
 
 		//remove asterisks to account for chunks in the middle of revealed strings
 		if(!secretParams) {

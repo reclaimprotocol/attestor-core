@@ -37,6 +37,10 @@ export type HttpResponse = {
     chunks?: ArraySlice[]
 
     headerIndices: Map<string, ArraySlice>
+	/**
+	 * index of separator \r\n\r\n between headers and body
+	 */
+	headerEndIdx: number
 }
 
 const HTTP_HEADER_LINE_END = strToUint8Array('\r\n')
@@ -53,7 +57,8 @@ export function makeHttpResponseParser() {
 		body: new Uint8Array(),
 		complete: false,
 		headersComplete: false,
-		headerIndices:new Map<string, ArraySlice>()
+		headerIndices:new Map<string, ArraySlice>(),
+		headerEndIdx: 0
 	}
 
 	let remainingBodyBytes = 0
@@ -82,6 +87,7 @@ export function makeHttpResponseParser() {
 						res.statusLineEndIndex = currentByteIdx - HTTP_HEADER_LINE_END.length
 					} else if(line === '') { // empty line signifies end of headers
 						res.headersComplete = true
+						res.headerEndIdx = currentByteIdx - 4
 						// if the response is chunked, we need to process the body differently
 						if(res.headers['transfer-encoding']?.includes('chunked')) {
 							isChunked = true
