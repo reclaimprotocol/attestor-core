@@ -150,6 +150,8 @@ export declare class IAttestorServerSocket extends IAttestorSocket {
 	 */
 	getTunnel(tunnelId: TunnelMessage['tunnelId']): Tunnel<TCPSocketProperties>
 
+	removeTunnel(tunnelId: TunnelMessage['tunnelId']): void
+
 	bgpListener?: BGPListener
 }
 

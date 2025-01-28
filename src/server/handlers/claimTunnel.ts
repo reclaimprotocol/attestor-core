@@ -74,5 +74,8 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 		)
 	}
 
+	// remove tunnel from client -- to free up our mem
+	client.removeTunnel(request.id)
+
 	return res
 }

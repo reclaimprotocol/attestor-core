@@ -1,4 +1,5 @@
 import { handleMessage } from 'src/client/utils/message-handler'
+import { TunnelMessage } from 'src/proto/api'
 import { HANDLERS } from 'src/server/handlers'
 import { getInitialMessagesFromQuery } from 'src/server/utils/generics'
 import { AcceptNewConnectionOpts, BGPListener, IAttestorServerSocket, Logger, RPCEvent, RPCHandler } from 'src/types'
@@ -43,6 +44,10 @@ export class AttestorServerSocket extends AttestorSocket implements IAttestorSer
 		}
 
 		return tunnel
+	}
+
+	removeTunnel(tunnelId: TunnelMessage['tunnelId']): void {
+		delete this.tunnels[tunnelId]
 	}
 
 	static async acceptConnection(
