@@ -7,7 +7,7 @@ import { AttestorError, createSignDataForClaim, getIdentifierFromClaimInfo, unix
 
 export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 	claimRequest,
-	{ logger, client }
+	{ tx, logger, client }
 ) => {
 	const {
 		request,
@@ -18,6 +18,14 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 		await tunnel.close()
 	} catch(err) {
 		logger.debug({ err }, 'error closing tunnel')
+	}
+
+	if(tx) {
+		const transcriptBytes = tunnel.transcript.reduce(
+			(acc, { message }) => acc + message.length,
+			0
+		)
+		tx?.setLabel('transcriptBytes', transcriptBytes.toString())
 	}
 
 	// we throw an error for cases where the attestor cannot prove
