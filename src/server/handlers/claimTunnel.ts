@@ -14,6 +14,12 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 		data: { timestampS } = {},
 	} = claimRequest
 	const tunnel = client.getTunnel(request?.id!)
+	try {
+		await tunnel.close()
+	} catch(err) {
+		logger.debug({ err }, 'error closing tunnel')
+	}
+
 	// we throw an error for cases where the attestor cannot prove
 	// the user's request is faulty. For eg. if the user sends a
 	// "createRequest" that does not match the tunnel's actual
