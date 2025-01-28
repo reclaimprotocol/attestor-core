@@ -39,7 +39,7 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 	let closed = false
 
 	socket.once('error', close)
-	socket.once('end', () => close(undefined))
+	socket.once('close', () => close(undefined))
 	socket.on('data', message => {
 		onMessage?.(message)
 		transcript.push({ sender: 'server', message })
