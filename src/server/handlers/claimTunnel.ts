@@ -1,5 +1,6 @@
 import { MAX_CLAIM_TIMESTAMP_DIFF_S } from 'src/config'
 import { ClaimTunnelResponse } from 'src/proto/api'
+import { getApm } from 'src/server/utils/apm'
 import { assertTranscriptsMatch, assertValidClaimRequest } from 'src/server/utils/assert-valid-claim-request'
 import { getAttestorAddress, signAsAttestor } from 'src/server/utils/generics'
 import { RPCHandler } from 'src/types'
@@ -54,16 +55,26 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 			)
 		}
 
-		const claim = await assertValidClaimRequest(
-			claimRequest,
-			client.metadata,
-			logger
-		)
-		res.claim = {
-			...claim,
-			identifier: getIdentifierFromClaimInfo(claim),
-			// hardcode for compatibility with V1 claims
-			epoch: 1
+		const assertTx = getApm()
+			?.startTransaction('assertValidClaimRequest', { childOf: tx })
+
+		try {
+			const claim = await assertValidClaimRequest(
+				claimRequest,
+				client.metadata,
+				logger
+			)
+			res.claim = {
+				...claim,
+				identifier: getIdentifierFromClaimInfo(claim),
+				// hardcode for compatibility with V1 claims
+				epoch: 1
+			}
+		} catch(err) {
+			assertTx?.setOutcome('failure')
+			throw err
+		} finally {
+			assertTx?.end()
 		}
 	} catch(err) {
 		logger.error({ err }, 'invalid claim request')
