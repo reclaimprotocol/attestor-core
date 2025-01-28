@@ -8,13 +8,6 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 	{ id, ...opts },
 	{ tx, logger, client }
 ) => {
-	const apm = getApm()
-	const sessionTx = apm?.startTransaction(
-		'tunnel',
-		{ childOf: tx }
-	) || undefined
-	sessionTx?.addLabels({ tunnelId: id, ...opts })
-
 	if(client.tunnels[id]) {
 		throw AttestorError.badRequest(`Tunnel "${id}" already exists`)
 	}
@@ -27,6 +20,12 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 	}
 
 	let cancelBgp: (() => void) | undefined
+
+	const apm = getApm()
+	const sessionTx = apm?.startTransaction('tunnelConnection', { childOf: tx })
+	sessionTx?.setLabel('tunnelId', id.toString())
+	sessionTx?.setLabel('hostPort', `${opts.host}:${opts.port}`)
+	sessionTx?.setLabel('geoLocation', opts.geoLocation)
 
 	try {
 		const tunnel = await makeTcpTunnel({
@@ -46,14 +45,18 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 				})
 			},
 			onClose(err) {
+				logger.info('tunnel closed')
+
 				cancelBgp?.()
 
 				if(err) {
 					apm?.captureError(err, { parent: sessionTx })
-					tx?.setOutcome('failure')
+					sessionTx?.setOutcome('failure')
+				} else {
+					sessionTx?.setOutcome('success')
 				}
 
-				tx?.end()
+				sessionTx?.end()
 
 				if(!client.isOpen) {
 					return
@@ -92,8 +95,8 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 		return {}
 	} catch(err) {
 		apm?.captureError(err, { parent: sessionTx })
-		tx?.setOutcome('failure')
-		tx?.end()
+		sessionTx?.setOutcome('failure')
+		sessionTx?.end()
 		cancelBgp?.()
 
 		throw err
@@ -114,7 +117,7 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 				'BGP announcement overlap detected'
 			)
 			// track how many times we've seen a BGP overlap
-			tx?.addLabels({ bgpOverlap: true, ...info })
+			sessionTx?.addLabels({ bgpOverlap: true, ...info })
 
 			tunnel?.close(
 				new AttestorError(
