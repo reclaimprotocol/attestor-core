@@ -1,6 +1,7 @@
 import { handleMessage } from 'src/client/utils/message-handler'
 import { TunnelMessage } from 'src/proto/api'
 import { HANDLERS } from 'src/server/handlers'
+import { getApm } from 'src/server/utils/apm'
 import { getInitialMessagesFromQuery } from 'src/server/utils/generics'
 import { AcceptNewConnectionOpts, BGPListener, IAttestorServerSocket, Logger, RPCEvent, RPCHandler } from 'src/types'
 import { AttestorError, generateSessionId } from 'src/utils'
@@ -119,16 +120,33 @@ async function handleRpcRequest(
 		rpc: type,
 		requestId
 	})
+
+	const apm = getApm()
+	const tx = apm?.startTransaction(type)
+	tx?.setLabel('requestId', requestId)
+	tx?.setLabel('sessionId', this.sessionId.toString())
+
+	const userId = this.metadata.auth?.data?.id
+	if(userId) {
+		tx?.setLabel('authUserId', userId)
+	}
+
 	try {
 		logger.debug({ data }, 'handling RPC request')
 
 		const handler = HANDLERS[type] as RPCHandler<typeof type>
-		const res = await handler(data, { client: this, logger })
+		const res = await handler(data, { client: this, logger, tx })
 		await respond(res)
 
 		logger.debug({ res }, 'handled RPC request')
+		tx?.setOutcome('success')
 	} catch(err) {
 		logger.error({ err }, 'error in RPC request')
 		respond(AttestorError.fromError(err))
+		tx?.setOutcome('failure')
+
+		apm?.captureError(err, { parent: tx })
+	} finally {
+		tx?.end()
 	}
 }
