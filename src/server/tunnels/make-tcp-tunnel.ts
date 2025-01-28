@@ -38,14 +38,34 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 
 	let closed = false
 
-	socket.once('error', close)
-	socket.once('close', () => close(undefined))
+	let sockEnd = false
+	let sockClose = false
+
+	socket.once('error', onSocketClose)
+	socket.once('close', () => {
+		sockClose = true
+		if(sockEnd) {
+			onSocketClose(undefined)
+		}
+	})
+	socket.once('end', () => {
+		sockEnd = true
+		if(sockClose) {
+			onSocketClose(undefined)
+		}
+	})
 	socket.on('data', message => {
+		if(closed) {
+			logger.warn('socket is closed, dropping message')
+			return
+		}
+
 		onMessage?.(message)
 		transcript.push({ sender: 'server', message })
 	})
 
 	return {
+		socket,
 		transcript,
 		createRequest: opts,
 		async write(data) {
@@ -60,10 +80,16 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 				})
 			})
 		},
-		close,
+		close(err?: Error) {
+			if(closed) {
+				return
+			}
+
+			socket.destroy(err)
+		}
 	}
 
-	function close(err?: Error) {
+	function onSocketClose(err?: Error) {
 		if(closed) {
 			return
 		}
@@ -72,9 +98,6 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 
 		closed = true
 
-		socket.end(() => {
-			// Do nothing
-		})
 		onClose?.(err)
 		onClose = undefined
 	}
