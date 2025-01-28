@@ -45,8 +45,6 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 				})
 			},
 			onClose(err) {
-				logger.info('tunnel closed')
-
 				cancelBgp?.()
 
 				if(err) {
