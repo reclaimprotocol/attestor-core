@@ -60,11 +60,19 @@ export class AttestorClient extends AttestorSocket implements IAttestorClient {
 		type: T,
 		request: Partial<RPCRequestData<T>>
 	) {
-		const {
-			messages: [{ id }]
-		} = await this.sendMessage({ [getRpcRequestType(type)]: request })
-		const rslt = await this.waitForResponse<T>(id)
-		return rslt
+		this.logger.debug({ type }, 'sending rpc request')
+		const now = Date.now()
+		try {
+			const {
+				messages: [{ id }]
+			} = await this.sendMessage({ [getRpcRequestType(type)]: request })
+			const rslt = await this.waitForResponse<T>(id)
+
+			return rslt
+		} finally {
+			const timeTakenMs = Date.now() - now
+			this.logger.debug({ type, timeTakenMs }, 'received rpc response')
+		}
 	}
 
 	waitForResponse<T extends RPCType>(id: number) {
