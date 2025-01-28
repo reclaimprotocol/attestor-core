@@ -44,7 +44,7 @@ describeWithServer('RPC Tunnel', opts => {
 		await expect(
 			socketTunnel?.write(Buffer.from('hello'))
 		).rejects.toMatchObject({
-			code: 'ERR_STREAM_WRITE_AFTER_END'
+			code: 'ERR_STREAM_DESTROYED'
 		})
 	})
 
