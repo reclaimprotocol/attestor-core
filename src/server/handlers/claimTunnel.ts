@@ -16,7 +16,7 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 	} = claimRequest
 	const tunnel = client.getTunnel(request?.id!)
 	try {
-		tunnel.close()
+		await tunnel.close()
 	} catch(err) {
 		logger.debug({ err }, 'error closing tunnel')
 	}

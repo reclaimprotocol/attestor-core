@@ -7,7 +7,7 @@ export type MakeTunnelBaseOpts<O> = O & {
 
 export type Tunnel<E> = E & {
 	write(data: Uint8Array): void | Promise<void>
-	close(err?: Error): void
+	close(err?: Error): void | Promise<void>
 }
 
 export type MakeTunnelFn<O, E = {}> = (opts: MakeTunnelBaseOpts<O>) => (

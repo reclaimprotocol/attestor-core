@@ -117,7 +117,7 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 			// track how many times we've seen a BGP overlap
 			sessionTx?.addLabels({ bgpOverlap: true, ...info })
 
-			tunnel?.close(
+			void tunnel?.close(
 				new AttestorError(
 					'ERROR_BGP_ANNOUNCEMENT_OVERLAP',
 					`BGP announcement overlap detected for ${opts.host}`,

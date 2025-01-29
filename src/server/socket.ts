@@ -30,7 +30,7 @@ export class AttestorServerSocket extends AttestorSocket implements IAttestorSer
 		this.addEventListener('connection-terminated', () => {
 			for(const tunnelId in this.tunnels) {
 				const tunnel = this.tunnels[tunnelId]
-				tunnel.close(new Error('WS session terminated'))
+				void tunnel.close(new Error('WS session terminated'))
 			}
 		})
 	}

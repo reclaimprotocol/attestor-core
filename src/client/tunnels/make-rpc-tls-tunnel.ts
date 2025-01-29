@@ -15,7 +15,7 @@ type ExtraTLSOptions = {
 	 *
 	 * @returns the client that was used to send the messages
 	 */
-	connect(initMessages: Partial<RPCMessage>[]): Promise<IAttestorClient>
+	connect(initMessages: Partial<RPCMessage>[]): IAttestorClient
 	tlsOpts?: TLSConnectionOptions
 }
 

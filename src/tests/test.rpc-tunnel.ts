@@ -37,7 +37,7 @@ describeWithServer('RPC Tunnel', opts => {
 		const socketTunnel = ws?.tunnels[1]
 		expect(socketTunnel).toBeTruthy()
 
-		tunnel.close()
+		await tunnel.close()
 
 		// check that the server actually closed the tunnel
 		// upon our request
@@ -61,8 +61,9 @@ describeWithServer('RPC Tunnel', opts => {
 					verifyServerCertificate: false,
 				},
 				logger: client.logger,
-				async connect(initMessages) {
-					await client.sendMessage(...initMessages)
+				connect(initMessages) {
+					client.sendMessage(...initMessages)
+						.catch(() => {})
 					// ensure that the client hello message
 					// was sent to the server along the
 					// "createTunnel" request -- that saves
@@ -75,7 +76,7 @@ describeWithServer('RPC Tunnel', opts => {
 
 			expect(ws?.tunnels[1]).toBeTruthy()
 
-			tunnel.close()
+			await tunnel.close()
 		})
 
 		it('should setup a 0-RTT TLS connection', async() => {
@@ -90,7 +91,7 @@ describeWithServer('RPC Tunnel', opts => {
 					verifyServerCertificate: false,
 				},
 				logger: client.logger,
-				async connect(initMessages) {
+				connect(initMessages) {
 					client2 = new AttestorClient({
 						url: opts.serverUrl,
 						logger: logger.child({ client: 2 }),
@@ -100,7 +101,7 @@ describeWithServer('RPC Tunnel', opts => {
 				},
 			})
 
-			tunnel.close()
+			await tunnel.close()
 			await client2?.terminateConnection()
 		})
 
@@ -121,8 +122,9 @@ describeWithServer('RPC Tunnel', opts => {
 					verifyServerCertificate: false,
 				},
 				logger: client.logger,
-				async connect(initMessages) {
-					await client.sendMessage(...initMessages)
+				connect(initMessages) {
+					client.sendMessage(...initMessages)
+						.catch(() => {})
 					return client
 				},
 				onClose(err) {
@@ -156,8 +158,9 @@ describeWithServer('RPC Tunnel', opts => {
 						]
 					},
 					logger: client.logger,
-					async connect(initMessages) {
-						await client.sendMessage(...initMessages)
+					connect(initMessages) {
+						client.sendMessage(...initMessages)
+							.catch(() => {})
 						return client
 					},
 				})
@@ -182,8 +185,9 @@ describeWithServer('RPC Tunnel', opts => {
 						]
 					},
 					logger: client.logger,
-					async connect(initMessages) {
-						await client.sendMessage(...initMessages)
+					connect(initMessages) {
+						client.sendMessage(...initMessages)
+							.catch(() => {})
 						return client
 					},
 				})
