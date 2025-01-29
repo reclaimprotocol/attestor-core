@@ -100,7 +100,7 @@ async function handleTunnelMessage(
 ) {
 	try {
 		const tunnel = this.getTunnel(tunnelId)
-		tunnel.write(message)
+		await tunnel.write(message)
 	} catch(err) {
 		this.logger?.error(
 			{
