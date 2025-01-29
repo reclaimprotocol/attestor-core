@@ -19,4 +19,4 @@ async function main() {
 	console.log('Whitelisted address:', address)
 }
 
-main()
+void main()

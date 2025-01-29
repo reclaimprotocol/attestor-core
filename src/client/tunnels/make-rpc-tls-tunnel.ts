@@ -155,7 +155,7 @@ export const makeRpcTlsTunnel: MakeTunnelFn<ExtraTLSOptions, TLSTunnelProperties
 				tls.handleReceivedBytes(data)
 			},
 			onClose(err) {
-				tls.end(err)
+				void tls.end(err)
 			},
 		})
 

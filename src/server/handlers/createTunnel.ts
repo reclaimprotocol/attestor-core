@@ -37,7 +37,7 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 					return
 				}
 
-				client.sendMessage({
+				void client.sendMessage({
 					tunnelMessage: {
 						tunnelId: id,
 						message

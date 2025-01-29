@@ -84,7 +84,7 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 	}
 
 	res.signatures = {
-		attestorAddress: await getAttestorAddress(
+		attestorAddress: getAttestorAddress(
 			client.metadata.signatureType
 		),
 		claimSignature: res.claim

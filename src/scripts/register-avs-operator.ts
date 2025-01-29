@@ -2,4 +2,4 @@
 import 'src/server/utils/config-env'
 import { registerOperator } from 'src/avs/utils/register'
 
-registerOperator()
+void registerOperator()

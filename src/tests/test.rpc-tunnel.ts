@@ -62,7 +62,7 @@ describeWithServer('RPC Tunnel', opts => {
 				},
 				logger: client.logger,
 				connect(initMessages) {
-					client.sendMessage(...initMessages)
+					void client.sendMessage(...initMessages)
 					// ensure that the client hello message
 					// was sent to the server along the
 					// "createTunnel" request -- that saves
@@ -122,7 +122,7 @@ describeWithServer('RPC Tunnel', opts => {
 				},
 				logger: client.logger,
 				connect(initMessages) {
-					client.sendMessage(...initMessages)
+					void client.sendMessage(...initMessages)
 					return client
 				},
 				onClose(err) {
@@ -157,7 +157,7 @@ describeWithServer('RPC Tunnel', opts => {
 					},
 					logger: client.logger,
 					connect(initMessages) {
-						client.sendMessage(...initMessages)
+						void client.sendMessage(...initMessages)
 						return client
 					},
 				})
@@ -183,7 +183,7 @@ describeWithServer('RPC Tunnel', opts => {
 					},
 					logger: client.logger,
 					connect(initMessages) {
-						client.sendMessage(...initMessages)
+						void client.sendMessage(...initMessages)
 						return client
 					},
 				})

@@ -648,7 +648,7 @@ Content-Type: text/html; charset=utf-8\r
 	it('should throw on bad method', () => {
 
 		expect(() => {
-			assertValidProviderReceipt(transcript, {
+			void assertValidProviderReceipt(transcript, {
 				url: 'abc',
 				responseMatches: [],
 				responseRedactions: [],
@@ -660,7 +660,7 @@ Content-Type: text/html; charset=utf-8\r
 	it('should throw on bad protocol', () => {
 
 		expect(() => {
-			assertValidProviderReceipt(transcript, {
+			void assertValidProviderReceipt(transcript, {
 				url: 'http://xargs.com',
 				responseMatches: [],
 				responseRedactions: [],
@@ -672,7 +672,7 @@ Content-Type: text/html; charset=utf-8\r
 	it('should throw on duplicate groups', () => {
 
 		expect(() => {
-			assertValidProviderReceipt(transcript, {
+			void assertValidProviderReceipt(transcript, {
 				url: 'https://xargs.{{abc}}',
 				responseMatches: [{
 					type: 'regex',
@@ -690,7 +690,7 @@ Content-Type: text/html; charset=utf-8\r
 	it('should throw on bad path', () => {
 
 		expect(() => {
-			assertValidProviderReceipt(transcript, {
+			void assertValidProviderReceipt(transcript, {
 				url: 'https://xargs.com/abc',
 				responseMatches: [],
 				responseRedactions: [],
@@ -701,7 +701,7 @@ Content-Type: text/html; charset=utf-8\r
 
 	it('should throw on bad host', () => {
 		expect(() => {
-			assertValidProviderReceipt(transcript, {
+			void assertValidProviderReceipt(transcript, {
 				url: 'https://abc.com/',
 				responseMatches: [],
 				responseRedactions: [],
@@ -717,7 +717,7 @@ Content-Type: text/html; charset=utf-8\r
 		const firstServerMsg = temp.find((x, index) => x.sender === 'server' && index !== 0)!
 		firstServerMsg.message[0] = 32
 		expect(() => {
-			assertValidProviderReceipt(temp, {
+			void assertValidProviderReceipt(temp, {
 				url: 'https://xargs.org/',
 				responseMatches: [],
 				responseRedactions: [],
@@ -738,7 +738,7 @@ Content-Type: text/html; charset=utf-8\r
 		})!
 		clientMsgWithClose.message[68] = 102
 		expect(() => {
-			assertValidProviderReceipt(temp, {
+			void assertValidProviderReceipt(temp, {
 				url: 'https://xargs.org/',
 				responseMatches: [],
 				responseRedactions: [],
@@ -749,7 +749,7 @@ Content-Type: text/html; charset=utf-8\r
 
 	it('should throw on bad body', () => {
 		expect(() => {
-			assertValidProviderReceipt(transcript, {
+			void assertValidProviderReceipt(transcript, {
 				url: 'https://xargs.org/',
 				responseMatches: [],
 				responseRedactions: [],
@@ -761,7 +761,7 @@ Content-Type: text/html; charset=utf-8\r
 
 	it('should throw on bad regex match', () => {
 		expect(() => {
-			assertValidProviderReceipt(transcript, {
+			void assertValidProviderReceipt(transcript, {
 				url: 'https://xargs.org/',
 				responseMatches: [{
 					type: 'regex',
@@ -775,7 +775,7 @@ Content-Type: text/html; charset=utf-8\r
 
 	it('should throw on bad contains match', () => {
 		expect(() => {
-			assertValidProviderReceipt(transcript, {
+			void assertValidProviderReceipt(transcript, {
 				url: 'https://xargs.org/',
 				responseMatches: [{
 					type: 'contains',
@@ -857,13 +857,13 @@ Content-Type: text/html; charset=utf-8\r
 				method: 'GET',
 			}
 			// @ts-ignore
-			assertValidProviderReceipt(transcript, params, logger)
+			void assertValidProviderReceipt(transcript, params, logger)
 		}).toThrow('Invalid response match type abc')
 	})
 
 	it('should throw on no non present params', () => {
 		expect(() => {
-			assertValidProviderReceipt(transcript, {
+			void assertValidProviderReceipt(transcript, {
 				url: 'https://xargs.{{org}}/',
 				responseMatches: [{
 					type: 'contains',

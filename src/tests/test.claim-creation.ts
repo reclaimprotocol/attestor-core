@@ -303,7 +303,7 @@ describeWithServer('Claim Creation', opts => {
 					'F'
 				)
 
-				client.terminateConnection(err)
+				await client.terminateConnection(err)
 				throw err
 			}
 

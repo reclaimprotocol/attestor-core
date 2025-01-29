@@ -80,7 +80,7 @@ export class AttestorServerSocket extends AttestorSocket implements IAttestorSer
 		} catch(err) {
 			logger.error({ err }, 'error in new connection')
 			if(client.isOpen) {
-				client.terminateConnection(
+				await client.terminateConnection(
 					err instanceof AttestorError
 						? err
 						: AttestorError.badRequest(err.message)
@@ -100,7 +100,7 @@ async function handleTunnelMessage(
 ) {
 	try {
 		const tunnel = this.getTunnel(tunnelId)
-		await tunnel.write(message)
+		tunnel.write(message)
 	} catch(err) {
 		this.logger?.error(
 			{
@@ -136,7 +136,7 @@ async function handleRpcRequest(
 
 		const handler = HANDLERS[type] as RPCHandler<typeof type>
 		const res = await handler(data, { client: this, logger, tx })
-		await respond(res)
+		respond(res)
 
 		logger.debug({ res }, 'handled RPC request')
 		tx?.setOutcome('success')
