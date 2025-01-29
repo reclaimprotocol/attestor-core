@@ -23,4 +23,4 @@ async function main() {
 	console.log('Updated task creation metadata')
 }
 
-main()
+void main()

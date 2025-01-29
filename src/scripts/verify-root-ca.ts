@@ -56,4 +56,4 @@ export async function main() {
 	socket.connect({ host, port: +(port || DEFAULT_HTTPS_PORT) })
 }
 
-main()
+void main()

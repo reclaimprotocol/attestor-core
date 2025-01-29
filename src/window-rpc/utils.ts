@@ -18,7 +18,7 @@ export async function getCurrentMemoryUsage() {
 		}
 	} else {
 		try {
-			const result = await performance.measureUserAgentSpecificMemory()
+			const result = performance.measureUserAgentSpecificMemory()
 			const totalmb = Math.round(result.bytes / 1024 / 1024)
 
 			return {

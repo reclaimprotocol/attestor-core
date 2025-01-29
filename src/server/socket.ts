@@ -30,7 +30,7 @@ export class AttestorServerSocket extends AttestorSocket implements IAttestorSer
 		this.addEventListener('connection-terminated', () => {
 			for(const tunnelId in this.tunnels) {
 				const tunnel = this.tunnels[tunnelId]
-				tunnel.close(new Error('WS session terminated'))
+				void tunnel.close(new Error('WS session terminated'))
 			}
 		})
 	}
@@ -80,7 +80,7 @@ export class AttestorServerSocket extends AttestorSocket implements IAttestorSer
 		} catch(err) {
 			logger.error({ err }, 'error in new connection')
 			if(client.isOpen) {
-				client.terminateConnection(
+				await client.terminateConnection(
 					err instanceof AttestorError
 						? err
 						: AttestorError.badRequest(err.message)
@@ -136,7 +136,7 @@ async function handleRpcRequest(
 
 		const handler = HANDLERS[type] as RPCHandler<typeof type>
 		const res = await handler(data, { client: this, logger, tx })
-		await respond(res)
+		respond(res)
 
 		logger.debug({ res }, 'handled RPC request')
 		tx?.setOutcome('success')

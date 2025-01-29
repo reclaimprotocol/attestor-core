@@ -57,7 +57,7 @@ export function handleMessage(this: IAttestorSocket, msg: RPCMessage) {
 				{ type: rpcRequest.type },
 				'RPC request received before initialisation'
 			)
-			this.sendMessage({
+			void this.sendMessage({
 				id: msg.id,
 				requestError: AttestorError
 					.badRequest('Initialise connection first')

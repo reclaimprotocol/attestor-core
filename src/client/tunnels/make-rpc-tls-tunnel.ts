@@ -71,7 +71,7 @@ export const makeRpcTlsTunnel: MakeTunnelFn<ExtraTLSOptions, TLSTunnelProperties
 				// round trip to the server as we send the packet
 				// in the same message as the tunnel creation.
 				const createTunnelReqId = generateRpcMessageId()
-				client = connect([
+				client = await connect([
 					{
 						id: createTunnelReqId,
 						createTunnelRequest: {
@@ -155,7 +155,7 @@ export const makeRpcTlsTunnel: MakeTunnelFn<ExtraTLSOptions, TLSTunnelProperties
 				tls.handleReceivedBytes(data)
 			},
 			onClose(err) {
-				tls.end(err)
+				void tls.end(err)
 			},
 		})
 

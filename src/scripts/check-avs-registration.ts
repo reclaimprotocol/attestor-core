@@ -35,4 +35,4 @@ async function main() {
 	console.log('Operator registered, URL:', metadata.url)
 }
 
-main()
+void main()
