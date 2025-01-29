@@ -1,5 +1,6 @@
 import { MAX_CLAIM_TIMESTAMP_DIFF_S } from 'src/config'
 import { ClaimTunnelResponse } from 'src/proto/api'
+import { getApm } from 'src/server/utils/apm'
 import { assertTranscriptsMatch, assertValidClaimRequest } from 'src/server/utils/assert-valid-claim-request'
 import { getAttestorAddress, signAsAttestor } from 'src/server/utils/generics'
 import { RPCHandler } from 'src/types'
@@ -7,13 +8,27 @@ import { AttestorError, createSignDataForClaim, getIdentifierFromClaimInfo, unix
 
 export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 	claimRequest,
-	{ logger, client }
+	{ tx, logger, client }
 ) => {
 	const {
 		request,
 		data: { timestampS } = {},
 	} = claimRequest
 	const tunnel = client.getTunnel(request?.id!)
+	try {
+		await tunnel.close()
+	} catch(err) {
+		logger.debug({ err }, 'error closing tunnel')
+	}
+
+	if(tx) {
+		const transcriptBytes = tunnel.transcript.reduce(
+			(acc, { message }) => acc + message.length,
+			0
+		)
+		tx?.setLabel('transcriptBytes', transcriptBytes.toString())
+	}
+
 	// we throw an error for cases where the attestor cannot prove
 	// the user's request is faulty. For eg. if the user sends a
 	// "createRequest" that does not match the tunnel's actual
@@ -40,16 +55,26 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 			)
 		}
 
-		const claim = await assertValidClaimRequest(
-			claimRequest,
-			client.metadata,
-			logger
-		)
-		res.claim = {
-			...claim,
-			identifier: getIdentifierFromClaimInfo(claim),
-			// hardcode for compatibility with V1 claims
-			epoch: 1
+		const assertTx = getApm()
+			?.startTransaction('assertValidClaimRequest', { childOf: tx })
+
+		try {
+			const claim = await assertValidClaimRequest(
+				claimRequest,
+				client.metadata,
+				logger
+			)
+			res.claim = {
+				...claim,
+				identifier: getIdentifierFromClaimInfo(claim),
+				// hardcode for compatibility with V1 claims
+				epoch: 1
+			}
+		} catch(err) {
+			assertTx?.setOutcome('failure')
+			throw err
+		} finally {
+			assertTx?.end()
 		}
 	} catch(err) {
 		logger.error({ err }, 'invalid claim request')
@@ -59,7 +84,7 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 	}
 
 	res.signatures = {
-		attestorAddress: await getAttestorAddress(
+		attestorAddress: getAttestorAddress(
 			client.metadata.signatureType
 		),
 		claimSignature: res.claim
@@ -73,6 +98,9 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 			client.metadata.signatureType
 		)
 	}
+
+	// remove tunnel from client -- to free up our mem
+	client.removeTunnel(request.id)
 
 	return res
 }

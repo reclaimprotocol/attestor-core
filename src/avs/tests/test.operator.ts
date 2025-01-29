@@ -270,7 +270,7 @@ describe('Operators', () => {
 			reclaimRpcUrl: url
 		})
 
-		const newAddr = await wallet2.address
+		const newAddr = wallet2.address
 
 		assert.strictEqual(
 			await contracts.registryContract.operatorRegistered(newAddr),
@@ -321,12 +321,12 @@ describe('Operators', () => {
 		const signData = createSignDataForClaim({
 			identifier: req.claimHash,
 			timestampS: +task.createdAt.toString(),
-			owner: await userWallet.address,
+			owner: userWallet.address,
 			epoch: 1
 		})
 		const signatures: string[] = []
 		for(const { wallet: operator } of operators) {
-			const opAddr = await operator.address
+			const opAddr = operator.address
 			const selectedOp = task.operators
 				.some(op => op.addr === opAddr)
 			if(!selectedOp) {

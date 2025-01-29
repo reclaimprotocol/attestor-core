@@ -26,4 +26,4 @@ function logEnvValue(name: string, value: Uint8Array) {
 	console.log(`${name}=${ethers.utils.hexlify(value)}`)
 }
 
-main()
+void main()

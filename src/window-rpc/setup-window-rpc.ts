@@ -4,7 +4,7 @@ import { createClaimOnAvs } from 'src/avs/client/create-claim-on-avs'
 import { createClaimOnAttestor } from 'src/client'
 import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from 'src/providers/http/utils'
 import { OPRFOperators, ProviderParams, ProviderSecretParams, ZKOperators } from 'src/types'
-import { makeLogger } from 'src/utils'
+import { logger as LOGGER, makeLogger } from 'src/utils'
 import { B64_JSON_REPLACER, B64_JSON_REVIVER } from 'src/utils/b64-json'
 import { Benchmark } from 'src/utils/benchmark'
 import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from 'src/window-rpc/types'
@@ -22,13 +22,15 @@ const VALID_MODULES = [
 	'witness-sdk'
 ]
 
-let logger = makeLogger(true)
+let logger = LOGGER
 
 /**
  * Sets up the current window to listen for RPC requests
  * from React Native or other windows
  */
 export function setupWindowRpc() {
+	logger = makeLogger(true)
+
 	window.addEventListener('message', handleMessage, false)
 	const windowMsgs = new EventTarget()
 

@@ -25,10 +25,12 @@ type ProviderReceiptGenerationParams<P extends ProviderName> = {
 }
 
 // tmp change till we move OPRF attestor to prod
-const DEFAULT_ATTESTOR_HOST_PORT = 'wss://attestor.reclaimprotocol.org:447/ws'
+const DEFAULT_ATTESTOR_HOST_PORT = 'wss://attestor.reclaimprotocol.org/ws'
 const PRIVATE_KEY_HEX = getEnvVariable('PRIVATE_KEY_HEX')
 	// demo private key
 	|| '0x0123788edad59d7c013cdc85e4372f350f828e2cec62d9a2de4560e69aec7f89'
+
+let server: WebSocketServer | undefined
 
 export async function main<T extends ProviderName>(
 	receiptParams?: ProviderReceiptGenerationParams<T>
@@ -42,7 +44,6 @@ export async function main<T extends ProviderName>(
 
 	let attestorHostPort = getCliArgument('attestor')
         || DEFAULT_ATTESTOR_HOST_PORT
-	let server: WebSocketServer | undefined
 	if(attestorHostPort === 'local') {
 		console.log('starting local attestor server...')
 		server = await createServer()
@@ -84,7 +85,6 @@ export async function main<T extends ProviderName>(
 
 	const client = getAttestorClientFromPool(attestorHostPort)
 	await client.terminateConnection()
-	server?.close()
 
 }
 
@@ -121,6 +121,9 @@ if(require.main === module) {
 	main()
 		.catch(err => {
 			console.error('error in receipt gen', err)
+		})
+		.finally(() => {
+			server?.close()
 		})
 }
 

@@ -44,7 +44,7 @@ describeWithServer('RPC Tunnel', opts => {
 		await expect(
 			socketTunnel?.write(Buffer.from('hello'))
 		).rejects.toMatchObject({
-			code: 'ERR_STREAM_WRITE_AFTER_END'
+			code: 'ERR_STREAM_DESTROYED'
 		})
 	})
 
@@ -63,6 +63,7 @@ describeWithServer('RPC Tunnel', opts => {
 				logger: client.logger,
 				connect(initMessages) {
 					client.sendMessage(...initMessages)
+						.catch(() => {})
 					// ensure that the client hello message
 					// was sent to the server along the
 					// "createTunnel" request -- that saves
@@ -123,6 +124,7 @@ describeWithServer('RPC Tunnel', opts => {
 				logger: client.logger,
 				connect(initMessages) {
 					client.sendMessage(...initMessages)
+						.catch(() => {})
 					return client
 				},
 				onClose(err) {
@@ -158,6 +160,7 @@ describeWithServer('RPC Tunnel', opts => {
 					logger: client.logger,
 					connect(initMessages) {
 						client.sendMessage(...initMessages)
+							.catch(() => {})
 						return client
 					},
 				})
@@ -184,6 +187,7 @@ describeWithServer('RPC Tunnel', opts => {
 					logger: client.logger,
 					connect(initMessages) {
 						client.sendMessage(...initMessages)
+							.catch(() => {})
 						return client
 					},
 				})

@@ -28,8 +28,8 @@ export const makeRpcTcpTunnel: MakeTunnelFn<TCPTunnelCreateOpts> = ({
 	client.addEventListener('connection-terminated', onConnectionTerminatedListener)
 
 	return {
-		write(message) {
-			return client.sendMessage({
+		async write(message) {
+			await client.sendMessage({
 				tunnelMessage: { tunnelId, message }
 			})
 		},

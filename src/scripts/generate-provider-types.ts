@@ -118,4 +118,4 @@ async function findAllProviderFolders() {
 		.map(p => p.name)
 }
 
-main()
+void main()

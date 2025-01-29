@@ -682,34 +682,33 @@ Content-Type: text/html; charset=utf-8\r
 		}).toThrow('regexp abc does not match found element \'1\'')
 	})
 
-	it('should throw on bad method', () => {
-
-		expect(() => {
-			assertValidProviderReceipt(transcript, {
+	it('should throw on bad method', async() => {
+		await expect(async() => {
+			await assertValidProviderReceipt(transcript, {
 				url: 'abc',
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'POST'
 			}, logger)
-		}).toThrow('Invalid method: get')
+		}).rejects.toThrow('Invalid method: get')
 	})
 
-	it('should throw on bad protocol', () => {
+	it('should throw on bad protocol', async() => {
 
-		expect(() => {
-			assertValidProviderReceipt(transcript, {
+		await expect(async() => {
+			await assertValidProviderReceipt(transcript, {
 				url: 'http://xargs.com',
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'GET'
 			}, logger)
-		}).toThrow('Expected protocol: https, found: http:')
+		}).rejects.toThrow('Expected protocol: https, found: http:')
 	})
 
-	it('should throw on duplicate groups', () => {
+	it('should throw on duplicate groups', async() => {
 
-		expect(() => {
-			assertValidProviderReceipt(transcript, {
+		await expect(async() => {
+			await assertValidProviderReceipt(transcript, {
 				url: 'https://xargs.{{abc}}',
 				responseMatches: [{
 					type: 'regex',
@@ -721,49 +720,49 @@ Content-Type: text/html; charset=utf-8\r
 					'abc': 'org'
 				}
 			}, logger)
-		}).toThrow('Duplicate parameter abc')
+		}).rejects.toThrow('Duplicate parameter abc')
 	})
 
-	it('should throw on bad path', () => {
+	it('should throw on bad path', async() => {
 
-		expect(() => {
-			assertValidProviderReceipt(transcript, {
+		await expect(async() => {
+			await assertValidProviderReceipt(transcript, {
 				url: 'https://xargs.com/abc',
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'GET'
 			}, logger)
-		}).toThrow('Expected path: /abc, found: /')
+		}).rejects.toThrow('Expected path: /abc, found: /')
 	})
 
-	it('should throw on bad host', () => {
-		expect(() => {
-			assertValidProviderReceipt(transcript, {
+	it('should throw on bad host', async() => {
+		await expect(async() => {
+			await assertValidProviderReceipt(transcript, {
 				url: 'https://abc.com/',
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'GET'
 			}, logger)
-		}).toThrow('Expected host: abc.com, found: xargs.org')
+		}).rejects.toThrow('Expected host: abc.com, found: xargs.org')
 	})
 
-	it('should throw on bad OK string', () => {
+	it('should throw on bad OK string', async() => {
 		const temp = cloneObject(transcript)
 		// changes the status ("OK") text to something else
 		// it'll be in the first server response packet
 		const firstServerMsg = temp.find((x, index) => x.sender === 'server' && index !== 0)!
 		firstServerMsg.message[0] = 32
-		expect(() => {
-			assertValidProviderReceipt(temp, {
+		await expect(async() => {
+			await assertValidProviderReceipt(temp, {
 				url: 'https://xargs.org/',
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'GET'
 			}, logger)
-		}).toThrow('Response did not start with \"HTTP/1.1 200\"')
+		}).rejects.toThrow('Response did not start with \"HTTP/1.1 200\"')
 	})
 
-	it('should throw on bad close header', () => {
+	it('should throw on bad close header', async() => {
 		const temp = cloneObject(transcript)
 		const clientMsgWithClose = temp.find((x) => {
 			if(x.sender !== 'client') {
@@ -774,31 +773,31 @@ Content-Type: text/html; charset=utf-8\r
 				.includes('Connection: close')
 		})!
 		clientMsgWithClose.message[68] = 102
-		expect(() => {
-			assertValidProviderReceipt(temp, {
+		await expect(async() => {
+			await assertValidProviderReceipt(temp, {
 				url: 'https://xargs.org/',
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'GET'
 			}, logger)
-		}).toThrow('Connection header must be \"close\"')
+		}).rejects.toThrow('Connection header must be \"close\"')
 	})
 
-	it('should throw on bad body', () => {
-		expect(() => {
-			assertValidProviderReceipt(transcript, {
+	it('should throw on bad body', async() => {
+		await expect(async() => {
+			await assertValidProviderReceipt(transcript, {
 				url: 'https://xargs.org/',
 				responseMatches: [],
 				responseRedactions: [],
 				method: 'GET',
 				body: 'abc'
 			}, logger)
-		}).toThrow('request body mismatch')
+		}).rejects.toThrow('request body mismatch')
 	})
 
-	it('should throw on bad regex match', () => {
-		expect(() => {
-			assertValidProviderReceipt(transcript, {
+	it('should throw on bad regex match', async() => {
+		await expect(async() => {
+			await assertValidProviderReceipt(transcript, {
 				url: 'https://xargs.org/',
 				responseMatches: [{
 					type: 'regex',
@@ -807,12 +806,12 @@ Content-Type: text/html; charset=utf-8\r
 				responseRedactions: [],
 				method: 'GET',
 			}, logger)
-		}).toThrow('Invalid receipt. Regex \"abc\" didn\'t match')
+		}).rejects.toThrow('Invalid receipt. Regex \"abc\" didn\'t match')
 	})
 
-	it('should throw on bad contains match', () => {
-		expect(() => {
-			assertValidProviderReceipt(transcript, {
+	it('should throw on bad contains match', async() => {
+		await expect(async() => {
+			await assertValidProviderReceipt(transcript, {
 				url: 'https://xargs.org/',
 				responseMatches: [{
 					type: 'contains',
@@ -821,7 +820,7 @@ Content-Type: text/html; charset=utf-8\r
 				responseRedactions: [],
 				method: 'GET',
 			}, logger)
-		}).toThrow('Invalid receipt. Response does not contain \"abc\"')
+		}).rejects.toThrow('Invalid receipt. Response does not contain \"abc\"')
 	})
 
 	it('should get geo', () => {
@@ -882,8 +881,8 @@ Content-Type: text/html; charset=utf-8\r
 			.toThrow('url is incorrect')
 	})
 
-	it('should throw on bad match type', () => {
-		expect(() => {
+	it('should throw on bad match type', async() => {
+		await expect(async() => {
 			const params = {
 				url: 'https://xargs.org/',
 				responseMatches: [{
@@ -894,13 +893,13 @@ Content-Type: text/html; charset=utf-8\r
 				method: 'GET',
 			}
 			// @ts-ignore
-			assertValidProviderReceipt(transcript, params, logger)
-		}).toThrow('Invalid response match type abc')
+			await assertValidProviderReceipt(transcript, params, logger)
+		}).rejects.toThrow('Invalid response match type abc')
 	})
 
-	it('should throw on no non present params', () => {
-		expect(() => {
-			assertValidProviderReceipt(transcript, {
+	it('should throw on no non present params', async() => {
+		await expect(async() => {
+			await assertValidProviderReceipt(transcript, {
 				url: 'https://xargs.{{org}}/',
 				responseMatches: [{
 					type: 'contains',
@@ -909,7 +908,7 @@ Content-Type: text/html; charset=utf-8\r
 				responseRedactions: [],
 				method: 'GET',
 			}, logger)
-		}).toThrow('Expected host: xargs.{{org}}, found: xargs.org')
+		}).rejects.toThrow('Expected host: xargs.{{org}}, found: xargs.org')
 	})
 
 	it('should throw on non present secret params', () => {

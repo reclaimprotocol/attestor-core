@@ -36,14 +36,24 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 	const transcript: TCPSocketProperties['transcript'] = []
 	const socket = await connectTcp({ ...opts, logger })
 
-	socket.once('error', close)
-	socket.once('end', () => close(undefined))
+	let closed = false
+
+
 	socket.on('data', message => {
+		if(closed) {
+			logger.warn('socket is closed, dropping message')
+			return
+		}
+
 		onMessage?.(message)
 		transcript.push({ sender: 'server', message })
 	})
 
+	socket.once('error', onSocketClose)
+	socket.once('close', () => onSocketClose(undefined))
+
 	return {
+		socket,
 		transcript,
 		createRequest: opts,
 		async write(data) {
@@ -58,20 +68,25 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 				})
 			})
 		},
-		close,
+		close(err?: Error) {
+			if(closed) {
+				return
+			}
+
+			socket.destroy(err)
+		}
 	}
 
-	function close(error?: Error) {
-		if(socket.readableEnded) {
+	function onSocketClose(err?: Error) {
+		if(closed) {
 			return
 		}
 
-		logger.debug({ err: error }, 'closing socket')
+		logger.debug({ err }, 'closing socket')
 
-		socket.end(() => {
-			// Do nothing
-		})
-		onClose?.(error)
+		closed = true
+
+		onClose?.(err)
 		onClose = undefined
 	}
 }
