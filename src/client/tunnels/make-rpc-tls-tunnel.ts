@@ -15,7 +15,7 @@ type ExtraTLSOptions = {
 	 *
 	 * @returns the client that was used to send the messages
 	 */
-	connect(initMessages: Partial<RPCMessage>[]): IAttestorClient
+	connect(initMessages: Partial<RPCMessage>[]): Promise<IAttestorClient>
 	tlsOpts?: TLSConnectionOptions
 }
 
@@ -71,7 +71,7 @@ export const makeRpcTlsTunnel: MakeTunnelFn<ExtraTLSOptions, TLSTunnelProperties
 				// round trip to the server as we send the packet
 				// in the same message as the tunnel creation.
 				const createTunnelReqId = generateRpcMessageId()
-				client = connect([
+				client = await connect([
 					{
 						id: createTunnelReqId,
 						createTunnelRequest: {
