@@ -18,6 +18,7 @@ import { processHandshake } from 'src/server/utils/process-handshake'
 import {
 	IDecryptedTranscript, IDecryptedTranscriptMessage,
 	Logger,
+	ProviderCtx,
 	ProviderName,
 	TCPSocketProperties,
 	Transcript,
@@ -47,7 +48,7 @@ import { SIGNATURES } from 'src/utils/signatures'
 export async function assertValidClaimRequest(
 	request: ClaimTunnelRequest,
 	metadata: InitRequest,
-	logger: Logger
+	logger: Logger,
 ) {
 	const {
 		data,
@@ -105,7 +106,7 @@ export async function assertValidClaimRequest(
 	// get all application data messages
 	const applData = extractApplicationDataFromTranscript(receipt)
 	const newData = await assertValidProviderTranscript(
-		applData, data, logger
+		applData, data, logger, { version: metadata.clientVersion }
 	)
 	if(newData !== data) {
 		logger.info({ newData }, 'updated claim info')
@@ -121,7 +122,8 @@ export async function assertValidClaimRequest(
 export async function assertValidProviderTranscript<T extends ProviderClaimInfo>(
 	applData: Transcript<Uint8Array>,
 	info: T,
-	logger: Logger
+	logger: Logger,
+	providerCtx: ProviderCtx
 ) {
 	const providerName = info.provider as ProviderName
 	const provider = providers[providerName]
@@ -137,11 +139,12 @@ export async function assertValidProviderTranscript<T extends ProviderClaimInfo>
 
 	assertValidateProviderParams(providerName, params)
 
-	const rslt = await provider.assertValidProviderReceipt(
-		applData,
+	const rslt = await provider.assertValidProviderReceipt({
+		receipt: applData,
 		params,
-		logger
-	)
+		logger,
+		ctx: providerCtx
+	})
 
 	const extractedParameters = rslt?.extractedParameters || {}
 	if(!Object.keys(extractedParameters).length) {

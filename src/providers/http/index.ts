@@ -151,7 +151,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			redactions: redactions,
 		}
 	},
-	getResponseRedactions(response, rawParams, logger) {
+	getResponseRedactions({ response, params: rawParams, logger }) {
 		logger.debug({ response:base64.encode(response), params:rawParams })
 
 		const res = parseHttpResponse(response)
@@ -234,7 +234,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		return redactions
 	},
-	assertValidProviderReceipt(receipt, paramsAny, logger) {
+	assertValidProviderReceipt({ receipt, params: paramsAny, logger }) {
 		logTranscript()
 		let extractedParams: { [_: string]: string } = {}
 		const secretParams = ('secretParams' in paramsAny)
