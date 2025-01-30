@@ -1,7 +1,7 @@
 import { strToUint8Array, TLSPacketContext } from '@reclaimprotocol/tls'
 import { makeRpcTlsTunnel } from 'src/client/tunnels/make-rpc-tls-tunnel'
 import { getAttestorClientFromPool } from 'src/client/utils/attestor-pool'
-import { DEFAULT_HTTPS_PORT, TOPRF_DOMAIN_SEPARATOR } from 'src/config'
+import { DEFAULT_HTTPS_PORT, PROVIDER_CTX, TOPRF_DOMAIN_SEPARATOR } from 'src/config'
 import { ClaimTunnelRequest, ZKProofEngine } from 'src/proto/api'
 import { providers } from 'src/providers'
 import type {
@@ -468,11 +468,12 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		if(provider.getResponseRedactions) {
 			serverPacketsToReveal = await getBlocksToReveal(
 				serverBlocks,
-				total => provider.getResponseRedactions!(
-					total,
+				total => provider.getResponseRedactions!({
+					response: total,
 					params,
-					logger
-				),
+					logger,
+					ctx: PROVIDER_CTX
+				}),
 				performOprf
 			)
 		}
@@ -514,16 +515,17 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			}
 		}
 
-		await provider.assertValidProviderReceipt(
-			revealedPackets,
-			{
+		await provider.assertValidProviderReceipt({
+			receipt: revealedPackets,
+			params: {
 				...params,
 				// provide secret params for proper
 				// request body validation
 				secretParams,
 			},
-			logger
-		)
+			logger,
+			ctx: PROVIDER_CTX
+		})
 
 		// reveal all handshake blocks
 		// so the attestor can verify there was no

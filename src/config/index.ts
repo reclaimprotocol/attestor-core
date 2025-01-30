@@ -27,11 +27,15 @@ export const DNS_SERVERS = [
 // 10m
 export const MAX_CLAIM_TIMESTAMP_DIFF_S = 10 * 60
 
+export const CURRENT_ATTESTOR_VERSION = AttestorVersion.ATTESTOR_VERSION_2_0_1
+
 export const DEFAULT_METADATA: InitRequest = {
 	signatureType: ServiceSignatureType.SERVICE_SIGNATURE_TYPE_ETH,
-	clientVersion: AttestorVersion.ATTESTOR_VERSION_2_0_0,
+	clientVersion: CURRENT_ATTESTOR_VERSION,
 	auth: undefined
 }
+
+export const PROVIDER_CTX = { version: CURRENT_ATTESTOR_VERSION }
 
 export const PING_INTERVAL_MS = 10_000
 /**

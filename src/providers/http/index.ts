@@ -1,6 +1,7 @@
-import { concatenateUint8Arrays, strToUint8Array, TLSConnectionOptions } from '@reclaimprotocol/tls'
+import { areUint8ArraysEqual, concatenateUint8Arrays, strToUint8Array, TLSConnectionOptions } from '@reclaimprotocol/tls'
 import { base64 } from 'ethers/lib/utils'
 import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from 'src/config'
+import { AttestorVersion } from 'src/proto/api'
 import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
@@ -10,7 +11,7 @@ import {
 	matchRedactedStrings,
 	parseHttpResponse,
 } from 'src/providers/http/utils'
-import { ArraySlice, Provider, ProviderParams, ProviderSecretParams, RedactedOrHashedArraySlice } from 'src/types'
+import { ArraySlice, Provider, ProviderCtx, ProviderParams, ProviderSecretParams, RedactedOrHashedArraySlice } from 'src/types'
 import {
 	findIndexInUint8Array,
 	getHttpRequestDataFromTranscript,
@@ -151,7 +152,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			redactions: redactions,
 		}
 	},
-	getResponseRedactions(response, rawParams, logger) {
+	getResponseRedactions({ response, params: rawParams, logger, ctx }) {
 		logger.debug({ response:base64.encode(response), params:rawParams })
 
 		const res = parseHttpResponse(response)
@@ -179,6 +180,20 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const reveals: RedactedOrHashedArraySlice[] = [
 			{ fromIndex: 0, toIndex: headerEndIndex }
 		]
+
+		//reveal double CRLF which separates headers from body
+		if(shouldRevealCrlf(ctx)) {
+			const crlfs = response
+				.slice(res.headerEndIdx, res.headerEndIdx + 4)
+			if(!areUint8ArraysEqual(crlfs, strToUint8Array('\r\n\r\n'))) {
+				logger.error({ response: uint8ArrayToBinaryStr(response) })
+				throw new Error(
+					`Failed to find header/body separator at index ${res.headerEndIdx}`
+				)
+			}
+		}
+
+		reveals.push({ fromIndex:res.headerEndIdx, toIndex:res.headerEndIdx + 4 })
 
 		//reveal date header
 		if(res.headerIndices['date']) {
@@ -224,7 +239,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		return redactions
 	},
-	assertValidProviderReceipt(receipt, paramsAny, logger) {
+	assertValidProviderReceipt({ receipt, params: paramsAny, logger, ctx }) {
 		logTranscript()
 		let extractedParams: { [_: string]: string } = {}
 		const secretParams = ('secretParams' in paramsAny)
@@ -272,7 +287,6 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const response = concatArrays(...serverBlocks)
 
 		let res: string
-		let bodyStart = OK_HTTP_HEADER.length
 		res = uint8ArrayToStr(response)
 		if(!res.startsWith(OK_HTTP_HEADER)) {
 			const statusRegex = makeRegex('^HTTP\\/1.1 (\\d{3})')
@@ -297,6 +311,15 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			)
 		}
 
+		let bodyStart: number
+		if(shouldRevealCrlf(ctx)) {
+			bodyStart = res.indexOf('\r\n\r\n', OK_HTTP_HEADER.length) + 4
+			if(bodyStart < 4) {
+				throw new Error('Response body start not found')
+			}
+		} else {
+			bodyStart = OK_HTTP_HEADER.length
+		}
 
 		//validate server Date header if present
 		const dateHeader = makeRegex(dateHeaderRegex).exec(res)
@@ -310,8 +333,6 @@ const HTTP_PROVIDER: Provider<'http'> = {
 					`Server date is off by "${(Date.now() - serverDate.getTime()) / 1000} s"`
 				)
 			}
-
-			bodyStart = dateHeader.index + dateHeader[0].length
 		}
 
 
@@ -322,6 +343,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		if(paramBody.length > 0 && !matchRedactedStrings(paramBody, req.body)) {
 			throw new Error('request body mismatch')
 		}
+
 
 		//remove asterisks to account for chunks in the middle of revealed strings
 		if(!secretParams) {
@@ -397,6 +419,12 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			logger.debug({ request: clientTranscript, response:serverTranscript, params:paramsAny })
 		}
 	},
+}
+
+// revealing CRLF is a breaking change -- and should only be done
+// if the client's version supports it
+function shouldRevealCrlf({ version }: ProviderCtx) {
+	return version >= AttestorVersion.ATTESTOR_VERSION_2_0_1
 }
 
 function getHostPort(params: ProviderParams<'http'>, secretParams: ProviderSecretParams<'http'>) {

@@ -1,5 +1,5 @@
 import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
-import type { ProviderClaimData } from 'src/proto/api'
+import type { AttestorVersion, ProviderClaimData } from 'src/proto/api'
 import type { ArraySlice, Logger, RedactedOrHashedArraySlice } from 'src/types/general'
 import type { ProvidersConfig } from 'src/types/providers.gen'
 import type { Transcript } from 'src/types/tunnel'
@@ -30,6 +30,24 @@ export type ProviderSecretParams<T extends ProviderName> = ProvidersConfig[T]['s
 export type RedactionMode = 'key-update' | 'zk'
 
 export type ProviderField<Params, SecretParams, T> = T | ((params: Params, secretParams?: SecretParams) => T)
+
+export type ProviderCtx = {
+  version: AttestorVersion
+}
+
+type GetResponseRedactionsOpts<P> = {
+  response: Uint8Array
+  params: P
+  logger: Logger
+  ctx: ProviderCtx
+}
+
+type AssertValidProviderReceipt<P> = {
+  receipt: Transcript<Uint8Array>
+  params: P
+  logger: Logger
+  ctx: ProviderCtx
+}
 
 /**
  * Generic interface for a provider that can be used to verify
@@ -92,9 +110,7 @@ export interface Provider<
    * the server response to send to the attestor
    * */
   getResponseRedactions?(
-    response: Uint8Array,
-    params: Params,
-    logger: Logger
+    opts: GetResponseRedactionsOpts<Params>
   ): RedactedOrHashedArraySlice[]
   /**
    * verify a generated TLS receipt against given parameters
@@ -110,9 +126,7 @@ export interface Provider<
 	 *  that will then be included in the claim context
    * */
   assertValidProviderReceipt(
-    receipt: Transcript<Uint8Array>,
-    params: Params,
-    logger: Logger
+    opts: AssertValidProviderReceipt<Params>
   ): void | Promise<void> | { extractedParameters: { [key: string]: string } }
 }
 
