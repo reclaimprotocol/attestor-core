@@ -91,6 +91,7 @@ export enum AttestorVersion {
   ATTESTOR_VERSION_1_0_0 = 1,
   ATTESTOR_VERSION_1_1_0 = 2,
   ATTESTOR_VERSION_2_0_0 = 3,
+  ATTESTOR_VERSION_2_0_1 = 4,
   UNRECOGNIZED = -1,
 }
 
@@ -108,6 +109,9 @@ export function attestorVersionFromJSON(object: any): AttestorVersion {
     case 3:
     case "ATTESTOR_VERSION_2_0_0":
       return AttestorVersion.ATTESTOR_VERSION_2_0_0;
+    case 4:
+    case "ATTESTOR_VERSION_2_0_1":
+      return AttestorVersion.ATTESTOR_VERSION_2_0_1;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -125,6 +129,8 @@ export function attestorVersionToJSON(object: AttestorVersion): string {
       return "ATTESTOR_VERSION_1_1_0";
     case AttestorVersion.ATTESTOR_VERSION_2_0_0:
       return "ATTESTOR_VERSION_2_0_0";
+    case AttestorVersion.ATTESTOR_VERSION_2_0_1:
+      return "ATTESTOR_VERSION_2_0_1";
     case AttestorVersion.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
