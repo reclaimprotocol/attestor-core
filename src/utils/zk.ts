@@ -499,12 +499,14 @@ export async function verifyZkPacket(
 }
 
 function getChunkSizeBytes(alg: EncryptionAlgorithm) {
-	const {
-		chunkSize,
-		bitsPerWord
-	} = ZK_CONFIG[alg]
-
+	const { chunkSize, bitsPerWord } = ZK_CONFIG[alg]
 	return chunkSize * bitsPerWord / 8
+}
+
+
+function getBlockSizeBytes(alg: EncryptionAlgorithm) {
+	const { chunkSize, bitsPerWord, blocksPerChunk } = ZK_CONFIG[alg]
+	return chunkSize * bitsPerWord / (8 * blocksPerChunk)
 }
 
 const zkEngines: {
