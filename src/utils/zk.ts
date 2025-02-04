@@ -3,7 +3,7 @@ import {
 	CONFIG as ZK_CONFIG,
 	EncryptionAlgorithm,
 	generateProof,
-	makeGnarkOPRFOperator,
+	getBlockSizeBytes,	makeGnarkOPRFOperator,
 	makeGnarkZkOperator,
 	makeLocalFileFetch,
 	MakeOPRFOperator,
@@ -15,9 +15,9 @@ import {
 	verifyProof,
 	ZKEngine,
 	ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
-import { DEFAULT_REMOTE_FILE_FETCH_BASE_URL, DEFAULT_ZK_CONCURRENCY, MAX_ZK_CHUNKS, TOPRF_DOMAIN_SEPARATOR } from 'src/config'
+import { DEFAULT_REMOTE_FILE_FETCH_BASE_URL, DEFAULT_ZK_CONCURRENCY, TOPRF_DOMAIN_SEPARATOR } from 'src/config'
 import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof, ZKProofEngine } from 'src/proto/api'
-import { CompleteTLSPacket, Logger, OPRFOperators, PrepareZKProofsBaseOpts, TOPRFProofParams, ZKOperators, ZKRevealInfo } from 'src/types'
+import { ArraySlice, CompleteTLSPacket, Logger, OPRFOperators, PrepareZKProofsBaseOpts, TOPRFProofParams, ZKOperators, ZKRevealInfo } from 'src/types'
 import { detectEnvironment, getEnvVariable } from 'src/utils/env'
 import { AttestorError } from 'src/utils/error'
 import { getPureCiphertext, getRecordIV, getZkAlgorithmForCipherSuite, uint8ArrayToStr } from 'src/utils/generics'
@@ -33,7 +33,9 @@ type GenerateZKChunkProofOpts = {
 	 */
 	ciphertext: Uint8Array
 	redactedPlaintext: Uint8Array
-	offsetChunks: number
+
+	slice: ArraySlice
+
 	toprf?: TOPRFProofParams
 }
 
@@ -81,7 +83,6 @@ export async function makeZkProofGenerator(
 		oprfOperators,
 		logger = LOGGER,
 		zkProofConcurrency = ZK_CONCURRENCY,
-		maxZkChunks = MAX_ZK_CHUNKS,
 		cipherSuite,
 		zkEngine = 'snarkjs'
 	}: PrepareZKProofsOpts
@@ -96,7 +97,7 @@ export async function makeZkProofGenerator(
 	const packetsToProve: ZKPacketToProve[] = []
 
 	logger = (logger || LOGGER).child({ module: 'zk', zkEngine: zkEngine })
-	let zkChunksToProve = 0
+	let zkProofsToGen = 0
 
 	return {
 		/**
@@ -117,99 +118,117 @@ export async function makeZkProofGenerator(
 			const alg = getZkAlgorithmForCipherSuite(cipherSuite)
 			const chunkSizeBytes = getChunkSizeBytes(alg)
 
-			//const { redactedPlaintext } = reveal
 			const key = await crypto.exportKey(packet.encKey)
 			const iv = packet.iv
 			const ciphertext = getPureCiphertext(
 				packet.ciphertext,
 				cipherSuite
 			)
-			const chunks = Math.ceil(ciphertext.length / chunkSizeBytes)
 			const packetToProve: ZKPacketToProve = {
 				onGeneratedProofs,
 				algorithm: alg,
 				proofsToGenerate: [],
 				iv: packet.fixedIv,
 			}
-			const chunksDone = new Set<number>()
-
+			const slicesDone: ArraySlice[] = []
 			// first we'll handle all TOPRF blocks
 			// we do these first, because they can span multiple chunks
 			// & we need to be able to span the right chunks
 			for(const toprf of toprfs || []) {
-				const startChunk = Math.floor(
-					toprf.dataLocation!.fromIndex / chunkSizeBytes
-				)
-				if(chunksDone.has(startChunk)) {
-					throw new AttestorError(
-						'ERROR_BAD_REQUEST',
-						`Chunk ${startChunk} contains more than one TOPRF,`
-						+ ' which is not supported'
-					)
-				}
+				const fromIndex = getIdealOffsetForToprfBlock(alg, toprf)
+				const toIndex = Math.min(fromIndex + chunkSizeBytes, ciphertext.length)
 
-				addProofToGenerate(
-					startChunk,
+				// ensure this OPRF block doesn't overlap with any other OPRF block
+				const slice: ArraySlice = { fromIndex, toIndex }
+				assertNoOverlapOprf(slice)
+
+				addProofsToGenerate(
+					slice,
 					{
 						...toprf,
 						dataLocation: {
 							...toprf.dataLocation!,
-							fromIndex: toprf.dataLocation!.fromIndex % chunkSizeBytes
+							fromIndex: toprf.dataLocation!.fromIndex - fromIndex
 						}
 					}
 				)
 			}
 
-			for(let i = 0;i < chunks;i++) {
-				// ignore any TOPRF chunks
-				if(chunksDone.has(i)) {
-					continue
+			// now we'll go through the rest of the ciphertext, and add proofs
+			// for the sections that haven't been covered by the TOPRF blocks
+			const slicesCp = sortSlices(slicesDone.slice())
+			let fromIndex = 0
+			for(const done of slicesCp) {
+				if(done.fromIndex > fromIndex) {
+					addProofsToGenerate({
+						fromIndex,
+						toIndex: done.fromIndex
+					})
 				}
 
-				addProofToGenerate(i)
+				fromIndex = done.toIndex
+			}
+
+			if(fromIndex < ciphertext.length) {
+				addProofsToGenerate({
+					fromIndex,
+					toIndex: ciphertext.length
+				})
 			}
 
 			// generate proofs in order of start index
 			packetToProve.proofsToGenerate
 				.sort((a, b) => a.startIdx - b.startIdx)
-
 			packetsToProve.push(packetToProve)
 
-			function addProofToGenerate(
-				offsetChunks: number,
+			function assertNoOverlapOprf(slice: ArraySlice) {
+				for(const done of slicesDone) {
+					if(
+						// 1d box overlap
+						slice.fromIndex < done.toIndex
+							&& slice.toIndex > done.fromIndex
+					) {
+						throw new AttestorError(
+							'ERROR_BAD_REQUEST',
+							'Single chunk has multiple OPRFs'
+						)
+					}
+				}
+			}
+
+			function addProofsToGenerate(
+				{ fromIndex, toIndex }: ArraySlice,
 				toprf?: TOPRFProofParams
 			) {
-				chunksDone.add(offsetChunks)
+				for(let i = fromIndex;i < toIndex;i += chunkSizeBytes) {
+					const slice: ArraySlice = {
+						fromIndex: i,
+						toIndex: Math.min(i + chunkSizeBytes, toIndex)
+					}
 
-				const proofParams = getProofGenerationParamsForChunk(
-					alg,
-					{
-						key,
-						iv,
-						ciphertext,
-						redactedPlaintext,
-						offsetChunks,
-						toprf,
-					},
-				)
-
-				if(!proofParams) {
-					return
-				}
-
-				packetToProve.proofsToGenerate.push(proofParams)
-				zkChunksToProve += 1
-
-				if(zkChunksToProve > maxZkChunks) {
-					throw new Error(
-						'Too many chunks to prove:'
-						+ ` ${zkChunksToProve} > ${maxZkChunks}`
+					slicesDone.push(slice)
+					const proofParams = getProofGenerationParamsForSlice(
+						{
+							key,
+							iv,
+							ciphertext,
+							redactedPlaintext,
+							slice,
+							toprf,
+						},
 					)
+
+					if(!proofParams) {
+						continue
+					}
+
+					packetToProve.proofsToGenerate.push(proofParams)
+					zkProofsToGen += 1
 				}
 			}
 		},
 		getTotalChunksToProve() {
-			return zkChunksToProve
+			return zkProofsToGen
 		},
 		async generateProofs(onChunkDone?: () => void) {
 			if(!packetsToProve.length) {
@@ -224,10 +243,7 @@ export async function makeZkProofGenerator(
 				let proofsLeft = proofsToGenerate.length
 				for(const proofToGen of proofsToGenerate) {
 					tasks.push(zkQueue.add(async() => {
-						const proof = await generateProofForChunk(
-							algorithm,
-							proofToGen
-						)
+						const proof = await generateProofForChunk(algorithm, proofToGen)
 
 						onChunkDone?.()
 						proofs.push(proof)
@@ -243,16 +259,13 @@ export async function makeZkProofGenerator(
 			await Promise.all(tasks)
 
 			logger?.info(
-				{
-					durationMs: Date.now() - start,
-					chunks: zkChunksToProve,
-				},
+				{ durationMs: Date.now() - start, zkProofsToGen },
 				'generated ZK proofs'
 			)
 
 			// reset the packets to prove
 			packetsToProve.splice(0, packetsToProve.length)
-			zkChunksToProve = 0
+			zkProofsToGen = 0
 
 			// release ZK resources to free up memory
 			const alg = getZkAlgorithmForCipherSuite(cipherSuite)
@@ -358,9 +371,6 @@ export async function verifyZkPacket(
 		ciphertext.length,
 	).fill(REDACTION_CHAR_CODE)
 
-	const alg = getZkAlgorithmForCipherSuite(cipherSuite)
-	const chunkSizeBytes = getChunkSizeBytes(alg)
-
 	await Promise.all(
 		proofs.map(async(proof, i) => {
 			try {
@@ -440,9 +450,7 @@ export async function verifyZkPacket(
 			throw new Error('redacted ciphertext not congruent')
 		}
 
-		const chunkIndex = startIdx / chunkSizeBytes
 		let nonce = concatenateUint8Arrays([iv, recordIV])
-
 		if(!recordIV.length) {
 			nonce = generateIV(nonce, recordNumber)
 		}
@@ -459,7 +467,7 @@ export async function verifyZkPacket(
 				publicInput: {
 					ciphertext: ciphertextChunk,
 					iv: nonce,
-					offset: chunkIndex
+					offsetBytes: startIdx
 				},
 				logger,
 				...(
@@ -498,12 +506,10 @@ export async function verifyZkPacket(
 	}
 }
 
+// the chunk size of the ZK circuit in bytes
+// this will be >= the block size
 function getChunkSizeBytes(alg: EncryptionAlgorithm) {
-	const {
-		chunkSize,
-		bitsPerWord
-	} = ZK_CONFIG[alg]
-
+	const { chunkSize, bitsPerWord } = ZK_CONFIG[alg]
 	return chunkSize * bitsPerWord / 8
 }
 
@@ -613,25 +619,18 @@ export function getEngineProto(engine: ZKEngine) {
 	throw new Error(`Unknown ZK engine: ${engine}`)
 }
 
-function getProofGenerationParamsForChunk(
-	algorithm: EncryptionAlgorithm,
+function getProofGenerationParamsForSlice(
 	{
 		key,
 		iv,
 		ciphertext,
 		redactedPlaintext,
-		offsetChunks,
+		slice: { fromIndex, toIndex },
 		toprf,
 	}: GenerateZKChunkProofOpts,
 ): ZKProofToGenerate | undefined {
-	const chunkSize = getChunkSizeBytes(algorithm)
-
-	const startIdx = offsetChunks * chunkSize
-	const endIdx = (offsetChunks + 1) * chunkSize
-	const ciphertextChunk = ciphertext
-		.slice(startIdx, endIdx)
-	const plaintextChunk = redactedPlaintext
-		.slice(startIdx, endIdx)
+	const ciphertextChunk = ciphertext.slice(fromIndex, toIndex)
+	const plaintextChunk = redactedPlaintext.slice(fromIndex, toIndex)
 	if(isFullyRedacted(plaintextChunk)) {
 		return
 	}
@@ -647,11 +646,55 @@ function getProofGenerationParamsForChunk(
 	}
 
 	return {
-		startIdx,
+		startIdx: fromIndex,
 		redactedPlaintext: plaintextChunk,
 		privateInput: { key },
-		publicInput: { ciphertext: ciphertextChunk, iv, offset: offsetChunks },
+		publicInput: { ciphertext: ciphertextChunk, iv, offsetBytes: fromIndex },
 		toprf
 	}
 }
 
+/**
+ * Get the ideal location to generate a ZK proof for a TOPRF block.
+ * Ideally it should be put into a slice that's a divisor of the chunk size,
+ * as that'll minimize the number of proofs that need to be generated.
+ * @returns the offset in bytes
+ */
+function getIdealOffsetForToprfBlock(
+	alg: EncryptionAlgorithm,
+	{ dataLocation }: TOPRFProofParams,
+) {
+	const chunkSizeBytes = getChunkSizeBytes(alg)
+	const offsetChunks = Math.floor(
+		dataLocation!.fromIndex / chunkSizeBytes
+	) * chunkSizeBytes
+	const endOffsetChunks = Math.floor(
+		(dataLocation!.fromIndex + dataLocation!.length) / chunkSizeBytes
+	)
+
+	// happy case -- the OPRF block fits into a single chunk, that's a
+	// divisor of the chunk size
+	if(endOffsetChunks === offsetChunks) {
+		return offsetChunks * chunkSizeBytes
+	}
+
+	const blockSizeBytes = getBlockSizeBytes(alg)
+	const offsetBytes = Math.floor(
+		dataLocation!.fromIndex / blockSizeBytes
+	) * blockSizeBytes
+	if(
+		(dataLocation!.fromIndex + dataLocation!.length) - offsetBytes
+			> chunkSizeBytes
+	) {
+		throw new AttestorError(
+			'ERROR_BAD_REQUEST',
+			'OPRF data cannot fit into a single chunk'
+		)
+	}
+
+	return offsetBytes
+}
+
+function sortSlices(slices: ArraySlice[]) {
+	return slices.sort((a, b) => a.fromIndex - b.fromIndex)
+}
