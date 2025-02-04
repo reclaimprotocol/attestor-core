@@ -1,7 +1,5 @@
 import { AttestorVersion, InitRequest, ServiceSignatureType } from 'src/proto/api'
 
-export const MAX_ZK_CHUNKS = 200
-
 export const DEFAULT_ZK_CONCURRENCY = 10
 
 export const RECLAIM_USER_AGENT = 'reclaim/0.0.1'

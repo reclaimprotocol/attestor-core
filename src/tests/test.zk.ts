@@ -332,6 +332,9 @@ describe('OPRF Slicing Tests', () => {
 
 describe.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some ciphertext', (cipherSuite) => {
 	describe.each(ZK_ENGINES)('[%s]', (zkEngine) => {
+
+		const zkProofConcurrency = zkEngine === 'snarkjs' ? 1 : undefined
+
 		it(zkEngine + '-' + cipherSuite, async() => {
 			const alg = cipherSuite.includes('CHACHA20')
 				? 'CHACHA20-POLY1305'
@@ -354,7 +357,8 @@ describe.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some cipherte
 			const encKey = await crypto.importKey(alg, key)
 			const vectors = [
 				{
-					plaintext: 'My cool API secret is "my name jeff". Please don\'t reveal it',
+					plaintext:
+						'My cool API secret is "my name jeff". Please don\'t reveal it',
 					redactions: [
 						{ fromIndex: 23, toIndex: 35 }
 					]
@@ -376,7 +380,8 @@ describe.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some cipherte
 			const proofGenerator = await makeZkProofGenerator({
 				logger,
 				cipherSuite,
-				zkEngine: zkEngine
+				zkEngine,
+				zkProofConcurrency,
 			})
 			for(const { plaintext, redactions } of vectors) {
 				const plaintextArr = Buffer.from(plaintext)
@@ -390,9 +395,7 @@ describe.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some cipherte
 						key: encKey,
 						iv: fixedIv,
 						recordNumber: 1234,
-						recordHeaderOpts: {
-							type: 'WRAPPED_RECORD'
-						},
+						recordHeaderOpts: { type: 'WRAPPED_RECORD' },
 						cipherSuite,
 						version: cipherSuite.includes('ECDHE_')
 							? 'TLS1_2'
@@ -414,13 +417,11 @@ describe.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some cipherte
 				let proofs: ZKProof[] | undefined
 				await proofGenerator.addPacketToProve(
 					packet,
-					{
-						type: 'zk',
-						redactedPlaintext,
-					},
+					{ type: 'zk', redactedPlaintext },
 					p => proofs = p
 				)
 				await proofGenerator.generateProofs()
+
 				const x = await verifyZkPacket(
 					{
 						ciphertext,
@@ -429,7 +430,7 @@ describe.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some cipherte
 						cipherSuite,
 						zkEngine: zkEngine,
 						recordNumber: 1234,
-						iv:fixedIv
+						iv: fixedIv
 					},
 				)
 

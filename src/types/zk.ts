@@ -15,7 +15,6 @@ export type PrepareZKProofsBaseOpts = {
 	 * @default 10
 	 */
 	zkProofConcurrency?: number
-	maxZkChunks?: number
 	zkEngine?: ZKEngine
 }
 
