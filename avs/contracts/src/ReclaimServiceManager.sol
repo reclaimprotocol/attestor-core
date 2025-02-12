@@ -62,15 +62,23 @@ contract ReclaimServiceManager is
     constructor(
         address _avsDirectory,
         address _stakeRegistry,
+        address _rewardsCoordinator,
         address _delegationManager
     )
         ECDSAServiceManagerBase(
             _avsDirectory,
             _stakeRegistry,
-            address(0), // TODO: payments
+            _rewardsCoordinator,
             _delegationManager
         )
     {}
+
+    function initialize(
+        address initialOwner,
+        address _rewardsInitiator
+    ) external initializer {
+        __ServiceManagerBase_init(initialOwner, _rewardsInitiator);
+    }
 
     function setup(address initialAdmin) external initializer {
         taskCreationMetadata = TaskCreationMetadata(
