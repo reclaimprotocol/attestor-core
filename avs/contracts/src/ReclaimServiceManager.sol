@@ -3,8 +3,9 @@ pragma solidity ^0.8.9;
 
 import "@eigenlayer/contracts/libraries/BytesLib.sol";
 import "@eigenlayer/contracts/core/DelegationManager.sol";
-import "@eigenlayer-middleware/src/unaudited/ECDSAServiceManagerBase.sol";
-import "@eigenlayer-middleware/src/unaudited/ECDSAStakeRegistry.sol";
+import {ECDSAServiceManagerBase} from
+    "@eigenlayer-middleware/src/unaudited/ECDSAServiceManagerBase.sol";
+import {ECDSAStakeRegistry} from "@eigenlayer-middleware/src/unaudited/ECDSAStakeRegistry.sol";
 import "@openzeppelin-upgrades/contracts/utils/cryptography/ECDSAUpgradeable.sol";
 import "@eigenlayer/contracts/permissions/Pausable.sol";
 import {IRegistryCoordinator} from "@eigenlayer-middleware/src/interfaces/IRegistryCoordinator.sol";
@@ -75,12 +76,10 @@ contract ReclaimServiceManager is
 
     function initialize(
         address initialOwner,
-        address _rewardsInitiator
+        address _rewardsInitiator,
+        address deployer
     ) external initializer {
         __ServiceManagerBase_init(initialOwner, _rewardsInitiator);
-    }
-
-    function setup(address initialAdmin) external initializer {
         taskCreationMetadata = TaskCreationMetadata(
             // 30m
             30 * 60,
@@ -89,12 +88,11 @@ contract ReclaimServiceManager is
             // 5m
             5 * 60
         );
-        admins.push(initialAdmin);
+        admins.push(deployer);
     }
 
     /* FUNCTIONS */
 
-    /// @inheritdoc IServiceManagerUI
     function updateAVSMetadataURI(
         string memory _metadataURI
     ) external override virtual onlyAdmin {

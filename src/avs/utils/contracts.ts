@@ -1,9 +1,6 @@
 import { ethers } from 'ethers'
-import { avsDirectoryABI } from 'src/avs/abis/avsDirectoryABI'
-import { delegationABI } from 'src/avs/abis/delegationABI'
-import { registryABI } from 'src/avs/abis/registryABI'
 import { CHAIN_CONFIGS, PRIVATE_KEY, SELECTED_CHAIN_ID } from 'src/avs/config'
-import { ReclaimServiceManager__factory } from 'src/avs/contracts'
+import { AVSDirectory__factory, DelegationManager__factory, ECDSAStakeRegistry__factory, ReclaimServiceManager__factory } from 'src/avs/contracts'
 import { ChainConfig } from 'src/avs/types'
 
 type Contracts = ReturnType<typeof initialiseContracts>
@@ -41,9 +38,9 @@ export function initialiseContracts(
 	return {
 		provider,
 		wallet,
-		delegationManager: new ethers.Contract(
+		// eslint-disable-next-line camelcase
+		delegationManager: DelegationManager__factory.connect(
 			delegationManagerAddress,
-			delegationABI,
 			wallet || provider
 		),
 		// eslint-disable-next-line camelcase
@@ -51,14 +48,14 @@ export function initialiseContracts(
 			contractAddress,
 			wallet || provider
 		),
-		registryContract: new ethers.Contract(
+		// eslint-disable-next-line camelcase
+		registryContract: ECDSAStakeRegistry__factory.connect(
 			stakeRegistryAddress,
-			registryABI,
 			wallet || provider
 		),
-		avsDirectory: new ethers.Contract(
+		// eslint-disable-next-line camelcase
+		avsDirectory: AVSDirectory__factory.connect(
 			avsDirectoryAddress,
-			avsDirectoryABI,
 			wallet || provider
 		),
 	}

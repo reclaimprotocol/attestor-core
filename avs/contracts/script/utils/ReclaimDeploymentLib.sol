@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from
-    "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {Script} from "forge-std/Script.sol";
 import {console2} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {stdJson} from "forge-std/StdJson.sol";
@@ -42,7 +38,8 @@ library ReclaimDeploymentLib {
         CoreDeploymentLib.DeploymentData memory core,
         Quorum memory quorum,
         address rewardsInitiator,
-        address owner
+        address owner,
+		address deployer
     ) internal returns (DeploymentData memory) {
         DeploymentData memory result;
 
@@ -62,7 +59,7 @@ library ReclaimDeploymentLib {
             ECDSAStakeRegistry.initialize, (result.reclaimServiceManager, 0, quorum)
         );
         UpgradeableProxyLib.upgradeAndCall(result.stakeRegistry, stakeRegistryImpl, upgradeCall);
-        upgradeCall = abi.encodeCall(ReclaimServiceManager.initialize, (owner, rewardsInitiator));
+        upgradeCall = abi.encodeCall(ReclaimServiceManager.initialize, (owner, rewardsInitiator, deployer));
         UpgradeableProxyLib.upgradeAndCall(result.reclaimServiceManager, reclaimServiceManagerImpl, upgradeCall);
 
         return result;

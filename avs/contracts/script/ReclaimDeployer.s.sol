@@ -65,8 +65,11 @@ contract ReclaimDeployer is Script, Test {
         proxyAdmin = UpgradeableProxyLib.deployProxyAdmin();
 
 
-        reclaimDeployment =
-            ReclaimDeploymentLib.deployContracts(proxyAdmin, coreDeployment, quorum, rewardsInitiator, rewardsOwner);
+        reclaimDeployment = ReclaimDeploymentLib.deployContracts(
+			proxyAdmin, coreDeployment,
+			quorum, rewardsInitiator,
+			rewardsOwner, deployer
+		);
 
         reclaimDeployment.strategy = address(reclaimStrategy);
         reclaimDeployment.token = address(token);

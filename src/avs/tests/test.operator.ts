@@ -23,8 +23,8 @@ import { registerOperator } from 'src/avs/utils/register'
 import { createNewClaimRequestOnChain } from 'src/avs/utils/tasks'
 import type { createClaimOnAttestor } from 'src/client'
 import { describeWithServer } from 'src/tests/describe-with-server'
-import { ClaimInfo } from 'src/types'
-import { canonicalStringify, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from 'src/utils'
+import { ClaimInfo, CompleteClaimData } from 'src/types'
+import { canonicalStringify, createSignDataForClaim, getIdentifierFromClaimInfo, logger, unixTimestampSeconds } from 'src/utils'
 
 const contracts = getContracts()
 
@@ -65,8 +65,7 @@ describe('Operators', () => {
 			}
 
 			const userWallet = new Wallet(ownerPrivateKey, contracts.provider)
-
-			const data = createSignDataForClaim({
+			const data: CompleteClaimData = {
 				provider: name,
 				parameters: canonicalStringify(params),
 				context: context
@@ -75,12 +74,15 @@ describe('Operators', () => {
 				timestampS: timestampS!,
 				owner: userWallet.address,
 				epoch: 1
-			})
+			}
+			const signStr = createSignDataForClaim(data)
 
-			const signData = await op.wallet.signMessage(data)
+			const signData = await op.wallet.signMessage(signStr)
 			const signArray = arrayify(signData)
 
 			return {
+				claim: data,
+				request: { data },
 				signatures: { claimSignature: signArray }
 			} as any
 		})
@@ -146,7 +148,10 @@ describe('Operators', () => {
 
 	it('should not throw an error on repeated registration', async() => {
 		await registerFirstOperator()
-		await registerOperator()
+		await registerOperator({
+			wallet: operators[0].wallet,
+			reclaimRpcUrl: operators[0].url,
+		})
 	})
 
 	it('should register multiple operators', async() => {
@@ -238,7 +243,8 @@ describe('Operators', () => {
 
 		await registerOperator({
 			wallet: operators[0].wallet,
-			reclaimRpcUrl: operators[0].url
+			reclaimRpcUrl: operators[0].url,
+			logger: logger.child({ op: operatorAddress })
 		})
 
 		assert.strictEqual(
@@ -259,21 +265,17 @@ describe('Operators', () => {
 		}
 
 		const wallet2 = randomWallet()
+		const newAddr = wallet2.address
 		const url = 'ws://abcd.com/ws'
-		await sendGasToAddress(wallet2.address)
+		await sendGasToAddress(newAddr)
 
-		await contracts.contract.whitelistAddressAsOperator(
-			wallet2.address,
-			true
-		)
-
-
+		await contracts.contract
+			.whitelistAddressAsOperator(newAddr, true)
 		await registerOperator({
 			wallet: wallet2,
-			reclaimRpcUrl: url
+			reclaimRpcUrl: url,
+			logger: logger.child({ op: newAddr })
 		})
-
-		const newAddr = wallet2.address
 
 		assert.strictEqual(
 			await contracts.registryContract.operatorRegistered(newAddr),
