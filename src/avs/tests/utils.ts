@@ -1,11 +1,20 @@
 import { spawn } from 'child_process'
 
 export async function runFreshChain() {
-	const task = spawn('npm', ['run', 'start:chain'])
+	const PRIVATE_KEY = process.env.PRIVATE_KEY
+	if(!PRIVATE_KEY) {
+		throw new Error('PRIVATE_KEY environment variable is required')
+	}
+
+	const task = spawn(
+		'npm',
+		['run', 'start:chain'],
+		{ env: process.env }
+	)
 	task.stderr.pipe(process.stderr)
 	await new Promise<void>((resolve, reject) => {
 		task.stdout.on('data', (data) => {
-			if(data.toString().includes('advancing chain...')) {
+			if(data.toString().includes('Deployed Reclaim contracts')) {
 				resolve()
 			}
 		})

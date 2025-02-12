@@ -9,6 +9,9 @@
  * and the nesting helps save time by not repeating the same setup code.
  */
 
+// eslint-disable-next-line simple-import-sort/imports
+import 'src/server/utils/config-env'
+
 import { Wallet } from 'ethers'
 import { arrayify } from 'ethers/lib/utils'
 import assert from 'node:assert'

@@ -4,10 +4,10 @@ import { getEnvVariable } from 'src/utils/env'
 export const CHAIN_CONFIGS: { [key: string]: ChainConfig } = {
 	'31337': {
 		rpcUrl: 'http://localhost:8545',
-		contractAddress: '0x84eA74d481Ee0A5332c457a4d796187F6Ba67fEB',
-		delegationManagerAddress: '0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9',
-		stakeRegistryAddress: '0x9E545E3C0baAB3E08CdfD552C960A1050f373042',
-		avsDirectoryAddress: '0x5FC8d32690cc91D4c39d9d3abcBD16989F875707'
+		contractAddress: '0x998abeb3e57409262ae5b751f60747921b33613e',
+		delegationManagerAddress: '0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0',
+		stakeRegistryAddress: '0x4826533b4897376654bb4d4ad88b7fafd0c98528',
+		avsDirectoryAddress: '0xdc64a140aa3e981100a9beca4e685f962f0cf6c9'
 	},
 	'17000': {
 		rpcUrl: getEnvVariable('RPC_URL') || 'https://rpc.holesky.ethpandaops.io',

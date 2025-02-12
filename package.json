@@ -29,7 +29,7 @@
     "whitelist:operator": "npm run run:tsc -- src/scripts/whitelist-operator.ts",
     "update:avs-metadata": "npm run run:tsc -- src/scripts/update-avs-metadata.ts",
     "generate:avs": "typechain -- --target ethers-v5 --out-dir src/avs/contracts avs/contracts/out/ReclaimServiceManager.sol/*.json",
-    "start:chain": "bash ./avs/utils/anvil/start-anvil-chain-with-el-and-avs-deployed.sh",
+    "start:chain": "sh ./avs/utils/anvil/start-anvil-chain-with-el-and-avs-deployed.sh",
     "commitlint": "commitlint --edit",
     "download:zk-files": "node node_modules/@reclaimprotocol/zk-symmetric-crypto/lib/scripts/download-files",
     "generate:toprf-keys": "npm run run:tsc -- src/scripts/generate-toprf-keys.ts"
