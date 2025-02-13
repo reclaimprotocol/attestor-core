@@ -39,7 +39,8 @@ library ReclaimDeploymentLib {
         Quorum memory quorum,
         address rewardsInitiator,
         address owner,
-		address deployer
+		address deployer,
+        address strategy
     ) internal returns (DeploymentData memory) {
         DeploymentData memory result;
 
@@ -59,7 +60,7 @@ library ReclaimDeploymentLib {
             ECDSAStakeRegistry.initialize, (result.reclaimServiceManager, 0, quorum)
         );
         UpgradeableProxyLib.upgradeAndCall(result.stakeRegistry, stakeRegistryImpl, upgradeCall);
-        upgradeCall = abi.encodeCall(ReclaimServiceManager.initialize, (owner, rewardsInitiator, deployer));
+        upgradeCall = abi.encodeCall(ReclaimServiceManager.initialize, (owner, rewardsInitiator, deployer, strategy));
         UpgradeableProxyLib.upgradeAndCall(result.reclaimServiceManager, reclaimServiceManagerImpl, upgradeCall);
 
         return result;

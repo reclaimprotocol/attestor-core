@@ -28,6 +28,8 @@ import { canonicalStringify, createSignDataForClaim, getIdentifierFromClaimInfo,
 
 const contracts = getContracts()
 
+const defaultFee = 0x1000
+
 jest.setTimeout(60_000)
 
 describe('Operators', () => {
@@ -127,7 +129,8 @@ describe('Operators', () => {
 				contract.updateTaskCreationMetadata({
 					minSignaturesPerTask: 2,
 					maxTaskLifetimeS: 10,
-					maxTaskCreationDelayS: 0
+					maxTaskCreationDelayS: 0,
+					minFee: 1,
 				})
 			)
 		]
@@ -172,20 +175,32 @@ describe('Operators', () => {
 			await sendGasToAddress(userWallet.address)
 		})
 
+		it('should fail to create a task w insufficient balance', async() => {
+			await expect(
+				createNewTask(userWallet)
+			).rejects.toMatchObject({
+				message: /transfer amount exceeds balance/
+			})
+		})
+
 		it('should create a task', async() => {
+			// add fees for wallet to create a task
+			await addTokensToAddress(userWallet.address)
 			arg = await createNewTask(userWallet)
 		})
 
 		it('should mark a task as completed', async() => {
 			if(!arg) {
+				await addTokensToAddress(userWallet.address)
 				arg = await createNewTask(userWallet)
 			}
 
 			await markTaskAsCompleted(userWallet, arg)
 		})
 
-		it('should create a task for another wallet', async() => {
+		it('should allow another wallet to create a task', async() => {
 			const ownerWallet = randomWallet()
+			await addTokensToAddress(userWallet.address)
 			const rslt = await createNewTask(userWallet, ownerWallet)
 			assert.strictEqual(rslt.task.request.owner, ownerWallet.address)
 		})
@@ -204,6 +219,10 @@ describe('Operators', () => {
 
 		it('should make attestor pay for claim', async() => {
 			const userWallet = randomWallet()
+
+			// default address is the attestor's address
+			await addTokensToAddress(contracts.wallet!.address)
+
 			const { object: rslt } = await createClaimOnAvs({
 				ownerPrivateKey: userWallet.privateKey,
 				name: 'http',
@@ -297,12 +316,14 @@ describe('Operators', () => {
 		claimOwner = userWallet
 	) {
 		const params = makeNewCreateClaimParams()
+
 		const { task } = await createNewClaimRequestOnChain({
 			request: {
 				provider: params.provider,
 				claimUserId: new Uint8Array(32),
 				claimHash: getIdentifierFromClaimInfo(params),
 				requestedAt: unixTimestampSeconds(),
+				fee: defaultFee
 			},
 			payer: userWallet,
 			owner: claimOwner
@@ -362,13 +383,15 @@ describe('Operators', () => {
 		const tx = await contracts.contract.updateTaskCreationMetadata({
 			minSignaturesPerTask: 2,
 			maxTaskLifetimeS: 0,
-			maxTaskCreationDelayS: 0
+			maxTaskCreationDelayS: 0,
+			minFee: 1
 		})
 		await tx.wait()
 		console.log('min sigs set to 2')
 
 		const userWallet = randomWallet()
 		await sendGasToAddress(userWallet.address)
+		await addTokensToAddress(userWallet.address)
 
 		const { object: rslt } = await createClaimOnAvs({
 			ownerPrivateKey: userWallet.privateKey,
@@ -393,6 +416,13 @@ describe('Operators', () => {
 		assert.equal(rslt.task.signatures.length, 2)
 	}
 })
+
+async function addTokensToAddress(address: string) {
+	const mocktoken = await contracts.tokens.getDefault()
+	const tx = await mocktoken
+		.mint(address, defaultFee)
+	await tx.wait()
+}
 
 function randomWallet() {
 	return Wallet.createRandom()

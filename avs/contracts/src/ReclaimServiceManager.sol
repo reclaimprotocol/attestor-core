@@ -9,6 +9,8 @@ import {ECDSAStakeRegistry} from "@eigenlayer-middleware/src/unaudited/ECDSAStak
 import "@openzeppelin-upgrades/contracts/utils/cryptography/ECDSAUpgradeable.sol";
 import "@eigenlayer/contracts/permissions/Pausable.sol";
 import {IRegistryCoordinator} from "@eigenlayer-middleware/src/interfaces/IRegistryCoordinator.sol";
+import {IStrategy} from "@eigenlayer/contracts/interfaces/IStrategy.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IReclaimServiceManager.sol";
 import "./utils/Random.sol";
 import "./utils/Claims.sol";
@@ -22,6 +24,8 @@ contract ReclaimServiceManager is
 {
     using BytesLib for bytes;
     using ECDSAUpgradeable for bytes32;
+
+    address public defaultStrategy;
 
     /* STORAGE */
     // The latest task index
@@ -77,7 +81,8 @@ contract ReclaimServiceManager is
     function initialize(
         address initialOwner,
         address _rewardsInitiator,
-        address deployer
+        address deployer,
+        address strategy
     ) external initializer {
         __ServiceManagerBase_init(initialOwner, _rewardsInitiator);
         taskCreationMetadata = TaskCreationMetadata(
@@ -86,9 +91,12 @@ contract ReclaimServiceManager is
             // 1m
             1,
             // 5m
-            5 * 60
+            5 * 60,
+            // spend a little bit
+            1
         );
         admins.push(deployer);
+        defaultStrategy = strategy;
     }
 
     /* FUNCTIONS */
@@ -193,14 +201,19 @@ contract ReclaimServiceManager is
         ClaimRequest memory request,
         bytes memory requestSignature
     ) external {
+        require(taskCreationMetadata.minFee <= request.fee, "Fee too low");
+
         if(request.owner != msg.sender) {
             bytes memory encodedReq = abi.encode(request);
             address signer = Claims.verifySignature(encodedReq, requestSignature);
             require(signer == request.owner, "Signer of requestSignature is not request.owner");
         }
 
-        uint32 diff = absDiff(request.requestedAt, uint32(block.timestamp));
+        uint32 diff = _absDiff(request.requestedAt, uint32(block.timestamp));
         require(diff <= taskCreationMetadata.maxTaskCreationDelayS, "Request timestamp too far away");
+
+        IERC20 token = getToken();
+        require(token.transferFrom(msg.sender, address(this), request.fee), "Failed to transfer fee");
 
         // create a new task struct
         Task memory newTask;
@@ -210,11 +223,12 @@ contract ReclaimServiceManager is
             newTask.createdAt + taskCreationMetadata.maxTaskLifetimeS
         );
 		newTask.minimumSignatures = taskCreationMetadata.minSignaturesPerTask;
+        newTask.feePaid = request.fee;
 
 		// hash before picking operators -- we'll use this
 		// as the seed for randomness
 		bytes32 preOpHash = keccak256(abi.encode(newTask));
-		newTask.operators = pickRandomOperators(
+		newTask.operators = _pickRandomOperators(
 			taskCreationMetadata.minSignaturesPerTask,
 			uint256(preOpHash)
 		);
@@ -222,18 +236,6 @@ contract ReclaimServiceManager is
         allTaskHashes[latestTaskNum] = keccak256(abi.encode(newTask));
         emit NewTaskCreated(latestTaskNum, newTask);
         latestTaskNum = latestTaskNum + 1;
-    }
-
-    function encodeClaimRequest(ClaimRequest memory request) public pure returns (bytes memory) {
-        return abi.encode(request);
-    }
-
-    function checkSignerAddress(
-        ClaimRequest memory request,
-        bytes memory requestSignature
-    ) public pure returns (address) {
-        bytes memory encodedReq = abi.encode(request);
-        return Claims.verifySignature(encodedReq, requestSignature);
     }
 
 	function taskCompleted(
@@ -282,6 +284,14 @@ contract ReclaimServiceManager is
 
     // HELPER
 
+    function encodeClaimRequest(ClaimRequest memory request) public pure returns (bytes memory) {
+        return abi.encode(request);
+    }
+
+    function getToken() public view returns (IERC20) {
+        return IStrategy(defaultStrategy).underlyingToken();
+    }
+
     // for a whitelist to count -- operator must either be whitelisted
     // or be an admin
     function isOperatorWhitelisted(address operator) public view returns (bool) {
@@ -311,7 +321,7 @@ contract ReclaimServiceManager is
 	 * @param seed Seed to use for randomness
 	 * @return Array of the selected operators
 	 */
-	function pickRandomOperators(
+	function _pickRandomOperators(
 		uint8 count,
 		uint256 seed
 	) internal view returns (Operator[] memory) {
@@ -351,7 +361,7 @@ contract ReclaimServiceManager is
 		return output;
 	}
 
-    function absDiff(uint32 a, uint32 b) internal pure returns (uint32) {
+    function _absDiff(uint32 a, uint32 b) internal pure returns (uint32) {
         return a > b ? a - b : b - a;
     }
 

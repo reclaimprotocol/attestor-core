@@ -1,6 +1,6 @@
 import { ethers } from 'ethers'
 import { CHAIN_CONFIGS, PRIVATE_KEY, SELECTED_CHAIN_ID } from 'src/avs/config'
-import { AVSDirectory__factory, DelegationManager__factory, ECDSAStakeRegistry__factory, ReclaimServiceManager__factory } from 'src/avs/contracts'
+import { AVSDirectory__factory, DelegationManager__factory, ECDSAStakeRegistry__factory, ERC20Mock__factory, ReclaimServiceManager__factory } from 'src/avs/contracts'
 import { ChainConfig } from 'src/avs/types'
 
 type Contracts = ReturnType<typeof initialiseContracts>
@@ -34,6 +34,11 @@ export function initialiseContracts(
 	const wallet = privateKey
 		? new ethers.Wallet(privateKey, provider)
 		: undefined
+	// eslint-disable-next-line camelcase
+	const contract = ReclaimServiceManager__factory.connect(
+		contractAddress,
+		wallet || provider
+	)
 
 	return {
 		provider,
@@ -43,11 +48,7 @@ export function initialiseContracts(
 			delegationManagerAddress,
 			wallet || provider
 		),
-		// eslint-disable-next-line camelcase
-		contract: ReclaimServiceManager__factory.connect(
-			contractAddress,
-			wallet || provider
-		),
+		contract,
 		// eslint-disable-next-line camelcase
 		registryContract: ECDSAStakeRegistry__factory.connect(
 			stakeRegistryAddress,
@@ -58,5 +59,14 @@ export function initialiseContracts(
 			avsDirectoryAddress,
 			wallet || provider
 		),
+		// tokens
+		tokens: {
+			async getDefault() {
+				const tokenAddr = await contract.getToken()
+				// eslint-disable-next-line camelcase
+				return ERC20Mock__factory
+					.connect(tokenAddr, wallet || provider)
+			}
+		}
 	}
 }

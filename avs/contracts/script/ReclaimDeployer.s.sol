@@ -56,19 +56,17 @@ contract ReclaimDeployer is Script, Test {
         token = new ERC20Mock();
         reclaimStrategy = IStrategy(StrategyFactory(coreDeployment.strategyFactory).deployNewStrategy(token));
 
-
         quorum.strategies.push(
             StrategyParams({strategy: reclaimStrategy, multiplier: 10_000})
         );
 
-
         proxyAdmin = UpgradeableProxyLib.deployProxyAdmin();
-
 
         reclaimDeployment = ReclaimDeploymentLib.deployContracts(
 			proxyAdmin, coreDeployment,
 			quorum, rewardsInitiator,
-			rewardsOwner, deployer
+			rewardsOwner, deployer,
+            address(reclaimStrategy)
 		);
 
         reclaimDeployment.strategy = address(reclaimStrategy);

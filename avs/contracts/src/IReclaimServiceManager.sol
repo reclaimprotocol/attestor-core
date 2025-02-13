@@ -32,6 +32,10 @@ interface IReclaimServiceManager {
          * Address of the requester.
          */
         address owner;
+        /**
+         * Fee to pay for the claim.
+         */
+        uint256 fee;
     }
 
     struct Operator {
@@ -92,6 +96,10 @@ interface IReclaimServiceManager {
          * Max time between the submission of the task and requestedAt
          */
         uint32 maxTaskCreationDelayS;
+        /**
+         * Minimum fee required to create a task
+         */
+        uint256 minFee;
     }
 
     // FUNCTIONS

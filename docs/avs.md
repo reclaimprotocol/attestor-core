@@ -135,7 +135,8 @@ Regardless, if you're one of the chosen few -- here's how you can register yours
 
 **Building the contracts**:
 	- `npm run build:contracts`
-	- `npm run generate:avs-types` to generate the types for the AVS contracts (make sure contracts are built first)
+	- `npm run generate:avs-types` to generate the types for the AVS contracts
+		- before generating types, make sure contracts are built first
 **Deploying the contracts locally**:
 	- `npm run start:chain`
 	- This will start the local chain, build the contracts & deploy them on the local chain too.
