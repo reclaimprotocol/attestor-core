@@ -14,8 +14,14 @@ let apm: Agent | undefined
  * here: https://www.elastic.co/guide/en/apm/agent/nodejs/current/custom-stack.html#custom-stack-advanced-configuration
  */
 export function getApm(): Agent | undefined {
-	if(!getEnvVariable('ELASTIC_APM_SERVER_URL') || !getEnvVariable('ELASTIC_APM_SECRET_TOKEN')) {
-		logger.info('ELASTIC_APM_SERVER_URL or ELASTIC_APM_SECRET_TOKEN no found in env APM agent not initialised')
+	if(
+		!getEnvVariable('ELASTIC_APM_SERVER_URL')
+		|| !getEnvVariable('ELASTIC_APM_SECRET_TOKEN')
+	) {
+		logger.info(
+			'ELASTIC_APM_SERVER_URL or ELASTIC_APM_SECRET_TOKEN not found'
+			+ ' in env, APM agent not initialised'
+		)
 		return undefined
 	}
 
@@ -28,8 +34,10 @@ export function getApm(): Agent | undefined {
 			serviceName: 'reclaim_attestor',
 			serviceVersion: '4.0.0',
 			transactionSampleRate: sampleRate,
-			instrumentIncomingHTTPRequests: false,
+			instrumentIncomingHTTPRequests: true,
+			usePathAsTransactionName: true,
 			instrument: true,
+			captureHeaders: true,
 		})
 		logger.info('initialised APM agent')
 	}
