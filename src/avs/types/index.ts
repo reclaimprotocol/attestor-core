@@ -12,6 +12,7 @@ export type ChainConfig = {
 	 */
 	contractAddress: string
 	delegationManagerAddress: string
+	rewardsCoordinatorAddress: string
 	stakeRegistryAddress: string
 	avsDirectoryAddress: string
 }

@@ -29,6 +29,7 @@
     "update:avs-metadata": "npm run run:tsc -- src/scripts/update-avs-metadata.ts",
     "generate:avs-types": "sh ./avs/utils/contract-data-gen.sh",
     "start:chain": "sh ./avs/utils/anvil/start-anvil-chain-with-el-and-avs-deployed.sh",
+    "create:payments-root": "cd avs/contracts && forge script script/SetupPayments.s.sol --rpc-url http://localhost:8545 --broadcast -v --sender 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
     "commitlint": "commitlint --edit",
     "download:zk-files": "node node_modules/@reclaimprotocol/zk-symmetric-crypto/lib/scripts/download-files",
     "generate:toprf-keys": "npm run run:tsc -- src/scripts/generate-toprf-keys.ts"

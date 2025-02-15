@@ -1,9 +1,9 @@
 import { ethers } from 'ethers'
 import { CHAIN_CONFIGS, PRIVATE_KEY, SELECTED_CHAIN_ID } from 'src/avs/config'
-import { AVSDirectory__factory, DelegationManager__factory, ECDSAStakeRegistry__factory, ERC20Mock__factory, ReclaimServiceManager__factory } from 'src/avs/contracts'
+import { AVSDirectory__factory, DelegationManager__factory, ECDSAStakeRegistry__factory, ERC20Mock__factory, ReclaimServiceManager__factory, RewardsCoordinator__factory } from 'src/avs/contracts'
 import { ChainConfig } from 'src/avs/types'
 
-type Contracts = ReturnType<typeof initialiseContracts>
+export type Contracts = ReturnType<typeof initialiseContracts>
 
 const configs: { [key: string]: Contracts } = {}
 
@@ -27,6 +27,7 @@ export function initialiseContracts(
 		avsDirectoryAddress,
 		contractAddress,
 		delegationManagerAddress,
+		rewardsCoordinatorAddress,
 	}: ChainConfig,
 	privateKey: string | undefined = PRIVATE_KEY
 ) {
@@ -57,6 +58,11 @@ export function initialiseContracts(
 		// eslint-disable-next-line camelcase
 		avsDirectory: AVSDirectory__factory.connect(
 			avsDirectoryAddress,
+			wallet || provider
+		),
+		// eslint-disable-next-line camelcase
+		rewardsCoordinator: RewardsCoordinator__factory.connect(
+			rewardsCoordinatorAddress,
 			wallet || provider
 		),
 		// tokens

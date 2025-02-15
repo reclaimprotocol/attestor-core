@@ -373,10 +373,31 @@ describe('Operators', () => {
 			)
 		const rslt = await tx.wait()
 		const events = rslt.events
-		const arg = events?.[0]?.args as unknown as TaskCompletedEventObject
-		assert.strictEqual(events?.length, 1)
-
+		const arg = events
+			?.find(ev => (ev.event === 'TaskCompleted'))
+			?.args as unknown as TaskCompletedEventObject
 		assert.ok(arg.task)
+
+		console.log('events', events)
+		console.log('rewardsCoord', contracts.rewardsCoordinator.address)
+
+		const rewardsCoordEvents = events
+			?.filter(ev => (
+				ev.address.toLowerCase()
+					=== contracts.rewardsCoordinator.address.toLowerCase()
+			))
+			?.map(ev => (
+				contracts.rewardsCoordinator.interface.parseLog(ev)
+			))
+		expect(rewardsCoordEvents).toHaveLength(1)
+		const parsedData = rewardsCoordEvents?.[0].args
+			.operatorDirectedRewardsSubmission
+		console.log('parsedData', parsedData)
+
+		const nonce = await contracts.rewardsCoordinator
+			.getDistributionRootsLength()
+		console.log('nonce', nonce)
+		expect(nonce).toBeGreaterThan(0)
 	}
 
 	async function createClaimViaFn() {

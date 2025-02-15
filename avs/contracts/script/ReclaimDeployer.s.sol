@@ -64,9 +64,8 @@ contract ReclaimDeployer is Script, Test {
 
         reclaimDeployment = ReclaimDeploymentLib.deployContracts(
 			proxyAdmin, coreDeployment,
-			quorum, rewardsInitiator,
-			rewardsOwner, deployer,
-            address(reclaimStrategy)
+			quorum, rewardsOwner,
+			deployer, address(reclaimStrategy)
 		);
 
         reclaimDeployment.strategy = address(reclaimStrategy);

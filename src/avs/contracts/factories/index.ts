@@ -6,3 +6,4 @@ export { DelegationManager__factory } from "./DelegationManager__factory";
 export { ECDSAStakeRegistry__factory } from "./ECDSAStakeRegistry__factory";
 export { ERC20Mock__factory } from "./ERC20Mock__factory";
 export { ReclaimServiceManager__factory } from "./ReclaimServiceManager__factory";
+export { RewardsCoordinator__factory } from "./RewardsCoordinator__factory";

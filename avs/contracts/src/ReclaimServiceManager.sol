@@ -10,6 +10,7 @@ import "@openzeppelin-upgrades/contracts/utils/cryptography/ECDSAUpgradeable.sol
 import "@eigenlayer/contracts/permissions/Pausable.sol";
 import {IRegistryCoordinator} from "@eigenlayer-middleware/src/interfaces/IRegistryCoordinator.sol";
 import {IStrategy} from "@eigenlayer/contracts/interfaces/IStrategy.sol";
+import {IRewardsCoordinator} from "@eigenlayer/contracts/interfaces/IRewardsCoordinator.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IReclaimServiceManager.sol";
 import "./utils/Random.sol";
@@ -80,11 +81,10 @@ contract ReclaimServiceManager is
 
     function initialize(
         address initialOwner,
-        address _rewardsInitiator,
         address deployer,
         address strategy
     ) external initializer {
-        __ServiceManagerBase_init(initialOwner, _rewardsInitiator);
+        __ServiceManagerBase_init(initialOwner, address(this));
         taskCreationMetadata = TaskCreationMetadata(
             // 30m
             30 * 60,
@@ -277,12 +277,53 @@ contract ReclaimServiceManager is
         // remove so it cannot be claimed again
         delete allTaskHashes[referenceTaskIndex];
 
-        // TODO: distribute fees
-
-		emit TaskCompleted(referenceTaskIndex, completedTask);
+        // distribute reward
+        _distributeReward(operatorAddrs, completedTask.task.feePaid);
+        
+        emit TaskCompleted(referenceTaskIndex, completedTask);
 	}
 
     // HELPER
+
+    function _distributeReward(address[] memory operatorAddrs, uint256 reward) internal {
+        // distribute reward
+        IRewardsCoordinator coordinator = IRewardsCoordinator(rewardsCoordinator);
+        IERC20 token = getToken();
+
+        IRewardsCoordinator.StrategyAndMultiplier[] memory strats = new IRewardsCoordinator.StrategyAndMultiplier[](1);
+        strats[0].strategy = IStrategy(defaultStrategy);
+        strats[0].multiplier = 1;
+
+        IRewardsCoordinator.OperatorReward[] memory ops = new IRewardsCoordinator.OperatorReward[](operatorAddrs.length);
+        uint256 perOpReward = reward / operatorAddrs.length;
+        for(uint i = 0; i < operatorAddrs.length; i++) {
+            ops[i].operator = operatorAddrs[i];
+            ops[i].amount = perOpReward;
+        }
+
+        IRewardsCoordinator.OperatorDirectedRewardsSubmission[] memory subs = new IRewardsCoordinator.OperatorDirectedRewardsSubmission[](1);
+        subs[0].strategiesAndMultipliers = strats;
+        subs[0].token = getToken();
+        subs[0].operatorRewards = ops;
+
+        // taken from hello-world example
+        uint32 calcIntervalS = coordinator.CALCULATION_INTERVAL_SECONDS();
+        uint32 endStamp = coordinator.currRewardsCalculationEndTimestamp();
+        if(endStamp == 0) {
+            subs[0].startTimestamp = uint32(block.timestamp) - (uint32(block.timestamp) % calcIntervalS);
+        } else {
+            subs[0].startTimestamp = endStamp - coordinator.MAX_REWARDS_DURATION() + calcIntervalS;
+        }
+
+        // taken from hello-world example
+        subs[0].duration = 0;
+        subs[0].description = "Claim creation on AVS";
+
+        // call directly on rewardscoordinator, as this contract has already
+        // received the fees
+        token.approve(rewardsCoordinator, reward);
+        coordinator.createOperatorDirectedAVSRewardsSubmission(address(this), subs); 
+    }
 
     function encodeClaimRequest(ClaimRequest memory request) public pure returns (bytes memory) {
         return abi.encode(request);
