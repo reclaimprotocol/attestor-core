@@ -146,17 +146,16 @@ export async function assertValidProviderTranscript<T extends ProviderClaimInfo>
 		ctx: providerCtx
 	})
 
+	ctx.providerHash = hashProviderParams(params)
+
 	const extractedParameters = rslt?.extractedParameters || {}
-	if(!Object.keys(extractedParameters).length) {
-		return info
+	if(Object.keys(extractedParameters).length) {
+		ctx.extractedParameters = extractedParameters
 	}
 
-	const newInfo = { ...info }
-	ctx.extractedParameters = extractedParameters
-	ctx.providerHash = hashProviderParams(params)
-	newInfo.context = canonicalStringify(ctx) ?? ''
+	info.context = canonicalStringify(ctx) ?? ''
 
-	return newInfo
+	return info
 }
 
 /**
