@@ -288,7 +288,10 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		let res: string
 		res = uint8ArrayToStr(response)
-		if(!res.startsWith(OK_HTTP_HEADER)) {
+
+		const okRegex = makeRegex('^HTTP\\/1.1 2\\d{2} \\w')
+		const matchRes = okRegex.exec(res)
+		if(!matchRes) {
 			const statusRegex = makeRegex('^HTTP\\/1.1 (\\d{3})')
 			const matchRes = statusRegex.exec(res)
 			if(matchRes && matchRes.length > 1) {
@@ -307,7 +310,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			}
 
 			throw new Error(
-				`Response did not start with "${OK_HTTP_HEADER}" got "${res.slice(0, lineEnd)}"`
+				`Response did not start with \"HTTP/1.1 2XX\" got "${res.slice(0, lineEnd)}"`
 			)
 		}
 
