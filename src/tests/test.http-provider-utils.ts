@@ -840,7 +840,7 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx,
 			})
-		}).rejects.toThrow('Response did not start with \"HTTP/1.1 200\"')
+		}).rejects.toThrow('Response did not start with \"HTTP/1.1 2XX\"')
 	})
 
 	it('should throw on bad close header', async() => {
