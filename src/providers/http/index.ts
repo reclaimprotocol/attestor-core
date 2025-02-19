@@ -289,7 +289,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		let res: string
 		res = uint8ArrayToStr(response)
 
-		const okRegex = makeRegex('^HTTP\\/1.1 2\\d{2} \\w')
+		const okRegex = makeRegex('^HTTP\\/1.1 2\\d{2}')
 		const matchRes = okRegex.exec(res)
 		if(!matchRes) {
 			const statusRegex = makeRegex('^HTTP\\/1.1 (\\d{3})')
