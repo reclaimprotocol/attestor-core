@@ -130,7 +130,7 @@ describe('Operators', () => {
 					minSignaturesPerTask: 2,
 					maxTaskLifetimeS: 10,
 					maxTaskCreationDelayS: 0,
-					minFee: 1,
+					minFee: defaultFee,
 				})
 			)
 		]
@@ -413,7 +413,7 @@ describe('Operators', () => {
 			minSignaturesPerTask: 2,
 			maxTaskLifetimeS: 0,
 			maxTaskCreationDelayS: 0,
-			minFee: 1
+			minFee: defaultFee
 		})
 		await tx.wait()
 		console.log('min sigs set to 2')

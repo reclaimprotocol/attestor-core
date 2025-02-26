@@ -172,7 +172,7 @@ export async function createClaimOnAvs<N extends ProviderName>({
 			const tx = await contract.taskCompleted(data, arg.taskIndex)
 			const rslt = await tx.wait()
 			// check task created event was emitted
-			const ev = rslt.events?.[0]
+			const ev = rslt.events?.find((ev) => ev.event === 'TaskCompleted')
 			return {
 				object: ev?.args as unknown as TaskCompletedEventObject,
 				txHash: rslt.transactionHash

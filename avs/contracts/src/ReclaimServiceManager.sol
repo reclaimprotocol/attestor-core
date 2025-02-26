@@ -93,7 +93,7 @@ contract ReclaimServiceManager is
             // 5m
             5 * 60,
             // spend a little bit
-            1
+            2
         );
         admins.push(deployer);
         defaultStrategy = strategy;
@@ -286,6 +286,7 @@ contract ReclaimServiceManager is
     // HELPER
 
     function _distributeReward(address[] memory operatorAddrs, uint256 reward) internal {
+        _sortAddresses(operatorAddrs);
         // distribute reward
         IRewardsCoordinator coordinator = IRewardsCoordinator(rewardsCoordinator);
         IERC20 token = getToken();
@@ -401,6 +402,18 @@ contract ReclaimServiceManager is
 
 		return output;
 	}
+
+    function _sortAddresses(address[] memory addresses) internal pure {
+        for(uint i = 0; i < addresses.length; i++) {
+            for(uint j = i + 1; j < addresses.length; j++) {
+                if(addresses[i] > addresses[j]) {
+                    address temp = addresses[i];
+                    addresses[i] = addresses[j];
+                    addresses[j] = temp;
+                }
+            }
+        }
+    }
 
     function _absDiff(uint32 a, uint32 b) internal pure returns (uint32) {
         return a > b ? a - b : b - a;
