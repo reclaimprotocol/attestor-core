@@ -17,7 +17,7 @@ import { arrayify } from 'ethers/lib/utils'
 import assert from 'node:assert'
 import { createClaimOnAvs } from 'src/avs/client/create-claim-on-avs'
 import { NewTaskCreatedEventObject, TaskCompletedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
-import { runFreshChain, sendGasToAddress } from 'src/avs/tests/utils'
+import { runFreshChain, sendGasToAddress, submitPaymentRoot } from 'src/avs/tests/utils'
 import { getContracts } from 'src/avs/utils/contracts'
 import { registerOperator } from 'src/avs/utils/register'
 import { createNewClaimRequestOnChain } from 'src/avs/utils/tasks'
@@ -195,7 +195,34 @@ describe('Operators', () => {
 				arg = await createNewTask(userWallet)
 			}
 
-			await markTaskAsCompleted(userWallet, arg)
+			const {
+				taskCompletedEvent: { task }, events
+			} = await markTaskAsCompleted(userWallet, arg)
+
+			const rewardsCoordEvents = events
+				?.filter(ev => (
+					ev.address.toLowerCase()
+						=== contracts.rewardsCoordinator.address.toLowerCase()
+				))
+				?.map(ev => (
+					contracts.rewardsCoordinator.interface.parseLog(ev)
+				))
+			expect(rewardsCoordEvents).toHaveLength(1)
+
+			const evArgs = rewardsCoordEvents![0].args
+			// hardcode the index of the endTimestamp -- as the logs
+			// don't have the keys of the event args
+			const endTimestamp = evArgs[4][3]
+
+			await submitPaymentRoot(
+				task.task.operators[0].addr,
+				endTimestamp,
+				task.task.feePaid.toNumber()
+			)
+
+			const nonce = await contracts.rewardsCoordinator
+				.getDistributionRootsLength()
+			expect(nonce.toNumber()).toBeGreaterThan(0)
 		})
 
 		it('should allow another wallet to create a task', async() => {
@@ -373,31 +400,12 @@ describe('Operators', () => {
 			)
 		const rslt = await tx.wait()
 		const events = rslt.events
-		const arg = events
+		const taskCompletedEvent = events
 			?.find(ev => (ev.event === 'TaskCompleted'))
 			?.args as unknown as TaskCompletedEventObject
-		assert.ok(arg.task)
+		assert.ok(taskCompletedEvent.task)
 
-		console.log('events', events)
-		console.log('rewardsCoord', contracts.rewardsCoordinator.address)
-
-		const rewardsCoordEvents = events
-			?.filter(ev => (
-				ev.address.toLowerCase()
-					=== contracts.rewardsCoordinator.address.toLowerCase()
-			))
-			?.map(ev => (
-				contracts.rewardsCoordinator.interface.parseLog(ev)
-			))
-		expect(rewardsCoordEvents).toHaveLength(1)
-		const parsedData = rewardsCoordEvents?.[0].args
-			.operatorDirectedRewardsSubmission
-		console.log('parsedData', parsedData)
-
-		const nonce = await contracts.rewardsCoordinator
-			.getDistributionRootsLength()
-		console.log('nonce', nonce)
-		expect(nonce).toBeGreaterThan(0)
+		return { taskCompletedEvent, events }
 	}
 
 	async function createClaimViaFn() {

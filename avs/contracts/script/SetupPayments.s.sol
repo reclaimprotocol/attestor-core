@@ -13,16 +13,6 @@ import {ERC20Mock} from "../src/ERC20Mock.sol";
 import "forge-std/Test.sol";
 
 contract SetupPayments is Script, Test {
-    struct PaymentInfo { 
-        address recipient;
-        uint32 numPayments;
-        uint32 amountPerPayment;
-        uint32 duration;
-        uint32 startTimestamp;
-        uint32 endTimestamp;
-        uint256 indexToProve;
-    }
-
     address private deployer;
     CoreDeploymentLib.DeploymentData coreDeployment;
     CoreDeploymentLib.DeploymentConfigData coreConfig;
@@ -31,10 +21,8 @@ contract SetupPayments is Script, Test {
     ReclaimDeploymentLib.DeploymentConfigData reclaimConfig;
 
     RewardsCoordinator rewardsCoordinator;
-    string internal constant paymentInfofilePath = "test/mockData/scratch/payment_info.json";
-    string internal constant filePath = "test/mockData/scratch/payments.json";
-
-
+    string internal constant paymentInfofilePath = "mockData/payment_info.json";
+    string internal constant filePath = "mockData/payments.json";
     
     uint32 constant CALCULATION_INTERVAL_SECONDS = 1 days;
     uint256 constant NUM_TOKEN_EARNINGS = 1;
@@ -45,7 +33,6 @@ contract SetupPayments is Script, Test {
     uint32 indexToProve = 0;
     uint32 amountPerPayment = 100;
 
-    address recipient = address(1);
     IRewardsCoordinator.EarnerTreeMerkleLeaf[] public earnerLeaves;
     address[] public earners;
     uint32 startTimestamp;
@@ -55,7 +42,6 @@ contract SetupPayments is Script, Test {
 
     address operator1 = address(1);
     address operator2 = address(2);
-
 
     function setUp() public {
         deployer = vm.rememberKey(vm.envUint("PRIVATE_KEY"));
@@ -87,7 +73,8 @@ contract SetupPayments is Script, Test {
             revert("End timestamp must be in the future.  Please wait to generate new payments.");
         }
 
-        // sets a multiplier based on block number such that cumulativeEarnings increase accordingly for multiple runs of this script in the same session
+        // sets a multiplier based on block number such that cumulativeEarnings
+		// increase accordingly for multiple runs of this script in the same session
         uint256 nonce = rewardsCoordinator.getDistributionRootsLength();
         amountPerPayment = uint32(amountPerPayment * (nonce + 1));
         
@@ -95,6 +82,14 @@ contract SetupPayments is Script, Test {
         vm.stopBroadcast();
         vm.startBroadcast(deployer);
         earners = _getEarners(deployer);
+        submitPaymentRoot(earners, endTimestamp, numPayments, amountPerPayment);
+        vm.stopBroadcast();
+    }
+
+    function runPaymentRoot(
+        address[] memory earners, uint32 endTimestamp, uint32 numPayments, uint32 amountPerPayment
+    ) external {
+        vm.startBroadcast(deployer);
         submitPaymentRoot(earners, endTimestamp, numPayments, amountPerPayment);
         vm.stopBroadcast();
     }
@@ -127,7 +122,7 @@ contract SetupPayments is Script, Test {
     }
         
 
-    function executeProcessClaim() public {
+    function executeProcessClaim(address recipient) public {
         uint256 nonce = rewardsCoordinator.getDistributionRootsLength();
         amountPerPayment = uint32(amountPerPayment * nonce);
 
@@ -199,16 +194,8 @@ contract SetupPayments is Script, Test {
         emit log_named_uint("Earner Leaves Length", earnerLeaves.length);
         emit log_named_uint("numPayments", numPayments);    
 
-        SetupPaymentsLib.submitRoot(
-            IRewardsCoordinator(coreDeployment.rewardsCoordinator),
-            tokenLeaves,
-            earnerLeaves,
-            reclaimDeployment.strategy,
-            endTimestamp,
-            numPayments, 
-            NUM_TOKEN_EARNINGS,
-            filePath
-        );
+        bytes32 paymentRoot = SetupPaymentsLib.createPaymentRoot(rewardsCoordinator, tokenLeaves, earnerLeaves, numPayments, NUM_TOKEN_EARNINGS, filePath);
+        rewardsCoordinator.submitRoot(paymentRoot, endTimestamp);
     }
 
     function _getEarnerLeaves(address[] memory earners, uint32 amountPerPayment, address strategy) internal view returns (IRewardsCoordinator.EarnerTreeMerkleLeaf[] memory) {

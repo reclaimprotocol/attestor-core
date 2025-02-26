@@ -65,8 +65,8 @@ library CoreDeploymentLib {
         uint256 maxRetroactiveLength;
         uint256 maxFutureLength;
         uint256 genesisRewardsTimestamp;
+        // will be deployer
         address updater;
-        uint256 updaterKey;
         uint256 activationDelay;
         uint256 calculationIntervalSeconds;
         uint256 globalOperatorCommissionBips;
@@ -331,10 +331,6 @@ library CoreDeploymentLib {
             json.readUint(".rewardsCoordinator.MAX_FUTURE_LENGTH");
         data.rewardsCoordinator.genesisRewardsTimestamp =
             json.readUint(".rewardsCoordinator.GENESIS_REWARDS_TIMESTAMP");
-        data.rewardsCoordinator.updater =
-            json.readAddress(".rewardsCoordinator.rewards_updater_address");
-        data.rewardsCoordinator.updaterKey =
-            json.readUint(".rewardsCoordinator.rewards_updater_key");
         data.rewardsCoordinator.activationDelay =
             json.readUint(".rewardsCoordinator.activation_delay");
         data.rewardsCoordinator.calculationIntervalSeconds =
