@@ -15,4 +15,4 @@ src/test.ts
 .env.*
 .cache
 envs
-avs/contracts/mockData
+avs/contracts/mockData/payments.json
