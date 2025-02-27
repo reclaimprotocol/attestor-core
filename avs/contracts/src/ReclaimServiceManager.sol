@@ -124,6 +124,10 @@ contract ReclaimServiceManager is
             taskCreationMetadata.maxTaskCreationDelayS = newMetadata
                 .maxTaskCreationDelayS;
         }
+
+        if(newMetadata.minFee != 0) {
+            taskCreationMetadata.minFee = newMetadata.minFee;
+        }
     }
 
     function whitelistAddressAsOperator(
