@@ -776,7 +776,7 @@ function getGeoLocation(v2Params: HTTPProviderParams, secretParams?: ProviderSec
 			}
 		}
 
-		const geoRegex = /^[A-Za-z]{0,2}$/sgiu
+		const geoRegex = /^[A-Za-z]{2}$/sgiu
 		if(!geoRegex.test(geo)) {
 			throw new Error(`Geolocation ${geo} is invalid`)
 		}
