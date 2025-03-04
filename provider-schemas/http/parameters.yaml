@@ -22,11 +22,9 @@ properties:
   geoLocation:
     type: string
     nullable: true
-    pattern: >-
-      ^[A-Za-z]{0,2}$
     description: >-
       Specify the geographical location from where
-      to proxy the request. 2-letter ISO country code
+      to proxy the request. 2-letter ISO country code or parameter (public or secret)
   headers:
     type: object
     description: >-
