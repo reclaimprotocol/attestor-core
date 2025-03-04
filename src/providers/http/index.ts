@@ -35,9 +35,9 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			? params.writeRedactionMode
 			: undefined
 	},
-	geoLocation(params) {
+	geoLocation(params, secretParams) {
 		return ('geoLocation' in params)
-			? getGeoLocation(params)
+			? getGeoLocation(params, secretParams)
 			: undefined
 	},
 	additionalClientOptions(params): TLSConnectionOptions {
@@ -755,7 +755,7 @@ function substituteParamValues(
 	}
 }
 
-function getGeoLocation(v2Params: HTTPProviderParams) {
+function getGeoLocation(v2Params: HTTPProviderParams, secretParams?: ProviderSecretParams<'http'>) {
 	if(v2Params?.geoLocation) {
 		const paramNames: Set<string> = new Set()
 		let geo = v2Params.geoLocation
@@ -769,9 +769,16 @@ function getGeoLocation(v2Params: HTTPProviderParams) {
 		for(const pn of paramNames) {
 			if(v2Params.paramValues && pn in v2Params.paramValues) {
 				geo = geo?.replaceAll(`{{${pn}}}`, v2Params.paramValues[pn].toString())
+			} else if(secretParams?.paramValues && pn in secretParams.paramValues) {
+				geo = geo?.replaceAll(`{{${pn}}}`, secretParams.paramValues[pn].toString())
 			} else {
 				throw new Error(`parameter "${pn}" value not found in templateParams`)
 			}
+		}
+
+		const geoRegex = /^[A-Za-z]{2}$/sgiu
+		if(!geoRegex.test(geo)) {
+			throw new Error(`Geolocation ${geo} is invalid`)
 		}
 
 		return geo
