@@ -1,0 +1,46 @@
+name: Publish to NPM
+
+permissions:
+  contents: write
+
+# Manually triggered workflow
+on:
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Lint
+        run: npm run lint
+      
+      - name: Build
+        run: npm run build
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "hi@reclaimprotocol.org"
+          git config --global user.name "Reclaim CI"
+
+      - name: Publish to NPM
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm run publish:pkg

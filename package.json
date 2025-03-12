@@ -30,7 +30,8 @@
     "start:chain": "bash ./avs/utils/anvil/start-anvil-chain-with-el-and-avs-deployed.sh",
     "commitlint": "commitlint --edit",
     "download:zk-files": "node node_modules/@reclaimprotocol/zk-symmetric-crypto/lib/scripts/download-files",
-    "generate:toprf-keys": "npm run run:tsc -- src/scripts/generate-toprf-keys.ts"
+    "generate:toprf-keys": "npm run run:tsc -- src/scripts/generate-toprf-keys.ts",
+    "publish:pkg": "npm publish --access public"
   },
   "files": [
     "lib/*"
