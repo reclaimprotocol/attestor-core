@@ -7,11 +7,7 @@ export async function runFreshChain() {
 		throw new Error('PRIVATE_KEY environment variable is required')
 	}
 
-	const task = spawn(
-		'npm',
-		['run', 'start:chain'],
-		{ env: process.env }
-	)
+	const task = spawn('npm', ['run', 'start:chain'], { env: process.env })
 	task.stderr.pipe(process.stderr)
 	await new Promise<void>((resolve, reject) => {
 		task.stdout.on('data', (data) => {

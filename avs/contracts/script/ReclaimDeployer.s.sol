@@ -8,13 +8,10 @@ import {CoreDeploymentLib} from "./utils/CoreDeploymentLib.sol";
 import {UpgradeableProxyLib} from "./utils/UpgradeableProxyLib.sol";
 import {StrategyBase} from "@eigenlayer/contracts/strategies/StrategyBase.sol";
 import {ERC20Mock} from "../src/ERC20Mock.sol";
-import {TransparentUpgradeableProxy} from
-    "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {StrategyFactory} from "@eigenlayer/contracts/strategies/StrategyFactory.sol";
 import {StrategyManager} from "@eigenlayer/contracts/core/StrategyManager.sol";
 import {IRewardsCoordinator} from "@eigenlayer/contracts/interfaces/IRewardsCoordinator.sol";
-
-
 
 import {
     Quorum,
@@ -38,12 +35,12 @@ contract ReclaimDeployer is Script, Test {
     ReclaimDeploymentLib.DeploymentConfigData reclaimConfig;
     Quorum internal quorum;
     ERC20Mock token;
+
     function setUp() public virtual {
         deployer = vm.rememberKey(vm.envUint("PRIVATE_KEY"));
         vm.label(deployer, "Deployer");
 
         reclaimConfig = ReclaimDeploymentLib.readDeploymentConfigValues("config/reclaim/", block.chainid);
-
 
         coreDeployment = CoreDeploymentLib.readDeploymentJson("deployments/core/", block.chainid);
     }
@@ -56,17 +53,12 @@ contract ReclaimDeployer is Script, Test {
         token = new ERC20Mock();
         reclaimStrategy = IStrategy(StrategyFactory(coreDeployment.strategyFactory).deployNewStrategy(token));
 
-        quorum.strategies.push(
-            StrategyParams({strategy: reclaimStrategy, multiplier: 10_000})
-        );
+        quorum.strategies.push(StrategyParams({strategy: reclaimStrategy, multiplier: 10_000}));
 
         proxyAdmin = UpgradeableProxyLib.deployProxyAdmin();
 
-        reclaimDeployment = ReclaimDeploymentLib.deployContracts(
-			proxyAdmin, coreDeployment,
-			quorum, rewardsOwner,
-			deployer, address(reclaimStrategy)
-		);
+        reclaimDeployment =
+            ReclaimDeploymentLib.deployContracts(proxyAdmin, coreDeployment, quorum, deployer, address(reclaimStrategy));
 
         reclaimDeployment.strategy = address(reclaimStrategy);
         reclaimDeployment.token = address(token);
@@ -77,19 +69,11 @@ contract ReclaimDeployer is Script, Test {
     }
 
     function verifyDeployment() internal view {
-        require(
-            reclaimDeployment.stakeRegistry != address(0), "StakeRegistry address cannot be zero"
-        );
-        require(
-            reclaimDeployment.reclaimServiceManager != address(0),
-            "ReclaimServiceManager address cannot be zero"
-        );
+        require(reclaimDeployment.stakeRegistry != address(0), "StakeRegistry address cannot be zero");
+        require(reclaimDeployment.reclaimServiceManager != address(0), "ReclaimServiceManager address cannot be zero");
         require(reclaimDeployment.strategy != address(0), "Strategy address cannot be zero");
         require(proxyAdmin != address(0), "ProxyAdmin address cannot be zero");
-        require(
-            coreDeployment.delegationManager != address(0),
-            "DelegationManager address cannot be zero"
-        );
+        require(coreDeployment.delegationManager != address(0), "DelegationManager address cannot be zero");
         require(coreDeployment.avsDirectory != address(0), "AVSDirectory address cannot be zero");
     }
 }

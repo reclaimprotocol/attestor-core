@@ -11,7 +11,7 @@ interface IReclaimServiceManager {
     struct ClaimRequest {
         /**
          * Name of the provider.
-         * @example "http" 
+         * @example "http"
          */
         string provider;
         /**
@@ -39,11 +39,15 @@ interface IReclaimServiceManager {
     }
 
     struct Operator {
-		/** ETH address */
-		address addr;
-		/** Reclaim RPC Url to connect to */
-		string url;
-	}
+        /**
+         * ETH address
+         */
+        address addr;
+        /**
+         * Reclaim RPC Url to connect to
+         */
+        string url;
+    }
 
     struct Task {
         ClaimRequest request;
@@ -67,18 +71,19 @@ interface IReclaimServiceManager {
         uint256 feePaid;
     }
 
-	/** Claim with signatures & signer */
-	struct CompletedTask {
-		Task task;
-		bytes[] signatures;
-	}
+    /**
+     * Claim with signatures & signer
+     */
+    struct CompletedTask {
+        Task task;
+        bytes[] signatures;
+    }
 
     struct OperatorMetadata {
-
         address addr;
         /**
          * RPC URL for the operator
-        */
+         */
         string url;
     }
 
@@ -107,21 +112,14 @@ interface IReclaimServiceManager {
     // update the task creation metadata
     // 0 values, empty strings are ignored -- essentially
     // all falsey values are ignored.
-    function updateTaskCreationMetadata(
-        TaskCreationMetadata memory metadata
-    ) external;
+    function updateTaskCreationMetadata(TaskCreationMetadata memory metadata) external;
 
-    function whitelistAddressAsOperator(
-        address operator,
-        bool isWhitelisted
-    ) external;
+    function whitelistAddressAsOperator(address operator, bool isWhitelisted) external;
 
     // NOTE: this function is called by the operator
     // updating their metadata.
     // pass empty data to remove operator
-    function updateOperatorMetadata(
-        OperatorMetadata memory metadata
-    ) external;
+    function updateOperatorMetadata(OperatorMetadata memory metadata) external;
 
     /**
      * Create a new task.
@@ -130,16 +128,10 @@ interface IReclaimServiceManager {
      * by the request.owner address. Required when msg.sender is not
      * the request.owner
      */
-    function createNewTask(
-        ClaimRequest memory request,
-        bytes memory requestSignature
-    ) external;
+    function createNewTask(ClaimRequest memory request, bytes memory requestSignature) external;
 
     // NOTE: this function is called by the user
     // once they have aggregated all the responses
     // to the task.
-    function taskCompleted(
-        CompletedTask memory completedTask,
-        uint32 referenceTaskIndex
-    ) external;
+    function taskCompleted(CompletedTask memory completedTask, uint32 referenceTaskIndex) external;
 }

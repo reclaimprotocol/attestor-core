@@ -2,8 +2,7 @@
 pragma solidity ^0.8.0;
 
 import {ProxyAdmin} from "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
-import {TransparentUpgradeableProxy} from
-    "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
 import {console2} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -89,10 +88,10 @@ library CoreDeploymentLib {
         address initialOwner;
     }
 
-    function deployContracts(
-        address proxyAdmin,
-        DeploymentConfigData memory configData
-    ) internal returns (DeploymentData memory) {
+    function deployContracts(address proxyAdmin, DeploymentConfigData memory configData)
+        internal
+        returns (DeploymentData memory)
+    {
         DeploymentData memory result;
 
         result.delegationManager = UpgradeableProxyLib.setUpEmptyProxy(proxyAdmin);
@@ -107,13 +106,10 @@ library CoreDeploymentLib {
         // Deploy the implementation contracts, using the proxy contracts as inputs
         address delegationManagerImpl = address(
             new DelegationManager(
-                IStrategyManager(result.strategyManager),
-                ISlasher(address(0)),
-                IEigenPodManager(result.eigenPodManager)
+                IStrategyManager(result.strategyManager), ISlasher(address(0)), IEigenPodManager(result.eigenPodManager)
             )
         );
-        address avsDirectoryImpl =
-            address(new AVSDirectory(IDelegationManager(result.delegationManager)));
+        address avsDirectoryImpl = address(new AVSDirectory(IDelegationManager(result.delegationManager)));
 
         address strategyManagerImpl = address(
             new StrategyManager(
@@ -123,8 +119,7 @@ library CoreDeploymentLib {
             )
         );
 
-        address strategyFactoryImpl =
-            address(new StrategyFactory(IStrategyManager(result.strategyManager)));
+        address strategyFactoryImpl = address(new StrategyFactory(IStrategyManager(result.strategyManager)));
 
         address ethPOSDeposit;
         if (block.chainid == 1) {
@@ -166,16 +161,10 @@ library CoreDeploymentLib {
         /// TODO: Get actual genesis time
         uint64 GENESIS_TIME = 1_564_000;
 
-        address eigenPodImpl = address(
-            new EigenPod(
-                IETHPOSDeposit(ethPOSDeposit),
-                IEigenPodManager(result.eigenPodManager),
-                GENESIS_TIME
-            )
-        );
+        address eigenPodImpl =
+            address(new EigenPod(IETHPOSDeposit(ethPOSDeposit), IEigenPodManager(result.eigenPodManager), GENESIS_TIME));
         address eigenPodBeaconImpl = address(new UpgradeableBeacon(eigenPodImpl));
-        address baseStrategyImpl =
-            address(new StrategyBase(IStrategyManager(result.strategyManager)));
+        address baseStrategyImpl = address(new StrategyBase(IStrategyManager(result.strategyManager)));
         /// TODO: PauserRegistry isn't upgradeable
         address pauserRegistryImpl = address(
             new PauserRegistry(
@@ -200,9 +189,7 @@ library CoreDeploymentLib {
                 new uint256[](0) // _withdrawalDelayBlocks (empty array for now)
             )
         );
-        UpgradeableProxyLib.upgradeAndCall(
-            result.delegationManager, delegationManagerImpl, upgradeCall
-        );
+        UpgradeableProxyLib.upgradeAndCall(result.delegationManager, delegationManagerImpl, upgradeCall);
 
         // Upgrade StrategyManager contract
         upgradeCall = abi.encodeCall(
@@ -262,9 +249,7 @@ library CoreDeploymentLib {
                 uint16(configData.rewardsCoordinator.globalOperatorCommissionBips) // _globalCommissionBips
             )
         );
-        UpgradeableProxyLib.upgradeAndCall(
-            result.rewardsCoordinator, rewardsCoordinatorImpl, upgradeCall
-        );
+        UpgradeableProxyLib.upgradeAndCall(result.rewardsCoordinator, rewardsCoordinatorImpl, upgradeCall);
 
         // Upgrade EigenPod contract
         upgradeCall = abi.encodeCall(
@@ -287,10 +272,11 @@ library CoreDeploymentLib {
     }
     // StrategyConfig[] strategies;
 
-    function readDeploymentConfigValues(
-        string memory directoryPath,
-        string memory fileName
-    ) internal view returns (DeploymentConfigData memory) {
+    function readDeploymentConfigValues(string memory directoryPath, string memory fileName)
+        internal
+        view
+        returns (DeploymentConfigData memory)
+    {
         string memory pathToFile = string.concat(directoryPath, fileName);
 
         require(vm.exists(pathToFile), "CoreDeployment: Deployment config file does not exist");
@@ -307,8 +293,7 @@ library CoreDeploymentLib {
 
         // DelegationManager config start
         data.delegationManager.initPausedStatus = json.readUint(".delegation.init_paused_status");
-        data.delegationManager.withdrawalDelayBlocks =
-            json.readUint(".delegation.init_withdrawal_delay_blocks");
+        data.delegationManager.withdrawalDelayBlocks = json.readUint(".delegation.init_withdrawal_delay_blocks");
         // DelegationManager config end
 
         // Slasher config start
@@ -321,18 +306,12 @@ library CoreDeploymentLib {
         // EigenPodManager config end
 
         // RewardsCoordinator config start
-        data.rewardsCoordinator.initPausedStatus =
-            json.readUint(".rewardsCoordinator.init_paused_status");
-        data.rewardsCoordinator.maxRewardsDuration =
-            json.readUint(".rewardsCoordinator.MAX_REWARDS_DURATION");
-        data.rewardsCoordinator.maxRetroactiveLength =
-            json.readUint(".rewardsCoordinator.MAX_RETROACTIVE_LENGTH");
-        data.rewardsCoordinator.maxFutureLength =
-            json.readUint(".rewardsCoordinator.MAX_FUTURE_LENGTH");
-        data.rewardsCoordinator.genesisRewardsTimestamp =
-            json.readUint(".rewardsCoordinator.GENESIS_REWARDS_TIMESTAMP");
-        data.rewardsCoordinator.activationDelay =
-            json.readUint(".rewardsCoordinator.activation_delay");
+        data.rewardsCoordinator.initPausedStatus = json.readUint(".rewardsCoordinator.init_paused_status");
+        data.rewardsCoordinator.maxRewardsDuration = json.readUint(".rewardsCoordinator.MAX_REWARDS_DURATION");
+        data.rewardsCoordinator.maxRetroactiveLength = json.readUint(".rewardsCoordinator.MAX_RETROACTIVE_LENGTH");
+        data.rewardsCoordinator.maxFutureLength = json.readUint(".rewardsCoordinator.MAX_FUTURE_LENGTH");
+        data.rewardsCoordinator.genesisRewardsTimestamp = json.readUint(".rewardsCoordinator.GENESIS_REWARDS_TIMESTAMP");
+        data.rewardsCoordinator.activationDelay = json.readUint(".rewardsCoordinator.activation_delay");
         data.rewardsCoordinator.calculationIntervalSeconds =
             json.readUint(".rewardsCoordinator.calculation_interval_seconds");
         data.rewardsCoordinator.globalOperatorCommissionBips =
@@ -342,25 +321,27 @@ library CoreDeploymentLib {
         return data;
     }
 
-    function readDeploymentConfigValues(
-        string memory directoryPath,
-        uint256 chainId
-    ) internal view returns (DeploymentConfigData memory) {
-        return
-            readDeploymentConfigValues(directoryPath, string.concat(vm.toString(chainId), ".json"));
+    function readDeploymentConfigValues(string memory directoryPath, uint256 chainId)
+        internal
+        view
+        returns (DeploymentConfigData memory)
+    {
+        return readDeploymentConfigValues(directoryPath, string.concat(vm.toString(chainId), ".json"));
     }
 
-    function readDeploymentJson(
-        string memory directoryPath,
-        uint256 chainId
-    ) internal view returns (DeploymentData memory) {
+    function readDeploymentJson(string memory directoryPath, uint256 chainId)
+        internal
+        view
+        returns (DeploymentData memory)
+    {
         return readDeploymentJson(directoryPath, string.concat(vm.toString(chainId), ".json"));
     }
 
-    function readDeploymentJson(
-        string memory path,
-        string memory fileName
-    ) internal view returns (DeploymentData memory) {
+    function readDeploymentJson(string memory path, string memory fileName)
+        internal
+        view
+        returns (DeploymentData memory)
+    {
         string memory pathToFile = string.concat(path, fileName);
 
         require(vm.exists(pathToFile), "CoreDeployment: Deployment file does not exist");
@@ -380,17 +361,11 @@ library CoreDeploymentLib {
     }
 
     /// TODO: Need to be able to read json from eigenlayer-contracts repo for holesky/mainnet and output the json here
-    function writeDeploymentJson(
-        DeploymentData memory data
-    ) internal {
+    function writeDeploymentJson(DeploymentData memory data) internal {
         writeDeploymentJson("deployments/core/", block.chainid, data);
     }
 
-    function writeDeploymentJson(
-        string memory path,
-        uint256 chainId,
-        DeploymentData memory data
-    ) internal {
+    function writeDeploymentJson(string memory path, uint256 chainId, DeploymentData memory data) internal {
         address proxyAdmin = address(UpgradeableProxyLib.getProxyAdmin(data.strategyManager));
 
         string memory deploymentData = _generateDeploymentJson(data, proxyAdmin);
@@ -404,10 +379,11 @@ library CoreDeploymentLib {
         console2.log("Deployment artifacts written to:", fileName);
     }
 
-    function _generateDeploymentJson(
-        DeploymentData memory data,
-        address proxyAdmin
-    ) private view returns (string memory) {
+    function _generateDeploymentJson(DeploymentData memory data, address proxyAdmin)
+        private
+        view
+        returns (string memory)
+    {
         return string.concat(
             '{"lastUpdate":{"timestamp":"',
             vm.toString(block.timestamp),
@@ -419,10 +395,11 @@ library CoreDeploymentLib {
         );
     }
 
-    function _generateContractsJson(
-        DeploymentData memory data,
-        address proxyAdmin
-    ) private view returns (string memory) {
+    function _generateContractsJson(DeploymentData memory data, address proxyAdmin)
+        private
+        view
+        returns (string memory)
+    {
         /// TODO: namespace contracts -> {avs, core}
         return string.concat(
             '{"proxyAdmin":"',

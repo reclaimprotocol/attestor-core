@@ -1,7 +1,8 @@
 import { ethers } from 'ethers'
 import { CHAIN_CONFIGS, PRIVATE_KEY, SELECTED_CHAIN_ID } from 'src/avs/config'
-import { AVSDirectory__factory, DelegationManager__factory, ECDSAStakeRegistry__factory, ERC20Mock__factory, ReclaimServiceManager__factory, RewardsCoordinator__factory } from 'src/avs/contracts'
+import { AVSDirectory__factory, DelegationManager__factory, ECDSAStakeRegistry__factory, ERC20Mock__factory, ProxyAdmin__factory, ReclaimServiceManager__factory, RewardsCoordinator__factory } from 'src/avs/contracts'
 import { ChainConfig } from 'src/avs/types'
+import { ReclaimServiceManagerInterface } from '../contracts/ReclaimServiceManager'
 
 export type Contracts = ReturnType<typeof initialiseContracts>
 
@@ -28,6 +29,7 @@ export function initialiseContracts(
 		contractAddress,
 		delegationManagerAddress,
 		rewardsCoordinatorAddress,
+		proxyAdminAddress,
 	}: ChainConfig,
 	privateKey: string | undefined = PRIVATE_KEY
 ) {
@@ -40,6 +42,8 @@ export function initialiseContracts(
 		contractAddress,
 		wallet || provider
 	)
+
+	console.log('wallet ', wallet?.address)
 
 	return {
 		provider,
@@ -65,6 +69,11 @@ export function initialiseContracts(
 			rewardsCoordinatorAddress,
 			wallet || provider
 		),
+		// eslint-disable-next-line camelcase
+		proxyAdmin: ProxyAdmin__factory.connect(
+			proxyAdminAddress,
+			wallet || provider
+		),
 		// tokens
 		tokens: {
 			async getDefault() {
@@ -76,3 +85,12 @@ export function initialiseContracts(
 		}
 	}
 }
+
+// export function makeAdminCallOnReclaimContract(
+// 	fn: keyof ReclaimServiceManagerInterface['functions'],
+// 	args: any[],
+// 	chainId = SELECTED_CHAIN_ID!
+// ) {
+// 	const { contract, proxyAdmin } = getContracts(chainId)
+// 	proxyAdmin.callStatic.
+// }

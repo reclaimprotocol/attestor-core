@@ -203,7 +203,6 @@ export declare namespace ISignatureUtils {
 
 export interface ReclaimServiceManagerInterface extends utils.Interface {
   functions: {
-    "admins(uint256)": FunctionFragment;
     "allTaskHashes(uint32)": FunctionFragment;
     "avsDirectory()": FunctionFragment;
     "createAVSRewardsSubmission(((address,uint96)[],address,uint256,uint32,uint32)[])": FunctionFragment;
@@ -216,8 +215,7 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
     "getOperatorRestakedStrategies(address)": FunctionFragment;
     "getRestakeableStrategies()": FunctionFragment;
     "getToken()": FunctionFragment;
-    "initialize(address,address,address,address)": FunctionFragment;
-    "isAdmin(address)": FunctionFragment;
+    "initialize(address,address)": FunctionFragment;
     "isOperatorWhitelisted(address)": FunctionFragment;
     "latestTaskNum()": FunctionFragment;
     "operatorHasMinimumWeight(address)": FunctionFragment;
@@ -248,7 +246,6 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
 
   getFunction(
     nameOrSignatureOrTopic:
-      | "admins"
       | "allTaskHashes"
       | "avsDirectory"
       | "createAVSRewardsSubmission"
@@ -262,7 +259,6 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
       | "getRestakeableStrategies"
       | "getToken"
       | "initialize"
-      | "isAdmin"
       | "isOperatorWhitelisted"
       | "latestTaskNum"
       | "operatorHasMinimumWeight"
@@ -291,10 +287,6 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
       | "whitelistedOperators"
   ): FunctionFragment;
 
-  encodeFunctionData(
-    functionFragment: "admins",
-    values: [BigNumberish]
-  ): string;
   encodeFunctionData(
     functionFragment: "allTaskHashes",
     values: [BigNumberish]
@@ -342,9 +334,8 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
   encodeFunctionData(functionFragment: "getToken", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "initialize",
-    values: [string, string, string, string]
+    values: [string, string]
   ): string;
-  encodeFunctionData(functionFragment: "isAdmin", values: [string]): string;
   encodeFunctionData(
     functionFragment: "isOperatorWhitelisted",
     values: [string]
@@ -438,7 +429,6 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
     values: [BigNumberish]
   ): string;
 
-  decodeFunctionResult(functionFragment: "admins", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "allTaskHashes",
     data: BytesLike
@@ -485,7 +475,6 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "getToken", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "isAdmin", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "isOperatorWhitelisted",
     data: BytesLike
@@ -708,8 +697,6 @@ export interface ReclaimServiceManager extends BaseContract {
   removeListener: OnEvent<this>;
 
   functions: {
-    admins(arg0: BigNumberish, overrides?: CallOverrides): Promise<[string]>;
-
     allTaskHashes(
       arg0: BigNumberish,
       overrides?: CallOverrides
@@ -761,13 +748,9 @@ export interface ReclaimServiceManager extends BaseContract {
 
     initialize(
       initialOwner: string,
-      _rewardsInitiator: string,
-      deployer: string,
       strategy: string,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
-
-    isAdmin(_admin: string, overrides?: CallOverrides): Promise<[boolean]>;
 
     isOperatorWhitelisted(
       operator: string,
@@ -889,8 +872,6 @@ export interface ReclaimServiceManager extends BaseContract {
     ): Promise<[string]>;
   };
 
-  admins(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>;
-
   allTaskHashes(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>;
 
   avsDirectory(overrides?: CallOverrides): Promise<string>;
@@ -939,13 +920,9 @@ export interface ReclaimServiceManager extends BaseContract {
 
   initialize(
     initialOwner: string,
-    _rewardsInitiator: string,
-    deployer: string,
     strategy: string,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
-
-  isAdmin(_admin: string, overrides?: CallOverrides): Promise<boolean>;
 
   isOperatorWhitelisted(
     operator: string,
@@ -1067,8 +1044,6 @@ export interface ReclaimServiceManager extends BaseContract {
   ): Promise<string>;
 
   callStatic: {
-    admins(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>;
-
     allTaskHashes(
       arg0: BigNumberish,
       overrides?: CallOverrides
@@ -1120,13 +1095,9 @@ export interface ReclaimServiceManager extends BaseContract {
 
     initialize(
       initialOwner: string,
-      _rewardsInitiator: string,
-      deployer: string,
       strategy: string,
       overrides?: CallOverrides
     ): Promise<void>;
-
-    isAdmin(_admin: string, overrides?: CallOverrides): Promise<boolean>;
 
     isOperatorWhitelisted(
       operator: string,
@@ -1307,8 +1278,6 @@ export interface ReclaimServiceManager extends BaseContract {
   };
 
   estimateGas: {
-    admins(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>;
-
     allTaskHashes(
       arg0: BigNumberish,
       overrides?: CallOverrides
@@ -1360,13 +1329,9 @@ export interface ReclaimServiceManager extends BaseContract {
 
     initialize(
       initialOwner: string,
-      _rewardsInitiator: string,
-      deployer: string,
       strategy: string,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
-
-    isAdmin(_admin: string, overrides?: CallOverrides): Promise<BigNumber>;
 
     isOperatorWhitelisted(
       operator: string,
@@ -1478,11 +1443,6 @@ export interface ReclaimServiceManager extends BaseContract {
   };
 
   populateTransaction: {
-    admins(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
     allTaskHashes(
       arg0: BigNumberish,
       overrides?: CallOverrides
@@ -1536,15 +1496,8 @@ export interface ReclaimServiceManager extends BaseContract {
 
     initialize(
       initialOwner: string,
-      _rewardsInitiator: string,
-      deployer: string,
       strategy: string,
       overrides?: Overrides & { from?: string }
-    ): Promise<PopulatedTransaction>;
-
-    isAdmin(
-      _admin: string,
-      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     isOperatorWhitelisted(

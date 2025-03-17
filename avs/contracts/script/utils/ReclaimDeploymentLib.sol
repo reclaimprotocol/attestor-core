@@ -37,8 +37,7 @@ library ReclaimDeploymentLib {
         address proxyAdmin,
         CoreDeploymentLib.DeploymentData memory core,
         Quorum memory quorum,
-        address owner,
-		address deployer,
+        address contractOwner,
         address strategy
     ) internal returns (DeploymentData memory) {
         DeploymentData memory result;
@@ -47,34 +46,31 @@ library ReclaimDeploymentLib {
         result.reclaimServiceManager = UpgradeableProxyLib.setUpEmptyProxy(proxyAdmin);
         result.stakeRegistry = UpgradeableProxyLib.setUpEmptyProxy(proxyAdmin);
         // Deploy the implementation contracts, using the proxy contracts as inputs
-        address stakeRegistryImpl =
-            address(new ECDSAStakeRegistry(IDelegationManager(core.delegationManager)));
+        address stakeRegistryImpl = address(new ECDSAStakeRegistry(IDelegationManager(core.delegationManager)));
         address reclaimServiceManagerImpl = address(
             new ReclaimServiceManager(
                 core.avsDirectory, result.stakeRegistry, core.rewardsCoordinator, core.delegationManager
             )
         );
         // Upgrade contracts
-        bytes memory upgradeCall = abi.encodeCall(
-            ECDSAStakeRegistry.initialize, (result.reclaimServiceManager, 0, quorum)
-        );
+        bytes memory upgradeCall =
+            abi.encodeCall(ECDSAStakeRegistry.initialize, (result.reclaimServiceManager, 0, quorum));
         UpgradeableProxyLib.upgradeAndCall(result.stakeRegistry, stakeRegistryImpl, upgradeCall);
-        upgradeCall = abi.encodeCall(ReclaimServiceManager.initialize, (owner, deployer, strategy));
+        upgradeCall = abi.encodeCall(ReclaimServiceManager.initialize, (contractOwner, strategy));
         UpgradeableProxyLib.upgradeAndCall(result.reclaimServiceManager, reclaimServiceManagerImpl, upgradeCall);
 
         return result;
     }
 
-    function readDeploymentJson(
-        uint256 chainId
-    ) internal view returns (DeploymentData memory) {
+    function readDeploymentJson(uint256 chainId) internal view returns (DeploymentData memory) {
         return readDeploymentJson("deployments/", chainId);
     }
 
-    function readDeploymentJson(
-        string memory directoryPath,
-        uint256 chainId
-    ) internal view returns (DeploymentData memory) {
+    function readDeploymentJson(string memory directoryPath, uint256 chainId)
+        internal
+        view
+        returns (DeploymentData memory)
+    {
         string memory fileName = string.concat(directoryPath, vm.toString(chainId), ".json");
 
         require(vm.exists(fileName), "ReclaimDeployment: Deployment file does not exist");
@@ -90,22 +86,14 @@ library ReclaimDeploymentLib {
 
         return data;
     }
-    
 
     /// write to default output path
-    function writeDeploymentJson(
-        DeploymentData memory data
-    ) internal {
+    function writeDeploymentJson(DeploymentData memory data) internal {
         writeDeploymentJson("deployments/reclaim/", block.chainid, data);
     }
 
-    function writeDeploymentJson(
-        string memory outputPath,
-        uint256 chainId,
-        DeploymentData memory data
-    ) internal {
-        address proxyAdmin =
-            address(UpgradeableProxyLib.getProxyAdmin(data.reclaimServiceManager));
+    function writeDeploymentJson(string memory outputPath, uint256 chainId, DeploymentData memory data) internal {
+        address proxyAdmin = address(UpgradeableProxyLib.getProxyAdmin(data.reclaimServiceManager));
 
         string memory deploymentData = _generateDeploymentJson(data, proxyAdmin);
 
@@ -117,12 +105,12 @@ library ReclaimDeploymentLib {
         vm.writeFile(fileName, deploymentData);
         console2.log("Deployment artifacts written to:", fileName);
     }
-    
 
-    function readDeploymentConfigValues(
-        string memory directoryPath,
-        string memory fileName
-    ) internal view returns (DeploymentConfigData memory) {
+    function readDeploymentConfigValues(string memory directoryPath, string memory fileName)
+        internal
+        view
+        returns (DeploymentConfigData memory)
+    {
         string memory pathToFile = string.concat(directoryPath, fileName);
 
         require(vm.exists(pathToFile), "ReclaimDeployment: Deployment Config file does not exist");
@@ -137,18 +125,19 @@ library ReclaimDeploymentLib {
         return data;
     }
 
-    function readDeploymentConfigValues(
-        string memory directoryPath,
-        uint256 chainId
-    ) internal view returns (DeploymentConfigData memory) {
-        return
-            readDeploymentConfigValues(directoryPath, string.concat(vm.toString(chainId), ".json"));
+    function readDeploymentConfigValues(string memory directoryPath, uint256 chainId)
+        internal
+        view
+        returns (DeploymentConfigData memory)
+    {
+        return readDeploymentConfigValues(directoryPath, string.concat(vm.toString(chainId), ".json"));
     }
 
-    function _generateDeploymentJson(
-        DeploymentData memory data,
-        address proxyAdmin
-    ) private view returns (string memory) {
+    function _generateDeploymentJson(DeploymentData memory data, address proxyAdmin)
+        private
+        view
+        returns (string memory)
+    {
         return string.concat(
             '{"lastUpdate":{"timestamp":"',
             vm.toString(block.timestamp),
@@ -160,10 +149,11 @@ library ReclaimDeploymentLib {
         );
     }
 
-    function _generateContractsJson(
-        DeploymentData memory data,
-        address proxyAdmin
-    ) private view returns (string memory) {
+    function _generateContractsJson(DeploymentData memory data, address proxyAdmin)
+        private
+        view
+        returns (string memory)
+    {
         return string.concat(
             '{"proxyAdmin":"',
             proxyAdmin.toHexString(),
@@ -179,7 +169,7 @@ library ReclaimDeploymentLib {
             data.strategy.toHexString(),
             '","token":"',
             data.token.toHexString(),
-             '"}'
+            '"}'
         );
     }
 }

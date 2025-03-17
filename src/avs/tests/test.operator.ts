@@ -140,7 +140,7 @@ describe('Operators', () => {
 				await op()
 				throw new Error('Should have thrown an error')
 			} catch(err) {
-				expect(err.message).toMatch(/Caller is not admin/)
+				expect(err.message).toMatch(/caller is not the owner/)
 			}
 		}
 	})
@@ -281,6 +281,8 @@ describe('Operators', () => {
 		// fetch address from the env variable, PRIVATE_KEY
 		const operatorAddress = await contracts.wallet!.address
 		await sendGasToAddress(operatorAddress)
+
+		console.log('owner ', await contracts.contract.owner())
 
 		await contracts.contract.whitelistAddressAsOperator(
 			operatorAddress,
