@@ -6,8 +6,9 @@ import { governanceABI } from 'src/mechain/abis/governanceABI'
 import { taskABI } from 'src/mechain/abis/taskABI'
 import { GOVERNANCE_CONTRACT_ADDRESS, RPC_URL, TASK_CONTRACT_ADDRESS } from 'src/mechain/constants'
 import { CreateClaimOnMechainOpts } from 'src/mechain/types'
-import { ClaimTunnelResponse } from 'src/proto/api'
 import { ProviderName } from 'src/types'
+import { CreateClaimResponse } from 'src/window-rpc'
+import { mapToCreateClaimResponse } from 'src/window-rpc/utils'
 
 /**
  * Creates a Reclaim claim on the AVS chain.
@@ -33,7 +34,7 @@ export async function createClaimOnMechain<N extends ProviderName>({
 	// fetch requiredAttestors to determine how many proofs to request
 	const requiredAttestors = await taskContract.requiredAttestors()
 
-	const responses: ClaimTunnelResponse [] = []
+	const responses: CreateClaimResponse [] = []
 
 	for(let i = 0; i < requiredAttestors; i++) {
 		// Fetched attestors's WebSocket URI, e.g. wss://attestor.reclaimprotocol.org/ws
@@ -43,12 +44,15 @@ export async function createClaimOnMechain<N extends ProviderName>({
 			url: host
 		})
 
-		const res = await createClaimOnAttestor ({
+		const claimTunnelRes = await createClaimOnAttestor ({
 			...opts,
 			client
 		})
 
-		responses.push(res)
+		const response = mapToCreateClaimResponse(
+			claimTunnelRes
+		)
+		responses.push(response)
 	}
 
 	// Perform the call that was statically-called previously
