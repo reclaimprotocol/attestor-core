@@ -64,7 +64,7 @@ export async function createClaimOnMechain<N extends ProviderName>({
 }
 
 async function getContracts() {
-	const privateKey: string = process.env.PRIVATE_KEY!
+	const privateKey: string = process.env.MECHAIN_PRIVATE_KEY!
 
 	const provider = new providers.JsonRpcProvider(RPC_URL)
 	const signer = new Wallet(privateKey, provider)
