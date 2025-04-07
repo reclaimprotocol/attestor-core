@@ -3,5 +3,5 @@
 	url = https://github.com/foundry-rs/forge-std
 [submodule "avs/contracts/lib/eigenlayer-middleware"]
 	path = avs/contracts/lib/eigenlayer-middleware
-	url = https://github.com/layr-Labs/eigenlayer-middleware
-	branch = dev
+	url = https://github.com/layr-labs/eigenlayer-middleware
+	branch = 4d63f27247587607beb67f96fdabec4b2c1321ef
