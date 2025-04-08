@@ -1,6 +1,7 @@
 import type { OPRFOperator, ZKEngine, ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
 import type { TaskCompletedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
 import type { CreateClaimOnAvsOpts, CreateClaimOnAvsStep } from 'src/avs/types'
+import type { CreateClaimOnMechainStep } from 'src/mechain/types'
 import { AuthenticationRequest } from 'src/proto/api'
 import type { extractHTMLElement, extractJSONValueIndex } from 'src/providers/http/utils'
 import type {
@@ -53,6 +54,11 @@ export type RPCCreateClaimOnAvsOptions<N extends ProviderName = any> = Omit<
 	payer?: 'attestor'
 } & CreateClaimRPCBaseOpts
 
+export type RPCCreateClaimOnMechainOptions<N extends ProviderName = any> = Omit<
+	CreateClaimOnAvsOpts<N>,
+	'zkOperators' | 'context'
+> & CreateClaimRPCBaseOpts
+
 type ExtractHTMLElementOptions = {
 	html: string
 	xpathExpression: string
@@ -83,6 +89,10 @@ type AVSCreateResult = {
 	txHash: string
 }
 
+type MechainCreateResult = {
+	taskId: number
+}
+
 /**
  * Legacy V1 create claim response
  */
@@ -109,6 +119,10 @@ export type WindowRPCClient = {
 	 * Create a claim on the AVS
 	 */
 	createClaimOnAvs(opts: RPCCreateClaimOnAvsOptions): Promise<AVSCreateResult>
+	/**
+	 * Create a claim on Mechain
+	 */
+	createClaimOnMechain(opts: RPCCreateClaimOnMechainOptions): Promise<MechainCreateResult>
 	/**
 	 * Extract an HTML element from a string of HTML
 	 */
@@ -183,6 +197,7 @@ type AsResponse<T> = T & { isResponse: true }
 export type WindowRPCIncomingMsg = (
 	WindowRPCRequest<WindowRPCClient, 'createClaim'>
 	| WindowRPCRequest<WindowRPCClient, 'createClaimOnAvs'>
+	| WindowRPCRequest<WindowRPCClient, 'createClaimOnMechain'>
 	| WindowRPCRequest<WindowRPCClient, 'extractHtmlElement'>
 	| WindowRPCRequest<WindowRPCClient, 'extractJSONValueIndex'>
 	| WindowRPCRequest<WindowRPCClient, 'getCurrentMemoryUsage'>
@@ -222,6 +237,12 @@ export type WindowRPCOutgoingMsg = (
 		{
 			type: 'createClaimOnAvsStep'
 			step: CreateClaimOnAvsStep
+		}
+	)
+	| (
+		{
+			type: 'createClaimOnMechainStep'
+			step: CreateClaimOnMechainStep
 		}
 	)
 	| (

@@ -2,6 +2,7 @@ import { uint8ArrayToStr } from '@reclaimprotocol/tls'
 import { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import { createClaimOnAvs } from 'src/avs/client/create-claim-on-avs'
 import { createClaimOnAttestor } from 'src/client'
+import { createClaimOnMechain } from 'src/mechain/client/create-claim-on-mechain'
 import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from 'src/providers/http/utils'
 import { OPRFOperators, ProviderParams, ProviderSecretParams, ZKOperators } from 'src/types'
 import { logger as LOGGER, makeLogger } from 'src/utils'
@@ -152,6 +153,33 @@ export function setupWindowRpc() {
 					response: avsRes,
 				})
 				break
+			case 'createClaimOnMechain':
+				const mechainRes = await createClaimOnMechain({
+					...req.request,
+					context: req.request.context
+						? JSON.parse(req.request.context)
+						: undefined,
+					zkOperators: getZkOperators(
+						req.request.zkOperatorMode, req.request.zkEngine
+					),
+					oprfOperators: getOprfOperators(
+						req.request.zkOperatorMode, req.request.zkEngine
+					),
+					logger,
+					onStep(step) {
+						sendMessage({
+							type: 'createClaimOnMechainStep',
+							step,
+							module: req.module,
+							id: req.id,
+						})
+					},
+				})
+				respond({
+					type: 'createClaimOnMechainDone',
+					response: mechainRes,
+				})
+				break
 			case 'extractHtmlElement':
 				respond({
 					type: 'extractHtmlElementDone',
@@ -161,6 +189,7 @@ export function setupWindowRpc() {
 						req.request.contentsOnly
 					),
 				})
+
 				break
 			case 'extractJSONValueIndex':
 				respond({
