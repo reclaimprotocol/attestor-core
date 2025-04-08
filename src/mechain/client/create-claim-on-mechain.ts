@@ -73,7 +73,7 @@ export async function createClaimOnMechain<N extends ProviderName>({
 async function getContracts() {
 	const privateKey = process.env.MECHAIN_PRIVATE_KEY!
 	if(!privateKey) {
-		throw new Error('PRIVATE_KEY environment variable is not set')
+		throw new Error('MECHAIN_PRIVATE_KEY environment variable is not set')
 	}
 
 	try {
