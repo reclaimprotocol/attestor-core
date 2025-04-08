@@ -166,6 +166,14 @@ export function setupWindowRpc() {
 						req.request.zkOperatorMode, req.request.zkEngine
 					),
 					logger,
+					onStep(step) {
+						sendMessage({
+							type: 'createClaimOnMechainStep',
+							step,
+							module: req.module,
+							id: req.id,
+						})
+					},
 				})
 				respond({
 					type: 'createClaimOnMechainDone',
@@ -181,6 +189,7 @@ export function setupWindowRpc() {
 						req.request.contentsOnly
 					),
 				})
+
 				break
 			case 'extractJSONValueIndex':
 				respond({

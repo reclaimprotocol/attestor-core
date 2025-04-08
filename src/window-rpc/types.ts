@@ -1,6 +1,7 @@
 import type { OPRFOperator, ZKEngine, ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
 import type { TaskCompletedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
 import type { CreateClaimOnAvsOpts, CreateClaimOnAvsStep } from 'src/avs/types'
+import type { CreateClaimOnMechainStep } from 'src/mechain/types'
 import { AuthenticationRequest } from 'src/proto/api'
 import type { extractHTMLElement, extractJSONValueIndex } from 'src/providers/http/utils'
 import type {
@@ -236,6 +237,12 @@ export type WindowRPCOutgoingMsg = (
 		{
 			type: 'createClaimOnAvsStep'
 			step: CreateClaimOnAvsStep
+		}
+	)
+	| (
+		{
+			type: 'createClaimOnMechainStep'
+			step: CreateClaimOnMechainStep
 		}
 	)
 	| (

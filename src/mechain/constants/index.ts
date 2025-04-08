@@ -2,4 +2,4 @@ export const TASK_CONTRACT_ADDRESS = '0x88cEd91D4966D82912774B9fdf9ca4E065881a91
 
 export const GOVERNANCE_CONTRACT_ADDRESS = '0x0E2CF8810B11c2875246d634f030897e77491680'
 
-export const RPC_URL = 'https://testnet-rpc.mechain.tech '
+export const RPC_URL = 'https://testnet-rpc.mechain.tech'

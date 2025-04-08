@@ -15,8 +15,10 @@ import { mapToCreateClaimResponse } from 'src/window-rpc/utils'
  */
 export async function createClaimOnMechain<N extends ProviderName>({
 	createClaimOnAttestor = _createClaimOnAttestor,
+	onStep,
 	...opts
 }: CreateClaimOnMechainOpts<N>) {
+
 
 	const { taskContract } = await getContracts()
 
@@ -29,16 +31,19 @@ export async function createClaimOnMechain<N extends ProviderName>({
 		seed,
 		timestamp
 	)
-	const taskId = result[0]
+	const taskId = result[0] as number
 
 	// fetch requiredAttestors to determine how many proofs to request
 	const requiredAttestors = await taskContract.requiredAttestors()
+	onStep?.({ type: 'requiredAttestorsFetched', data: requiredAttestors })
 
 	const responses: CreateClaimResponse [] = []
 
 	for(let i = 0; i < requiredAttestors; i++) {
 		// Fetched attestors's WebSocket URI, e.g. wss://attestor.reclaimprotocol.org/ws
 		const host = result[1][i].host
+
+		onStep?.({ type: 'attestorFetched', data: host })
 
 		const client = new AttestorClient({
 			url: host
@@ -59,28 +64,41 @@ export async function createClaimOnMechain<N extends ProviderName>({
 	const tx = await taskContract.createNewTaskRequest(seed, timestamp)
 	await tx.wait()
 
+	onStep?.({ type: 'taskCreated', data: taskId })
+
 	return { taskId, responses }
 
 }
 
 async function getContracts() {
-	const privateKey: string = process.env.MECHAIN_PRIVATE_KEY!
+	const privateKey = process.env.MECHAIN_PRIVATE_KEY!
+	if(!privateKey) {
+		throw new Error('PRIVATE_KEY environment variable is not set')
+	}
 
-	const provider = new providers.JsonRpcProvider(RPC_URL)
-	const signer = new Wallet(privateKey, provider)
+	try {
+		const provider = new providers.JsonRpcProvider(RPC_URL)
+		// Validate connection to provider
+		await provider.getNetwork()
 
-	const taskContract = new Contract(
-		TASK_CONTRACT_ADDRESS,
-		taskABI,
-		signer
-	)
+		const signer = new Wallet(privateKey, provider)
 
-	const governanceContract = new Contract(
-		GOVERNANCE_CONTRACT_ADDRESS,
-		governanceABI,
-		signer
-	)
+		const taskContract = new Contract(
+			TASK_CONTRACT_ADDRESS,
+			taskABI,
+			signer
+		)
 
-	return { taskContract, governanceContract }
+		const governanceContract = new Contract(
+			GOVERNANCE_CONTRACT_ADDRESS,
+			governanceABI,
+			signer
+		)
+
+		return { taskContract, governanceContract }
+	} catch(error) {
+		throw new Error(`Failed to initialize contracts: ${error.message || error}`)
+	}
+
 }
 
