@@ -730,7 +730,7 @@ Content-Type: text/html; charset=utf-8\r
 					ctx,
 				})
 			}
-		}).toThrow('regexp abc does not match found element \'1\'')
+		}).toThrow('regexp abc does not match found element \'MQ==\'')
 	})
 
 	it('should throw on bad method', async() => {
