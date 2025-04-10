@@ -20,6 +20,8 @@ export async function createClaimOnMechain<N extends ProviderName>({
 
 	const timestamp = Math.floor(Date.now() / 1000)
 
+	await clientMechain.waitForInit()
+
 	const { taskId, requiredAttestors, hosts } = await clientMechain.rpc('createTaskOnMechain', {
 		timestamp: timestamp
 	})
