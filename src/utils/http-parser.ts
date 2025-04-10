@@ -99,6 +99,7 @@ export function makeHttpResponseParser() {
 							break
 						} else {
 							remainingBodyBytes = -1
+							break
 							// otherwise,
 							// no content-length, no chunked transfer encoding
 							// means wait till the stream ends

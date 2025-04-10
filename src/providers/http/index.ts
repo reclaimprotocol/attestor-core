@@ -201,7 +201,6 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		const body = uint8ArrayToBinaryStr(res.body)
-		console.log({ bodyBefore:base64.encode(strToUint8Array(body)) })
 		const redactions: RedactedOrHashedArraySlice[] = []
 		for(const rs of params.responseRedactions || []) {
 			const processor = processRedactionRequest(
