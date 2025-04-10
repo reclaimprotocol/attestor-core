@@ -1,6 +1,7 @@
 import { claimTunnel } from 'src/server/handlers/claimTunnel'
 import { completeClaimOnChain } from 'src/server/handlers/completeClaimOnChain'
 import { createClaimOnChain } from 'src/server/handlers/createClaimOnChain'
+import { createTaskOnMechain } from 'src/server/handlers/createTaskOnMechain'
 import { createTunnel } from 'src/server/handlers/createTunnel'
 import { disconnectTunnel } from 'src/server/handlers/disconnectTunnel'
 import { init } from 'src/server/handlers/init'
@@ -15,4 +16,5 @@ export const HANDLERS: { [T in RPCType]: RPCHandler<T> } = {
 	createClaimOnChain,
 	completeClaimOnChain,
 	toprf,
+	createTaskOnMechain,
 }

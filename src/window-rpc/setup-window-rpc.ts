@@ -165,6 +165,9 @@ export function setupWindowRpc() {
 					oprfOperators: getOprfOperators(
 						req.request.zkOperatorMode, req.request.zkEngine
 					),
+					client: {
+						url: defaultUrl,
+					},
 					logger,
 					onStep(step) {
 						sendMessage({
