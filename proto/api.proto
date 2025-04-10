@@ -358,6 +358,16 @@ message CompleteClaimOnAvsResponse {
 	string taskCompletedObjectJson = 2;
 }
 
+message CreateTaskOnChainRequest {
+	uint32 timestamp = 1;
+}
+
+message CreateTaskOnChainResponse {
+	uint32 taskId = 1;
+	uint32 requiredAttestors = 2;
+	repeated string hosts = 3;
+}
+
 message AuthenticatedUserData {
 	/** Unique identifier for the user */
 	string id = 1;
@@ -485,6 +495,12 @@ message RPCMessage {
 		 */
 		TOPRFRequest toprfRequest = 18;
 		TOPRFResponse toprfResponse = 19;
+
+		/**
+		 * Request the attestor to create a Task on the ReclaimTask contract.
+		 */
+		CreateTaskOnChainRequest createTaskOnChainRequest = 20;
+		CreateTaskOnChainResponse createTaskOnChainResponse = 21;
 	}
 }
 

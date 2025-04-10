@@ -12,6 +12,9 @@ export type CreateClaimOnMechainStep = {
     data: string
 }
 
+export type DefaultClient = {
+    url: string
+}
 
 export type CreateClaimOnMechainOpts<N extends ProviderName> = (
     Omit<CreateClaimOnAttestorOpts<N>, 'onStep' | 'client'>
@@ -21,4 +24,5 @@ export type CreateClaimOnMechainOpts<N extends ProviderName> = (
      * Override the default createClaimOnAttestor function
      */
     createClaimOnAttestor?: typeof createClaimOnAttestor
+    client: DefaultClient
 }
