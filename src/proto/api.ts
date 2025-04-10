@@ -567,11 +567,11 @@ export interface CompleteClaimOnAvsResponse {
   taskCompletedObjectJson: string;
 }
 
-export interface CreateTaskOnChainRequest {
+export interface CreateTaskOnMechainRequest {
   timestamp: number;
 }
 
-export interface CreateTaskOnChainResponse {
+export interface CreateTaskOnMechainResponse {
   taskId: number;
   requiredAttestors: number;
   hosts: string[];
@@ -716,8 +716,8 @@ export interface RPCMessage {
     | TOPRFResponse
     | undefined;
   /** Request the attestor to create a Task on the ReclaimTask contract. */
-  createTaskOnChainRequest?: CreateTaskOnChainRequest | undefined;
-  createTaskOnChainResponse?: CreateTaskOnChainResponse | undefined;
+  createTaskOnMechainRequest?: CreateTaskOnMechainRequest | undefined;
+  createTaskOnMechainResponse?: CreateTaskOnMechainResponse | undefined;
 }
 
 export interface RPCMessages {
@@ -3176,22 +3176,22 @@ export const CompleteClaimOnAvsResponse: MessageFns<CompleteClaimOnAvsResponse> 
   },
 };
 
-function createBaseCreateTaskOnChainRequest(): CreateTaskOnChainRequest {
+function createBaseCreateTaskOnMechainRequest(): CreateTaskOnMechainRequest {
   return { timestamp: 0 };
 }
 
-export const CreateTaskOnChainRequest: MessageFns<CreateTaskOnChainRequest> = {
-  encode(message: CreateTaskOnChainRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+export const CreateTaskOnMechainRequest: MessageFns<CreateTaskOnMechainRequest> = {
+  encode(message: CreateTaskOnMechainRequest, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.timestamp !== 0) {
       writer.uint32(8).uint32(message.timestamp);
     }
     return writer;
   },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): CreateTaskOnChainRequest {
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateTaskOnMechainRequest {
     const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCreateTaskOnChainRequest();
+    const message = createBaseCreateTaskOnMechainRequest();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -3212,11 +3212,11 @@ export const CreateTaskOnChainRequest: MessageFns<CreateTaskOnChainRequest> = {
     return message;
   },
 
-  fromJSON(object: any): CreateTaskOnChainRequest {
+  fromJSON(object: any): CreateTaskOnMechainRequest {
     return { timestamp: isSet(object.timestamp) ? globalThis.Number(object.timestamp) : 0 };
   },
 
-  toJSON(message: CreateTaskOnChainRequest): unknown {
+  toJSON(message: CreateTaskOnMechainRequest): unknown {
     const obj: any = {};
     if (message.timestamp !== 0) {
       obj.timestamp = Math.round(message.timestamp);
@@ -3224,22 +3224,22 @@ export const CreateTaskOnChainRequest: MessageFns<CreateTaskOnChainRequest> = {
     return obj;
   },
 
-  create(base?: DeepPartial<CreateTaskOnChainRequest>): CreateTaskOnChainRequest {
-    return CreateTaskOnChainRequest.fromPartial(base ?? {});
+  create(base?: DeepPartial<CreateTaskOnMechainRequest>): CreateTaskOnMechainRequest {
+    return CreateTaskOnMechainRequest.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<CreateTaskOnChainRequest>): CreateTaskOnChainRequest {
-    const message = createBaseCreateTaskOnChainRequest();
+  fromPartial(object: DeepPartial<CreateTaskOnMechainRequest>): CreateTaskOnMechainRequest {
+    const message = createBaseCreateTaskOnMechainRequest();
     message.timestamp = object.timestamp ?? 0;
     return message;
   },
 };
 
-function createBaseCreateTaskOnChainResponse(): CreateTaskOnChainResponse {
+function createBaseCreateTaskOnMechainResponse(): CreateTaskOnMechainResponse {
   return { taskId: 0, requiredAttestors: 0, hosts: [] };
 }
 
-export const CreateTaskOnChainResponse: MessageFns<CreateTaskOnChainResponse> = {
-  encode(message: CreateTaskOnChainResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+export const CreateTaskOnMechainResponse: MessageFns<CreateTaskOnMechainResponse> = {
+  encode(message: CreateTaskOnMechainResponse, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.taskId !== 0) {
       writer.uint32(8).uint32(message.taskId);
     }
@@ -3252,10 +3252,10 @@ export const CreateTaskOnChainResponse: MessageFns<CreateTaskOnChainResponse> = 
     return writer;
   },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): CreateTaskOnChainResponse {
+  decode(input: BinaryReader | Uint8Array, length?: number): CreateTaskOnMechainResponse {
     const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseCreateTaskOnChainResponse();
+    const message = createBaseCreateTaskOnMechainResponse();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -3292,7 +3292,7 @@ export const CreateTaskOnChainResponse: MessageFns<CreateTaskOnChainResponse> = 
     return message;
   },
 
-  fromJSON(object: any): CreateTaskOnChainResponse {
+  fromJSON(object: any): CreateTaskOnMechainResponse {
     return {
       taskId: isSet(object.taskId) ? globalThis.Number(object.taskId) : 0,
       requiredAttestors: isSet(object.requiredAttestors) ? globalThis.Number(object.requiredAttestors) : 0,
@@ -3300,7 +3300,7 @@ export const CreateTaskOnChainResponse: MessageFns<CreateTaskOnChainResponse> = 
     };
   },
 
-  toJSON(message: CreateTaskOnChainResponse): unknown {
+  toJSON(message: CreateTaskOnMechainResponse): unknown {
     const obj: any = {};
     if (message.taskId !== 0) {
       obj.taskId = Math.round(message.taskId);
@@ -3314,11 +3314,11 @@ export const CreateTaskOnChainResponse: MessageFns<CreateTaskOnChainResponse> = 
     return obj;
   },
 
-  create(base?: DeepPartial<CreateTaskOnChainResponse>): CreateTaskOnChainResponse {
-    return CreateTaskOnChainResponse.fromPartial(base ?? {});
+  create(base?: DeepPartial<CreateTaskOnMechainResponse>): CreateTaskOnMechainResponse {
+    return CreateTaskOnMechainResponse.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<CreateTaskOnChainResponse>): CreateTaskOnChainResponse {
-    const message = createBaseCreateTaskOnChainResponse();
+  fromPartial(object: DeepPartial<CreateTaskOnMechainResponse>): CreateTaskOnMechainResponse {
+    const message = createBaseCreateTaskOnMechainResponse();
     message.taskId = object.taskId ?? 0;
     message.requiredAttestors = object.requiredAttestors ?? 0;
     message.hosts = object.hosts?.map((e) => e) || [];
@@ -3878,8 +3878,8 @@ function createBaseRPCMessage(): RPCMessage {
     completeClaimOnChainResponse: undefined,
     toprfRequest: undefined,
     toprfResponse: undefined,
-    createTaskOnChainRequest: undefined,
-    createTaskOnChainResponse: undefined,
+    createTaskOnMechainRequest: undefined,
+    createTaskOnMechainResponse: undefined,
   };
 }
 
@@ -3942,11 +3942,11 @@ export const RPCMessage: MessageFns<RPCMessage> = {
     if (message.toprfResponse !== undefined) {
       TOPRFResponse.encode(message.toprfResponse, writer.uint32(154).fork()).join();
     }
-    if (message.createTaskOnChainRequest !== undefined) {
-      CreateTaskOnChainRequest.encode(message.createTaskOnChainRequest, writer.uint32(162).fork()).join();
+    if (message.createTaskOnMechainRequest !== undefined) {
+      CreateTaskOnMechainRequest.encode(message.createTaskOnMechainRequest, writer.uint32(162).fork()).join();
     }
-    if (message.createTaskOnChainResponse !== undefined) {
-      CreateTaskOnChainResponse.encode(message.createTaskOnChainResponse, writer.uint32(170).fork()).join();
+    if (message.createTaskOnMechainResponse !== undefined) {
+      CreateTaskOnMechainResponse.encode(message.createTaskOnMechainResponse, writer.uint32(170).fork()).join();
     }
     return writer;
   },
@@ -4115,7 +4115,7 @@ export const RPCMessage: MessageFns<RPCMessage> = {
             break;
           }
 
-          message.createTaskOnChainRequest = CreateTaskOnChainRequest.decode(reader, reader.uint32());
+          message.createTaskOnMechainRequest = CreateTaskOnMechainRequest.decode(reader, reader.uint32());
           continue;
         }
         case 21: {
@@ -4123,7 +4123,7 @@ export const RPCMessage: MessageFns<RPCMessage> = {
             break;
           }
 
-          message.createTaskOnChainResponse = CreateTaskOnChainResponse.decode(reader, reader.uint32());
+          message.createTaskOnMechainResponse = CreateTaskOnMechainResponse.decode(reader, reader.uint32());
           continue;
         }
       }
@@ -4180,11 +4180,11 @@ export const RPCMessage: MessageFns<RPCMessage> = {
         : undefined,
       toprfRequest: isSet(object.toprfRequest) ? TOPRFRequest.fromJSON(object.toprfRequest) : undefined,
       toprfResponse: isSet(object.toprfResponse) ? TOPRFResponse.fromJSON(object.toprfResponse) : undefined,
-      createTaskOnChainRequest: isSet(object.createTaskOnChainRequest)
-        ? CreateTaskOnChainRequest.fromJSON(object.createTaskOnChainRequest)
+      createTaskOnMechainRequest: isSet(object.createTaskOnMechainRequest)
+        ? CreateTaskOnMechainRequest.fromJSON(object.createTaskOnMechainRequest)
         : undefined,
-      createTaskOnChainResponse: isSet(object.createTaskOnChainResponse)
-        ? CreateTaskOnChainResponse.fromJSON(object.createTaskOnChainResponse)
+      createTaskOnMechainResponse: isSet(object.createTaskOnMechainResponse)
+        ? CreateTaskOnMechainResponse.fromJSON(object.createTaskOnMechainResponse)
         : undefined,
     };
   },
@@ -4248,11 +4248,11 @@ export const RPCMessage: MessageFns<RPCMessage> = {
     if (message.toprfResponse !== undefined) {
       obj.toprfResponse = TOPRFResponse.toJSON(message.toprfResponse);
     }
-    if (message.createTaskOnChainRequest !== undefined) {
-      obj.createTaskOnChainRequest = CreateTaskOnChainRequest.toJSON(message.createTaskOnChainRequest);
+    if (message.createTaskOnMechainRequest !== undefined) {
+      obj.createTaskOnMechainRequest = CreateTaskOnMechainRequest.toJSON(message.createTaskOnMechainRequest);
     }
-    if (message.createTaskOnChainResponse !== undefined) {
-      obj.createTaskOnChainResponse = CreateTaskOnChainResponse.toJSON(message.createTaskOnChainResponse);
+    if (message.createTaskOnMechainResponse !== undefined) {
+      obj.createTaskOnMechainResponse = CreateTaskOnMechainResponse.toJSON(message.createTaskOnMechainResponse);
     }
     return obj;
   },
@@ -4325,13 +4325,13 @@ export const RPCMessage: MessageFns<RPCMessage> = {
     message.toprfResponse = (object.toprfResponse !== undefined && object.toprfResponse !== null)
       ? TOPRFResponse.fromPartial(object.toprfResponse)
       : undefined;
-    message.createTaskOnChainRequest =
-      (object.createTaskOnChainRequest !== undefined && object.createTaskOnChainRequest !== null)
-        ? CreateTaskOnChainRequest.fromPartial(object.createTaskOnChainRequest)
+    message.createTaskOnMechainRequest =
+      (object.createTaskOnMechainRequest !== undefined && object.createTaskOnMechainRequest !== null)
+        ? CreateTaskOnMechainRequest.fromPartial(object.createTaskOnMechainRequest)
         : undefined;
-    message.createTaskOnChainResponse =
-      (object.createTaskOnChainResponse !== undefined && object.createTaskOnChainResponse !== null)
-        ? CreateTaskOnChainResponse.fromPartial(object.createTaskOnChainResponse)
+    message.createTaskOnMechainResponse =
+      (object.createTaskOnMechainResponse !== undefined && object.createTaskOnMechainResponse !== null)
+        ? CreateTaskOnMechainResponse.fromPartial(object.createTaskOnMechainResponse)
         : undefined;
     return message;
   },

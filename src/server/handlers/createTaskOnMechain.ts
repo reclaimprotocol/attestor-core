@@ -6,7 +6,7 @@ import { RPCHandler } from 'src/types'
 import { getEnvVariable } from 'src/utils/env'
 
 
-export const createTaskOnChain: RPCHandler<'createTaskOnChain'> = async({
+export const createTaskOnMechain: RPCHandler<'createTaskOnMechain'> = async({
 	timestamp
 }) => {
 

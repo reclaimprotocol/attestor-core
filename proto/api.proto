@@ -358,11 +358,11 @@ message CompleteClaimOnAvsResponse {
 	string taskCompletedObjectJson = 2;
 }
 
-message CreateTaskOnChainRequest {
+message CreateTaskOnMechainRequest {
 	uint32 timestamp = 1;
 }
 
-message CreateTaskOnChainResponse {
+message CreateTaskOnMechainResponse {
 	uint32 taskId = 1;
 	uint32 requiredAttestors = 2;
 	repeated string hosts = 3;
@@ -499,8 +499,8 @@ message RPCMessage {
 		/**
 		 * Request the attestor to create a Task on the ReclaimTask contract.
 		 */
-		CreateTaskOnChainRequest createTaskOnChainRequest = 20;
-		CreateTaskOnChainResponse createTaskOnChainResponse = 21;
+		CreateTaskOnMechainRequest createTaskOnMechainRequest = 20;
+		CreateTaskOnMechainResponse createTaskOnMechainResponse = 21;
 	}
 }
 
