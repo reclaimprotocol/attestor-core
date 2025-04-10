@@ -7,6 +7,7 @@ import { taskABI } from 'src/mechain/abis/taskABI'
 import { GOVERNANCE_CONTRACT_ADDRESS, RPC_URL, TASK_CONTRACT_ADDRESS } from 'src/mechain/constants'
 import { CreateClaimOnMechainOpts } from 'src/mechain/types'
 import { ProviderName } from 'src/types'
+import { getEnvVariable } from 'src/utils/env'
 import { CreateClaimResponse } from 'src/window-rpc'
 import { mapToCreateClaimResponse } from 'src/window-rpc/utils'
 
@@ -71,7 +72,7 @@ export async function createClaimOnMechain<N extends ProviderName>({
 }
 
 async function getContracts() {
-	const privateKey = process.env.MECHAIN_PRIVATE_KEY!
+	const privateKey = getEnvVariable('MECHAIN_PRIVATE_KEY')
 	if(!privateKey) {
 		throw new Error('MECHAIN_PRIVATE_KEY environment variable is not set')
 	}
