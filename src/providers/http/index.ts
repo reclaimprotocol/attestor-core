@@ -14,7 +14,7 @@ import {
 import { ArraySlice, Provider, ProviderCtx, ProviderParams, ProviderSecretParams, RedactedOrHashedArraySlice } from 'src/types'
 import {
 	findIndexInUint8Array,
-	getHttpRequestDataFromTranscript,
+	getHttpRequestDataFromTranscript, logger,
 	REDACTION_CHAR_CODE,
 	uint8ArrayToBinaryStr,
 	uint8ArrayToStr,
@@ -201,6 +201,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		const body = uint8ArrayToBinaryStr(res.body)
+		console.log({ bodyBefore:base64.encode(strToUint8Array(body)) })
 		const redactions: RedactedOrHashedArraySlice[] = []
 		for(const rs of params.responseRedactions || []) {
 			const processor = processRedactionRequest(
@@ -519,14 +520,15 @@ function *processRedactionRequest(
 	}
 
 	function *processRegexp() {
+		logger.debug({ element: base64.encode(strToUint8Array(element)), body: base64.encode(strToUint8Array(body)) })
 		const regexp = makeRegex(rs.regex!)
 		const elem = element || body
 		const match = regexp.exec(elem)
 		// eslint-disable-next-line max-depth
 		if(!match?.[0]) {
-			// logger.error({ response: uint8ArrayToBinaryStr(res.body) })
+
 			throw new Error(
-				`regexp ${rs.regex} does not match found element '${elem}'`
+				`regexp ${rs.regex} does not match found element '${base64.encode(strToUint8Array(elem))}'`
 			)
 		}
 
