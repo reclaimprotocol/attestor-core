@@ -5,7 +5,6 @@ import { GOVERNANCE_CONTRACT_ADDRESS, RPC_URL, TASK_CONTRACT_ADDRESS } from 'src
 import { RPCHandler } from 'src/types'
 import { getEnvVariable } from 'src/utils/env'
 
-const MECHAIN_PRIVATE_KEY = getEnvVariable('MECHAIN_PRIVATE_KEY')
 
 export const createTaskOnMechain: RPCHandler<'createTaskOnMechain'> = async({
 	timestamp
@@ -45,7 +44,8 @@ export const createTaskOnMechain: RPCHandler<'createTaskOnMechain'> = async({
 }
 
 async function getContracts() {
-	if(!MECHAIN_PRIVATE_KEY) {
+	const privateKey = getEnvVariable('MECHAIN_PRIVATE_KEY')
+	if(!privateKey) {
 		throw new Error('MECHAIN_PRIVATE_KEY environment variable is not set')
 	}
 
@@ -54,7 +54,7 @@ async function getContracts() {
 		// Validate connection to provider
 		await provider.getNetwork()
 
-		const signer = new Wallet(MECHAIN_PRIVATE_KEY, provider)
+		const signer = new Wallet(privateKey, provider)
 
 		const taskContract = new Contract(
 			TASK_CONTRACT_ADDRESS,
