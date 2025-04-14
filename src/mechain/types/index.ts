@@ -1,15 +1,16 @@
 import type { createClaimOnAttestor } from 'src/client'
 import type { CreateClaimOnAttestorOpts, ProviderName } from 'src/types'
 
-export type CreateClaimOnMechainStep = {
-    type: 'taskCreated'
-    data: number
-}| {
-    type: 'requiredAttestorsFetched'
-    data: number
+export type CreateClaimOnMechainStep =
+{
+    type: 'taskRequested'
+    timestamp: number
 } | {
-    type: 'attestorFetched'
-    data: string
+    type: 'taskCreated'
+    taskId: number
+} | {
+    type: 'attestorRequested'
+    host: string
 }
 
 export type DefaultClient = {
