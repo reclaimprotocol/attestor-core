@@ -185,7 +185,7 @@ export function setupWindowRpc() {
 
 				respond({
 					type: 'createClaimOnMechainDone',
-					response: { taskId: mechainRes.taskId, response: claimResponses },
+					response: { taskId: mechainRes.taskId, data: claimResponses },
 				})
 				break
 			case 'extractHtmlElement':
