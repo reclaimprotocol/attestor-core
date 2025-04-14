@@ -21,15 +21,19 @@ export async function createClaimOnMechain<N extends ProviderName>({
 
 	await clientMechain.waitForInit()
 
+	onStep?.({ type: 'taskRequested', timestamp })
+
 	const { taskId, requiredAttestors, hosts } = await clientMechain.rpc('createTaskOnMechain', {
 		timestamp: timestamp
 	})
+
+	onStep?.({ type: 'taskCreated', taskId })
 
 	const responses: ClaimTunnelResponse [] = []
 
 	for(let i = 0; i < requiredAttestors; i++) {
 
-		onStep?.({ type: 'attestorFetched', data: hosts[i] })
+		onStep?.({ type: 'attestorRequested', host: hosts[i] })
 
 		const client = new AttestorClient({
 			url: hosts[i]
@@ -42,8 +46,6 @@ export async function createClaimOnMechain<N extends ProviderName>({
 
 		responses.push(claimTunnelRes)
 	}
-
-	onStep?.({ type: 'taskCreated', data: taskId })
 
 	return { taskId, responses }
 
