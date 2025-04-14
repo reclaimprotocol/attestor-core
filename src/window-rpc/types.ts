@@ -91,6 +91,7 @@ type AVSCreateResult = {
 
 type MechainCreateResult = {
 	taskId: number
+	data: CreateClaimResponse[]
 }
 
 /**

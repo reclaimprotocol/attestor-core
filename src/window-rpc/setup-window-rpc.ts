@@ -8,7 +8,7 @@ import { OPRFOperators, ProviderParams, ProviderSecretParams, ZKOperators } from
 import { logger as LOGGER, makeLogger } from 'src/utils'
 import { B64_JSON_REPLACER, B64_JSON_REVIVER } from 'src/utils/b64-json'
 import { Benchmark } from 'src/utils/benchmark'
-import { CommunicationBridge, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from 'src/window-rpc/types'
+import { CommunicationBridge, CreateClaimResponse, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from 'src/window-rpc/types'
 import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromLocation, mapToCreateClaimResponse, waitForResponse } from 'src/window-rpc/utils'
 import { ALL_ENC_ALGORITHMS, makeWindowRpcOprfOperator, makeWindowRpcZkOperator } from 'src/window-rpc/window-rpc-zk'
 
@@ -178,9 +178,14 @@ export function setupWindowRpc() {
 						})
 					},
 				})
+				const claimResponses: CreateClaimResponse[] = []
+				for(let i = 0; i < mechainRes.responses.length; i++) {
+					claimResponses[i] = mapToCreateClaimResponse(mechainRes.responses[i])
+				}
+
 				respond({
 					type: 'createClaimOnMechainDone',
-					response: mechainRes,
+					response: { taskId: mechainRes.taskId, data: claimResponses },
 				})
 				break
 			case 'extractHtmlElement':

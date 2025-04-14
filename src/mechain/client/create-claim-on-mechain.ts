@@ -1,9 +1,8 @@
 import { createClaimOnAttestor as _createClaimOnAttestor, getAttestorClientFromPool } from 'src/client'
 import { AttestorClient } from 'src/client'
 import { CreateClaimOnMechainOpts } from 'src/mechain/types'
+import { ClaimTunnelResponse } from 'src/proto/api'
 import { ProviderName } from 'src/types'
-import { CreateClaimResponse } from 'src/window-rpc'
-import { mapToCreateClaimResponse } from 'src/window-rpc/utils'
 
 /**
  * Creates a Reclaim claim on the AVS chain.
@@ -26,7 +25,7 @@ export async function createClaimOnMechain<N extends ProviderName>({
 		timestamp: timestamp
 	})
 
-	const responses: CreateClaimResponse [] = []
+	const responses: ClaimTunnelResponse [] = []
 
 	for(let i = 0; i < requiredAttestors; i++) {
 
@@ -41,12 +40,8 @@ export async function createClaimOnMechain<N extends ProviderName>({
 			client
 		})
 
-		const response = mapToCreateClaimResponse(
-			claimTunnelRes
-		)
-		responses.push(response)
+		responses.push(claimTunnelRes)
 	}
-
 
 	onStep?.({ type: 'taskCreated', data: taskId })
 
