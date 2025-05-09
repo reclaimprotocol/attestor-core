@@ -24,7 +24,14 @@ export const completeClaimOnChain: RPCHandler<'completeClaimOnChain'> = async(
 	const rslt = await tx.wait()
 
 	// check task created event was emitted
-	const ev = rslt.events?.[0]
+	const ev = rslt.events?.find((ev) => ev.event === 'TaskCompleted')
+	if(!ev) {
+		throw new AttestorError(
+			'ERROR_INTERNAL',
+			'TaskCompleted event not emitted'
+		)
+	}
+
 	const obj = ev?.args as unknown as TaskCompletedEventObject
 
 	const plainObj = ethersStructToPlainObject(obj)

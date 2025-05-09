@@ -47,7 +47,7 @@ export async function registerOperator({
 	try {
 		const tx1 = await delegationManager
 			.registerAsOperator({
-				earningsReceiver: addr,
+				'__deprecated_earningsReceiver': addr,
 				delegationApprover:
 					'0x0000000000000000000000000000000000000000',
 				stakerOptOutWindowBlocks: 0
@@ -55,7 +55,10 @@ export async function registerOperator({
 		await tx1.wait()
 		logger.info('operator registered on DM successfully')
 	} catch(err) {
-		if(!err.message.includes('operator has already registered')) {
+		if(
+			!err.message.includes('operator has already registered')
+			&& !err.message.includes('caller is already actively delegated')
+		) {
 			throw err
 		}
 
@@ -66,12 +69,7 @@ export async function registerOperator({
 	// Example expiry, 1 hour from now
 	const expiry = Math.floor(Date.now() / 1000) + 3600
 	// Define the output structure
-	const operatorSignature = {
-		expiry: expiry,
-		salt: salt,
-		signature: ''
-	}
-
+	const operatorSignature = { expiry, salt, signature: '' }
 	// Calculate the digest hash using the avsDirectory's method
 	const digestHash = await avsDirectory
 		.calculateOperatorAVSRegistrationDigestHash(
@@ -92,13 +90,15 @@ export async function registerOperator({
 
 	logger.info('operator signature generated successfully')
 
-	if(!(await registryContract.operatorRegistered(addr))) {
+	const isRegistered = await registryContract.operatorRegistered(addr)
+	if(!isRegistered) {
+		logger.info('registering operator on AVS...')
 		const tx2 = await registryContract
-			.registerOperatorWithSignature(addr, operatorSignature)
+			.registerOperatorWithSignature(operatorSignature, addr)
 		await tx2.wait()
 		logger.info('operator registered on AVS successfully')
 	} else {
-		logger.info('Operator already registered on AVS')
+		logger.info('operator already registered on AVS')
 	}
 
 	const existingMetadata = await contract.getMetadataForOperator(addr)
