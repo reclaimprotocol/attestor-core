@@ -1,79 +1,121 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
 
-import {Script} from "forge-std/Script.sol";
-import {console2} from "forge-std/Test.sol";
-import {ReclaimDeploymentLib} from "./utils/ReclaimDeploymentLib.sol";
 import {CoreDeploymentLib} from "./utils/CoreDeploymentLib.sol";
-import {UpgradeableProxyLib} from "./utils/UpgradeableProxyLib.sol";
-import {StrategyBase} from "@eigenlayer/contracts/strategies/StrategyBase.sol";
-import {ERC20Mock} from "../src/ERC20Mock.sol";
-import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
-import {StrategyFactory} from "@eigenlayer/contracts/strategies/StrategyFactory.sol";
-import {StrategyManager} from "@eigenlayer/contracts/core/StrategyManager.sol";
-import {IRewardsCoordinator} from "@eigenlayer/contracts/interfaces/IRewardsCoordinator.sol";
 
-import {
-    Quorum,
-    StrategyParams,
-    IStrategy
-} from "@eigenlayer-middleware/src/interfaces/IECDSAStakeRegistryEventsAndErrors.sol";
+import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
+import "@eigenlayer/contracts/permissions/PauserRegistry.sol";
+
+import {IDelegationManager} from "@eigenlayer/contracts/interfaces/IDelegationManager.sol";
+import {IAVSDirectory} from "@eigenlayer/contracts/interfaces/IAVSDirectory.sol";
+import {IStrategyManager, IStrategy} from "@eigenlayer/contracts/interfaces/IStrategyManager.sol";
+import {StrategyBaseTVLLimits} from "@eigenlayer/contracts/strategies/StrategyBaseTVLLimits.sol";
+import "@eigenlayer/test/mocks/EmptyContract.sol";
+
+import "@eigenlayer-middleware/src/RegistryCoordinator.sol" as regcoord;
+import {IBLSApkRegistry, IIndexRegistry, IStakeRegistry} from "@eigenlayer-middleware/src/RegistryCoordinator.sol";
+import {BLSApkRegistry} from "@eigenlayer-middleware/src/BLSApkRegistry.sol";
+import {IndexRegistry} from "@eigenlayer-middleware/src/IndexRegistry.sol";
+import {StakeRegistry} from "@eigenlayer-middleware/src/StakeRegistry.sol";
+import "@eigenlayer-middleware/src/OperatorStateRetriever.sol";
+
+import {ReclaimServiceManager, IServiceManager} from "../src/ReclaimServiceManager.sol";
+import {ReclaimTaskManager} from "../src/ReclaimTaskManager.sol";
+import {IReclaimTaskManager} from "../src/IReclaimTaskManager.sol";
+import "../src/ERC20Mock.sol";
 
 import "forge-std/Test.sol";
+import "forge-std/Script.sol";
+import "forge-std/StdJson.sol";
+import "forge-std/console.sol";
+import {StrategyFactory} from "@eigenlayer/contracts/strategies/StrategyFactory.sol";
 
-contract ReclaimDeployer is Script, Test {
-    using CoreDeploymentLib for *;
+import {ContractsRegistry} from "../src/test/ContractsRegistry.sol";
+import {ReclaimDeploymentLib} from "../script/utils/ReclaimDeploymentLib.sol";
+import {UpgradeableProxyLib} from "./utils/UpgradeableProxyLib.sol";
+
+import {FundOperator} from "./utils/FundOperator.sol";
+// # To deploy and verify our contract
+// forge script script/ReclaimDeployer.s.sol:ReclaimDeployer --rpc-url $RPC_URL  --private-key $PRIVATE_KEY --broadcast -vvvv
+
+contract ReclaimDeployer is Script {
+    // DEPLOYMENT CONSTANTS
+    uint256 public constant QUORUM_THRESHOLD_PERCENTAGE = 100;
+    uint32 public constant TASK_RESPONSE_WINDOW_BLOCK = 30;
+    uint32 public constant TASK_DURATION_BLOCKS = 0;
+    address public AGGREGATOR_ADDR;
+    address public TASK_GENERATOR_ADDR;
+    address public CONTRACTS_REGISTRY_ADDR;
+    address public OPERATOR_ADDR;
+    address public OPERATOR_2_ADDR;
+    ContractsRegistry contractsRegistry;
+
+    StrategyBaseTVLLimits public erc20MockStrategy;
+
+    address public rewardscoordinator;
+
+    regcoord.RegistryCoordinator public registryCoordinator;
+    regcoord.IRegistryCoordinator public registryCoordinatorImplementation;
+
+    IBLSApkRegistry public blsApkRegistry;
+    IBLSApkRegistry public blsApkRegistryImplementation;
+
+    IIndexRegistry public indexRegistry;
+    IIndexRegistry public indexRegistryImplementation;
+
+    IStakeRegistry public stakeRegistry;
+    IStakeRegistry public stakeRegistryImplementation;
+
+    OperatorStateRetriever public operatorStateRetriever;
+
+    ReclaimServiceManager public serviceManager;
+    IServiceManager public serviceManagerImplementation;
+
+    CoreDeploymentLib.DeploymentData internal configData;
+    IStrategy strategy;
+    address private deployer;
+    ERC20Mock public erc20Mock;
+    ReclaimDeploymentLib.DeploymentData deployment;
+
     using UpgradeableProxyLib for address;
 
-    address private deployer;
     address proxyAdmin;
-    address rewardsOwner;
-    address rewardsInitiator;
-    IStrategy reclaimStrategy;
-    CoreDeploymentLib.DeploymentData coreDeployment;
-    ReclaimDeploymentLib.DeploymentData reclaimDeployment;
-    ReclaimDeploymentLib.DeploymentConfigData reclaimConfig;
-    Quorum internal quorum;
-    ERC20Mock token;
 
     function setUp() public virtual {
         deployer = vm.rememberKey(vm.envUint("PRIVATE_KEY"));
         vm.label(deployer, "Deployer");
-
-        reclaimConfig = ReclaimDeploymentLib.readDeploymentConfigValues("config/reclaim/", block.chainid);
-
-        coreDeployment = CoreDeploymentLib.readDeploymentJson("deployments/core/", block.chainid);
     }
 
     function run() external {
+        // Eigenlayer contracts
         vm.startBroadcast(deployer);
-        rewardsOwner = reclaimConfig.rewardsOwner;
-        rewardsInitiator = reclaimConfig.rewardsInitiator;
+        ReclaimDeploymentLib.SetupConfig memory isConfig =
+            ReclaimDeploymentLib.readSetupConfigJson("reclaim");
+        configData = CoreDeploymentLib.readDeploymentJson("script/deployments/core/", block.chainid);
 
-        token = new ERC20Mock();
-        reclaimStrategy = IStrategy(StrategyFactory(coreDeployment.strategyFactory).deployNewStrategy(token));
-
-        quorum.strategies.push(StrategyParams({strategy: reclaimStrategy, multiplier: 10_000}));
+        erc20Mock = new ERC20Mock();
+        FundOperator.fund_operator(address(erc20Mock), isConfig.operator_addr, 15000e18);
+        FundOperator.fund_operator(address(erc20Mock), isConfig.operator_2_addr, 30000e18);
+        console.log(isConfig.operator_2_addr);
+        (bool s,) = isConfig.operator_2_addr.call{value: 0.1 ether}("");
+        require(s);
+        strategy = IStrategy(StrategyFactory(configData.strategyFactory).deployNewStrategy(erc20Mock));
+        rewardscoordinator = configData.rewardsCoordinator;
 
         proxyAdmin = UpgradeableProxyLib.deployProxyAdmin();
+        require(address(strategy) != address(0));
+        deployment = ReclaimDeploymentLib.deployContracts(
+            proxyAdmin, configData, address(strategy), isConfig, msg.sender
+        );
+        console.log("instantSlasher", deployment.slasher);
 
-        reclaimDeployment =
-            ReclaimDeploymentLib.deployContracts(proxyAdmin, coreDeployment, quorum, deployer, address(reclaimStrategy));
+        FundOperator.fund_operator(
+            address(erc20Mock), deployment.serviceManager, 1e18
+        );
+        deployment.token = address(erc20Mock);
 
-        reclaimDeployment.strategy = address(reclaimStrategy);
-        reclaimDeployment.token = address(token);
+        ReclaimDeploymentLib.writeDeploymentJson(deployment);
 
         vm.stopBroadcast();
-        verifyDeployment();
-        ReclaimDeploymentLib.writeDeploymentJson(reclaimDeployment);
-    }
-
-    function verifyDeployment() internal view {
-        require(reclaimDeployment.stakeRegistry != address(0), "StakeRegistry address cannot be zero");
-        require(reclaimDeployment.reclaimServiceManager != address(0), "ReclaimServiceManager address cannot be zero");
-        require(reclaimDeployment.strategy != address(0), "Strategy address cannot be zero");
-        require(proxyAdmin != address(0), "ProxyAdmin address cannot be zero");
-        require(coreDeployment.delegationManager != address(0), "DelegationManager address cannot be zero");
-        require(coreDeployment.avsDirectory != address(0), "AVSDirectory address cannot be zero");
     }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.9;
 
-interface IReclaimServiceManager {
+interface IReclaimTaskManager {
     // EVENTS
     event NewTaskCreated(uint32 indexed taskIndex, Task task);
 
@@ -38,7 +38,7 @@ interface IReclaimServiceManager {
         uint256 fee;
     }
 
-    struct Operator {
+    struct ReclaimOperator {
         /**
          * ETH address
          */
@@ -64,7 +64,7 @@ interface IReclaimServiceManager {
         /**
          * Operators selected for the task.
          */
-        Operator[] operators;
+        ReclaimOperator[] operators;
         /**
          * Total fee paid for the task.
          */
@@ -113,14 +113,6 @@ interface IReclaimServiceManager {
     // 0 values, empty strings are ignored -- essentially
     // all falsey values are ignored.
     function updateTaskCreationMetadata(TaskCreationMetadata memory metadata) external;
-
-    function whitelistAddressAsOperator(address operator, bool isWhitelisted) external;
-
-    // NOTE: this function is called by the operator
-    // updating their metadata.
-    // pass empty data to remove operator
-    function updateOperatorMetadata(OperatorMetadata memory metadata) external;
-
     /**
      * Create a new task.
      * @param request ClaimRequest
@@ -129,7 +121,6 @@ interface IReclaimServiceManager {
      * the request.owner
      */
     function createNewTask(ClaimRequest memory request, bytes memory requestSignature) external;
-
     // NOTE: this function is called by the user
     // once they have aggregated all the responses
     // to the task.
