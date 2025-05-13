@@ -26,7 +26,7 @@ import type {
   OnEvent,
 } from "./common";
 
-export declare namespace ISignatureUtils {
+export declare namespace ISignatureUtilsMixinTypes {
   export type SignatureWithSaltAndExpiryStruct = {
     signature: BytesLike;
     salt: BytesLike;
@@ -42,15 +42,16 @@ export declare namespace ISignatureUtils {
 
 export interface AVSDirectoryInterface extends utils.Interface {
   functions: {
-    "DOMAIN_TYPEHASH()": FunctionFragment;
     "OPERATOR_AVS_REGISTRATION_TYPEHASH()": FunctionFragment;
+    "OPERATOR_SET_FORCE_DEREGISTRATION_TYPEHASH()": FunctionFragment;
+    "OPERATOR_SET_REGISTRATION_TYPEHASH()": FunctionFragment;
     "avsOperatorStatus(address,address)": FunctionFragment;
     "calculateOperatorAVSRegistrationDigestHash(address,address,bytes32,uint256)": FunctionFragment;
     "cancelSalt(bytes32)": FunctionFragment;
     "delegation()": FunctionFragment;
     "deregisterOperatorFromAVS(address)": FunctionFragment;
     "domainSeparator()": FunctionFragment;
-    "initialize(address,address,uint256)": FunctionFragment;
+    "initialize(address,uint256)": FunctionFragment;
     "operatorSaltIsSpent(address,bytes32)": FunctionFragment;
     "owner()": FunctionFragment;
     "pause(uint256)": FunctionFragment;
@@ -60,16 +61,17 @@ export interface AVSDirectoryInterface extends utils.Interface {
     "pauserRegistry()": FunctionFragment;
     "registerOperatorToAVS(address,(bytes,bytes32,uint256))": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
-    "setPauserRegistry(address)": FunctionFragment;
     "transferOwnership(address)": FunctionFragment;
     "unpause(uint256)": FunctionFragment;
     "updateAVSMetadataURI(string)": FunctionFragment;
+    "version()": FunctionFragment;
   };
 
   getFunction(
     nameOrSignatureOrTopic:
-      | "DOMAIN_TYPEHASH"
       | "OPERATOR_AVS_REGISTRATION_TYPEHASH"
+      | "OPERATOR_SET_FORCE_DEREGISTRATION_TYPEHASH"
+      | "OPERATOR_SET_REGISTRATION_TYPEHASH"
       | "avsOperatorStatus"
       | "calculateOperatorAVSRegistrationDigestHash"
       | "cancelSalt"
@@ -86,18 +88,22 @@ export interface AVSDirectoryInterface extends utils.Interface {
       | "pauserRegistry"
       | "registerOperatorToAVS"
       | "renounceOwnership"
-      | "setPauserRegistry"
       | "transferOwnership"
       | "unpause"
       | "updateAVSMetadataURI"
+      | "version"
   ): FunctionFragment;
 
   encodeFunctionData(
-    functionFragment: "DOMAIN_TYPEHASH",
+    functionFragment: "OPERATOR_AVS_REGISTRATION_TYPEHASH",
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "OPERATOR_AVS_REGISTRATION_TYPEHASH",
+    functionFragment: "OPERATOR_SET_FORCE_DEREGISTRATION_TYPEHASH",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "OPERATOR_SET_REGISTRATION_TYPEHASH",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -126,7 +132,7 @@ export interface AVSDirectoryInterface extends utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "initialize",
-    values: [string, string, BigNumberish]
+    values: [string, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "operatorSaltIsSpent",
@@ -146,15 +152,11 @@ export interface AVSDirectoryInterface extends utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "registerOperatorToAVS",
-    values: [string, ISignatureUtils.SignatureWithSaltAndExpiryStruct]
+    values: [string, ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct]
   ): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
     values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "setPauserRegistry",
-    values: [string]
   ): string;
   encodeFunctionData(
     functionFragment: "transferOwnership",
@@ -168,13 +170,18 @@ export interface AVSDirectoryInterface extends utils.Interface {
     functionFragment: "updateAVSMetadataURI",
     values: [string]
   ): string;
+  encodeFunctionData(functionFragment: "version", values?: undefined): string;
 
   decodeFunctionResult(
-    functionFragment: "DOMAIN_TYPEHASH",
+    functionFragment: "OPERATOR_AVS_REGISTRATION_TYPEHASH",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "OPERATOR_AVS_REGISTRATION_TYPEHASH",
+    functionFragment: "OPERATOR_SET_FORCE_DEREGISTRATION_TYPEHASH",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "OPERATOR_SET_REGISTRATION_TYPEHASH",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -221,10 +228,6 @@ export interface AVSDirectoryInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "setPauserRegistry",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "transferOwnership",
     data: BytesLike
   ): Result;
@@ -233,6 +236,7 @@ export interface AVSDirectoryInterface extends utils.Interface {
     functionFragment: "updateAVSMetadataURI",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "version", data: BytesLike): Result;
 
   events: {
     "AVSMetadataURIUpdated(address,string)": EventFragment;
@@ -240,7 +244,6 @@ export interface AVSDirectoryInterface extends utils.Interface {
     "OperatorAVSRegistrationStatusUpdated(address,address,uint8)": EventFragment;
     "OwnershipTransferred(address,address)": EventFragment;
     "Paused(address,uint256)": EventFragment;
-    "PauserRegistrySet(address,address)": EventFragment;
     "Unpaused(address,uint256)": EventFragment;
   };
 
@@ -251,7 +254,6 @@ export interface AVSDirectoryInterface extends utils.Interface {
   ): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Paused"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "PauserRegistrySet"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Unpaused"): EventFragment;
 }
 
@@ -307,18 +309,6 @@ export type PausedEvent = TypedEvent<[string, BigNumber], PausedEventObject>;
 
 export type PausedEventFilter = TypedEventFilter<PausedEvent>;
 
-export interface PauserRegistrySetEventObject {
-  pauserRegistry: string;
-  newPauserRegistry: string;
-}
-export type PauserRegistrySetEvent = TypedEvent<
-  [string, string],
-  PauserRegistrySetEventObject
->;
-
-export type PauserRegistrySetEventFilter =
-  TypedEventFilter<PauserRegistrySetEvent>;
-
 export interface UnpausedEventObject {
   account: string;
   newPausedStatus: BigNumber;
@@ -357,15 +347,21 @@ export interface AVSDirectory extends BaseContract {
   removeListener: OnEvent<this>;
 
   functions: {
-    DOMAIN_TYPEHASH(overrides?: CallOverrides): Promise<[string]>;
-
     OPERATOR_AVS_REGISTRATION_TYPEHASH(
       overrides?: CallOverrides
     ): Promise<[string]>;
 
+    OPERATOR_SET_FORCE_DEREGISTRATION_TYPEHASH(
+      overrides?: CallOverrides
+    ): Promise<[string]>;
+
+    OPERATOR_SET_REGISTRATION_TYPEHASH(
+      overrides?: CallOverrides
+    ): Promise<[string]>;
+
     avsOperatorStatus(
-      arg0: string,
-      arg1: string,
+      avs: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<[number]>;
 
@@ -393,16 +389,15 @@ export interface AVSDirectory extends BaseContract {
 
     initialize(
       initialOwner: string,
-      _pauserRegistry: string,
       initialPausedStatus: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
     operatorSaltIsSpent(
-      arg0: string,
-      arg1: BytesLike,
+      operator: string,
+      salt: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    ): Promise<[boolean] & { isSpent: boolean }>;
 
     owner(overrides?: CallOverrides): Promise<[string]>;
 
@@ -426,16 +421,11 @@ export interface AVSDirectory extends BaseContract {
 
     registerOperatorToAVS(
       operator: string,
-      operatorSignature: ISignatureUtils.SignatureWithSaltAndExpiryStruct,
+      operatorSignature: ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
     renounceOwnership(
-      overrides?: Overrides & { from?: string }
-    ): Promise<ContractTransaction>;
-
-    setPauserRegistry(
-      newPauserRegistry: string,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
@@ -453,17 +443,25 @@ export interface AVSDirectory extends BaseContract {
       metadataURI: string,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
-  };
 
-  DOMAIN_TYPEHASH(overrides?: CallOverrides): Promise<string>;
+    version(overrides?: CallOverrides): Promise<[string]>;
+  };
 
   OPERATOR_AVS_REGISTRATION_TYPEHASH(
     overrides?: CallOverrides
   ): Promise<string>;
 
+  OPERATOR_SET_FORCE_DEREGISTRATION_TYPEHASH(
+    overrides?: CallOverrides
+  ): Promise<string>;
+
+  OPERATOR_SET_REGISTRATION_TYPEHASH(
+    overrides?: CallOverrides
+  ): Promise<string>;
+
   avsOperatorStatus(
-    arg0: string,
-    arg1: string,
+    avs: string,
+    operator: string,
     overrides?: CallOverrides
   ): Promise<number>;
 
@@ -491,14 +489,13 @@ export interface AVSDirectory extends BaseContract {
 
   initialize(
     initialOwner: string,
-    _pauserRegistry: string,
     initialPausedStatus: BigNumberish,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
   operatorSaltIsSpent(
-    arg0: string,
-    arg1: BytesLike,
+    operator: string,
+    salt: BytesLike,
     overrides?: CallOverrides
   ): Promise<boolean>;
 
@@ -524,16 +521,11 @@ export interface AVSDirectory extends BaseContract {
 
   registerOperatorToAVS(
     operator: string,
-    operatorSignature: ISignatureUtils.SignatureWithSaltAndExpiryStruct,
+    operatorSignature: ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
   renounceOwnership(
-    overrides?: Overrides & { from?: string }
-  ): Promise<ContractTransaction>;
-
-  setPauserRegistry(
-    newPauserRegistry: string,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
@@ -552,16 +544,24 @@ export interface AVSDirectory extends BaseContract {
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
-  callStatic: {
-    DOMAIN_TYPEHASH(overrides?: CallOverrides): Promise<string>;
+  version(overrides?: CallOverrides): Promise<string>;
 
+  callStatic: {
     OPERATOR_AVS_REGISTRATION_TYPEHASH(
       overrides?: CallOverrides
     ): Promise<string>;
 
+    OPERATOR_SET_FORCE_DEREGISTRATION_TYPEHASH(
+      overrides?: CallOverrides
+    ): Promise<string>;
+
+    OPERATOR_SET_REGISTRATION_TYPEHASH(
+      overrides?: CallOverrides
+    ): Promise<string>;
+
     avsOperatorStatus(
-      arg0: string,
-      arg1: string,
+      avs: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<number>;
 
@@ -586,14 +586,13 @@ export interface AVSDirectory extends BaseContract {
 
     initialize(
       initialOwner: string,
-      _pauserRegistry: string,
       initialPausedStatus: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
 
     operatorSaltIsSpent(
-      arg0: string,
-      arg1: BytesLike,
+      operator: string,
+      salt: BytesLike,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
@@ -617,16 +616,11 @@ export interface AVSDirectory extends BaseContract {
 
     registerOperatorToAVS(
       operator: string,
-      operatorSignature: ISignatureUtils.SignatureWithSaltAndExpiryStruct,
+      operatorSignature: ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct,
       overrides?: CallOverrides
     ): Promise<void>;
 
     renounceOwnership(overrides?: CallOverrides): Promise<void>;
-
-    setPauserRegistry(
-      newPauserRegistry: string,
-      overrides?: CallOverrides
-    ): Promise<void>;
 
     transferOwnership(
       newOwner: string,
@@ -642,6 +636,8 @@ export interface AVSDirectory extends BaseContract {
       metadataURI: string,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    version(overrides?: CallOverrides): Promise<string>;
   };
 
   filters: {
@@ -683,15 +679,6 @@ export interface AVSDirectory extends BaseContract {
     ): PausedEventFilter;
     Paused(account?: string | null, newPausedStatus?: null): PausedEventFilter;
 
-    "PauserRegistrySet(address,address)"(
-      pauserRegistry?: null,
-      newPauserRegistry?: null
-    ): PauserRegistrySetEventFilter;
-    PauserRegistrySet(
-      pauserRegistry?: null,
-      newPauserRegistry?: null
-    ): PauserRegistrySetEventFilter;
-
     "Unpaused(address,uint256)"(
       account?: string | null,
       newPausedStatus?: null
@@ -703,15 +690,21 @@ export interface AVSDirectory extends BaseContract {
   };
 
   estimateGas: {
-    DOMAIN_TYPEHASH(overrides?: CallOverrides): Promise<BigNumber>;
-
     OPERATOR_AVS_REGISTRATION_TYPEHASH(
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    OPERATOR_SET_FORCE_DEREGISTRATION_TYPEHASH(
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    OPERATOR_SET_REGISTRATION_TYPEHASH(
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     avsOperatorStatus(
-      arg0: string,
-      arg1: string,
+      avs: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -739,14 +732,13 @@ export interface AVSDirectory extends BaseContract {
 
     initialize(
       initialOwner: string,
-      _pauserRegistry: string,
       initialPausedStatus: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     operatorSaltIsSpent(
-      arg0: string,
-      arg1: BytesLike,
+      operator: string,
+      salt: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -770,16 +762,11 @@ export interface AVSDirectory extends BaseContract {
 
     registerOperatorToAVS(
       operator: string,
-      operatorSignature: ISignatureUtils.SignatureWithSaltAndExpiryStruct,
+      operatorSignature: ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     renounceOwnership(
-      overrides?: Overrides & { from?: string }
-    ): Promise<BigNumber>;
-
-    setPauserRegistry(
-      newPauserRegistry: string,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
@@ -797,18 +784,26 @@ export interface AVSDirectory extends BaseContract {
       metadataURI: string,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
+
+    version(overrides?: CallOverrides): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    DOMAIN_TYPEHASH(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
     OPERATOR_AVS_REGISTRATION_TYPEHASH(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    OPERATOR_SET_FORCE_DEREGISTRATION_TYPEHASH(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    OPERATOR_SET_REGISTRATION_TYPEHASH(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     avsOperatorStatus(
-      arg0: string,
-      arg1: string,
+      avs: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -836,14 +831,13 @@ export interface AVSDirectory extends BaseContract {
 
     initialize(
       initialOwner: string,
-      _pauserRegistry: string,
       initialPausedStatus: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     operatorSaltIsSpent(
-      arg0: string,
-      arg1: BytesLike,
+      operator: string,
+      salt: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -869,16 +863,11 @@ export interface AVSDirectory extends BaseContract {
 
     registerOperatorToAVS(
       operator: string,
-      operatorSignature: ISignatureUtils.SignatureWithSaltAndExpiryStruct,
+      operatorSignature: ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     renounceOwnership(
-      overrides?: Overrides & { from?: string }
-    ): Promise<PopulatedTransaction>;
-
-    setPauserRegistry(
-      newPauserRegistry: string,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
@@ -896,5 +885,7 @@ export interface AVSDirectory extends BaseContract {
       metadataURI: string,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
+
+    version(overrides?: CallOverrides): Promise<PopulatedTransaction>;
   };
 }

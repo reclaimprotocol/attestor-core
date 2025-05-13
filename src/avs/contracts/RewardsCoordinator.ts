@@ -26,7 +26,54 @@ import type {
   OnEvent,
 } from "./common";
 
-export declare namespace IRewardsCoordinator {
+export type OperatorSetStruct = { avs: string; id: BigNumberish };
+
+export type OperatorSetStructOutput = [string, number] & {
+  avs: string;
+  id: number;
+};
+
+export declare namespace IRewardsCoordinatorTypes {
+  export type RewardsCoordinatorConstructorParamsStruct = {
+    delegationManager: string;
+    strategyManager: string;
+    allocationManager: string;
+    pauserRegistry: string;
+    permissionController: string;
+    CALCULATION_INTERVAL_SECONDS: BigNumberish;
+    MAX_REWARDS_DURATION: BigNumberish;
+    MAX_RETROACTIVE_LENGTH: BigNumberish;
+    MAX_FUTURE_LENGTH: BigNumberish;
+    GENESIS_REWARDS_TIMESTAMP: BigNumberish;
+    version: string;
+  };
+
+  export type RewardsCoordinatorConstructorParamsStructOutput = [
+    string,
+    string,
+    string,
+    string,
+    string,
+    number,
+    number,
+    number,
+    number,
+    number,
+    string
+  ] & {
+    delegationManager: string;
+    strategyManager: string;
+    allocationManager: string;
+    pauserRegistry: string;
+    permissionController: string;
+    CALCULATION_INTERVAL_SECONDS: number;
+    MAX_REWARDS_DURATION: number;
+    MAX_RETROACTIVE_LENGTH: number;
+    MAX_FUTURE_LENGTH: number;
+    GENESIS_REWARDS_TIMESTAMP: number;
+    version: string;
+  };
+
   export type EarnerTreeMerkleLeafStruct = {
     earner: string;
     earnerTokenRoot: BytesLike;
@@ -51,28 +98,28 @@ export declare namespace IRewardsCoordinator {
     rootIndex: BigNumberish;
     earnerIndex: BigNumberish;
     earnerTreeProof: BytesLike;
-    earnerLeaf: IRewardsCoordinator.EarnerTreeMerkleLeafStruct;
+    earnerLeaf: IRewardsCoordinatorTypes.EarnerTreeMerkleLeafStruct;
     tokenIndices: BigNumberish[];
     tokenTreeProofs: BytesLike[];
-    tokenLeaves: IRewardsCoordinator.TokenTreeMerkleLeafStruct[];
+    tokenLeaves: IRewardsCoordinatorTypes.TokenTreeMerkleLeafStruct[];
   };
 
   export type RewardsMerkleClaimStructOutput = [
     number,
     number,
     string,
-    IRewardsCoordinator.EarnerTreeMerkleLeafStructOutput,
+    IRewardsCoordinatorTypes.EarnerTreeMerkleLeafStructOutput,
     number[],
     string[],
-    IRewardsCoordinator.TokenTreeMerkleLeafStructOutput[]
+    IRewardsCoordinatorTypes.TokenTreeMerkleLeafStructOutput[]
   ] & {
     rootIndex: number;
     earnerIndex: number;
     earnerTreeProof: string;
-    earnerLeaf: IRewardsCoordinator.EarnerTreeMerkleLeafStructOutput;
+    earnerLeaf: IRewardsCoordinatorTypes.EarnerTreeMerkleLeafStructOutput;
     tokenIndices: number[];
     tokenTreeProofs: string[];
-    tokenLeaves: IRewardsCoordinator.TokenTreeMerkleLeafStructOutput[];
+    tokenLeaves: IRewardsCoordinatorTypes.TokenTreeMerkleLeafStructOutput[];
   };
 
   export type StrategyAndMultiplierStruct = {
@@ -86,7 +133,7 @@ export declare namespace IRewardsCoordinator {
   };
 
   export type RewardsSubmissionStruct = {
-    strategiesAndMultipliers: IRewardsCoordinator.StrategyAndMultiplierStruct[];
+    strategiesAndMultipliers: IRewardsCoordinatorTypes.StrategyAndMultiplierStruct[];
     token: string;
     amount: BigNumberish;
     startTimestamp: BigNumberish;
@@ -94,13 +141,13 @@ export declare namespace IRewardsCoordinator {
   };
 
   export type RewardsSubmissionStructOutput = [
-    IRewardsCoordinator.StrategyAndMultiplierStructOutput[],
+    IRewardsCoordinatorTypes.StrategyAndMultiplierStructOutput[],
     string,
     BigNumber,
     number,
     number
   ] & {
-    strategiesAndMultipliers: IRewardsCoordinator.StrategyAndMultiplierStructOutput[];
+    strategiesAndMultipliers: IRewardsCoordinatorTypes.StrategyAndMultiplierStructOutput[];
     token: string;
     amount: BigNumber;
     startTimestamp: number;
@@ -115,25 +162,25 @@ export declare namespace IRewardsCoordinator {
   };
 
   export type OperatorDirectedRewardsSubmissionStruct = {
-    strategiesAndMultipliers: IRewardsCoordinator.StrategyAndMultiplierStruct[];
+    strategiesAndMultipliers: IRewardsCoordinatorTypes.StrategyAndMultiplierStruct[];
     token: string;
-    operatorRewards: IRewardsCoordinator.OperatorRewardStruct[];
+    operatorRewards: IRewardsCoordinatorTypes.OperatorRewardStruct[];
     startTimestamp: BigNumberish;
     duration: BigNumberish;
     description: string;
   };
 
   export type OperatorDirectedRewardsSubmissionStructOutput = [
-    IRewardsCoordinator.StrategyAndMultiplierStructOutput[],
+    IRewardsCoordinatorTypes.StrategyAndMultiplierStructOutput[],
     string,
-    IRewardsCoordinator.OperatorRewardStructOutput[],
+    IRewardsCoordinatorTypes.OperatorRewardStructOutput[],
     number,
     number,
     string
   ] & {
-    strategiesAndMultipliers: IRewardsCoordinator.StrategyAndMultiplierStructOutput[];
+    strategiesAndMultipliers: IRewardsCoordinatorTypes.StrategyAndMultiplierStructOutput[];
     token: string;
-    operatorRewards: IRewardsCoordinator.OperatorRewardStructOutput[];
+    operatorRewards: IRewardsCoordinatorTypes.OperatorRewardStructOutput[];
     startTimestamp: number;
     duration: number;
     description: string;
@@ -167,6 +214,7 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     "MAX_RETROACTIVE_LENGTH()": FunctionFragment;
     "MAX_REWARDS_DURATION()": FunctionFragment;
     "activationDelay()": FunctionFragment;
+    "allocationManager()": FunctionFragment;
     "beaconChainETHStrategy()": FunctionFragment;
     "calculateEarnerLeafHash((address,bytes32))": FunctionFragment;
     "calculateTokenLeafHash((address,uint256))": FunctionFragment;
@@ -174,6 +222,7 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     "claimerFor(address)": FunctionFragment;
     "createAVSRewardsSubmission(((address,uint96)[],address,uint256,uint32,uint32)[])": FunctionFragment;
     "createOperatorDirectedAVSRewardsSubmission(address,((address,uint96)[],address,(address,uint256)[],uint32,uint32,string)[])": FunctionFragment;
+    "createOperatorDirectedOperatorSetRewardsSubmission((address,uint32),((address,uint96)[],address,(address,uint256)[],uint32,uint32,string)[])": FunctionFragment;
     "createRewardsForAllEarners(((address,uint96)[],address,uint256,uint32,uint32)[])": FunctionFragment;
     "createRewardsForAllSubmission(((address,uint96)[],address,uint256,uint32,uint32)[])": FunctionFragment;
     "cumulativeClaimed(address,address)": FunctionFragment;
@@ -181,17 +230,18 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     "defaultOperatorSplitBips()": FunctionFragment;
     "delegationManager()": FunctionFragment;
     "disableRoot(uint32)": FunctionFragment;
-    "domainSeparator()": FunctionFragment;
     "getCurrentClaimableDistributionRoot()": FunctionFragment;
     "getCurrentDistributionRoot()": FunctionFragment;
     "getDistributionRootAtIndex(uint256)": FunctionFragment;
     "getDistributionRootsLength()": FunctionFragment;
     "getOperatorAVSSplit(address,address)": FunctionFragment;
     "getOperatorPISplit(address)": FunctionFragment;
+    "getOperatorSetSplit(address,(address,uint32))": FunctionFragment;
     "getRootIndexFromHash(bytes32)": FunctionFragment;
-    "initialize(address,address,uint256,address,uint32,uint16)": FunctionFragment;
+    "initialize(address,uint256,address,uint32,uint16)": FunctionFragment;
     "isAVSRewardsSubmissionHash(address,bytes32)": FunctionFragment;
     "isOperatorDirectedAVSRewardsSubmissionHash(address,bytes32)": FunctionFragment;
+    "isOperatorDirectedOperatorSetRewardsSubmissionHash(address,bytes32)": FunctionFragment;
     "isRewardsForAllSubmitter(address)": FunctionFragment;
     "isRewardsSubmissionForAllEarnersHash(address,bytes32)": FunctionFragment;
     "isRewardsSubmissionForAllHash(address,bytes32)": FunctionFragment;
@@ -201,16 +251,18 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     "paused(uint8)": FunctionFragment;
     "paused()": FunctionFragment;
     "pauserRegistry()": FunctionFragment;
+    "permissionController()": FunctionFragment;
     "processClaim((uint32,uint32,bytes,(address,bytes32),uint32[],bytes[],(address,uint256)[]),address)": FunctionFragment;
     "processClaims((uint32,uint32,bytes,(address,bytes32),uint32[],bytes[],(address,uint256)[])[],address)": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
     "rewardsUpdater()": FunctionFragment;
     "setActivationDelay(uint32)": FunctionFragment;
     "setClaimerFor(address)": FunctionFragment;
+    "setClaimerFor(address,address)": FunctionFragment;
     "setDefaultOperatorSplit(uint16)": FunctionFragment;
     "setOperatorAVSSplit(address,address,uint16)": FunctionFragment;
     "setOperatorPISplit(address,uint16)": FunctionFragment;
-    "setPauserRegistry(address)": FunctionFragment;
+    "setOperatorSetSplit(address,(address,uint32),uint16)": FunctionFragment;
     "setRewardsForAllSubmitter(address,bool)": FunctionFragment;
     "setRewardsUpdater(address)": FunctionFragment;
     "strategyManager()": FunctionFragment;
@@ -218,6 +270,7 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     "submitRoot(bytes32,uint32)": FunctionFragment;
     "transferOwnership(address)": FunctionFragment;
     "unpause(uint256)": FunctionFragment;
+    "version()": FunctionFragment;
   };
 
   getFunction(
@@ -228,6 +281,7 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
       | "MAX_RETROACTIVE_LENGTH"
       | "MAX_REWARDS_DURATION"
       | "activationDelay"
+      | "allocationManager"
       | "beaconChainETHStrategy"
       | "calculateEarnerLeafHash"
       | "calculateTokenLeafHash"
@@ -235,6 +289,7 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
       | "claimerFor"
       | "createAVSRewardsSubmission"
       | "createOperatorDirectedAVSRewardsSubmission"
+      | "createOperatorDirectedOperatorSetRewardsSubmission"
       | "createRewardsForAllEarners"
       | "createRewardsForAllSubmission"
       | "cumulativeClaimed"
@@ -242,17 +297,18 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
       | "defaultOperatorSplitBips"
       | "delegationManager"
       | "disableRoot"
-      | "domainSeparator"
       | "getCurrentClaimableDistributionRoot"
       | "getCurrentDistributionRoot"
       | "getDistributionRootAtIndex"
       | "getDistributionRootsLength"
       | "getOperatorAVSSplit"
       | "getOperatorPISplit"
+      | "getOperatorSetSplit"
       | "getRootIndexFromHash"
       | "initialize"
       | "isAVSRewardsSubmissionHash"
       | "isOperatorDirectedAVSRewardsSubmissionHash"
+      | "isOperatorDirectedOperatorSetRewardsSubmissionHash"
       | "isRewardsForAllSubmitter"
       | "isRewardsSubmissionForAllEarnersHash"
       | "isRewardsSubmissionForAllHash"
@@ -262,16 +318,18 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
       | "paused(uint8)"
       | "paused()"
       | "pauserRegistry"
+      | "permissionController"
       | "processClaim"
       | "processClaims"
       | "renounceOwnership"
       | "rewardsUpdater"
       | "setActivationDelay"
-      | "setClaimerFor"
+      | "setClaimerFor(address)"
+      | "setClaimerFor(address,address)"
       | "setDefaultOperatorSplit"
       | "setOperatorAVSSplit"
       | "setOperatorPISplit"
-      | "setPauserRegistry"
+      | "setOperatorSetSplit"
       | "setRewardsForAllSubmitter"
       | "setRewardsUpdater"
       | "strategyManager"
@@ -279,6 +337,7 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
       | "submitRoot"
       | "transferOwnership"
       | "unpause"
+      | "version"
   ): FunctionFragment;
 
   encodeFunctionData(
@@ -306,40 +365,51 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "allocationManager",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "beaconChainETHStrategy",
     values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "calculateEarnerLeafHash",
-    values: [IRewardsCoordinator.EarnerTreeMerkleLeafStruct]
+    values: [IRewardsCoordinatorTypes.EarnerTreeMerkleLeafStruct]
   ): string;
   encodeFunctionData(
     functionFragment: "calculateTokenLeafHash",
-    values: [IRewardsCoordinator.TokenTreeMerkleLeafStruct]
+    values: [IRewardsCoordinatorTypes.TokenTreeMerkleLeafStruct]
   ): string;
   encodeFunctionData(
     functionFragment: "checkClaim",
-    values: [IRewardsCoordinator.RewardsMerkleClaimStruct]
+    values: [IRewardsCoordinatorTypes.RewardsMerkleClaimStruct]
   ): string;
   encodeFunctionData(functionFragment: "claimerFor", values: [string]): string;
   encodeFunctionData(
     functionFragment: "createAVSRewardsSubmission",
-    values: [IRewardsCoordinator.RewardsSubmissionStruct[]]
+    values: [IRewardsCoordinatorTypes.RewardsSubmissionStruct[]]
   ): string;
   encodeFunctionData(
     functionFragment: "createOperatorDirectedAVSRewardsSubmission",
     values: [
       string,
-      IRewardsCoordinator.OperatorDirectedRewardsSubmissionStruct[]
+      IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[]
+    ]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "createOperatorDirectedOperatorSetRewardsSubmission",
+    values: [
+      OperatorSetStruct,
+      IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[]
     ]
   ): string;
   encodeFunctionData(
     functionFragment: "createRewardsForAllEarners",
-    values: [IRewardsCoordinator.RewardsSubmissionStruct[]]
+    values: [IRewardsCoordinatorTypes.RewardsSubmissionStruct[]]
   ): string;
   encodeFunctionData(
     functionFragment: "createRewardsForAllSubmission",
-    values: [IRewardsCoordinator.RewardsSubmissionStruct[]]
+    values: [IRewardsCoordinatorTypes.RewardsSubmissionStruct[]]
   ): string;
   encodeFunctionData(
     functionFragment: "cumulativeClaimed",
@@ -360,10 +430,6 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "disableRoot",
     values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "domainSeparator",
-    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "getCurrentClaimableDistributionRoot",
@@ -390,12 +456,16 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     values: [string]
   ): string;
   encodeFunctionData(
+    functionFragment: "getOperatorSetSplit",
+    values: [string, OperatorSetStruct]
+  ): string;
+  encodeFunctionData(
     functionFragment: "getRootIndexFromHash",
     values: [BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "initialize",
-    values: [string, string, BigNumberish, string, BigNumberish, BigNumberish]
+    values: [string, BigNumberish, string, BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "isAVSRewardsSubmissionHash",
@@ -403,6 +473,10 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "isOperatorDirectedAVSRewardsSubmissionHash",
+    values: [string, BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "isOperatorDirectedOperatorSetRewardsSubmissionHash",
     values: [string, BytesLike]
   ): string;
   encodeFunctionData(
@@ -430,12 +504,16 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "permissionController",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "processClaim",
-    values: [IRewardsCoordinator.RewardsMerkleClaimStruct, string]
+    values: [IRewardsCoordinatorTypes.RewardsMerkleClaimStruct, string]
   ): string;
   encodeFunctionData(
     functionFragment: "processClaims",
-    values: [IRewardsCoordinator.RewardsMerkleClaimStruct[], string]
+    values: [IRewardsCoordinatorTypes.RewardsMerkleClaimStruct[], string]
   ): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
@@ -450,8 +528,12 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "setClaimerFor",
+    functionFragment: "setClaimerFor(address)",
     values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setClaimerFor(address,address)",
+    values: [string, string]
   ): string;
   encodeFunctionData(
     functionFragment: "setDefaultOperatorSplit",
@@ -466,8 +548,8 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     values: [string, BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "setPauserRegistry",
-    values: [string]
+    functionFragment: "setOperatorSetSplit",
+    values: [string, OperatorSetStruct, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "setRewardsForAllSubmitter",
@@ -497,6 +579,7 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     functionFragment: "unpause",
     values: [BigNumberish]
   ): string;
+  encodeFunctionData(functionFragment: "version", values?: undefined): string;
 
   decodeFunctionResult(
     functionFragment: "CALCULATION_INTERVAL_SECONDS",
@@ -523,6 +606,10 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "allocationManager",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "beaconChainETHStrategy",
     data: BytesLike
   ): Result;
@@ -542,6 +629,10 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "createOperatorDirectedAVSRewardsSubmission",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "createOperatorDirectedOperatorSetRewardsSubmission",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -573,10 +664,6 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "domainSeparator",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "getCurrentClaimableDistributionRoot",
     data: BytesLike
   ): Result;
@@ -601,6 +688,10 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "getOperatorSetSplit",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "getRootIndexFromHash",
     data: BytesLike
   ): Result;
@@ -611,6 +702,10 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "isOperatorDirectedAVSRewardsSubmissionHash",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "isOperatorDirectedOperatorSetRewardsSubmissionHash",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -638,6 +733,10 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "permissionController",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "processClaim",
     data: BytesLike
   ): Result;
@@ -658,7 +757,11 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "setClaimerFor",
+    functionFragment: "setClaimerFor(address)",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setClaimerFor(address,address)",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -674,7 +777,7 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "setPauserRegistry",
+    functionFragment: "setOperatorSetSplit",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -699,6 +802,7 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "unpause", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "version", data: BytesLike): Result;
 
   events: {
     "AVSRewardsSubmissionCreated(address,uint256,bytes32,((address,uint96)[],address,uint256,uint32,uint32))": EventFragment;
@@ -710,10 +814,11 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
     "Initialized(uint8)": EventFragment;
     "OperatorAVSSplitBipsSet(address,address,address,uint32,uint16,uint16)": EventFragment;
     "OperatorDirectedAVSRewardsSubmissionCreated(address,address,bytes32,uint256,((address,uint96)[],address,(address,uint256)[],uint32,uint32,string))": EventFragment;
+    "OperatorDirectedOperatorSetRewardsSubmissionCreated(address,bytes32,(address,uint32),uint256,((address,uint96)[],address,(address,uint256)[],uint32,uint32,string))": EventFragment;
     "OperatorPISplitBipsSet(address,address,uint32,uint16,uint16)": EventFragment;
+    "OperatorSetSplitBipsSet(address,address,(address,uint32),uint32,uint16,uint16)": EventFragment;
     "OwnershipTransferred(address,address)": EventFragment;
     "Paused(address,uint256)": EventFragment;
-    "PauserRegistrySet(address,address)": EventFragment;
     "RewardsClaimed(bytes32,address,address,address,address,uint256)": EventFragment;
     "RewardsForAllSubmitterSet(address,bool,bool)": EventFragment;
     "RewardsSubmissionForAllCreated(address,uint256,bytes32,((address,uint96)[],address,uint256,uint32,uint32))": EventFragment;
@@ -737,10 +842,13 @@ export interface RewardsCoordinatorInterface extends utils.Interface {
   getEvent(
     nameOrSignatureOrTopic: "OperatorDirectedAVSRewardsSubmissionCreated"
   ): EventFragment;
+  getEvent(
+    nameOrSignatureOrTopic: "OperatorDirectedOperatorSetRewardsSubmissionCreated"
+  ): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OperatorPISplitBipsSet"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "OperatorSetSplitBipsSet"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Paused"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "PauserRegistrySet"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "RewardsClaimed"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "RewardsForAllSubmitterSet"): EventFragment;
   getEvent(
@@ -757,14 +865,14 @@ export interface AVSRewardsSubmissionCreatedEventObject {
   avs: string;
   submissionNonce: BigNumber;
   rewardsSubmissionHash: string;
-  rewardsSubmission: IRewardsCoordinator.RewardsSubmissionStructOutput;
+  rewardsSubmission: IRewardsCoordinatorTypes.RewardsSubmissionStructOutput;
 }
 export type AVSRewardsSubmissionCreatedEvent = TypedEvent<
   [
     string,
     BigNumber,
     string,
-    IRewardsCoordinator.RewardsSubmissionStructOutput
+    IRewardsCoordinatorTypes.RewardsSubmissionStructOutput
   ],
   AVSRewardsSubmissionCreatedEventObject
 >;
@@ -861,7 +969,7 @@ export interface OperatorDirectedAVSRewardsSubmissionCreatedEventObject {
   avs: string;
   operatorDirectedRewardsSubmissionHash: string;
   submissionNonce: BigNumber;
-  operatorDirectedRewardsSubmission: IRewardsCoordinator.OperatorDirectedRewardsSubmissionStructOutput;
+  operatorDirectedRewardsSubmission: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStructOutput;
 }
 export type OperatorDirectedAVSRewardsSubmissionCreatedEvent = TypedEvent<
   [
@@ -869,13 +977,35 @@ export type OperatorDirectedAVSRewardsSubmissionCreatedEvent = TypedEvent<
     string,
     string,
     BigNumber,
-    IRewardsCoordinator.OperatorDirectedRewardsSubmissionStructOutput
+    IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStructOutput
   ],
   OperatorDirectedAVSRewardsSubmissionCreatedEventObject
 >;
 
 export type OperatorDirectedAVSRewardsSubmissionCreatedEventFilter =
   TypedEventFilter<OperatorDirectedAVSRewardsSubmissionCreatedEvent>;
+
+export interface OperatorDirectedOperatorSetRewardsSubmissionCreatedEventObject {
+  caller: string;
+  operatorDirectedRewardsSubmissionHash: string;
+  operatorSet: OperatorSetStructOutput;
+  submissionNonce: BigNumber;
+  operatorDirectedRewardsSubmission: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStructOutput;
+}
+export type OperatorDirectedOperatorSetRewardsSubmissionCreatedEvent =
+  TypedEvent<
+    [
+      string,
+      string,
+      OperatorSetStructOutput,
+      BigNumber,
+      IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStructOutput
+    ],
+    OperatorDirectedOperatorSetRewardsSubmissionCreatedEventObject
+  >;
+
+export type OperatorDirectedOperatorSetRewardsSubmissionCreatedEventFilter =
+  TypedEventFilter<OperatorDirectedOperatorSetRewardsSubmissionCreatedEvent>;
 
 export interface OperatorPISplitBipsSetEventObject {
   caller: string;
@@ -891,6 +1021,22 @@ export type OperatorPISplitBipsSetEvent = TypedEvent<
 
 export type OperatorPISplitBipsSetEventFilter =
   TypedEventFilter<OperatorPISplitBipsSetEvent>;
+
+export interface OperatorSetSplitBipsSetEventObject {
+  caller: string;
+  operator: string;
+  operatorSet: OperatorSetStructOutput;
+  activatedAt: number;
+  oldOperatorSetSplitBips: number;
+  newOperatorSetSplitBips: number;
+}
+export type OperatorSetSplitBipsSetEvent = TypedEvent<
+  [string, string, OperatorSetStructOutput, number, number, number],
+  OperatorSetSplitBipsSetEventObject
+>;
+
+export type OperatorSetSplitBipsSetEventFilter =
+  TypedEventFilter<OperatorSetSplitBipsSetEvent>;
 
 export interface OwnershipTransferredEventObject {
   previousOwner: string;
@@ -911,18 +1057,6 @@ export interface PausedEventObject {
 export type PausedEvent = TypedEvent<[string, BigNumber], PausedEventObject>;
 
 export type PausedEventFilter = TypedEventFilter<PausedEvent>;
-
-export interface PauserRegistrySetEventObject {
-  pauserRegistry: string;
-  newPauserRegistry: string;
-}
-export type PauserRegistrySetEvent = TypedEvent<
-  [string, string],
-  PauserRegistrySetEventObject
->;
-
-export type PauserRegistrySetEventFilter =
-  TypedEventFilter<PauserRegistrySetEvent>;
 
 export interface RewardsClaimedEventObject {
   root: string;
@@ -956,14 +1090,14 @@ export interface RewardsSubmissionForAllCreatedEventObject {
   submitter: string;
   submissionNonce: BigNumber;
   rewardsSubmissionHash: string;
-  rewardsSubmission: IRewardsCoordinator.RewardsSubmissionStructOutput;
+  rewardsSubmission: IRewardsCoordinatorTypes.RewardsSubmissionStructOutput;
 }
 export type RewardsSubmissionForAllCreatedEvent = TypedEvent<
   [
     string,
     BigNumber,
     string,
-    IRewardsCoordinator.RewardsSubmissionStructOutput
+    IRewardsCoordinatorTypes.RewardsSubmissionStructOutput
   ],
   RewardsSubmissionForAllCreatedEventObject
 >;
@@ -975,14 +1109,14 @@ export interface RewardsSubmissionForAllEarnersCreatedEventObject {
   tokenHopper: string;
   submissionNonce: BigNumber;
   rewardsSubmissionHash: string;
-  rewardsSubmission: IRewardsCoordinator.RewardsSubmissionStructOutput;
+  rewardsSubmission: IRewardsCoordinatorTypes.RewardsSubmissionStructOutput;
 }
 export type RewardsSubmissionForAllEarnersCreatedEvent = TypedEvent<
   [
     string,
     BigNumber,
     string,
-    IRewardsCoordinator.RewardsSubmissionStructOutput
+    IRewardsCoordinatorTypes.RewardsSubmissionStructOutput
   ],
   RewardsSubmissionForAllEarnersCreatedEventObject
 >;
@@ -1052,51 +1186,62 @@ export interface RewardsCoordinator extends BaseContract {
 
     activationDelay(overrides?: CallOverrides): Promise<[number]>;
 
+    allocationManager(overrides?: CallOverrides): Promise<[string]>;
+
     beaconChainETHStrategy(overrides?: CallOverrides): Promise<[string]>;
 
     calculateEarnerLeafHash(
-      leaf: IRewardsCoordinator.EarnerTreeMerkleLeafStruct,
+      leaf: IRewardsCoordinatorTypes.EarnerTreeMerkleLeafStruct,
       overrides?: CallOverrides
     ): Promise<[string]>;
 
     calculateTokenLeafHash(
-      leaf: IRewardsCoordinator.TokenTreeMerkleLeafStruct,
+      leaf: IRewardsCoordinatorTypes.TokenTreeMerkleLeafStruct,
       overrides?: CallOverrides
     ): Promise<[string]>;
 
     checkClaim(
-      claim: IRewardsCoordinator.RewardsMerkleClaimStruct,
+      claim: IRewardsCoordinatorTypes.RewardsMerkleClaimStruct,
       overrides?: CallOverrides
     ): Promise<[boolean]>;
 
-    claimerFor(arg0: string, overrides?: CallOverrides): Promise<[string]>;
+    claimerFor(
+      earner: string,
+      overrides?: CallOverrides
+    ): Promise<[string] & { claimer: string }>;
 
     createAVSRewardsSubmission(
-      rewardsSubmissions: IRewardsCoordinator.RewardsSubmissionStruct[],
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
     createOperatorDirectedAVSRewardsSubmission(
       avs: string,
-      operatorDirectedRewardsSubmissions: IRewardsCoordinator.OperatorDirectedRewardsSubmissionStruct[],
+      operatorDirectedRewardsSubmissions: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[],
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
+
+    createOperatorDirectedOperatorSetRewardsSubmission(
+      operatorSet: OperatorSetStruct,
+      operatorDirectedRewardsSubmissions: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[],
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
     createRewardsForAllEarners(
-      rewardsSubmissions: IRewardsCoordinator.RewardsSubmissionStruct[],
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
     createRewardsForAllSubmission(
-      rewardsSubmissions: IRewardsCoordinator.RewardsSubmissionStruct[],
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
     cumulativeClaimed(
-      arg0: string,
-      arg1: string,
+      earner: string,
+      token: string,
       overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+    ): Promise<[BigNumber] & { totalClaimed: BigNumber }>;
 
     currRewardsCalculationEndTimestamp(
       overrides?: CallOverrides
@@ -1111,20 +1256,18 @@ export interface RewardsCoordinator extends BaseContract {
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
-    domainSeparator(overrides?: CallOverrides): Promise<[string]>;
-
     getCurrentClaimableDistributionRoot(
       overrides?: CallOverrides
-    ): Promise<[IRewardsCoordinator.DistributionRootStructOutput]>;
+    ): Promise<[IRewardsCoordinatorTypes.DistributionRootStructOutput]>;
 
     getCurrentDistributionRoot(
       overrides?: CallOverrides
-    ): Promise<[IRewardsCoordinator.DistributionRootStructOutput]>;
+    ): Promise<[IRewardsCoordinatorTypes.DistributionRootStructOutput]>;
 
     getDistributionRootAtIndex(
       index: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<[IRewardsCoordinator.DistributionRootStructOutput]>;
+    ): Promise<[IRewardsCoordinatorTypes.DistributionRootStructOutput]>;
 
     getDistributionRootsLength(overrides?: CallOverrides): Promise<[BigNumber]>;
 
@@ -1139,6 +1282,12 @@ export interface RewardsCoordinator extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[number]>;
 
+    getOperatorSetSplit(
+      operator: string,
+      operatorSet: OperatorSetStruct,
+      overrides?: CallOverrides
+    ): Promise<[number]>;
+
     getRootIndexFromHash(
       rootHash: BytesLike,
       overrides?: CallOverrides
@@ -1146,7 +1295,6 @@ export interface RewardsCoordinator extends BaseContract {
 
     initialize(
       initialOwner: string,
-      _pauserRegistry: string,
       initialPausedStatus: BigNumberish,
       _rewardsUpdater: string,
       _activationDelay: BigNumberish,
@@ -1155,33 +1303,39 @@ export interface RewardsCoordinator extends BaseContract {
     ): Promise<ContractTransaction>;
 
     isAVSRewardsSubmissionHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    ): Promise<[boolean] & { valid: boolean }>;
 
     isOperatorDirectedAVSRewardsSubmissionHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    ): Promise<[boolean] & { valid: boolean }>;
+
+    isOperatorDirectedOperatorSetRewardsSubmissionHash(
+      avs: string,
+      hash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<[boolean] & { valid: boolean }>;
 
     isRewardsForAllSubmitter(
-      arg0: string,
+      submitter: string,
       overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    ): Promise<[boolean] & { valid: boolean }>;
 
     isRewardsSubmissionForAllEarnersHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    ): Promise<[boolean] & { valid: boolean }>;
 
     isRewardsSubmissionForAllHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    ): Promise<[boolean] & { valid: boolean }>;
 
     owner(overrides?: CallOverrides): Promise<[string]>;
 
@@ -1203,14 +1357,16 @@ export interface RewardsCoordinator extends BaseContract {
 
     pauserRegistry(overrides?: CallOverrides): Promise<[string]>;
 
+    permissionController(overrides?: CallOverrides): Promise<[string]>;
+
     processClaim(
-      claim: IRewardsCoordinator.RewardsMerkleClaimStruct,
+      claim: IRewardsCoordinatorTypes.RewardsMerkleClaimStruct,
       recipient: string,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
     processClaims(
-      claims: IRewardsCoordinator.RewardsMerkleClaimStruct[],
+      claims: IRewardsCoordinatorTypes.RewardsMerkleClaimStruct[],
       recipient: string,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
@@ -1226,7 +1382,13 @@ export interface RewardsCoordinator extends BaseContract {
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
-    setClaimerFor(
+    "setClaimerFor(address)"(
+      claimer: string,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
+
+    "setClaimerFor(address,address)"(
+      earner: string,
       claimer: string,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
@@ -1249,8 +1411,10 @@ export interface RewardsCoordinator extends BaseContract {
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
-    setPauserRegistry(
-      newPauserRegistry: string,
+    setOperatorSetSplit(
+      operator: string,
+      operatorSet: OperatorSetStruct,
+      split: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
@@ -1268,9 +1432,9 @@ export interface RewardsCoordinator extends BaseContract {
     strategyManager(overrides?: CallOverrides): Promise<[string]>;
 
     submissionNonce(
-      arg0: string,
+      avs: string,
       overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+    ): Promise<[BigNumber] & { nonce: BigNumber }>;
 
     submitRoot(
       root: BytesLike,
@@ -1287,6 +1451,8 @@ export interface RewardsCoordinator extends BaseContract {
       newPausedStatus: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
+
+    version(overrides?: CallOverrides): Promise<[string]>;
   };
 
   CALCULATION_INTERVAL_SECONDS(overrides?: CallOverrides): Promise<number>;
@@ -1301,49 +1467,57 @@ export interface RewardsCoordinator extends BaseContract {
 
   activationDelay(overrides?: CallOverrides): Promise<number>;
 
+  allocationManager(overrides?: CallOverrides): Promise<string>;
+
   beaconChainETHStrategy(overrides?: CallOverrides): Promise<string>;
 
   calculateEarnerLeafHash(
-    leaf: IRewardsCoordinator.EarnerTreeMerkleLeafStruct,
+    leaf: IRewardsCoordinatorTypes.EarnerTreeMerkleLeafStruct,
     overrides?: CallOverrides
   ): Promise<string>;
 
   calculateTokenLeafHash(
-    leaf: IRewardsCoordinator.TokenTreeMerkleLeafStruct,
+    leaf: IRewardsCoordinatorTypes.TokenTreeMerkleLeafStruct,
     overrides?: CallOverrides
   ): Promise<string>;
 
   checkClaim(
-    claim: IRewardsCoordinator.RewardsMerkleClaimStruct,
+    claim: IRewardsCoordinatorTypes.RewardsMerkleClaimStruct,
     overrides?: CallOverrides
   ): Promise<boolean>;
 
-  claimerFor(arg0: string, overrides?: CallOverrides): Promise<string>;
+  claimerFor(earner: string, overrides?: CallOverrides): Promise<string>;
 
   createAVSRewardsSubmission(
-    rewardsSubmissions: IRewardsCoordinator.RewardsSubmissionStruct[],
+    rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
   createOperatorDirectedAVSRewardsSubmission(
     avs: string,
-    operatorDirectedRewardsSubmissions: IRewardsCoordinator.OperatorDirectedRewardsSubmissionStruct[],
+    operatorDirectedRewardsSubmissions: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[],
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  createOperatorDirectedOperatorSetRewardsSubmission(
+    operatorSet: OperatorSetStruct,
+    operatorDirectedRewardsSubmissions: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[],
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
   createRewardsForAllEarners(
-    rewardsSubmissions: IRewardsCoordinator.RewardsSubmissionStruct[],
+    rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
   createRewardsForAllSubmission(
-    rewardsSubmissions: IRewardsCoordinator.RewardsSubmissionStruct[],
+    rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
   cumulativeClaimed(
-    arg0: string,
-    arg1: string,
+    earner: string,
+    token: string,
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
@@ -1360,20 +1534,18 @@ export interface RewardsCoordinator extends BaseContract {
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
-  domainSeparator(overrides?: CallOverrides): Promise<string>;
-
   getCurrentClaimableDistributionRoot(
     overrides?: CallOverrides
-  ): Promise<IRewardsCoordinator.DistributionRootStructOutput>;
+  ): Promise<IRewardsCoordinatorTypes.DistributionRootStructOutput>;
 
   getCurrentDistributionRoot(
     overrides?: CallOverrides
-  ): Promise<IRewardsCoordinator.DistributionRootStructOutput>;
+  ): Promise<IRewardsCoordinatorTypes.DistributionRootStructOutput>;
 
   getDistributionRootAtIndex(
     index: BigNumberish,
     overrides?: CallOverrides
-  ): Promise<IRewardsCoordinator.DistributionRootStructOutput>;
+  ): Promise<IRewardsCoordinatorTypes.DistributionRootStructOutput>;
 
   getDistributionRootsLength(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -1388,6 +1560,12 @@ export interface RewardsCoordinator extends BaseContract {
     overrides?: CallOverrides
   ): Promise<number>;
 
+  getOperatorSetSplit(
+    operator: string,
+    operatorSet: OperatorSetStruct,
+    overrides?: CallOverrides
+  ): Promise<number>;
+
   getRootIndexFromHash(
     rootHash: BytesLike,
     overrides?: CallOverrides
@@ -1395,7 +1573,6 @@ export interface RewardsCoordinator extends BaseContract {
 
   initialize(
     initialOwner: string,
-    _pauserRegistry: string,
     initialPausedStatus: BigNumberish,
     _rewardsUpdater: string,
     _activationDelay: BigNumberish,
@@ -1404,31 +1581,37 @@ export interface RewardsCoordinator extends BaseContract {
   ): Promise<ContractTransaction>;
 
   isAVSRewardsSubmissionHash(
-    arg0: string,
-    arg1: BytesLike,
+    avs: string,
+    hash: BytesLike,
     overrides?: CallOverrides
   ): Promise<boolean>;
 
   isOperatorDirectedAVSRewardsSubmissionHash(
-    arg0: string,
-    arg1: BytesLike,
+    avs: string,
+    hash: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<boolean>;
+
+  isOperatorDirectedOperatorSetRewardsSubmissionHash(
+    avs: string,
+    hash: BytesLike,
     overrides?: CallOverrides
   ): Promise<boolean>;
 
   isRewardsForAllSubmitter(
-    arg0: string,
+    submitter: string,
     overrides?: CallOverrides
   ): Promise<boolean>;
 
   isRewardsSubmissionForAllEarnersHash(
-    arg0: string,
-    arg1: BytesLike,
+    avs: string,
+    hash: BytesLike,
     overrides?: CallOverrides
   ): Promise<boolean>;
 
   isRewardsSubmissionForAllHash(
-    arg0: string,
-    arg1: BytesLike,
+    avs: string,
+    hash: BytesLike,
     overrides?: CallOverrides
   ): Promise<boolean>;
 
@@ -1452,14 +1635,16 @@ export interface RewardsCoordinator extends BaseContract {
 
   pauserRegistry(overrides?: CallOverrides): Promise<string>;
 
+  permissionController(overrides?: CallOverrides): Promise<string>;
+
   processClaim(
-    claim: IRewardsCoordinator.RewardsMerkleClaimStruct,
+    claim: IRewardsCoordinatorTypes.RewardsMerkleClaimStruct,
     recipient: string,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
   processClaims(
-    claims: IRewardsCoordinator.RewardsMerkleClaimStruct[],
+    claims: IRewardsCoordinatorTypes.RewardsMerkleClaimStruct[],
     recipient: string,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
@@ -1475,7 +1660,13 @@ export interface RewardsCoordinator extends BaseContract {
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
-  setClaimerFor(
+  "setClaimerFor(address)"(
+    claimer: string,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  "setClaimerFor(address,address)"(
+    earner: string,
     claimer: string,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
@@ -1498,8 +1689,10 @@ export interface RewardsCoordinator extends BaseContract {
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
-  setPauserRegistry(
-    newPauserRegistry: string,
+  setOperatorSetSplit(
+    operator: string,
+    operatorSet: OperatorSetStruct,
+    split: BigNumberish,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
@@ -1516,7 +1709,7 @@ export interface RewardsCoordinator extends BaseContract {
 
   strategyManager(overrides?: CallOverrides): Promise<string>;
 
-  submissionNonce(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
+  submissionNonce(avs: string, overrides?: CallOverrides): Promise<BigNumber>;
 
   submitRoot(
     root: BytesLike,
@@ -1534,6 +1727,8 @@ export interface RewardsCoordinator extends BaseContract {
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
+  version(overrides?: CallOverrides): Promise<string>;
+
   callStatic: {
     CALCULATION_INTERVAL_SECONDS(overrides?: CallOverrides): Promise<number>;
 
@@ -1547,49 +1742,57 @@ export interface RewardsCoordinator extends BaseContract {
 
     activationDelay(overrides?: CallOverrides): Promise<number>;
 
+    allocationManager(overrides?: CallOverrides): Promise<string>;
+
     beaconChainETHStrategy(overrides?: CallOverrides): Promise<string>;
 
     calculateEarnerLeafHash(
-      leaf: IRewardsCoordinator.EarnerTreeMerkleLeafStruct,
+      leaf: IRewardsCoordinatorTypes.EarnerTreeMerkleLeafStruct,
       overrides?: CallOverrides
     ): Promise<string>;
 
     calculateTokenLeafHash(
-      leaf: IRewardsCoordinator.TokenTreeMerkleLeafStruct,
+      leaf: IRewardsCoordinatorTypes.TokenTreeMerkleLeafStruct,
       overrides?: CallOverrides
     ): Promise<string>;
 
     checkClaim(
-      claim: IRewardsCoordinator.RewardsMerkleClaimStruct,
+      claim: IRewardsCoordinatorTypes.RewardsMerkleClaimStruct,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
-    claimerFor(arg0: string, overrides?: CallOverrides): Promise<string>;
+    claimerFor(earner: string, overrides?: CallOverrides): Promise<string>;
 
     createAVSRewardsSubmission(
-      rewardsSubmissions: IRewardsCoordinator.RewardsSubmissionStruct[],
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
       overrides?: CallOverrides
     ): Promise<void>;
 
     createOperatorDirectedAVSRewardsSubmission(
       avs: string,
-      operatorDirectedRewardsSubmissions: IRewardsCoordinator.OperatorDirectedRewardsSubmissionStruct[],
+      operatorDirectedRewardsSubmissions: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[],
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    createOperatorDirectedOperatorSetRewardsSubmission(
+      operatorSet: OperatorSetStruct,
+      operatorDirectedRewardsSubmissions: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[],
       overrides?: CallOverrides
     ): Promise<void>;
 
     createRewardsForAllEarners(
-      rewardsSubmissions: IRewardsCoordinator.RewardsSubmissionStruct[],
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
       overrides?: CallOverrides
     ): Promise<void>;
 
     createRewardsForAllSubmission(
-      rewardsSubmissions: IRewardsCoordinator.RewardsSubmissionStruct[],
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
       overrides?: CallOverrides
     ): Promise<void>;
 
     cumulativeClaimed(
-      arg0: string,
-      arg1: string,
+      earner: string,
+      token: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -1606,20 +1809,18 @@ export interface RewardsCoordinator extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    domainSeparator(overrides?: CallOverrides): Promise<string>;
-
     getCurrentClaimableDistributionRoot(
       overrides?: CallOverrides
-    ): Promise<IRewardsCoordinator.DistributionRootStructOutput>;
+    ): Promise<IRewardsCoordinatorTypes.DistributionRootStructOutput>;
 
     getCurrentDistributionRoot(
       overrides?: CallOverrides
-    ): Promise<IRewardsCoordinator.DistributionRootStructOutput>;
+    ): Promise<IRewardsCoordinatorTypes.DistributionRootStructOutput>;
 
     getDistributionRootAtIndex(
       index: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<IRewardsCoordinator.DistributionRootStructOutput>;
+    ): Promise<IRewardsCoordinatorTypes.DistributionRootStructOutput>;
 
     getDistributionRootsLength(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -1634,6 +1835,12 @@ export interface RewardsCoordinator extends BaseContract {
       overrides?: CallOverrides
     ): Promise<number>;
 
+    getOperatorSetSplit(
+      operator: string,
+      operatorSet: OperatorSetStruct,
+      overrides?: CallOverrides
+    ): Promise<number>;
+
     getRootIndexFromHash(
       rootHash: BytesLike,
       overrides?: CallOverrides
@@ -1641,7 +1848,6 @@ export interface RewardsCoordinator extends BaseContract {
 
     initialize(
       initialOwner: string,
-      _pauserRegistry: string,
       initialPausedStatus: BigNumberish,
       _rewardsUpdater: string,
       _activationDelay: BigNumberish,
@@ -1650,31 +1856,37 @@ export interface RewardsCoordinator extends BaseContract {
     ): Promise<void>;
 
     isAVSRewardsSubmissionHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
     isOperatorDirectedAVSRewardsSubmissionHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<boolean>;
+
+    isOperatorDirectedOperatorSetRewardsSubmissionHash(
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
     isRewardsForAllSubmitter(
-      arg0: string,
+      submitter: string,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
     isRewardsSubmissionForAllEarnersHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
     isRewardsSubmissionForAllHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
@@ -1696,14 +1908,16 @@ export interface RewardsCoordinator extends BaseContract {
 
     pauserRegistry(overrides?: CallOverrides): Promise<string>;
 
+    permissionController(overrides?: CallOverrides): Promise<string>;
+
     processClaim(
-      claim: IRewardsCoordinator.RewardsMerkleClaimStruct,
+      claim: IRewardsCoordinatorTypes.RewardsMerkleClaimStruct,
       recipient: string,
       overrides?: CallOverrides
     ): Promise<void>;
 
     processClaims(
-      claims: IRewardsCoordinator.RewardsMerkleClaimStruct[],
+      claims: IRewardsCoordinatorTypes.RewardsMerkleClaimStruct[],
       recipient: string,
       overrides?: CallOverrides
     ): Promise<void>;
@@ -1717,7 +1931,16 @@ export interface RewardsCoordinator extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    setClaimerFor(claimer: string, overrides?: CallOverrides): Promise<void>;
+    "setClaimerFor(address)"(
+      claimer: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    "setClaimerFor(address,address)"(
+      earner: string,
+      claimer: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
 
     setDefaultOperatorSplit(
       split: BigNumberish,
@@ -1737,8 +1960,10 @@ export interface RewardsCoordinator extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    setPauserRegistry(
-      newPauserRegistry: string,
+    setOperatorSetSplit(
+      operator: string,
+      operatorSet: OperatorSetStruct,
+      split: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -1755,10 +1980,7 @@ export interface RewardsCoordinator extends BaseContract {
 
     strategyManager(overrides?: CallOverrides): Promise<string>;
 
-    submissionNonce(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    submissionNonce(avs: string, overrides?: CallOverrides): Promise<BigNumber>;
 
     submitRoot(
       root: BytesLike,
@@ -1775,6 +1997,8 @@ export interface RewardsCoordinator extends BaseContract {
       newPausedStatus: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    version(overrides?: CallOverrides): Promise<string>;
   };
 
   filters: {
@@ -1875,6 +2099,21 @@ export interface RewardsCoordinator extends BaseContract {
       operatorDirectedRewardsSubmission?: null
     ): OperatorDirectedAVSRewardsSubmissionCreatedEventFilter;
 
+    "OperatorDirectedOperatorSetRewardsSubmissionCreated(address,bytes32,(address,uint32),uint256,((address,uint96)[],address,(address,uint256)[],uint32,uint32,string))"(
+      caller?: string | null,
+      operatorDirectedRewardsSubmissionHash?: BytesLike | null,
+      operatorSet?: null,
+      submissionNonce?: null,
+      operatorDirectedRewardsSubmission?: null
+    ): OperatorDirectedOperatorSetRewardsSubmissionCreatedEventFilter;
+    OperatorDirectedOperatorSetRewardsSubmissionCreated(
+      caller?: string | null,
+      operatorDirectedRewardsSubmissionHash?: BytesLike | null,
+      operatorSet?: null,
+      submissionNonce?: null,
+      operatorDirectedRewardsSubmission?: null
+    ): OperatorDirectedOperatorSetRewardsSubmissionCreatedEventFilter;
+
     "OperatorPISplitBipsSet(address,address,uint32,uint16,uint16)"(
       caller?: string | null,
       operator?: string | null,
@@ -1890,6 +2129,23 @@ export interface RewardsCoordinator extends BaseContract {
       newOperatorPISplitBips?: null
     ): OperatorPISplitBipsSetEventFilter;
 
+    "OperatorSetSplitBipsSet(address,address,(address,uint32),uint32,uint16,uint16)"(
+      caller?: string | null,
+      operator?: string | null,
+      operatorSet?: null,
+      activatedAt?: null,
+      oldOperatorSetSplitBips?: null,
+      newOperatorSetSplitBips?: null
+    ): OperatorSetSplitBipsSetEventFilter;
+    OperatorSetSplitBipsSet(
+      caller?: string | null,
+      operator?: string | null,
+      operatorSet?: null,
+      activatedAt?: null,
+      oldOperatorSetSplitBips?: null,
+      newOperatorSetSplitBips?: null
+    ): OperatorSetSplitBipsSetEventFilter;
+
     "OwnershipTransferred(address,address)"(
       previousOwner?: string | null,
       newOwner?: string | null
@@ -1904,15 +2160,6 @@ export interface RewardsCoordinator extends BaseContract {
       newPausedStatus?: null
     ): PausedEventFilter;
     Paused(account?: string | null, newPausedStatus?: null): PausedEventFilter;
-
-    "PauserRegistrySet(address,address)"(
-      pauserRegistry?: null,
-      newPauserRegistry?: null
-    ): PauserRegistrySetEventFilter;
-    PauserRegistrySet(
-      pauserRegistry?: null,
-      newPauserRegistry?: null
-    ): PauserRegistrySetEventFilter;
 
     "RewardsClaimed(bytes32,address,address,address,address,uint256)"(
       root?: null,
@@ -2000,49 +2247,57 @@ export interface RewardsCoordinator extends BaseContract {
 
     activationDelay(overrides?: CallOverrides): Promise<BigNumber>;
 
+    allocationManager(overrides?: CallOverrides): Promise<BigNumber>;
+
     beaconChainETHStrategy(overrides?: CallOverrides): Promise<BigNumber>;
 
     calculateEarnerLeafHash(
-      leaf: IRewardsCoordinator.EarnerTreeMerkleLeafStruct,
+      leaf: IRewardsCoordinatorTypes.EarnerTreeMerkleLeafStruct,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     calculateTokenLeafHash(
-      leaf: IRewardsCoordinator.TokenTreeMerkleLeafStruct,
+      leaf: IRewardsCoordinatorTypes.TokenTreeMerkleLeafStruct,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     checkClaim(
-      claim: IRewardsCoordinator.RewardsMerkleClaimStruct,
+      claim: IRewardsCoordinatorTypes.RewardsMerkleClaimStruct,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    claimerFor(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
+    claimerFor(earner: string, overrides?: CallOverrides): Promise<BigNumber>;
 
     createAVSRewardsSubmission(
-      rewardsSubmissions: IRewardsCoordinator.RewardsSubmissionStruct[],
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     createOperatorDirectedAVSRewardsSubmission(
       avs: string,
-      operatorDirectedRewardsSubmissions: IRewardsCoordinator.OperatorDirectedRewardsSubmissionStruct[],
+      operatorDirectedRewardsSubmissions: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[],
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    createOperatorDirectedOperatorSetRewardsSubmission(
+      operatorSet: OperatorSetStruct,
+      operatorDirectedRewardsSubmissions: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[],
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     createRewardsForAllEarners(
-      rewardsSubmissions: IRewardsCoordinator.RewardsSubmissionStruct[],
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     createRewardsForAllSubmission(
-      rewardsSubmissions: IRewardsCoordinator.RewardsSubmissionStruct[],
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     cumulativeClaimed(
-      arg0: string,
-      arg1: string,
+      earner: string,
+      token: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -2058,8 +2313,6 @@ export interface RewardsCoordinator extends BaseContract {
       rootIndex: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
-
-    domainSeparator(overrides?: CallOverrides): Promise<BigNumber>;
 
     getCurrentClaimableDistributionRoot(
       overrides?: CallOverrides
@@ -2085,6 +2338,12 @@ export interface RewardsCoordinator extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    getOperatorSetSplit(
+      operator: string,
+      operatorSet: OperatorSetStruct,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     getRootIndexFromHash(
       rootHash: BytesLike,
       overrides?: CallOverrides
@@ -2092,7 +2351,6 @@ export interface RewardsCoordinator extends BaseContract {
 
     initialize(
       initialOwner: string,
-      _pauserRegistry: string,
       initialPausedStatus: BigNumberish,
       _rewardsUpdater: string,
       _activationDelay: BigNumberish,
@@ -2101,31 +2359,37 @@ export interface RewardsCoordinator extends BaseContract {
     ): Promise<BigNumber>;
 
     isAVSRewardsSubmissionHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     isOperatorDirectedAVSRewardsSubmissionHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    isOperatorDirectedOperatorSetRewardsSubmissionHash(
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     isRewardsForAllSubmitter(
-      arg0: string,
+      submitter: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     isRewardsSubmissionForAllEarnersHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     isRewardsSubmissionForAllHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -2147,14 +2411,16 @@ export interface RewardsCoordinator extends BaseContract {
 
     pauserRegistry(overrides?: CallOverrides): Promise<BigNumber>;
 
+    permissionController(overrides?: CallOverrides): Promise<BigNumber>;
+
     processClaim(
-      claim: IRewardsCoordinator.RewardsMerkleClaimStruct,
+      claim: IRewardsCoordinatorTypes.RewardsMerkleClaimStruct,
       recipient: string,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     processClaims(
-      claims: IRewardsCoordinator.RewardsMerkleClaimStruct[],
+      claims: IRewardsCoordinatorTypes.RewardsMerkleClaimStruct[],
       recipient: string,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
@@ -2170,7 +2436,13 @@ export interface RewardsCoordinator extends BaseContract {
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
-    setClaimerFor(
+    "setClaimerFor(address)"(
+      claimer: string,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    "setClaimerFor(address,address)"(
+      earner: string,
       claimer: string,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
@@ -2193,8 +2465,10 @@ export interface RewardsCoordinator extends BaseContract {
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
-    setPauserRegistry(
-      newPauserRegistry: string,
+    setOperatorSetSplit(
+      operator: string,
+      operatorSet: OperatorSetStruct,
+      split: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
@@ -2211,10 +2485,7 @@ export interface RewardsCoordinator extends BaseContract {
 
     strategyManager(overrides?: CallOverrides): Promise<BigNumber>;
 
-    submissionNonce(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    submissionNonce(avs: string, overrides?: CallOverrides): Promise<BigNumber>;
 
     submitRoot(
       root: BytesLike,
@@ -2231,6 +2502,8 @@ export interface RewardsCoordinator extends BaseContract {
       newPausedStatus: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
+
+    version(overrides?: CallOverrides): Promise<BigNumber>;
   };
 
   populateTransaction: {
@@ -2254,54 +2527,62 @@ export interface RewardsCoordinator extends BaseContract {
 
     activationDelay(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
+    allocationManager(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
     beaconChainETHStrategy(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     calculateEarnerLeafHash(
-      leaf: IRewardsCoordinator.EarnerTreeMerkleLeafStruct,
+      leaf: IRewardsCoordinatorTypes.EarnerTreeMerkleLeafStruct,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     calculateTokenLeafHash(
-      leaf: IRewardsCoordinator.TokenTreeMerkleLeafStruct,
+      leaf: IRewardsCoordinatorTypes.TokenTreeMerkleLeafStruct,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     checkClaim(
-      claim: IRewardsCoordinator.RewardsMerkleClaimStruct,
+      claim: IRewardsCoordinatorTypes.RewardsMerkleClaimStruct,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     claimerFor(
-      arg0: string,
+      earner: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     createAVSRewardsSubmission(
-      rewardsSubmissions: IRewardsCoordinator.RewardsSubmissionStruct[],
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     createOperatorDirectedAVSRewardsSubmission(
       avs: string,
-      operatorDirectedRewardsSubmissions: IRewardsCoordinator.OperatorDirectedRewardsSubmissionStruct[],
+      operatorDirectedRewardsSubmissions: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[],
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    createOperatorDirectedOperatorSetRewardsSubmission(
+      operatorSet: OperatorSetStruct,
+      operatorDirectedRewardsSubmissions: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[],
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     createRewardsForAllEarners(
-      rewardsSubmissions: IRewardsCoordinator.RewardsSubmissionStruct[],
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     createRewardsForAllSubmission(
-      rewardsSubmissions: IRewardsCoordinator.RewardsSubmissionStruct[],
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     cumulativeClaimed(
-      arg0: string,
-      arg1: string,
+      earner: string,
+      token: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -2319,8 +2600,6 @@ export interface RewardsCoordinator extends BaseContract {
       rootIndex: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
-
-    domainSeparator(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     getCurrentClaimableDistributionRoot(
       overrides?: CallOverrides
@@ -2350,6 +2629,12 @@ export interface RewardsCoordinator extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    getOperatorSetSplit(
+      operator: string,
+      operatorSet: OperatorSetStruct,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     getRootIndexFromHash(
       rootHash: BytesLike,
       overrides?: CallOverrides
@@ -2357,7 +2642,6 @@ export interface RewardsCoordinator extends BaseContract {
 
     initialize(
       initialOwner: string,
-      _pauserRegistry: string,
       initialPausedStatus: BigNumberish,
       _rewardsUpdater: string,
       _activationDelay: BigNumberish,
@@ -2366,31 +2650,37 @@ export interface RewardsCoordinator extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     isAVSRewardsSubmissionHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     isOperatorDirectedAVSRewardsSubmissionHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    isOperatorDirectedOperatorSetRewardsSubmissionHash(
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     isRewardsForAllSubmitter(
-      arg0: string,
+      submitter: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     isRewardsSubmissionForAllEarnersHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     isRewardsSubmissionForAllHash(
-      arg0: string,
-      arg1: BytesLike,
+      avs: string,
+      hash: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -2414,14 +2704,18 @@ export interface RewardsCoordinator extends BaseContract {
 
     pauserRegistry(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
+    permissionController(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     processClaim(
-      claim: IRewardsCoordinator.RewardsMerkleClaimStruct,
+      claim: IRewardsCoordinatorTypes.RewardsMerkleClaimStruct,
       recipient: string,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     processClaims(
-      claims: IRewardsCoordinator.RewardsMerkleClaimStruct[],
+      claims: IRewardsCoordinatorTypes.RewardsMerkleClaimStruct[],
       recipient: string,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
@@ -2437,7 +2731,13 @@ export interface RewardsCoordinator extends BaseContract {
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
-    setClaimerFor(
+    "setClaimerFor(address)"(
+      claimer: string,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    "setClaimerFor(address,address)"(
+      earner: string,
       claimer: string,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
@@ -2460,8 +2760,10 @@ export interface RewardsCoordinator extends BaseContract {
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
-    setPauserRegistry(
-      newPauserRegistry: string,
+    setOperatorSetSplit(
+      operator: string,
+      operatorSet: OperatorSetStruct,
+      split: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
@@ -2479,7 +2781,7 @@ export interface RewardsCoordinator extends BaseContract {
     strategyManager(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     submissionNonce(
-      arg0: string,
+      avs: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -2498,5 +2800,7 @@ export interface RewardsCoordinator extends BaseContract {
       newPausedStatus: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
+
+    version(overrides?: CallOverrides): Promise<PopulatedTransaction>;
   };
 }

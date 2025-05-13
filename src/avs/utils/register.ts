@@ -1,5 +1,6 @@
 import { ethers } from 'ethers'
 import { RECLAIM_PUBLIC_URL, SELECTED_CHAIN_ID } from 'src/avs/config'
+import { SocketRegistry__factory } from 'src/avs/contracts'
 import { getContracts } from 'src/avs/utils/contracts'
 import { logger as LOGGER } from 'src/utils'
 
@@ -42,16 +43,16 @@ export async function registerOperator({
 		.connect(wallet)
 	const registryContract = contracts.registryContract
 		.connect(wallet)
+	const slashingCoordinator = contracts.slashingCoordinator
+		.connect(wallet)
 
 	const addr = await wallet.address
 	try {
-		const tx1 = await delegationManager
-			.registerAsOperator({
-				'__deprecated_earningsReceiver': addr,
-				delegationApprover:
-					'0x0000000000000000000000000000000000000000',
-				stakerOptOutWindowBlocks: 0
-			}, '')
+		const tx1 = await delegationManager.registerAsOperator(
+			'0x0000000000000000000000000000000000000000',
+			0,
+			''
+		)
 		await tx1.wait()
 		logger.info('operator registered on DM successfully')
 	} catch(err) {
@@ -101,24 +102,19 @@ export async function registerOperator({
 		logger.info('operator already registered on AVS')
 	}
 
-	const existingMetadata = await contract.getMetadataForOperator(addr)
-		.catch(err => {
-			if(err.message.includes('Operator not found')) {
-				return undefined
-			}
-
-			throw err
-		})
-	const metadata = { addr, url: reclaimRpcUrl }
-	if(
-		existingMetadata?.addr === metadata.addr
-		&& existingMetadata?.url === metadata.url
-	) {
+	// eslint-disable-next-line camelcase
+	const socketRegistry = SocketRegistry__factory.connect(
+		await slashingCoordinator.socketRegistry(),
+		wallet
+	)
+	const existingMetadata = await socketRegistry.getOperatorSocket(addr)
+	const metadata = JSON.stringify({ url: reclaimRpcUrl })
+	if(metadata === existingMetadata) {
 		logger.info('operator metadata already up to date')
 		return
 	}
 
-	await contract.updateOperatorMetadata(metadata)
+	await slashingCoordinator.updateSocket(metadata)
 
 	logger.info({ metadata }, 'operator metadata updated successfully')
 }

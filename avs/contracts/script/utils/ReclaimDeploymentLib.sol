@@ -14,7 +14,9 @@ import {
     ISlashingRegistryCoordinatorTypes
 } from "@eigenlayer-middleware/src/interfaces/ISlashingRegistryCoordinator.sol";
 import {SlashingRegistryCoordinator} from "@eigenlayer-middleware/src/SlashingRegistryCoordinator.sol";
+import {ReclaimSlashingRegistryCoordinator} from "../../src/ReclaimSlashingRegistryCoordinator.sol";
 import {IPermissionController} from "@eigenlayer/contracts/interfaces/IPermissionController.sol";
+import {IAVSRegistrar} from "@eigenlayer/contracts/interfaces/IAVSRegistrar.sol";
 import {
     ReclaimServiceManager,
     IServiceManager
@@ -131,7 +133,7 @@ library ReclaimDeploymentLib {
         );
 
         address slashingRegistryCoordinatorImpl = address(
-            new SlashingRegistryCoordinator(
+            new ReclaimSlashingRegistryCoordinator(
                 IStakeRegistry(result.stakeRegistry),
                 IBLSApkRegistry(result.blsapkRegistry),
                 IIndexRegistry(result.indexRegistry),
@@ -151,41 +153,13 @@ library ReclaimDeploymentLib {
         deployedStrategyArray[0] = IStrategy(strategy);
         uint256 numStrategies = deployedStrategyArray.length;
 
-        uint256 numQuorums = setupConfig.numQuorums;
-        ISlashingRegistryCoordinatorTypes.OperatorSetParam[] memory quorumsOperatorSetParams =
-            new ISlashingRegistryCoordinatorTypes.OperatorSetParam[](numQuorums);
-        uint256[] memory operator_params = setupConfig.operatorParams;
-
-        for (uint256 i = 0; i < numQuorums; i++) {
-            quorumsOperatorSetParams[i] = ISlashingRegistryCoordinatorTypes.OperatorSetParam({
-                maxOperatorCount: uint32(operator_params[i]),
-                kickBIPsOfOperatorStake: uint16(operator_params[i + 1]),
-                kickBIPsOfTotalStake: uint16(operator_params[i + 2])
-            });
-        }
-        // // set to 0 for every quorum
-        IStakeRegistryTypes.StrategyParams[][] memory quorumsStrategyParams =
-            new IStakeRegistryTypes.StrategyParams[][](numQuorums);
-        for (uint256 i = 0; i < numQuorums; i++) {
-            quorumsStrategyParams[i] = new IStakeRegistryTypes.StrategyParams[](numStrategies);
-            for (uint256 j = 0; j < numStrategies; j++) {
-                quorumsStrategyParams[i][j] = IStakeRegistryTypes.StrategyParams({
-                    strategy: deployedStrategyArray[j],
-                    // setting this to 1 ether since the divisor is also 1 ether
-                    // therefore this allows an operator to register with even just 1 token
-                    // see https://github.com/Layr-Labs/eigenlayer-middleware/blob/m2-mainnet/src/StakeRegistry.sol#L484
-                    //    weight += uint96(sharesAmount * strategyAndMultiplier.multiplier / WEIGHTING_DIVISOR);
-                    multiplier: 1 ether
-                });
-            }
-        }
-
         IStakeRegistryTypes.StakeType[] memory stake_type = new IStakeRegistryTypes.StakeType[](1);
         stake_type[0] = IStakeRegistryTypes.StakeType.TOTAL_SLASHABLE;
         uint32[] memory look_ahead_period = new uint32[](1);
         look_ahead_period[0] = 0;
         bytes memory upgradeCall = abi.encodeCall(
-            SlashingRegistryCoordinator.initialize, (admin, admin, admin, 0, result.serviceManager)
+            SlashingRegistryCoordinator.initialize,
+            (admin, admin, admin, 0, result.serviceManager)
         );
 
         UpgradeableProxyLib.upgrade(result.stakeRegistry, stakeRegistryImpl);
@@ -218,18 +192,9 @@ library ReclaimDeploymentLib {
             servicemanagerupgradecall
         );
 
-        console2.log(result.serviceManager);
         bytes memory taskmanagerupgradecall = abi.encodeCall(
             ReclaimTaskManager.initialize,
-            (
-                admin,
-                address(0)
-                // setupConfig.aggregator_addr,
-                // setupConfig.task_generator_addr,
-                // core.allocationManager,
-                // result.slasher,
-                // result.serviceManager
-            )
+            (admin, address(0))
         );
         UpgradeableProxyLib.upgradeAndCall(
             result.taskManager, address(taskManagerImpl), (taskmanagerupgradecall)
@@ -240,6 +205,44 @@ library ReclaimDeploymentLib {
         address socketRegistryImpl =
             address(new SocketRegistry(ISlashingRegistryCoordinator(result.slashingRegistryCoordinator)));
         UpgradeableProxyLib.upgrade(result.socketRegistry, socketRegistryImpl);
+
+         // create operator set 
+        uint256 numQuorums = setupConfig.numQuorums;
+        ISlashingRegistryCoordinatorTypes.OperatorSetParam[] memory quorumsOperatorSetParams =
+            new ISlashingRegistryCoordinatorTypes.OperatorSetParam[](numQuorums);
+        uint256[] memory operator_params = setupConfig.operatorParams;
+
+        for (uint256 i = 0; i < numQuorums; i++) {
+            quorumsOperatorSetParams[i] = ISlashingRegistryCoordinatorTypes.OperatorSetParam({
+                maxOperatorCount: uint32(operator_params[i]),
+                kickBIPsOfOperatorStake: uint16(operator_params[i + 1]),
+                kickBIPsOfTotalStake: uint16(operator_params[i + 2])
+            });
+        }
+        // set to 0 for every quorum
+        IStakeRegistryTypes.StrategyParams[][] memory quorumsStrategyParams =
+            new IStakeRegistryTypes.StrategyParams[][](numQuorums);
+        for (uint256 i = 0; i < numQuorums; i++) {
+            quorumsStrategyParams[i] = new IStakeRegistryTypes.StrategyParams[](numStrategies);
+            for (uint256 j = 0; j < numStrategies; j++) {
+                quorumsStrategyParams[i][j] = IStakeRegistryTypes.StrategyParams({
+                    strategy: deployedStrategyArray[j],
+                    // setting this to 1 ether since the divisor is also 1 ether
+                    // therefore this allows an operator to register with even just 1 token
+                    // see https://github.com/Layr-Labs/eigenlayer-middleware/blob/m2-mainnet/src/StakeRegistry.sol#L484
+                    //    weight += uint96(sharesAmount * strategyAndMultiplier.multiplier / WEIGHTING_DIVISOR);
+                    multiplier: 1 ether
+                });
+            }
+        }
+
+        for(uint256 i = 0; i < numQuorums; i++) {
+            ISlashingRegistryCoordinator(result.slashingRegistryCoordinator).createTotalDelegatedStakeQuorum(
+                quorumsOperatorSetParams[i],
+                100,
+                quorumsStrategyParams[i]
+            );
+        }
 
         verify_deployment(result);
 
@@ -274,7 +277,7 @@ library ReclaimDeploymentLib {
     }
 
     function readDeploymentJson(string memory directoryPath, uint256 chainId)
-        internal
+        internal view
         returns (DeploymentData memory)
     {
         string memory fileName = string.concat(directoryPath, vm.toString(chainId), ".json");
@@ -284,14 +287,15 @@ library ReclaimDeploymentLib {
         string memory json = vm.readFile(fileName);
 
         DeploymentData memory data;
-        data.serviceManager = json.readAddress(".addresses.ReclaimServiceManager");
-        data.taskManager = json.readAddress(".addresses.ReclaimTaskManager");
+        data.serviceManager = json.readAddress(".addresses.serviceManager");
+        data.taskManager = json.readAddress(".addresses.taskManager");
         data.slashingRegistryCoordinator = json.readAddress(".addresses.registryCoordinator");
         data.operatorStateRetriever = json.readAddress(".addresses.operatorStateRetriever");
         data.stakeRegistry = json.readAddress(".addresses.stakeRegistry");
         data.strategy = json.readAddress(".addresses.strategy");
         data.token = json.readAddress(".addresses.token");
         data.slasher = json.readAddress(".addresses.instantSlasher");
+        data.socketRegistry = json.readAddress(".addresses.socketRegistry");
 
         return data;
     }
@@ -339,11 +343,11 @@ library ReclaimDeploymentLib {
         return string.concat(
             '{"proxyAdmin":"',
             proxyAdmin.toHexString(),
-            '","ReclaimServiceManager":"',
+            '","serviceManager":"',
             data.serviceManager.toHexString(),
             '","serviceManagerImpl":"',
             data.serviceManager.getImplementation().toHexString(),
-            '","ReclaimTaskManager":"',
+            '","taskManager":"',
             data.taskManager.toHexString(),
             '","registryCoordinator":"',
             data.slashingRegistryCoordinator.toHexString(),
@@ -363,6 +367,8 @@ library ReclaimDeploymentLib {
             data.token.toHexString(),
             '","instantSlasher":"',
             data.slasher.toHexString(),
+            '","socketRegistry":"',
+            data.socketRegistry.toHexString(),
             '"}'
         );
     }

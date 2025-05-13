@@ -26,23 +26,27 @@ import type {
   OnEvent,
 } from "./common";
 
-export type StrategyParamsStruct = {
-  strategy: string;
-  multiplier: BigNumberish;
-};
+export declare namespace IECDSAStakeRegistryTypes {
+  export type StrategyParamsStruct = {
+    strategy: string;
+    multiplier: BigNumberish;
+  };
 
-export type StrategyParamsStructOutput = [string, BigNumber] & {
-  strategy: string;
-  multiplier: BigNumber;
-};
+  export type StrategyParamsStructOutput = [string, BigNumber] & {
+    strategy: string;
+    multiplier: BigNumber;
+  };
 
-export type QuorumStruct = { strategies: StrategyParamsStruct[] };
+  export type QuorumStruct = {
+    strategies: IECDSAStakeRegistryTypes.StrategyParamsStruct[];
+  };
 
-export type QuorumStructOutput = [StrategyParamsStructOutput[]] & {
-  strategies: StrategyParamsStructOutput[];
-};
+  export type QuorumStructOutput = [
+    IECDSAStakeRegistryTypes.StrategyParamsStructOutput[]
+  ] & { strategies: IECDSAStakeRegistryTypes.StrategyParamsStructOutput[] };
+}
 
-export declare namespace ISignatureUtils {
+export declare namespace ISignatureUtilsMixinTypes {
   export type SignatureWithSaltAndExpiryStruct = {
     signature: BytesLike;
     salt: BytesLike;
@@ -64,7 +68,7 @@ export interface ECDSAStakeRegistryInterface extends utils.Interface {
     "getLastCheckpointThresholdWeightAtBlock(uint32)": FunctionFragment;
     "getLastCheckpointTotalWeight()": FunctionFragment;
     "getLastCheckpointTotalWeightAtBlock(uint32)": FunctionFragment;
-    "getLastestOperatorSigningKey(address)": FunctionFragment;
+    "getLatestOperatorSigningKey(address)": FunctionFragment;
     "getOperatorSigningKeyAtBlock(address,uint256)": FunctionFragment;
     "getOperatorWeight(address)": FunctionFragment;
     "getOperatorWeightAtBlock(address,uint32)": FunctionFragment;
@@ -93,7 +97,7 @@ export interface ECDSAStakeRegistryInterface extends utils.Interface {
       | "getLastCheckpointThresholdWeightAtBlock"
       | "getLastCheckpointTotalWeight"
       | "getLastCheckpointTotalWeightAtBlock"
-      | "getLastestOperatorSigningKey"
+      | "getLatestOperatorSigningKey"
       | "getOperatorSigningKeyAtBlock"
       | "getOperatorWeight"
       | "getOperatorWeightAtBlock"
@@ -139,7 +143,7 @@ export interface ECDSAStakeRegistryInterface extends utils.Interface {
     values: [BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "getLastestOperatorSigningKey",
+    functionFragment: "getLatestOperatorSigningKey",
     values: [string]
   ): string;
   encodeFunctionData(
@@ -156,7 +160,7 @@ export interface ECDSAStakeRegistryInterface extends utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "initialize",
-    values: [string, BigNumberish, QuorumStruct]
+    values: [string, BigNumberish, IECDSAStakeRegistryTypes.QuorumStruct]
   ): string;
   encodeFunctionData(
     functionFragment: "isValidSignature",
@@ -174,7 +178,7 @@ export interface ECDSAStakeRegistryInterface extends utils.Interface {
   encodeFunctionData(functionFragment: "quorum", values?: undefined): string;
   encodeFunctionData(
     functionFragment: "registerOperatorWithSignature",
-    values: [ISignatureUtils.SignatureWithSaltAndExpiryStruct, string]
+    values: [ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct, string]
   ): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
@@ -202,7 +206,7 @@ export interface ECDSAStakeRegistryInterface extends utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "updateQuorumConfig",
-    values: [QuorumStruct, string[]]
+    values: [IECDSAStakeRegistryTypes.QuorumStruct, string[]]
   ): string;
   encodeFunctionData(
     functionFragment: "updateStakeThreshold",
@@ -234,7 +238,7 @@ export interface ECDSAStakeRegistryInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "getLastestOperatorSigningKey",
+    functionFragment: "getLatestOperatorSigningKey",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -336,8 +340,8 @@ export type InitializedEvent = TypedEvent<[number], InitializedEventObject>;
 export type InitializedEventFilter = TypedEventFilter<InitializedEvent>;
 
 export interface MinimumWeightUpdatedEventObject {
-  _old: BigNumber;
-  _new: BigNumber;
+  previous: BigNumber;
+  current: BigNumber;
 }
 export type MinimumWeightUpdatedEvent = TypedEvent<
   [BigNumber, BigNumber],
@@ -348,8 +352,8 @@ export type MinimumWeightUpdatedEventFilter =
   TypedEventFilter<MinimumWeightUpdatedEvent>;
 
 export interface OperatorDeregisteredEventObject {
-  _operator: string;
-  _avs: string;
+  operator: string;
+  avs: string;
 }
 export type OperatorDeregisteredEvent = TypedEvent<
   [string, string],
@@ -360,8 +364,8 @@ export type OperatorDeregisteredEventFilter =
   TypedEventFilter<OperatorDeregisteredEvent>;
 
 export interface OperatorRegisteredEventObject {
-  _operator: string;
-  _avs: string;
+  operator: string;
+  avs: string;
 }
 export type OperatorRegisteredEvent = TypedEvent<
   [string, string],
@@ -372,7 +376,7 @@ export type OperatorRegisteredEventFilter =
   TypedEventFilter<OperatorRegisteredEvent>;
 
 export interface OperatorWeightUpdatedEventObject {
-  _operator: string;
+  operator: string;
   oldWeight: BigNumber;
   newWeight: BigNumber;
 }
@@ -397,11 +401,14 @@ export type OwnershipTransferredEventFilter =
   TypedEventFilter<OwnershipTransferredEvent>;
 
 export interface QuorumUpdatedEventObject {
-  _old: QuorumStructOutput;
-  _new: QuorumStructOutput;
+  previous: IECDSAStakeRegistryTypes.QuorumStructOutput;
+  current: IECDSAStakeRegistryTypes.QuorumStructOutput;
 }
 export type QuorumUpdatedEvent = TypedEvent<
-  [QuorumStructOutput, QuorumStructOutput],
+  [
+    IECDSAStakeRegistryTypes.QuorumStructOutput,
+    IECDSAStakeRegistryTypes.QuorumStructOutput
+  ],
   QuorumUpdatedEventObject
 >;
 
@@ -422,7 +429,7 @@ export type SigningKeyUpdateEventFilter =
   TypedEventFilter<SigningKeyUpdateEvent>;
 
 export interface ThresholdWeightUpdatedEventObject {
-  _thresholdWeight: BigNumber;
+  thresholdWeight: BigNumber;
 }
 export type ThresholdWeightUpdatedEvent = TypedEvent<
   [BigNumber],
@@ -488,7 +495,7 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<ContractTransaction>;
 
     getLastCheckpointOperatorWeight(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
@@ -497,7 +504,7 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<[BigNumber]>;
 
     getLastCheckpointThresholdWeightAtBlock(
-      _blockNumber: BigNumberish,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
@@ -506,41 +513,41 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<[BigNumber]>;
 
     getLastCheckpointTotalWeightAtBlock(
-      _blockNumber: BigNumberish,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
-    getLastestOperatorSigningKey(
-      _operator: string,
+    getLatestOperatorSigningKey(
+      operator: string,
       overrides?: CallOverrides
     ): Promise<[string]>;
 
     getOperatorSigningKeyAtBlock(
-      _operator: string,
-      _blockNumber: BigNumberish,
+      operator: string,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[string]>;
 
     getOperatorWeight(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
     getOperatorWeightAtBlock(
-      _operator: string,
-      _blockNumber: BigNumberish,
+      operator: string,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
 
     initialize(
       _serviceManager: string,
-      _thresholdWeight: BigNumberish,
-      _quorum: QuorumStruct,
+      thresholdWeight: BigNumberish,
+      quorum: IECDSAStakeRegistryTypes.QuorumStruct,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
     isValidSignature(
-      _dataHash: BytesLike,
+      digest: BytesLike,
       _signatureData: BytesLike,
       overrides?: CallOverrides
     ): Promise<[string]>;
@@ -548,17 +555,19 @@ export interface ECDSAStakeRegistry extends BaseContract {
     minimumWeight(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     operatorRegistered(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<[boolean]>;
 
     owner(overrides?: CallOverrides): Promise<[string]>;
 
-    quorum(overrides?: CallOverrides): Promise<[QuorumStructOutput]>;
+    quorum(
+      overrides?: CallOverrides
+    ): Promise<[IECDSAStakeRegistryTypes.QuorumStructOutput]>;
 
     registerOperatorWithSignature(
-      _operatorSignature: ISignatureUtils.SignatureWithSaltAndExpiryStruct,
-      _signingKey: string,
+      operatorSignature: ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct,
+      signingKey: string,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
@@ -572,18 +581,18 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<ContractTransaction>;
 
     updateMinimumWeight(
-      _newMinimumWeight: BigNumberish,
-      _operators: string[],
+      newMinimumWeight: BigNumberish,
+      operators: string[],
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
     updateOperatorSigningKey(
-      _newSigningKey: string,
+      newSigningKey: string,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
     updateOperators(
-      _operators: string[],
+      operators: string[],
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
@@ -594,13 +603,13 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<ContractTransaction>;
 
     updateQuorumConfig(
-      _quorum: QuorumStruct,
-      _operators: string[],
+      quorum: IECDSAStakeRegistryTypes.QuorumStruct,
+      operators: string[],
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
     updateStakeThreshold(
-      _thresholdWeight: BigNumberish,
+      thresholdWeight: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
   };
@@ -610,7 +619,7 @@ export interface ECDSAStakeRegistry extends BaseContract {
   ): Promise<ContractTransaction>;
 
   getLastCheckpointOperatorWeight(
-    _operator: string,
+    operator: string,
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
@@ -619,48 +628,48 @@ export interface ECDSAStakeRegistry extends BaseContract {
   ): Promise<BigNumber>;
 
   getLastCheckpointThresholdWeightAtBlock(
-    _blockNumber: BigNumberish,
+    blockNumber: BigNumberish,
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
   getLastCheckpointTotalWeight(overrides?: CallOverrides): Promise<BigNumber>;
 
   getLastCheckpointTotalWeightAtBlock(
-    _blockNumber: BigNumberish,
+    blockNumber: BigNumberish,
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
-  getLastestOperatorSigningKey(
-    _operator: string,
+  getLatestOperatorSigningKey(
+    operator: string,
     overrides?: CallOverrides
   ): Promise<string>;
 
   getOperatorSigningKeyAtBlock(
-    _operator: string,
-    _blockNumber: BigNumberish,
+    operator: string,
+    blockNumber: BigNumberish,
     overrides?: CallOverrides
   ): Promise<string>;
 
   getOperatorWeight(
-    _operator: string,
+    operator: string,
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
   getOperatorWeightAtBlock(
-    _operator: string,
-    _blockNumber: BigNumberish,
+    operator: string,
+    blockNumber: BigNumberish,
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
   initialize(
     _serviceManager: string,
-    _thresholdWeight: BigNumberish,
-    _quorum: QuorumStruct,
+    thresholdWeight: BigNumberish,
+    quorum: IECDSAStakeRegistryTypes.QuorumStruct,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
   isValidSignature(
-    _dataHash: BytesLike,
+    digest: BytesLike,
     _signatureData: BytesLike,
     overrides?: CallOverrides
   ): Promise<string>;
@@ -668,17 +677,19 @@ export interface ECDSAStakeRegistry extends BaseContract {
   minimumWeight(overrides?: CallOverrides): Promise<BigNumber>;
 
   operatorRegistered(
-    _operator: string,
+    operator: string,
     overrides?: CallOverrides
   ): Promise<boolean>;
 
   owner(overrides?: CallOverrides): Promise<string>;
 
-  quorum(overrides?: CallOverrides): Promise<QuorumStructOutput>;
+  quorum(
+    overrides?: CallOverrides
+  ): Promise<IECDSAStakeRegistryTypes.QuorumStructOutput>;
 
   registerOperatorWithSignature(
-    _operatorSignature: ISignatureUtils.SignatureWithSaltAndExpiryStruct,
-    _signingKey: string,
+    operatorSignature: ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct,
+    signingKey: string,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
@@ -692,18 +703,18 @@ export interface ECDSAStakeRegistry extends BaseContract {
   ): Promise<ContractTransaction>;
 
   updateMinimumWeight(
-    _newMinimumWeight: BigNumberish,
-    _operators: string[],
+    newMinimumWeight: BigNumberish,
+    operators: string[],
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
   updateOperatorSigningKey(
-    _newSigningKey: string,
+    newSigningKey: string,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
   updateOperators(
-    _operators: string[],
+    operators: string[],
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
@@ -714,13 +725,13 @@ export interface ECDSAStakeRegistry extends BaseContract {
   ): Promise<ContractTransaction>;
 
   updateQuorumConfig(
-    _quorum: QuorumStruct,
-    _operators: string[],
+    quorum: IECDSAStakeRegistryTypes.QuorumStruct,
+    operators: string[],
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
   updateStakeThreshold(
-    _thresholdWeight: BigNumberish,
+    thresholdWeight: BigNumberish,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
@@ -728,7 +739,7 @@ export interface ECDSAStakeRegistry extends BaseContract {
     deregisterOperator(overrides?: CallOverrides): Promise<void>;
 
     getLastCheckpointOperatorWeight(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -737,48 +748,48 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<BigNumber>;
 
     getLastCheckpointThresholdWeightAtBlock(
-      _blockNumber: BigNumberish,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     getLastCheckpointTotalWeight(overrides?: CallOverrides): Promise<BigNumber>;
 
     getLastCheckpointTotalWeightAtBlock(
-      _blockNumber: BigNumberish,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    getLastestOperatorSigningKey(
-      _operator: string,
+    getLatestOperatorSigningKey(
+      operator: string,
       overrides?: CallOverrides
     ): Promise<string>;
 
     getOperatorSigningKeyAtBlock(
-      _operator: string,
-      _blockNumber: BigNumberish,
+      operator: string,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<string>;
 
     getOperatorWeight(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     getOperatorWeightAtBlock(
-      _operator: string,
-      _blockNumber: BigNumberish,
+      operator: string,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     initialize(
       _serviceManager: string,
-      _thresholdWeight: BigNumberish,
-      _quorum: QuorumStruct,
+      thresholdWeight: BigNumberish,
+      quorum: IECDSAStakeRegistryTypes.QuorumStruct,
       overrides?: CallOverrides
     ): Promise<void>;
 
     isValidSignature(
-      _dataHash: BytesLike,
+      digest: BytesLike,
       _signatureData: BytesLike,
       overrides?: CallOverrides
     ): Promise<string>;
@@ -786,17 +797,19 @@ export interface ECDSAStakeRegistry extends BaseContract {
     minimumWeight(overrides?: CallOverrides): Promise<BigNumber>;
 
     operatorRegistered(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
     owner(overrides?: CallOverrides): Promise<string>;
 
-    quorum(overrides?: CallOverrides): Promise<QuorumStructOutput>;
+    quorum(
+      overrides?: CallOverrides
+    ): Promise<IECDSAStakeRegistryTypes.QuorumStructOutput>;
 
     registerOperatorWithSignature(
-      _operatorSignature: ISignatureUtils.SignatureWithSaltAndExpiryStruct,
-      _signingKey: string,
+      operatorSignature: ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct,
+      signingKey: string,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -808,18 +821,18 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<void>;
 
     updateMinimumWeight(
-      _newMinimumWeight: BigNumberish,
-      _operators: string[],
+      newMinimumWeight: BigNumberish,
+      operators: string[],
       overrides?: CallOverrides
     ): Promise<void>;
 
     updateOperatorSigningKey(
-      _newSigningKey: string,
+      newSigningKey: string,
       overrides?: CallOverrides
     ): Promise<void>;
 
     updateOperators(
-      _operators: string[],
+      operators: string[],
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -830,13 +843,13 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<void>;
 
     updateQuorumConfig(
-      _quorum: QuorumStruct,
-      _operators: string[],
+      quorum: IECDSAStakeRegistryTypes.QuorumStruct,
+      operators: string[],
       overrides?: CallOverrides
     ): Promise<void>;
 
     updateStakeThreshold(
-      _thresholdWeight: BigNumberish,
+      thresholdWeight: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
   };
@@ -846,39 +859,39 @@ export interface ECDSAStakeRegistry extends BaseContract {
     Initialized(version?: null): InitializedEventFilter;
 
     "MinimumWeightUpdated(uint256,uint256)"(
-      _old?: null,
-      _new?: null
+      previous?: null,
+      current?: null
     ): MinimumWeightUpdatedEventFilter;
     MinimumWeightUpdated(
-      _old?: null,
-      _new?: null
+      previous?: null,
+      current?: null
     ): MinimumWeightUpdatedEventFilter;
 
     "OperatorDeregistered(address,address)"(
-      _operator?: string | null,
-      _avs?: string | null
+      operator?: string | null,
+      avs?: string | null
     ): OperatorDeregisteredEventFilter;
     OperatorDeregistered(
-      _operator?: string | null,
-      _avs?: string | null
+      operator?: string | null,
+      avs?: string | null
     ): OperatorDeregisteredEventFilter;
 
     "OperatorRegistered(address,address)"(
-      _operator?: string | null,
-      _avs?: string | null
+      operator?: string | null,
+      avs?: string | null
     ): OperatorRegisteredEventFilter;
     OperatorRegistered(
-      _operator?: string | null,
-      _avs?: string | null
+      operator?: string | null,
+      avs?: string | null
     ): OperatorRegisteredEventFilter;
 
     "OperatorWeightUpdated(address,uint256,uint256)"(
-      _operator?: string | null,
+      operator?: string | null,
       oldWeight?: null,
       newWeight?: null
     ): OperatorWeightUpdatedEventFilter;
     OperatorWeightUpdated(
-      _operator?: string | null,
+      operator?: string | null,
       oldWeight?: null,
       newWeight?: null
     ): OperatorWeightUpdatedEventFilter;
@@ -893,10 +906,10 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): OwnershipTransferredEventFilter;
 
     "QuorumUpdated(((address,uint96)[]),((address,uint96)[]))"(
-      _old?: null,
-      _new?: null
+      previous?: null,
+      current?: null
     ): QuorumUpdatedEventFilter;
-    QuorumUpdated(_old?: null, _new?: null): QuorumUpdatedEventFilter;
+    QuorumUpdated(previous?: null, current?: null): QuorumUpdatedEventFilter;
 
     "SigningKeyUpdate(address,uint256,address,address)"(
       operator?: string | null,
@@ -912,10 +925,10 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): SigningKeyUpdateEventFilter;
 
     "ThresholdWeightUpdated(uint256)"(
-      _thresholdWeight?: null
+      thresholdWeight?: null
     ): ThresholdWeightUpdatedEventFilter;
     ThresholdWeightUpdated(
-      _thresholdWeight?: null
+      thresholdWeight?: null
     ): ThresholdWeightUpdatedEventFilter;
 
     "TotalWeightUpdated(uint256,uint256)"(
@@ -943,7 +956,7 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<BigNumber>;
 
     getLastCheckpointOperatorWeight(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -952,48 +965,48 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<BigNumber>;
 
     getLastCheckpointThresholdWeightAtBlock(
-      _blockNumber: BigNumberish,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     getLastCheckpointTotalWeight(overrides?: CallOverrides): Promise<BigNumber>;
 
     getLastCheckpointTotalWeightAtBlock(
-      _blockNumber: BigNumberish,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    getLastestOperatorSigningKey(
-      _operator: string,
+    getLatestOperatorSigningKey(
+      operator: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     getOperatorSigningKeyAtBlock(
-      _operator: string,
-      _blockNumber: BigNumberish,
+      operator: string,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     getOperatorWeight(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     getOperatorWeightAtBlock(
-      _operator: string,
-      _blockNumber: BigNumberish,
+      operator: string,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     initialize(
       _serviceManager: string,
-      _thresholdWeight: BigNumberish,
-      _quorum: QuorumStruct,
+      thresholdWeight: BigNumberish,
+      quorum: IECDSAStakeRegistryTypes.QuorumStruct,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     isValidSignature(
-      _dataHash: BytesLike,
+      digest: BytesLike,
       _signatureData: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
@@ -1001,7 +1014,7 @@ export interface ECDSAStakeRegistry extends BaseContract {
     minimumWeight(overrides?: CallOverrides): Promise<BigNumber>;
 
     operatorRegistered(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -1010,8 +1023,8 @@ export interface ECDSAStakeRegistry extends BaseContract {
     quorum(overrides?: CallOverrides): Promise<BigNumber>;
 
     registerOperatorWithSignature(
-      _operatorSignature: ISignatureUtils.SignatureWithSaltAndExpiryStruct,
-      _signingKey: string,
+      operatorSignature: ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct,
+      signingKey: string,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
@@ -1025,18 +1038,18 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<BigNumber>;
 
     updateMinimumWeight(
-      _newMinimumWeight: BigNumberish,
-      _operators: string[],
+      newMinimumWeight: BigNumberish,
+      operators: string[],
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     updateOperatorSigningKey(
-      _newSigningKey: string,
+      newSigningKey: string,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     updateOperators(
-      _operators: string[],
+      operators: string[],
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
@@ -1047,13 +1060,13 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<BigNumber>;
 
     updateQuorumConfig(
-      _quorum: QuorumStruct,
-      _operators: string[],
+      quorum: IECDSAStakeRegistryTypes.QuorumStruct,
+      operators: string[],
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     updateStakeThreshold(
-      _thresholdWeight: BigNumberish,
+      thresholdWeight: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
   };
@@ -1064,7 +1077,7 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     getLastCheckpointOperatorWeight(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -1073,7 +1086,7 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     getLastCheckpointThresholdWeightAtBlock(
-      _blockNumber: BigNumberish,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -1082,41 +1095,41 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     getLastCheckpointTotalWeightAtBlock(
-      _blockNumber: BigNumberish,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    getLastestOperatorSigningKey(
-      _operator: string,
+    getLatestOperatorSigningKey(
+      operator: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     getOperatorSigningKeyAtBlock(
-      _operator: string,
-      _blockNumber: BigNumberish,
+      operator: string,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     getOperatorWeight(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     getOperatorWeightAtBlock(
-      _operator: string,
-      _blockNumber: BigNumberish,
+      operator: string,
+      blockNumber: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     initialize(
       _serviceManager: string,
-      _thresholdWeight: BigNumberish,
-      _quorum: QuorumStruct,
+      thresholdWeight: BigNumberish,
+      quorum: IECDSAStakeRegistryTypes.QuorumStruct,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     isValidSignature(
-      _dataHash: BytesLike,
+      digest: BytesLike,
       _signatureData: BytesLike,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
@@ -1124,7 +1137,7 @@ export interface ECDSAStakeRegistry extends BaseContract {
     minimumWeight(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     operatorRegistered(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -1133,8 +1146,8 @@ export interface ECDSAStakeRegistry extends BaseContract {
     quorum(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     registerOperatorWithSignature(
-      _operatorSignature: ISignatureUtils.SignatureWithSaltAndExpiryStruct,
-      _signingKey: string,
+      operatorSignature: ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct,
+      signingKey: string,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
@@ -1148,18 +1161,18 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     updateMinimumWeight(
-      _newMinimumWeight: BigNumberish,
-      _operators: string[],
+      newMinimumWeight: BigNumberish,
+      operators: string[],
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     updateOperatorSigningKey(
-      _newSigningKey: string,
+      newSigningKey: string,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     updateOperators(
-      _operators: string[],
+      operators: string[],
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
@@ -1170,13 +1183,13 @@ export interface ECDSAStakeRegistry extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     updateQuorumConfig(
-      _quorum: QuorumStruct,
-      _operators: string[],
+      quorum: IECDSAStakeRegistryTypes.QuorumStruct,
+      operators: string[],
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     updateStakeThreshold(
-      _thresholdWeight: BigNumberish,
+      thresholdWeight: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
   };

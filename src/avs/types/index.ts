@@ -1,6 +1,6 @@
 
 import type { ethers } from 'ethers'
-import type { NewTaskCreatedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
+import type { NewTaskCreatedEventObject } from 'src/avs/contracts/ReclaimTaskManager'
 import type { createClaimOnAttestor } from 'src/client'
 import type { ClaimTunnelResponse } from 'src/proto/api'
 import type { CreateClaimOnAttestorOpts, ProofGenerationStep, ProviderName } from 'src/types'
@@ -13,6 +13,7 @@ export type ChainConfig = {
 	contractAddress: string
 	delegationManagerAddress: string
 	rewardsCoordinatorAddress: string
+	slashingCoordinatorAddress: string
 	stakeRegistryAddress: string
 	avsDirectoryAddress: string
 }

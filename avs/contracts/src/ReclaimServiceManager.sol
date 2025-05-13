@@ -13,12 +13,16 @@ import {ISlashingRegistryCoordinator} from "@eigenlayer-middleware/src/interface
  */
 contract ReclaimServiceManager is ServiceManagerBase {
 	IReclaimTaskManager public immutable taskManager;
+	ISlashingRegistryCoordinator public immutable slashingRegistryCoordinator;
 
-	/// @notice when applied to a function, ensures that the function is only callable by the `registryCoordinator`.
+	address[] public whitelistedOperators;
+
+	/// @notice when applied to a function, ensures that the function
+	// is only callable by the `registryCoordinator`.
 	modifier onlyTaskManager() {
 		require(
 			msg.sender == address(taskManager),
-			"onlyTaskManager: not from credible squaring task manager"
+			"onlyTaskManager: not from reclaim task manager"
 		);
 		_;
 	}
@@ -42,6 +46,7 @@ contract ReclaimServiceManager is ServiceManagerBase {
 		)
 	{
 		taskManager = _taskManager;
+		slashingRegistryCoordinator = _slashingRegistryCoordinator;
 	}
 
 	function initialize(
@@ -49,5 +54,61 @@ contract ReclaimServiceManager is ServiceManagerBase {
 		address rewardsInitiator
 	) external initializer {
 		__ServiceManagerBase_init(initialOwner, rewardsInitiator);
+		whitelistedOperators = new address[](0);
+		_allocationManager.setAVSRegistrar(
+			address(this), slashingRegistryCoordinator
+		);
+		_allocationManager.updateAVSMetadataURI(
+			address(this),
+			"TODO"
+		);
+
+		_permissionController.setAppointee(
+			address(this),
+			address(slashingRegistryCoordinator),
+			address(_allocationManager),
+			IAllocationManager.createOperatorSets.selector
+		);
+	}
+
+	function addOperatorToWhitelist(
+		address operator
+	) external onlyOwner {
+		require(
+			!isOperatorWhitelisted(operator),
+			"addOperatorToWhitelist: operator already whitelisted"
+		);
+
+		whitelistedOperators.push(operator);
+	}
+
+	function removeOperatorFromWhitelist(
+		address operator
+	) external onlyOwner {
+		require(
+			isOperatorWhitelisted(operator),
+			"removeOperatorFromWhitelist: operator not whitelisted"
+		);
+
+		for (uint256 i = 0; i < whitelistedOperators.length; i++) {
+			if (whitelistedOperators[i] == operator) {
+				whitelistedOperators[i] = whitelistedOperators[
+					whitelistedOperators.length - 1
+				];
+				whitelistedOperators.pop();
+				break;
+			}
+		}
+	}
+
+	function isOperatorWhitelisted(
+		address operator
+	) public view returns (bool) {
+		for (uint256 i = 0; i < whitelistedOperators.length; i++) {
+			if (whitelistedOperators[i] == operator) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

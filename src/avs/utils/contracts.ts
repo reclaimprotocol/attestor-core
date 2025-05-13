@@ -1,8 +1,7 @@
 import { ethers } from 'ethers'
 import { CHAIN_CONFIGS, PRIVATE_KEY, SELECTED_CHAIN_ID } from 'src/avs/config'
-import { AVSDirectory__factory, DelegationManager__factory, ECDSAStakeRegistry__factory, ERC20Mock__factory, ProxyAdmin__factory, ReclaimServiceManager__factory, RewardsCoordinator__factory } from 'src/avs/contracts'
+import { AVSDirectory__factory, DelegationManager__factory, ECDSAStakeRegistry__factory, ERC20Mock__factory, ReclaimServiceManager__factory, ReclaimSlashingRegistryCoordinator__factory, RewardsCoordinator__factory } from 'src/avs/contracts'
 import { ChainConfig } from 'src/avs/types'
-import { ReclaimServiceManagerInterface } from '../contracts/ReclaimServiceManager'
 
 export type Contracts = ReturnType<typeof initialiseContracts>
 
@@ -29,7 +28,7 @@ export function initialiseContracts(
 		contractAddress,
 		delegationManagerAddress,
 		rewardsCoordinatorAddress,
-		proxyAdminAddress,
+		slashingCoordinatorAddress,
 	}: ChainConfig,
 	privateKey: string | undefined = PRIVATE_KEY
 ) {
@@ -70,8 +69,8 @@ export function initialiseContracts(
 			wallet || provider
 		),
 		// eslint-disable-next-line camelcase
-		proxyAdmin: ProxyAdmin__factory.connect(
-			proxyAdminAddress,
+		slashingCoordinator: ReclaimSlashingRegistryCoordinator__factory.connect(
+			slashingCoordinatorAddress,
 			wallet || provider
 		),
 		// tokens

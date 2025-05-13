@@ -26,7 +26,7 @@ import type {
   OnEvent,
 } from "./common";
 
-export declare namespace IDelegationManager {
+export declare namespace IDelegationManagerTypes {
   export type WithdrawalStruct = {
     staker: string;
     delegatedTo: string;
@@ -34,7 +34,7 @@ export declare namespace IDelegationManager {
     nonce: BigNumberish;
     startBlock: BigNumberish;
     strategies: string[];
-    shares: BigNumberish[];
+    scaledShares: BigNumberish[];
   };
 
   export type WithdrawalStructOutput = [
@@ -52,35 +52,27 @@ export declare namespace IDelegationManager {
     nonce: BigNumber;
     startBlock: number;
     strategies: string[];
-    shares: BigNumber[];
-  };
-
-  export type OperatorDetailsStruct = {
-    __deprecated_earningsReceiver: string;
-    delegationApprover: string;
-    stakerOptOutWindowBlocks: BigNumberish;
-  };
-
-  export type OperatorDetailsStructOutput = [string, string, number] & {
-    __deprecated_earningsReceiver: string;
-    delegationApprover: string;
-    stakerOptOutWindowBlocks: number;
+    scaledShares: BigNumber[];
   };
 
   export type QueuedWithdrawalParamsStruct = {
     strategies: string[];
-    shares: BigNumberish[];
-    withdrawer: string;
+    depositShares: BigNumberish[];
+    __deprecated_withdrawer: string;
   };
 
   export type QueuedWithdrawalParamsStructOutput = [
     string[],
     BigNumber[],
     string
-  ] & { strategies: string[]; shares: BigNumber[]; withdrawer: string };
+  ] & {
+    strategies: string[];
+    depositShares: BigNumber[];
+    __deprecated_withdrawer: string;
+  };
 }
 
-export declare namespace ISignatureUtils {
+export declare namespace ISignatureUtilsMixinTypes {
   export type SignatureWithExpiryStruct = {
     signature: BytesLike;
     expiry: BigNumberish;
@@ -95,36 +87,36 @@ export declare namespace ISignatureUtils {
 export interface DelegationManagerInterface extends utils.Interface {
   functions: {
     "DELEGATION_APPROVAL_TYPEHASH()": FunctionFragment;
-    "DOMAIN_TYPEHASH()": FunctionFragment;
-    "MAX_STAKER_OPT_OUT_WINDOW_BLOCKS()": FunctionFragment;
-    "MAX_WITHDRAWAL_DELAY_BLOCKS()": FunctionFragment;
-    "STAKER_DELEGATION_TYPEHASH()": FunctionFragment;
+    "allocationManager()": FunctionFragment;
     "beaconChainETHStrategy()": FunctionFragment;
-    "calculateCurrentStakerDelegationDigestHash(address,address,uint256)": FunctionFragment;
     "calculateDelegationApprovalDigestHash(address,address,address,bytes32,uint256)": FunctionFragment;
-    "calculateStakerDelegationDigestHash(address,uint256,address,uint256)": FunctionFragment;
     "calculateWithdrawalRoot((address,address,address,uint256,uint32,address[],uint256[]))": FunctionFragment;
-    "completeQueuedWithdrawal((address,address,address,uint256,uint32,address[],uint256[]),address[],uint256,bool)": FunctionFragment;
-    "completeQueuedWithdrawals((address,address,address,uint256,uint32,address[],uint256[])[],address[][],uint256[],bool[])": FunctionFragment;
+    "completeQueuedWithdrawal((address,address,address,uint256,uint32,address[],uint256[]),address[],bool)": FunctionFragment;
+    "completeQueuedWithdrawals((address,address,address,uint256,uint32,address[],uint256[])[],address[][],bool[])": FunctionFragment;
+    "convertToDepositShares(address,address[],uint256[])": FunctionFragment;
     "cumulativeWithdrawalsQueued(address)": FunctionFragment;
-    "decreaseDelegatedShares(address,address,uint256)": FunctionFragment;
+    "decreaseDelegatedShares(address,uint256,uint64)": FunctionFragment;
     "delegateTo(address,(bytes,uint256),bytes32)": FunctionFragment;
-    "delegateToBySignature(address,address,(bytes,uint256),(bytes,uint256),bytes32)": FunctionFragment;
     "delegatedTo(address)": FunctionFragment;
     "delegationApprover(address)": FunctionFragment;
     "delegationApproverSaltIsSpent(address,bytes32)": FunctionFragment;
+    "depositScalingFactor(address,address)": FunctionFragment;
     "domainSeparator()": FunctionFragment;
     "eigenPodManager()": FunctionFragment;
-    "getDelegatableShares(address)": FunctionFragment;
+    "getDepositedShares(address)": FunctionFragment;
     "getOperatorShares(address,address[])": FunctionFragment;
-    "getWithdrawalDelay(address[])": FunctionFragment;
-    "increaseDelegatedShares(address,address,uint256)": FunctionFragment;
-    "initialize(address,address,uint256,uint256,address[],uint256[])": FunctionFragment;
+    "getOperatorsShares(address[],address[])": FunctionFragment;
+    "getQueuedWithdrawal(bytes32)": FunctionFragment;
+    "getQueuedWithdrawalRoots(address)": FunctionFragment;
+    "getQueuedWithdrawals(address)": FunctionFragment;
+    "getSlashableSharesInQueue(address,address)": FunctionFragment;
+    "getWithdrawableShares(address,address[])": FunctionFragment;
+    "increaseDelegatedShares(address,address,uint256,uint256)": FunctionFragment;
+    "initialize(address,uint256)": FunctionFragment;
     "isDelegated(address)": FunctionFragment;
     "isOperator(address)": FunctionFragment;
     "minWithdrawalDelayBlocks()": FunctionFragment;
-    "modifyOperatorDetails((address,address,uint32))": FunctionFragment;
-    "operatorDetails(address)": FunctionFragment;
+    "modifyOperatorDetails(address,address)": FunctionFragment;
     "operatorShares(address,address)": FunctionFragment;
     "owner()": FunctionFragment;
     "pause(uint256)": FunctionFragment;
@@ -133,56 +125,54 @@ export interface DelegationManagerInterface extends utils.Interface {
     "paused()": FunctionFragment;
     "pauserRegistry()": FunctionFragment;
     "pendingWithdrawals(bytes32)": FunctionFragment;
+    "permissionController()": FunctionFragment;
     "queueWithdrawals((address[],uint256[],address)[])": FunctionFragment;
-    "registerAsOperator((address,address,uint32),string)": FunctionFragment;
+    "queuedWithdrawals(bytes32)": FunctionFragment;
+    "redelegate(address,(bytes,uint256),bytes32)": FunctionFragment;
+    "registerAsOperator(address,uint32,string)": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
-    "setMinWithdrawalDelayBlocks(uint256)": FunctionFragment;
-    "setPauserRegistry(address)": FunctionFragment;
-    "setStrategyWithdrawalDelayBlocks(address[],uint256[])": FunctionFragment;
-    "slasher()": FunctionFragment;
-    "stakerNonce(address)": FunctionFragment;
-    "stakerOptOutWindowBlocks(address)": FunctionFragment;
+    "slashOperatorShares(address,address,uint64,uint64)": FunctionFragment;
     "strategyManager()": FunctionFragment;
-    "strategyWithdrawalDelayBlocks(address)": FunctionFragment;
     "transferOwnership(address)": FunctionFragment;
     "undelegate(address)": FunctionFragment;
     "unpause(uint256)": FunctionFragment;
-    "updateOperatorMetadataURI(string)": FunctionFragment;
+    "updateOperatorMetadataURI(address,string)": FunctionFragment;
+    "version()": FunctionFragment;
   };
 
   getFunction(
     nameOrSignatureOrTopic:
       | "DELEGATION_APPROVAL_TYPEHASH"
-      | "DOMAIN_TYPEHASH"
-      | "MAX_STAKER_OPT_OUT_WINDOW_BLOCKS"
-      | "MAX_WITHDRAWAL_DELAY_BLOCKS"
-      | "STAKER_DELEGATION_TYPEHASH"
+      | "allocationManager"
       | "beaconChainETHStrategy"
-      | "calculateCurrentStakerDelegationDigestHash"
       | "calculateDelegationApprovalDigestHash"
-      | "calculateStakerDelegationDigestHash"
       | "calculateWithdrawalRoot"
       | "completeQueuedWithdrawal"
       | "completeQueuedWithdrawals"
+      | "convertToDepositShares"
       | "cumulativeWithdrawalsQueued"
       | "decreaseDelegatedShares"
       | "delegateTo"
-      | "delegateToBySignature"
       | "delegatedTo"
       | "delegationApprover"
       | "delegationApproverSaltIsSpent"
+      | "depositScalingFactor"
       | "domainSeparator"
       | "eigenPodManager"
-      | "getDelegatableShares"
+      | "getDepositedShares"
       | "getOperatorShares"
-      | "getWithdrawalDelay"
+      | "getOperatorsShares"
+      | "getQueuedWithdrawal"
+      | "getQueuedWithdrawalRoots"
+      | "getQueuedWithdrawals"
+      | "getSlashableSharesInQueue"
+      | "getWithdrawableShares"
       | "increaseDelegatedShares"
       | "initialize"
       | "isDelegated"
       | "isOperator"
       | "minWithdrawalDelayBlocks"
       | "modifyOperatorDetails"
-      | "operatorDetails"
       | "operatorShares"
       | "owner"
       | "pause"
@@ -191,21 +181,19 @@ export interface DelegationManagerInterface extends utils.Interface {
       | "paused()"
       | "pauserRegistry"
       | "pendingWithdrawals"
+      | "permissionController"
       | "queueWithdrawals"
+      | "queuedWithdrawals"
+      | "redelegate"
       | "registerAsOperator"
       | "renounceOwnership"
-      | "setMinWithdrawalDelayBlocks"
-      | "setPauserRegistry"
-      | "setStrategyWithdrawalDelayBlocks"
-      | "slasher"
-      | "stakerNonce"
-      | "stakerOptOutWindowBlocks"
+      | "slashOperatorShares"
       | "strategyManager"
-      | "strategyWithdrawalDelayBlocks"
       | "transferOwnership"
       | "undelegate"
       | "unpause"
       | "updateOperatorMetadataURI"
+      | "version"
   ): FunctionFragment;
 
   encodeFunctionData(
@@ -213,19 +201,7 @@ export interface DelegationManagerInterface extends utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "DOMAIN_TYPEHASH",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "MAX_STAKER_OPT_OUT_WINDOW_BLOCKS",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "MAX_WITHDRAWAL_DELAY_BLOCKS",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "STAKER_DELEGATION_TYPEHASH",
+    functionFragment: "allocationManager",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -233,38 +209,24 @@ export interface DelegationManagerInterface extends utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "calculateCurrentStakerDelegationDigestHash",
-    values: [string, string, BigNumberish]
-  ): string;
-  encodeFunctionData(
     functionFragment: "calculateDelegationApprovalDigestHash",
     values: [string, string, string, BytesLike, BigNumberish]
   ): string;
   encodeFunctionData(
-    functionFragment: "calculateStakerDelegationDigestHash",
-    values: [string, BigNumberish, string, BigNumberish]
-  ): string;
-  encodeFunctionData(
     functionFragment: "calculateWithdrawalRoot",
-    values: [IDelegationManager.WithdrawalStruct]
+    values: [IDelegationManagerTypes.WithdrawalStruct]
   ): string;
   encodeFunctionData(
     functionFragment: "completeQueuedWithdrawal",
-    values: [
-      IDelegationManager.WithdrawalStruct,
-      string[],
-      BigNumberish,
-      boolean
-    ]
+    values: [IDelegationManagerTypes.WithdrawalStruct, string[], boolean]
   ): string;
   encodeFunctionData(
     functionFragment: "completeQueuedWithdrawals",
-    values: [
-      IDelegationManager.WithdrawalStruct[],
-      string[][],
-      BigNumberish[],
-      boolean[]
-    ]
+    values: [IDelegationManagerTypes.WithdrawalStruct[], string[][], boolean[]]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "convertToDepositShares",
+    values: [string, string[], BigNumberish[]]
   ): string;
   encodeFunctionData(
     functionFragment: "cumulativeWithdrawalsQueued",
@@ -272,19 +234,13 @@ export interface DelegationManagerInterface extends utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "decreaseDelegatedShares",
-    values: [string, string, BigNumberish]
+    values: [string, BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "delegateTo",
-    values: [string, ISignatureUtils.SignatureWithExpiryStruct, BytesLike]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "delegateToBySignature",
     values: [
       string,
-      string,
-      ISignatureUtils.SignatureWithExpiryStruct,
-      ISignatureUtils.SignatureWithExpiryStruct,
+      ISignatureUtilsMixinTypes.SignatureWithExpiryStruct,
       BytesLike
     ]
   ): string;
@@ -298,6 +254,10 @@ export interface DelegationManagerInterface extends utils.Interface {
     values: [string, BytesLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "depositScalingFactor",
+    values: [string, string]
+  ): string;
+  encodeFunctionData(
     functionFragment: "domainSeparator",
     values?: undefined
   ): string;
@@ -306,7 +266,7 @@ export interface DelegationManagerInterface extends utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "getDelegatableShares",
+    functionFragment: "getDepositedShares",
     values: [string]
   ): string;
   encodeFunctionData(
@@ -314,23 +274,36 @@ export interface DelegationManagerInterface extends utils.Interface {
     values: [string, string[]]
   ): string;
   encodeFunctionData(
-    functionFragment: "getWithdrawalDelay",
-    values: [string[]]
+    functionFragment: "getOperatorsShares",
+    values: [string[], string[]]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getQueuedWithdrawal",
+    values: [BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getQueuedWithdrawalRoots",
+    values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getQueuedWithdrawals",
+    values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getSlashableSharesInQueue",
+    values: [string, string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getWithdrawableShares",
+    values: [string, string[]]
   ): string;
   encodeFunctionData(
     functionFragment: "increaseDelegatedShares",
-    values: [string, string, BigNumberish]
+    values: [string, string, BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "initialize",
-    values: [
-      string,
-      string,
-      BigNumberish,
-      BigNumberish,
-      string[],
-      BigNumberish[]
-    ]
+    values: [string, BigNumberish]
   ): string;
   encodeFunctionData(functionFragment: "isDelegated", values: [string]): string;
   encodeFunctionData(functionFragment: "isOperator", values: [string]): string;
@@ -340,11 +313,7 @@ export interface DelegationManagerInterface extends utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "modifyOperatorDetails",
-    values: [IDelegationManager.OperatorDetailsStruct]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "operatorDetails",
-    values: [string]
+    values: [string, string]
   ): string;
   encodeFunctionData(
     functionFragment: "operatorShares",
@@ -367,42 +336,40 @@ export interface DelegationManagerInterface extends utils.Interface {
     values: [BytesLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "permissionController",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "queueWithdrawals",
-    values: [IDelegationManager.QueuedWithdrawalParamsStruct[]]
+    values: [IDelegationManagerTypes.QueuedWithdrawalParamsStruct[]]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "queuedWithdrawals",
+    values: [BytesLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "redelegate",
+    values: [
+      string,
+      ISignatureUtilsMixinTypes.SignatureWithExpiryStruct,
+      BytesLike
+    ]
   ): string;
   encodeFunctionData(
     functionFragment: "registerAsOperator",
-    values: [IDelegationManager.OperatorDetailsStruct, string]
+    values: [string, BigNumberish, string]
   ): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "setMinWithdrawalDelayBlocks",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "setPauserRegistry",
-    values: [string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "setStrategyWithdrawalDelayBlocks",
-    values: [string[], BigNumberish[]]
-  ): string;
-  encodeFunctionData(functionFragment: "slasher", values?: undefined): string;
-  encodeFunctionData(functionFragment: "stakerNonce", values: [string]): string;
-  encodeFunctionData(
-    functionFragment: "stakerOptOutWindowBlocks",
-    values: [string]
+    functionFragment: "slashOperatorShares",
+    values: [string, string, BigNumberish, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "strategyManager",
     values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "strategyWithdrawalDelayBlocks",
-    values: [string]
   ): string;
   encodeFunctionData(
     functionFragment: "transferOwnership",
@@ -415,27 +382,16 @@ export interface DelegationManagerInterface extends utils.Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "updateOperatorMetadataURI",
-    values: [string]
+    values: [string, string]
   ): string;
+  encodeFunctionData(functionFragment: "version", values?: undefined): string;
 
   decodeFunctionResult(
     functionFragment: "DELEGATION_APPROVAL_TYPEHASH",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "DOMAIN_TYPEHASH",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "MAX_STAKER_OPT_OUT_WINDOW_BLOCKS",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "MAX_WITHDRAWAL_DELAY_BLOCKS",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "STAKER_DELEGATION_TYPEHASH",
+    functionFragment: "allocationManager",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -443,15 +399,7 @@ export interface DelegationManagerInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "calculateCurrentStakerDelegationDigestHash",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "calculateDelegationApprovalDigestHash",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "calculateStakerDelegationDigestHash",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -467,6 +415,10 @@ export interface DelegationManagerInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "convertToDepositShares",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "cumulativeWithdrawalsQueued",
     data: BytesLike
   ): Result;
@@ -475,10 +427,6 @@ export interface DelegationManagerInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "delegateTo", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "delegateToBySignature",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(
     functionFragment: "delegatedTo",
     data: BytesLike
@@ -492,6 +440,10 @@ export interface DelegationManagerInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "depositScalingFactor",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "domainSeparator",
     data: BytesLike
   ): Result;
@@ -500,7 +452,7 @@ export interface DelegationManagerInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "getDelegatableShares",
+    functionFragment: "getDepositedShares",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -508,7 +460,27 @@ export interface DelegationManagerInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "getWithdrawalDelay",
+    functionFragment: "getOperatorsShares",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getQueuedWithdrawal",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getQueuedWithdrawalRoots",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getQueuedWithdrawals",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getSlashableSharesInQueue",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getWithdrawableShares",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -527,10 +499,6 @@ export interface DelegationManagerInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "modifyOperatorDetails",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "operatorDetails",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -554,9 +522,18 @@ export interface DelegationManagerInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "permissionController",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "queueWithdrawals",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "queuedWithdrawals",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(functionFragment: "redelegate", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "registerAsOperator",
     data: BytesLike
@@ -566,32 +543,11 @@ export interface DelegationManagerInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "setMinWithdrawalDelayBlocks",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "setPauserRegistry",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "setStrategyWithdrawalDelayBlocks",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "slasher", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "stakerNonce",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "stakerOptOutWindowBlocks",
+    functionFragment: "slashOperatorShares",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "strategyManager",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "strategyWithdrawalDelayBlocks",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -604,49 +560,73 @@ export interface DelegationManagerInterface extends utils.Interface {
     functionFragment: "updateOperatorMetadataURI",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "version", data: BytesLike): Result;
 
   events: {
+    "DelegationApproverUpdated(address,address)": EventFragment;
+    "DepositScalingFactorUpdated(address,address,uint256)": EventFragment;
     "Initialized(uint8)": EventFragment;
-    "MinWithdrawalDelayBlocksSet(uint256,uint256)": EventFragment;
-    "OperatorDetailsModified(address,(address,address,uint32))": EventFragment;
     "OperatorMetadataURIUpdated(address,string)": EventFragment;
-    "OperatorRegistered(address,(address,address,uint32))": EventFragment;
+    "OperatorRegistered(address,address)": EventFragment;
     "OperatorSharesDecreased(address,address,address,uint256)": EventFragment;
     "OperatorSharesIncreased(address,address,address,uint256)": EventFragment;
+    "OperatorSharesSlashed(address,address,uint256)": EventFragment;
     "OwnershipTransferred(address,address)": EventFragment;
     "Paused(address,uint256)": EventFragment;
-    "PauserRegistrySet(address,address)": EventFragment;
+    "SlashingWithdrawalCompleted(bytes32)": EventFragment;
+    "SlashingWithdrawalQueued(bytes32,(address,address,address,uint256,uint32,address[],uint256[]),uint256[])": EventFragment;
     "StakerDelegated(address,address)": EventFragment;
     "StakerForceUndelegated(address,address)": EventFragment;
     "StakerUndelegated(address,address)": EventFragment;
-    "StrategyWithdrawalDelayBlocksSet(address,uint256,uint256)": EventFragment;
     "Unpaused(address,uint256)": EventFragment;
-    "WithdrawalCompleted(bytes32)": EventFragment;
-    "WithdrawalQueued(bytes32,(address,address,address,uint256,uint32,address[],uint256[]))": EventFragment;
   };
 
-  getEvent(nameOrSignatureOrTopic: "Initialized"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "DelegationApproverUpdated"): EventFragment;
   getEvent(
-    nameOrSignatureOrTopic: "MinWithdrawalDelayBlocksSet"
+    nameOrSignatureOrTopic: "DepositScalingFactorUpdated"
   ): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "OperatorDetailsModified"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "Initialized"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OperatorMetadataURIUpdated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OperatorRegistered"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OperatorSharesDecreased"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OperatorSharesIncreased"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "OperatorSharesSlashed"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Paused"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "PauserRegistrySet"): EventFragment;
+  getEvent(
+    nameOrSignatureOrTopic: "SlashingWithdrawalCompleted"
+  ): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SlashingWithdrawalQueued"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "StakerDelegated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "StakerForceUndelegated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "StakerUndelegated"): EventFragment;
-  getEvent(
-    nameOrSignatureOrTopic: "StrategyWithdrawalDelayBlocksSet"
-  ): EventFragment;
   getEvent(nameOrSignatureOrTopic: "Unpaused"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "WithdrawalCompleted"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "WithdrawalQueued"): EventFragment;
 }
+
+export interface DelegationApproverUpdatedEventObject {
+  operator: string;
+  newDelegationApprover: string;
+}
+export type DelegationApproverUpdatedEvent = TypedEvent<
+  [string, string],
+  DelegationApproverUpdatedEventObject
+>;
+
+export type DelegationApproverUpdatedEventFilter =
+  TypedEventFilter<DelegationApproverUpdatedEvent>;
+
+export interface DepositScalingFactorUpdatedEventObject {
+  staker: string;
+  strategy: string;
+  newDepositScalingFactor: BigNumber;
+}
+export type DepositScalingFactorUpdatedEvent = TypedEvent<
+  [string, string, BigNumber],
+  DepositScalingFactorUpdatedEventObject
+>;
+
+export type DepositScalingFactorUpdatedEventFilter =
+  TypedEventFilter<DepositScalingFactorUpdatedEvent>;
 
 export interface InitializedEventObject {
   version: number;
@@ -654,30 +634,6 @@ export interface InitializedEventObject {
 export type InitializedEvent = TypedEvent<[number], InitializedEventObject>;
 
 export type InitializedEventFilter = TypedEventFilter<InitializedEvent>;
-
-export interface MinWithdrawalDelayBlocksSetEventObject {
-  previousValue: BigNumber;
-  newValue: BigNumber;
-}
-export type MinWithdrawalDelayBlocksSetEvent = TypedEvent<
-  [BigNumber, BigNumber],
-  MinWithdrawalDelayBlocksSetEventObject
->;
-
-export type MinWithdrawalDelayBlocksSetEventFilter =
-  TypedEventFilter<MinWithdrawalDelayBlocksSetEvent>;
-
-export interface OperatorDetailsModifiedEventObject {
-  operator: string;
-  newOperatorDetails: IDelegationManager.OperatorDetailsStructOutput;
-}
-export type OperatorDetailsModifiedEvent = TypedEvent<
-  [string, IDelegationManager.OperatorDetailsStructOutput],
-  OperatorDetailsModifiedEventObject
->;
-
-export type OperatorDetailsModifiedEventFilter =
-  TypedEventFilter<OperatorDetailsModifiedEvent>;
 
 export interface OperatorMetadataURIUpdatedEventObject {
   operator: string;
@@ -693,10 +649,10 @@ export type OperatorMetadataURIUpdatedEventFilter =
 
 export interface OperatorRegisteredEventObject {
   operator: string;
-  operatorDetails: IDelegationManager.OperatorDetailsStructOutput;
+  delegationApprover: string;
 }
 export type OperatorRegisteredEvent = TypedEvent<
-  [string, IDelegationManager.OperatorDetailsStructOutput],
+  [string, string],
   OperatorRegisteredEventObject
 >;
 
@@ -731,6 +687,19 @@ export type OperatorSharesIncreasedEvent = TypedEvent<
 export type OperatorSharesIncreasedEventFilter =
   TypedEventFilter<OperatorSharesIncreasedEvent>;
 
+export interface OperatorSharesSlashedEventObject {
+  operator: string;
+  strategy: string;
+  totalSlashedShares: BigNumber;
+}
+export type OperatorSharesSlashedEvent = TypedEvent<
+  [string, string, BigNumber],
+  OperatorSharesSlashedEventObject
+>;
+
+export type OperatorSharesSlashedEventFilter =
+  TypedEventFilter<OperatorSharesSlashedEvent>;
+
 export interface OwnershipTransferredEventObject {
   previousOwner: string;
   newOwner: string;
@@ -751,17 +720,29 @@ export type PausedEvent = TypedEvent<[string, BigNumber], PausedEventObject>;
 
 export type PausedEventFilter = TypedEventFilter<PausedEvent>;
 
-export interface PauserRegistrySetEventObject {
-  pauserRegistry: string;
-  newPauserRegistry: string;
+export interface SlashingWithdrawalCompletedEventObject {
+  withdrawalRoot: string;
 }
-export type PauserRegistrySetEvent = TypedEvent<
-  [string, string],
-  PauserRegistrySetEventObject
+export type SlashingWithdrawalCompletedEvent = TypedEvent<
+  [string],
+  SlashingWithdrawalCompletedEventObject
 >;
 
-export type PauserRegistrySetEventFilter =
-  TypedEventFilter<PauserRegistrySetEvent>;
+export type SlashingWithdrawalCompletedEventFilter =
+  TypedEventFilter<SlashingWithdrawalCompletedEvent>;
+
+export interface SlashingWithdrawalQueuedEventObject {
+  withdrawalRoot: string;
+  withdrawal: IDelegationManagerTypes.WithdrawalStructOutput;
+  sharesToWithdraw: BigNumber[];
+}
+export type SlashingWithdrawalQueuedEvent = TypedEvent<
+  [string, IDelegationManagerTypes.WithdrawalStructOutput, BigNumber[]],
+  SlashingWithdrawalQueuedEventObject
+>;
+
+export type SlashingWithdrawalQueuedEventFilter =
+  TypedEventFilter<SlashingWithdrawalQueuedEvent>;
 
 export interface StakerDelegatedEventObject {
   staker: string;
@@ -798,19 +779,6 @@ export type StakerUndelegatedEvent = TypedEvent<
 export type StakerUndelegatedEventFilter =
   TypedEventFilter<StakerUndelegatedEvent>;
 
-export interface StrategyWithdrawalDelayBlocksSetEventObject {
-  strategy: string;
-  previousValue: BigNumber;
-  newValue: BigNumber;
-}
-export type StrategyWithdrawalDelayBlocksSetEvent = TypedEvent<
-  [string, BigNumber, BigNumber],
-  StrategyWithdrawalDelayBlocksSetEventObject
->;
-
-export type StrategyWithdrawalDelayBlocksSetEventFilter =
-  TypedEventFilter<StrategyWithdrawalDelayBlocksSetEvent>;
-
 export interface UnpausedEventObject {
   account: string;
   newPausedStatus: BigNumber;
@@ -821,29 +789,6 @@ export type UnpausedEvent = TypedEvent<
 >;
 
 export type UnpausedEventFilter = TypedEventFilter<UnpausedEvent>;
-
-export interface WithdrawalCompletedEventObject {
-  withdrawalRoot: string;
-}
-export type WithdrawalCompletedEvent = TypedEvent<
-  [string],
-  WithdrawalCompletedEventObject
->;
-
-export type WithdrawalCompletedEventFilter =
-  TypedEventFilter<WithdrawalCompletedEvent>;
-
-export interface WithdrawalQueuedEventObject {
-  withdrawalRoot: string;
-  withdrawal: IDelegationManager.WithdrawalStructOutput;
-}
-export type WithdrawalQueuedEvent = TypedEvent<
-  [string, IDelegationManager.WithdrawalStructOutput],
-  WithdrawalQueuedEventObject
->;
-
-export type WithdrawalQueuedEventFilter =
-  TypedEventFilter<WithdrawalQueuedEvent>;
 
 export interface DelegationManager extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
@@ -874,94 +819,68 @@ export interface DelegationManager extends BaseContract {
   functions: {
     DELEGATION_APPROVAL_TYPEHASH(overrides?: CallOverrides): Promise<[string]>;
 
-    DOMAIN_TYPEHASH(overrides?: CallOverrides): Promise<[string]>;
-
-    MAX_STAKER_OPT_OUT_WINDOW_BLOCKS(
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
-
-    MAX_WITHDRAWAL_DELAY_BLOCKS(
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
-
-    STAKER_DELEGATION_TYPEHASH(overrides?: CallOverrides): Promise<[string]>;
+    allocationManager(overrides?: CallOverrides): Promise<[string]>;
 
     beaconChainETHStrategy(overrides?: CallOverrides): Promise<[string]>;
-
-    calculateCurrentStakerDelegationDigestHash(
-      staker: string,
-      operator: string,
-      expiry: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string]>;
 
     calculateDelegationApprovalDigestHash(
       staker: string,
       operator: string,
-      _delegationApprover: string,
+      approver: string,
       approverSalt: BytesLike,
-      expiry: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string]>;
-
-    calculateStakerDelegationDigestHash(
-      staker: string,
-      _stakerNonce: BigNumberish,
-      operator: string,
       expiry: BigNumberish,
       overrides?: CallOverrides
     ): Promise<[string]>;
 
     calculateWithdrawalRoot(
-      withdrawal: IDelegationManager.WithdrawalStruct,
+      withdrawal: IDelegationManagerTypes.WithdrawalStruct,
       overrides?: CallOverrides
     ): Promise<[string]>;
 
     completeQueuedWithdrawal(
-      withdrawal: IDelegationManager.WithdrawalStruct,
+      withdrawal: IDelegationManagerTypes.WithdrawalStruct,
       tokens: string[],
-      middlewareTimesIndex: BigNumberish,
       receiveAsTokens: boolean,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
     completeQueuedWithdrawals(
-      withdrawals: IDelegationManager.WithdrawalStruct[],
+      withdrawals: IDelegationManagerTypes.WithdrawalStruct[],
       tokens: string[][],
-      middlewareTimesIndexes: BigNumberish[],
       receiveAsTokens: boolean[],
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
-    cumulativeWithdrawalsQueued(
-      arg0: string,
+    convertToDepositShares(
+      staker: string,
+      strategies: string[],
+      withdrawableShares: BigNumberish[],
       overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+    ): Promise<[BigNumber[]]>;
+
+    cumulativeWithdrawalsQueued(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber] & { totalQueued: BigNumber }>;
 
     decreaseDelegatedShares(
       staker: string,
-      strategy: string,
-      shares: BigNumberish,
+      curDepositShares: BigNumberish,
+      beaconChainSlashingFactorDecrease: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
     delegateTo(
       operator: string,
-      approverSignatureAndExpiry: ISignatureUtils.SignatureWithExpiryStruct,
+      approverSignatureAndExpiry: ISignatureUtilsMixinTypes.SignatureWithExpiryStruct,
       approverSalt: BytesLike,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
-    delegateToBySignature(
+    delegatedTo(
       staker: string,
-      operator: string,
-      stakerSignatureAndExpiry: ISignatureUtils.SignatureWithExpiryStruct,
-      approverSignatureAndExpiry: ISignatureUtils.SignatureWithExpiryStruct,
-      approverSalt: BytesLike,
-      overrides?: Overrides & { from?: string }
-    ): Promise<ContractTransaction>;
-
-    delegatedTo(arg0: string, overrides?: CallOverrides): Promise<[string]>;
+      overrides?: CallOverrides
+    ): Promise<[string] & { operator: string }>;
 
     delegationApprover(
       operator: string,
@@ -969,16 +888,22 @@ export interface DelegationManager extends BaseContract {
     ): Promise<[string]>;
 
     delegationApproverSaltIsSpent(
-      arg0: string,
-      arg1: BytesLike,
+      delegationApprover: string,
+      salt: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    ): Promise<[boolean] & { spent: boolean }>;
+
+    depositScalingFactor(
+      staker: string,
+      strategy: string,
+      overrides?: CallOverrides
+    ): Promise<[BigNumber]>;
 
     domainSeparator(overrides?: CallOverrides): Promise<[string]>;
 
     eigenPodManager(overrides?: CallOverrides): Promise<[string]>;
 
-    getDelegatableShares(
+    getDepositedShares(
       staker: string,
       overrides?: CallOverrides
     ): Promise<[string[], BigNumber[]]>;
@@ -989,25 +914,65 @@ export interface DelegationManager extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[BigNumber[]]>;
 
-    getWithdrawalDelay(
+    getOperatorsShares(
+      operators: string[],
       strategies: string[],
       overrides?: CallOverrides
+    ): Promise<[BigNumber[][]]>;
+
+    getQueuedWithdrawal(
+      withdrawalRoot: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<
+      [IDelegationManagerTypes.WithdrawalStructOutput, BigNumber[]] & {
+        withdrawal: IDelegationManagerTypes.WithdrawalStructOutput;
+        shares: BigNumber[];
+      }
+    >;
+
+    getQueuedWithdrawalRoots(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<[string[]]>;
+
+    getQueuedWithdrawals(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<
+      [IDelegationManagerTypes.WithdrawalStructOutput[], BigNumber[][]] & {
+        withdrawals: IDelegationManagerTypes.WithdrawalStructOutput[];
+        shares: BigNumber[][];
+      }
+    >;
+
+    getSlashableSharesInQueue(
+      operator: string,
+      strategy: string,
+      overrides?: CallOverrides
     ): Promise<[BigNumber]>;
+
+    getWithdrawableShares(
+      staker: string,
+      strategies: string[],
+      overrides?: CallOverrides
+    ): Promise<
+      [BigNumber[], BigNumber[]] & {
+        withdrawableShares: BigNumber[];
+        depositShares: BigNumber[];
+      }
+    >;
 
     increaseDelegatedShares(
       staker: string,
       strategy: string,
-      shares: BigNumberish,
+      prevDepositShares: BigNumberish,
+      addedShares: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
     initialize(
       initialOwner: string,
-      _pauserRegistry: string,
       initialPausedStatus: BigNumberish,
-      _minWithdrawalDelayBlocks: BigNumberish,
-      _strategies: string[],
-      _withdrawalDelayBlocks: BigNumberish[],
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
@@ -1015,23 +980,19 @@ export interface DelegationManager extends BaseContract {
 
     isOperator(operator: string, overrides?: CallOverrides): Promise<[boolean]>;
 
-    minWithdrawalDelayBlocks(overrides?: CallOverrides): Promise<[BigNumber]>;
+    minWithdrawalDelayBlocks(overrides?: CallOverrides): Promise<[number]>;
 
     modifyOperatorDetails(
-      newOperatorDetails: IDelegationManager.OperatorDetailsStruct,
+      operator: string,
+      newDelegationApprover: string,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
-    operatorDetails(
-      operator: string,
-      overrides?: CallOverrides
-    ): Promise<[IDelegationManager.OperatorDetailsStructOutput]>;
-
     operatorShares(
-      arg0: string,
-      arg1: string,
+      operator: string,
+      strategy: string,
       overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+    ): Promise<[BigNumber] & { shares: BigNumber }>;
 
     owner(overrides?: CallOverrides): Promise<[string]>;
 
@@ -1054,17 +1015,36 @@ export interface DelegationManager extends BaseContract {
     pauserRegistry(overrides?: CallOverrides): Promise<[string]>;
 
     pendingWithdrawals(
-      arg0: BytesLike,
+      withdrawalRoot: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[boolean]>;
+    ): Promise<[boolean] & { pending: boolean }>;
+
+    permissionController(overrides?: CallOverrides): Promise<[string]>;
 
     queueWithdrawals(
-      queuedWithdrawalParams: IDelegationManager.QueuedWithdrawalParamsStruct[],
+      params: IDelegationManagerTypes.QueuedWithdrawalParamsStruct[],
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
+
+    queuedWithdrawals(
+      withdrawalRoot: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<
+      [IDelegationManagerTypes.WithdrawalStructOutput] & {
+        withdrawal: IDelegationManagerTypes.WithdrawalStructOutput;
+      }
+    >;
+
+    redelegate(
+      newOperator: string,
+      newOperatorApproverSig: ISignatureUtilsMixinTypes.SignatureWithExpiryStruct,
+      approverSalt: BytesLike,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
     registerAsOperator(
-      registeringOperatorDetails: IDelegationManager.OperatorDetailsStruct,
+      initDelegationApprover: string,
+      allocationDelay: BigNumberish,
       metadataURI: string,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
@@ -1073,37 +1053,15 @@ export interface DelegationManager extends BaseContract {
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
-    setMinWithdrawalDelayBlocks(
-      newMinWithdrawalDelayBlocks: BigNumberish,
-      overrides?: Overrides & { from?: string }
-    ): Promise<ContractTransaction>;
-
-    setPauserRegistry(
-      newPauserRegistry: string,
-      overrides?: Overrides & { from?: string }
-    ): Promise<ContractTransaction>;
-
-    setStrategyWithdrawalDelayBlocks(
-      strategies: string[],
-      withdrawalDelayBlocks: BigNumberish[],
-      overrides?: Overrides & { from?: string }
-    ): Promise<ContractTransaction>;
-
-    slasher(overrides?: CallOverrides): Promise<[string]>;
-
-    stakerNonce(arg0: string, overrides?: CallOverrides): Promise<[BigNumber]>;
-
-    stakerOptOutWindowBlocks(
+    slashOperatorShares(
       operator: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
+      strategy: string,
+      prevMaxMagnitude: BigNumberish,
+      newMaxMagnitude: BigNumberish,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
     strategyManager(overrides?: CallOverrides): Promise<[string]>;
-
-    strategyWithdrawalDelayBlocks(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<[BigNumber]>;
 
     transferOwnership(
       newOwner: string,
@@ -1121,99 +1079,75 @@ export interface DelegationManager extends BaseContract {
     ): Promise<ContractTransaction>;
 
     updateOperatorMetadataURI(
+      operator: string,
       metadataURI: string,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
+
+    version(overrides?: CallOverrides): Promise<[string]>;
   };
 
   DELEGATION_APPROVAL_TYPEHASH(overrides?: CallOverrides): Promise<string>;
 
-  DOMAIN_TYPEHASH(overrides?: CallOverrides): Promise<string>;
-
-  MAX_STAKER_OPT_OUT_WINDOW_BLOCKS(
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
-
-  MAX_WITHDRAWAL_DELAY_BLOCKS(overrides?: CallOverrides): Promise<BigNumber>;
-
-  STAKER_DELEGATION_TYPEHASH(overrides?: CallOverrides): Promise<string>;
+  allocationManager(overrides?: CallOverrides): Promise<string>;
 
   beaconChainETHStrategy(overrides?: CallOverrides): Promise<string>;
-
-  calculateCurrentStakerDelegationDigestHash(
-    staker: string,
-    operator: string,
-    expiry: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<string>;
 
   calculateDelegationApprovalDigestHash(
     staker: string,
     operator: string,
-    _delegationApprover: string,
+    approver: string,
     approverSalt: BytesLike,
-    expiry: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<string>;
-
-  calculateStakerDelegationDigestHash(
-    staker: string,
-    _stakerNonce: BigNumberish,
-    operator: string,
     expiry: BigNumberish,
     overrides?: CallOverrides
   ): Promise<string>;
 
   calculateWithdrawalRoot(
-    withdrawal: IDelegationManager.WithdrawalStruct,
+    withdrawal: IDelegationManagerTypes.WithdrawalStruct,
     overrides?: CallOverrides
   ): Promise<string>;
 
   completeQueuedWithdrawal(
-    withdrawal: IDelegationManager.WithdrawalStruct,
+    withdrawal: IDelegationManagerTypes.WithdrawalStruct,
     tokens: string[],
-    middlewareTimesIndex: BigNumberish,
     receiveAsTokens: boolean,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
   completeQueuedWithdrawals(
-    withdrawals: IDelegationManager.WithdrawalStruct[],
+    withdrawals: IDelegationManagerTypes.WithdrawalStruct[],
     tokens: string[][],
-    middlewareTimesIndexes: BigNumberish[],
     receiveAsTokens: boolean[],
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
+  convertToDepositShares(
+    staker: string,
+    strategies: string[],
+    withdrawableShares: BigNumberish[],
+    overrides?: CallOverrides
+  ): Promise<BigNumber[]>;
+
   cumulativeWithdrawalsQueued(
-    arg0: string,
+    staker: string,
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
   decreaseDelegatedShares(
     staker: string,
-    strategy: string,
-    shares: BigNumberish,
+    curDepositShares: BigNumberish,
+    beaconChainSlashingFactorDecrease: BigNumberish,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
   delegateTo(
     operator: string,
-    approverSignatureAndExpiry: ISignatureUtils.SignatureWithExpiryStruct,
+    approverSignatureAndExpiry: ISignatureUtilsMixinTypes.SignatureWithExpiryStruct,
     approverSalt: BytesLike,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
-  delegateToBySignature(
-    staker: string,
-    operator: string,
-    stakerSignatureAndExpiry: ISignatureUtils.SignatureWithExpiryStruct,
-    approverSignatureAndExpiry: ISignatureUtils.SignatureWithExpiryStruct,
-    approverSalt: BytesLike,
-    overrides?: Overrides & { from?: string }
-  ): Promise<ContractTransaction>;
-
-  delegatedTo(arg0: string, overrides?: CallOverrides): Promise<string>;
+  delegatedTo(staker: string, overrides?: CallOverrides): Promise<string>;
 
   delegationApprover(
     operator: string,
@@ -1221,16 +1155,22 @@ export interface DelegationManager extends BaseContract {
   ): Promise<string>;
 
   delegationApproverSaltIsSpent(
-    arg0: string,
-    arg1: BytesLike,
+    delegationApprover: string,
+    salt: BytesLike,
     overrides?: CallOverrides
   ): Promise<boolean>;
+
+  depositScalingFactor(
+    staker: string,
+    strategy: string,
+    overrides?: CallOverrides
+  ): Promise<BigNumber>;
 
   domainSeparator(overrides?: CallOverrides): Promise<string>;
 
   eigenPodManager(overrides?: CallOverrides): Promise<string>;
 
-  getDelegatableShares(
+  getDepositedShares(
     staker: string,
     overrides?: CallOverrides
   ): Promise<[string[], BigNumber[]]>;
@@ -1241,25 +1181,65 @@ export interface DelegationManager extends BaseContract {
     overrides?: CallOverrides
   ): Promise<BigNumber[]>;
 
-  getWithdrawalDelay(
+  getOperatorsShares(
+    operators: string[],
     strategies: string[],
     overrides?: CallOverrides
+  ): Promise<BigNumber[][]>;
+
+  getQueuedWithdrawal(
+    withdrawalRoot: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<
+    [IDelegationManagerTypes.WithdrawalStructOutput, BigNumber[]] & {
+      withdrawal: IDelegationManagerTypes.WithdrawalStructOutput;
+      shares: BigNumber[];
+    }
+  >;
+
+  getQueuedWithdrawalRoots(
+    staker: string,
+    overrides?: CallOverrides
+  ): Promise<string[]>;
+
+  getQueuedWithdrawals(
+    staker: string,
+    overrides?: CallOverrides
+  ): Promise<
+    [IDelegationManagerTypes.WithdrawalStructOutput[], BigNumber[][]] & {
+      withdrawals: IDelegationManagerTypes.WithdrawalStructOutput[];
+      shares: BigNumber[][];
+    }
+  >;
+
+  getSlashableSharesInQueue(
+    operator: string,
+    strategy: string,
+    overrides?: CallOverrides
   ): Promise<BigNumber>;
+
+  getWithdrawableShares(
+    staker: string,
+    strategies: string[],
+    overrides?: CallOverrides
+  ): Promise<
+    [BigNumber[], BigNumber[]] & {
+      withdrawableShares: BigNumber[];
+      depositShares: BigNumber[];
+    }
+  >;
 
   increaseDelegatedShares(
     staker: string,
     strategy: string,
-    shares: BigNumberish,
+    prevDepositShares: BigNumberish,
+    addedShares: BigNumberish,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
   initialize(
     initialOwner: string,
-    _pauserRegistry: string,
     initialPausedStatus: BigNumberish,
-    _minWithdrawalDelayBlocks: BigNumberish,
-    _strategies: string[],
-    _withdrawalDelayBlocks: BigNumberish[],
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
@@ -1267,21 +1247,17 @@ export interface DelegationManager extends BaseContract {
 
   isOperator(operator: string, overrides?: CallOverrides): Promise<boolean>;
 
-  minWithdrawalDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>;
+  minWithdrawalDelayBlocks(overrides?: CallOverrides): Promise<number>;
 
   modifyOperatorDetails(
-    newOperatorDetails: IDelegationManager.OperatorDetailsStruct,
+    operator: string,
+    newDelegationApprover: string,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
-  operatorDetails(
-    operator: string,
-    overrides?: CallOverrides
-  ): Promise<IDelegationManager.OperatorDetailsStructOutput>;
-
   operatorShares(
-    arg0: string,
-    arg1: string,
+    operator: string,
+    strategy: string,
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
@@ -1306,17 +1282,32 @@ export interface DelegationManager extends BaseContract {
   pauserRegistry(overrides?: CallOverrides): Promise<string>;
 
   pendingWithdrawals(
-    arg0: BytesLike,
+    withdrawalRoot: BytesLike,
     overrides?: CallOverrides
   ): Promise<boolean>;
 
+  permissionController(overrides?: CallOverrides): Promise<string>;
+
   queueWithdrawals(
-    queuedWithdrawalParams: IDelegationManager.QueuedWithdrawalParamsStruct[],
+    params: IDelegationManagerTypes.QueuedWithdrawalParamsStruct[],
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  queuedWithdrawals(
+    withdrawalRoot: BytesLike,
+    overrides?: CallOverrides
+  ): Promise<IDelegationManagerTypes.WithdrawalStructOutput>;
+
+  redelegate(
+    newOperator: string,
+    newOperatorApproverSig: ISignatureUtilsMixinTypes.SignatureWithExpiryStruct,
+    approverSalt: BytesLike,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
   registerAsOperator(
-    registeringOperatorDetails: IDelegationManager.OperatorDetailsStruct,
+    initDelegationApprover: string,
+    allocationDelay: BigNumberish,
     metadataURI: string,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
@@ -1325,37 +1316,15 @@ export interface DelegationManager extends BaseContract {
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
-  setMinWithdrawalDelayBlocks(
-    newMinWithdrawalDelayBlocks: BigNumberish,
-    overrides?: Overrides & { from?: string }
-  ): Promise<ContractTransaction>;
-
-  setPauserRegistry(
-    newPauserRegistry: string,
-    overrides?: Overrides & { from?: string }
-  ): Promise<ContractTransaction>;
-
-  setStrategyWithdrawalDelayBlocks(
-    strategies: string[],
-    withdrawalDelayBlocks: BigNumberish[],
-    overrides?: Overrides & { from?: string }
-  ): Promise<ContractTransaction>;
-
-  slasher(overrides?: CallOverrides): Promise<string>;
-
-  stakerNonce(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
-
-  stakerOptOutWindowBlocks(
+  slashOperatorShares(
     operator: string,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
+    strategy: string,
+    prevMaxMagnitude: BigNumberish,
+    newMaxMagnitude: BigNumberish,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
 
   strategyManager(overrides?: CallOverrides): Promise<string>;
-
-  strategyWithdrawalDelayBlocks(
-    arg0: string,
-    overrides?: CallOverrides
-  ): Promise<BigNumber>;
 
   transferOwnership(
     newOwner: string,
@@ -1373,99 +1342,75 @@ export interface DelegationManager extends BaseContract {
   ): Promise<ContractTransaction>;
 
   updateOperatorMetadataURI(
+    operator: string,
     metadataURI: string,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
+  version(overrides?: CallOverrides): Promise<string>;
+
   callStatic: {
     DELEGATION_APPROVAL_TYPEHASH(overrides?: CallOverrides): Promise<string>;
 
-    DOMAIN_TYPEHASH(overrides?: CallOverrides): Promise<string>;
-
-    MAX_STAKER_OPT_OUT_WINDOW_BLOCKS(
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    MAX_WITHDRAWAL_DELAY_BLOCKS(overrides?: CallOverrides): Promise<BigNumber>;
-
-    STAKER_DELEGATION_TYPEHASH(overrides?: CallOverrides): Promise<string>;
+    allocationManager(overrides?: CallOverrides): Promise<string>;
 
     beaconChainETHStrategy(overrides?: CallOverrides): Promise<string>;
-
-    calculateCurrentStakerDelegationDigestHash(
-      staker: string,
-      operator: string,
-      expiry: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<string>;
 
     calculateDelegationApprovalDigestHash(
       staker: string,
       operator: string,
-      _delegationApprover: string,
+      approver: string,
       approverSalt: BytesLike,
-      expiry: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<string>;
-
-    calculateStakerDelegationDigestHash(
-      staker: string,
-      _stakerNonce: BigNumberish,
-      operator: string,
       expiry: BigNumberish,
       overrides?: CallOverrides
     ): Promise<string>;
 
     calculateWithdrawalRoot(
-      withdrawal: IDelegationManager.WithdrawalStruct,
+      withdrawal: IDelegationManagerTypes.WithdrawalStruct,
       overrides?: CallOverrides
     ): Promise<string>;
 
     completeQueuedWithdrawal(
-      withdrawal: IDelegationManager.WithdrawalStruct,
+      withdrawal: IDelegationManagerTypes.WithdrawalStruct,
       tokens: string[],
-      middlewareTimesIndex: BigNumberish,
       receiveAsTokens: boolean,
       overrides?: CallOverrides
     ): Promise<void>;
 
     completeQueuedWithdrawals(
-      withdrawals: IDelegationManager.WithdrawalStruct[],
+      withdrawals: IDelegationManagerTypes.WithdrawalStruct[],
       tokens: string[][],
-      middlewareTimesIndexes: BigNumberish[],
       receiveAsTokens: boolean[],
       overrides?: CallOverrides
     ): Promise<void>;
 
+    convertToDepositShares(
+      staker: string,
+      strategies: string[],
+      withdrawableShares: BigNumberish[],
+      overrides?: CallOverrides
+    ): Promise<BigNumber[]>;
+
     cumulativeWithdrawalsQueued(
-      arg0: string,
+      staker: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     decreaseDelegatedShares(
       staker: string,
-      strategy: string,
-      shares: BigNumberish,
+      curDepositShares: BigNumberish,
+      beaconChainSlashingFactorDecrease: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
 
     delegateTo(
       operator: string,
-      approverSignatureAndExpiry: ISignatureUtils.SignatureWithExpiryStruct,
+      approverSignatureAndExpiry: ISignatureUtilsMixinTypes.SignatureWithExpiryStruct,
       approverSalt: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    delegateToBySignature(
-      staker: string,
-      operator: string,
-      stakerSignatureAndExpiry: ISignatureUtils.SignatureWithExpiryStruct,
-      approverSignatureAndExpiry: ISignatureUtils.SignatureWithExpiryStruct,
-      approverSalt: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    delegatedTo(arg0: string, overrides?: CallOverrides): Promise<string>;
+    delegatedTo(staker: string, overrides?: CallOverrides): Promise<string>;
 
     delegationApprover(
       operator: string,
@@ -1473,16 +1418,22 @@ export interface DelegationManager extends BaseContract {
     ): Promise<string>;
 
     delegationApproverSaltIsSpent(
-      arg0: string,
-      arg1: BytesLike,
+      delegationApprover: string,
+      salt: BytesLike,
       overrides?: CallOverrides
     ): Promise<boolean>;
+
+    depositScalingFactor(
+      staker: string,
+      strategy: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
 
     domainSeparator(overrides?: CallOverrides): Promise<string>;
 
     eigenPodManager(overrides?: CallOverrides): Promise<string>;
 
-    getDelegatableShares(
+    getDepositedShares(
       staker: string,
       overrides?: CallOverrides
     ): Promise<[string[], BigNumber[]]>;
@@ -1493,25 +1444,65 @@ export interface DelegationManager extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber[]>;
 
-    getWithdrawalDelay(
+    getOperatorsShares(
+      operators: string[],
       strategies: string[],
       overrides?: CallOverrides
+    ): Promise<BigNumber[][]>;
+
+    getQueuedWithdrawal(
+      withdrawalRoot: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<
+      [IDelegationManagerTypes.WithdrawalStructOutput, BigNumber[]] & {
+        withdrawal: IDelegationManagerTypes.WithdrawalStructOutput;
+        shares: BigNumber[];
+      }
+    >;
+
+    getQueuedWithdrawalRoots(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<string[]>;
+
+    getQueuedWithdrawals(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<
+      [IDelegationManagerTypes.WithdrawalStructOutput[], BigNumber[][]] & {
+        withdrawals: IDelegationManagerTypes.WithdrawalStructOutput[];
+        shares: BigNumber[][];
+      }
+    >;
+
+    getSlashableSharesInQueue(
+      operator: string,
+      strategy: string,
+      overrides?: CallOverrides
     ): Promise<BigNumber>;
+
+    getWithdrawableShares(
+      staker: string,
+      strategies: string[],
+      overrides?: CallOverrides
+    ): Promise<
+      [BigNumber[], BigNumber[]] & {
+        withdrawableShares: BigNumber[];
+        depositShares: BigNumber[];
+      }
+    >;
 
     increaseDelegatedShares(
       staker: string,
       strategy: string,
-      shares: BigNumberish,
+      prevDepositShares: BigNumberish,
+      addedShares: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
 
     initialize(
       initialOwner: string,
-      _pauserRegistry: string,
       initialPausedStatus: BigNumberish,
-      _minWithdrawalDelayBlocks: BigNumberish,
-      _strategies: string[],
-      _withdrawalDelayBlocks: BigNumberish[],
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -1519,21 +1510,17 @@ export interface DelegationManager extends BaseContract {
 
     isOperator(operator: string, overrides?: CallOverrides): Promise<boolean>;
 
-    minWithdrawalDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>;
+    minWithdrawalDelayBlocks(overrides?: CallOverrides): Promise<number>;
 
     modifyOperatorDetails(
-      newOperatorDetails: IDelegationManager.OperatorDetailsStruct,
+      operator: string,
+      newDelegationApprover: string,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    operatorDetails(
-      operator: string,
-      overrides?: CallOverrides
-    ): Promise<IDelegationManager.OperatorDetailsStructOutput>;
-
     operatorShares(
-      arg0: string,
-      arg1: string,
+      operator: string,
+      strategy: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -1556,54 +1543,47 @@ export interface DelegationManager extends BaseContract {
     pauserRegistry(overrides?: CallOverrides): Promise<string>;
 
     pendingWithdrawals(
-      arg0: BytesLike,
+      withdrawalRoot: BytesLike,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
+    permissionController(overrides?: CallOverrides): Promise<string>;
+
     queueWithdrawals(
-      queuedWithdrawalParams: IDelegationManager.QueuedWithdrawalParamsStruct[],
+      params: IDelegationManagerTypes.QueuedWithdrawalParamsStruct[],
+      overrides?: CallOverrides
+    ): Promise<string[]>;
+
+    queuedWithdrawals(
+      withdrawalRoot: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<IDelegationManagerTypes.WithdrawalStructOutput>;
+
+    redelegate(
+      newOperator: string,
+      newOperatorApproverSig: ISignatureUtilsMixinTypes.SignatureWithExpiryStruct,
+      approverSalt: BytesLike,
       overrides?: CallOverrides
     ): Promise<string[]>;
 
     registerAsOperator(
-      registeringOperatorDetails: IDelegationManager.OperatorDetailsStruct,
+      initDelegationApprover: string,
+      allocationDelay: BigNumberish,
       metadataURI: string,
       overrides?: CallOverrides
     ): Promise<void>;
 
     renounceOwnership(overrides?: CallOverrides): Promise<void>;
 
-    setMinWithdrawalDelayBlocks(
-      newMinWithdrawalDelayBlocks: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    setPauserRegistry(
-      newPauserRegistry: string,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    setStrategyWithdrawalDelayBlocks(
-      strategies: string[],
-      withdrawalDelayBlocks: BigNumberish[],
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    slasher(overrides?: CallOverrides): Promise<string>;
-
-    stakerNonce(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
-
-    stakerOptOutWindowBlocks(
+    slashOperatorShares(
       operator: string,
+      strategy: string,
+      prevMaxMagnitude: BigNumberish,
+      newMaxMagnitude: BigNumberish,
       overrides?: CallOverrides
-    ): Promise<BigNumber>;
+    ): Promise<void>;
 
     strategyManager(overrides?: CallOverrides): Promise<string>;
-
-    strategyWithdrawalDelayBlocks(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
 
     transferOwnership(
       newOwner: string,
@@ -1618,32 +1598,37 @@ export interface DelegationManager extends BaseContract {
     ): Promise<void>;
 
     updateOperatorMetadataURI(
+      operator: string,
       metadataURI: string,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    version(overrides?: CallOverrides): Promise<string>;
   };
 
   filters: {
+    "DelegationApproverUpdated(address,address)"(
+      operator?: string | null,
+      newDelegationApprover?: null
+    ): DelegationApproverUpdatedEventFilter;
+    DelegationApproverUpdated(
+      operator?: string | null,
+      newDelegationApprover?: null
+    ): DelegationApproverUpdatedEventFilter;
+
+    "DepositScalingFactorUpdated(address,address,uint256)"(
+      staker?: null,
+      strategy?: null,
+      newDepositScalingFactor?: null
+    ): DepositScalingFactorUpdatedEventFilter;
+    DepositScalingFactorUpdated(
+      staker?: null,
+      strategy?: null,
+      newDepositScalingFactor?: null
+    ): DepositScalingFactorUpdatedEventFilter;
+
     "Initialized(uint8)"(version?: null): InitializedEventFilter;
     Initialized(version?: null): InitializedEventFilter;
-
-    "MinWithdrawalDelayBlocksSet(uint256,uint256)"(
-      previousValue?: null,
-      newValue?: null
-    ): MinWithdrawalDelayBlocksSetEventFilter;
-    MinWithdrawalDelayBlocksSet(
-      previousValue?: null,
-      newValue?: null
-    ): MinWithdrawalDelayBlocksSetEventFilter;
-
-    "OperatorDetailsModified(address,(address,address,uint32))"(
-      operator?: string | null,
-      newOperatorDetails?: null
-    ): OperatorDetailsModifiedEventFilter;
-    OperatorDetailsModified(
-      operator?: string | null,
-      newOperatorDetails?: null
-    ): OperatorDetailsModifiedEventFilter;
 
     "OperatorMetadataURIUpdated(address,string)"(
       operator?: string | null,
@@ -1654,13 +1639,13 @@ export interface DelegationManager extends BaseContract {
       metadataURI?: null
     ): OperatorMetadataURIUpdatedEventFilter;
 
-    "OperatorRegistered(address,(address,address,uint32))"(
+    "OperatorRegistered(address,address)"(
       operator?: string | null,
-      operatorDetails?: null
+      delegationApprover?: null
     ): OperatorRegisteredEventFilter;
     OperatorRegistered(
       operator?: string | null,
-      operatorDetails?: null
+      delegationApprover?: null
     ): OperatorRegisteredEventFilter;
 
     "OperatorSharesDecreased(address,address,address,uint256)"(
@@ -1689,6 +1674,17 @@ export interface DelegationManager extends BaseContract {
       shares?: null
     ): OperatorSharesIncreasedEventFilter;
 
+    "OperatorSharesSlashed(address,address,uint256)"(
+      operator?: string | null,
+      strategy?: null,
+      totalSlashedShares?: null
+    ): OperatorSharesSlashedEventFilter;
+    OperatorSharesSlashed(
+      operator?: string | null,
+      strategy?: null,
+      totalSlashedShares?: null
+    ): OperatorSharesSlashedEventFilter;
+
     "OwnershipTransferred(address,address)"(
       previousOwner?: string | null,
       newOwner?: string | null
@@ -1704,14 +1700,23 @@ export interface DelegationManager extends BaseContract {
     ): PausedEventFilter;
     Paused(account?: string | null, newPausedStatus?: null): PausedEventFilter;
 
-    "PauserRegistrySet(address,address)"(
-      pauserRegistry?: null,
-      newPauserRegistry?: null
-    ): PauserRegistrySetEventFilter;
-    PauserRegistrySet(
-      pauserRegistry?: null,
-      newPauserRegistry?: null
-    ): PauserRegistrySetEventFilter;
+    "SlashingWithdrawalCompleted(bytes32)"(
+      withdrawalRoot?: null
+    ): SlashingWithdrawalCompletedEventFilter;
+    SlashingWithdrawalCompleted(
+      withdrawalRoot?: null
+    ): SlashingWithdrawalCompletedEventFilter;
+
+    "SlashingWithdrawalQueued(bytes32,(address,address,address,uint256,uint32,address[],uint256[]),uint256[])"(
+      withdrawalRoot?: null,
+      withdrawal?: null,
+      sharesToWithdraw?: null
+    ): SlashingWithdrawalQueuedEventFilter;
+    SlashingWithdrawalQueued(
+      withdrawalRoot?: null,
+      withdrawal?: null,
+      sharesToWithdraw?: null
+    ): SlashingWithdrawalQueuedEventFilter;
 
     "StakerDelegated(address,address)"(
       staker?: string | null,
@@ -1740,17 +1745,6 @@ export interface DelegationManager extends BaseContract {
       operator?: string | null
     ): StakerUndelegatedEventFilter;
 
-    "StrategyWithdrawalDelayBlocksSet(address,uint256,uint256)"(
-      strategy?: null,
-      previousValue?: null,
-      newValue?: null
-    ): StrategyWithdrawalDelayBlocksSetEventFilter;
-    StrategyWithdrawalDelayBlocksSet(
-      strategy?: null,
-      previousValue?: null,
-      newValue?: null
-    ): StrategyWithdrawalDelayBlocksSetEventFilter;
-
     "Unpaused(address,uint256)"(
       account?: string | null,
       newPausedStatus?: null
@@ -1759,111 +1753,70 @@ export interface DelegationManager extends BaseContract {
       account?: string | null,
       newPausedStatus?: null
     ): UnpausedEventFilter;
-
-    "WithdrawalCompleted(bytes32)"(
-      withdrawalRoot?: null
-    ): WithdrawalCompletedEventFilter;
-    WithdrawalCompleted(withdrawalRoot?: null): WithdrawalCompletedEventFilter;
-
-    "WithdrawalQueued(bytes32,(address,address,address,uint256,uint32,address[],uint256[]))"(
-      withdrawalRoot?: null,
-      withdrawal?: null
-    ): WithdrawalQueuedEventFilter;
-    WithdrawalQueued(
-      withdrawalRoot?: null,
-      withdrawal?: null
-    ): WithdrawalQueuedEventFilter;
   };
 
   estimateGas: {
     DELEGATION_APPROVAL_TYPEHASH(overrides?: CallOverrides): Promise<BigNumber>;
 
-    DOMAIN_TYPEHASH(overrides?: CallOverrides): Promise<BigNumber>;
-
-    MAX_STAKER_OPT_OUT_WINDOW_BLOCKS(
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    MAX_WITHDRAWAL_DELAY_BLOCKS(overrides?: CallOverrides): Promise<BigNumber>;
-
-    STAKER_DELEGATION_TYPEHASH(overrides?: CallOverrides): Promise<BigNumber>;
+    allocationManager(overrides?: CallOverrides): Promise<BigNumber>;
 
     beaconChainETHStrategy(overrides?: CallOverrides): Promise<BigNumber>;
-
-    calculateCurrentStakerDelegationDigestHash(
-      staker: string,
-      operator: string,
-      expiry: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
 
     calculateDelegationApprovalDigestHash(
       staker: string,
       operator: string,
-      _delegationApprover: string,
+      approver: string,
       approverSalt: BytesLike,
-      expiry: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    calculateStakerDelegationDigestHash(
-      staker: string,
-      _stakerNonce: BigNumberish,
-      operator: string,
       expiry: BigNumberish,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     calculateWithdrawalRoot(
-      withdrawal: IDelegationManager.WithdrawalStruct,
+      withdrawal: IDelegationManagerTypes.WithdrawalStruct,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     completeQueuedWithdrawal(
-      withdrawal: IDelegationManager.WithdrawalStruct,
+      withdrawal: IDelegationManagerTypes.WithdrawalStruct,
       tokens: string[],
-      middlewareTimesIndex: BigNumberish,
       receiveAsTokens: boolean,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     completeQueuedWithdrawals(
-      withdrawals: IDelegationManager.WithdrawalStruct[],
+      withdrawals: IDelegationManagerTypes.WithdrawalStruct[],
       tokens: string[][],
-      middlewareTimesIndexes: BigNumberish[],
       receiveAsTokens: boolean[],
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
+    convertToDepositShares(
+      staker: string,
+      strategies: string[],
+      withdrawableShares: BigNumberish[],
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
     cumulativeWithdrawalsQueued(
-      arg0: string,
+      staker: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     decreaseDelegatedShares(
       staker: string,
-      strategy: string,
-      shares: BigNumberish,
+      curDepositShares: BigNumberish,
+      beaconChainSlashingFactorDecrease: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     delegateTo(
       operator: string,
-      approverSignatureAndExpiry: ISignatureUtils.SignatureWithExpiryStruct,
+      approverSignatureAndExpiry: ISignatureUtilsMixinTypes.SignatureWithExpiryStruct,
       approverSalt: BytesLike,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
-    delegateToBySignature(
-      staker: string,
-      operator: string,
-      stakerSignatureAndExpiry: ISignatureUtils.SignatureWithExpiryStruct,
-      approverSignatureAndExpiry: ISignatureUtils.SignatureWithExpiryStruct,
-      approverSalt: BytesLike,
-      overrides?: Overrides & { from?: string }
-    ): Promise<BigNumber>;
-
-    delegatedTo(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
+    delegatedTo(staker: string, overrides?: CallOverrides): Promise<BigNumber>;
 
     delegationApprover(
       operator: string,
@@ -1871,8 +1824,14 @@ export interface DelegationManager extends BaseContract {
     ): Promise<BigNumber>;
 
     delegationApproverSaltIsSpent(
-      arg0: string,
-      arg1: BytesLike,
+      delegationApprover: string,
+      salt: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    depositScalingFactor(
+      staker: string,
+      strategy: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -1880,7 +1839,7 @@ export interface DelegationManager extends BaseContract {
 
     eigenPodManager(overrides?: CallOverrides): Promise<BigNumber>;
 
-    getDelegatableShares(
+    getDepositedShares(
       staker: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
@@ -1891,7 +1850,35 @@ export interface DelegationManager extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    getWithdrawalDelay(
+    getOperatorsShares(
+      operators: string[],
+      strategies: string[],
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getQueuedWithdrawal(
+      withdrawalRoot: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getQueuedWithdrawalRoots(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getQueuedWithdrawals(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getSlashableSharesInQueue(
+      operator: string,
+      strategy: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    getWithdrawableShares(
+      staker: string,
       strategies: string[],
       overrides?: CallOverrides
     ): Promise<BigNumber>;
@@ -1899,17 +1886,14 @@ export interface DelegationManager extends BaseContract {
     increaseDelegatedShares(
       staker: string,
       strategy: string,
-      shares: BigNumberish,
+      prevDepositShares: BigNumberish,
+      addedShares: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     initialize(
       initialOwner: string,
-      _pauserRegistry: string,
       initialPausedStatus: BigNumberish,
-      _minWithdrawalDelayBlocks: BigNumberish,
-      _strategies: string[],
-      _withdrawalDelayBlocks: BigNumberish[],
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
@@ -1920,18 +1904,14 @@ export interface DelegationManager extends BaseContract {
     minWithdrawalDelayBlocks(overrides?: CallOverrides): Promise<BigNumber>;
 
     modifyOperatorDetails(
-      newOperatorDetails: IDelegationManager.OperatorDetailsStruct,
+      operator: string,
+      newDelegationApprover: string,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
-    operatorDetails(
-      operator: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
     operatorShares(
-      arg0: string,
-      arg1: string,
+      operator: string,
+      strategy: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
@@ -1954,17 +1934,32 @@ export interface DelegationManager extends BaseContract {
     pauserRegistry(overrides?: CallOverrides): Promise<BigNumber>;
 
     pendingWithdrawals(
-      arg0: BytesLike,
+      withdrawalRoot: BytesLike,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    permissionController(overrides?: CallOverrides): Promise<BigNumber>;
+
     queueWithdrawals(
-      queuedWithdrawalParams: IDelegationManager.QueuedWithdrawalParamsStruct[],
+      params: IDelegationManagerTypes.QueuedWithdrawalParamsStruct[],
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    queuedWithdrawals(
+      withdrawalRoot: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
+
+    redelegate(
+      newOperator: string,
+      newOperatorApproverSig: ISignatureUtilsMixinTypes.SignatureWithExpiryStruct,
+      approverSalt: BytesLike,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     registerAsOperator(
-      registeringOperatorDetails: IDelegationManager.OperatorDetailsStruct,
+      initDelegationApprover: string,
+      allocationDelay: BigNumberish,
       metadataURI: string,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
@@ -1973,37 +1968,15 @@ export interface DelegationManager extends BaseContract {
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
-    setMinWithdrawalDelayBlocks(
-      newMinWithdrawalDelayBlocks: BigNumberish,
-      overrides?: Overrides & { from?: string }
-    ): Promise<BigNumber>;
-
-    setPauserRegistry(
-      newPauserRegistry: string,
-      overrides?: Overrides & { from?: string }
-    ): Promise<BigNumber>;
-
-    setStrategyWithdrawalDelayBlocks(
-      strategies: string[],
-      withdrawalDelayBlocks: BigNumberish[],
-      overrides?: Overrides & { from?: string }
-    ): Promise<BigNumber>;
-
-    slasher(overrides?: CallOverrides): Promise<BigNumber>;
-
-    stakerNonce(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
-
-    stakerOptOutWindowBlocks(
+    slashOperatorShares(
       operator: string,
-      overrides?: CallOverrides
+      strategy: string,
+      prevMaxMagnitude: BigNumberish,
+      newMaxMagnitude: BigNumberish,
+      overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     strategyManager(overrides?: CallOverrides): Promise<BigNumber>;
-
-    strategyWithdrawalDelayBlocks(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
 
     transferOwnership(
       newOwner: string,
@@ -2021,9 +1994,12 @@ export interface DelegationManager extends BaseContract {
     ): Promise<BigNumber>;
 
     updateOperatorMetadataURI(
+      operator: string,
       metadataURI: string,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
+
+    version(overrides?: CallOverrides): Promise<BigNumber>;
   };
 
   populateTransaction: {
@@ -2031,99 +2007,68 @@ export interface DelegationManager extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    DOMAIN_TYPEHASH(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    MAX_STAKER_OPT_OUT_WINDOW_BLOCKS(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    MAX_WITHDRAWAL_DELAY_BLOCKS(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    STAKER_DELEGATION_TYPEHASH(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
+    allocationManager(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     beaconChainETHStrategy(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    calculateCurrentStakerDelegationDigestHash(
-      staker: string,
-      operator: string,
-      expiry: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     calculateDelegationApprovalDigestHash(
       staker: string,
       operator: string,
-      _delegationApprover: string,
+      approver: string,
       approverSalt: BytesLike,
-      expiry: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    calculateStakerDelegationDigestHash(
-      staker: string,
-      _stakerNonce: BigNumberish,
-      operator: string,
       expiry: BigNumberish,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     calculateWithdrawalRoot(
-      withdrawal: IDelegationManager.WithdrawalStruct,
+      withdrawal: IDelegationManagerTypes.WithdrawalStruct,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     completeQueuedWithdrawal(
-      withdrawal: IDelegationManager.WithdrawalStruct,
+      withdrawal: IDelegationManagerTypes.WithdrawalStruct,
       tokens: string[],
-      middlewareTimesIndex: BigNumberish,
       receiveAsTokens: boolean,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     completeQueuedWithdrawals(
-      withdrawals: IDelegationManager.WithdrawalStruct[],
+      withdrawals: IDelegationManagerTypes.WithdrawalStruct[],
       tokens: string[][],
-      middlewareTimesIndexes: BigNumberish[],
       receiveAsTokens: boolean[],
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
+    convertToDepositShares(
+      staker: string,
+      strategies: string[],
+      withdrawableShares: BigNumberish[],
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     cumulativeWithdrawalsQueued(
-      arg0: string,
+      staker: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     decreaseDelegatedShares(
       staker: string,
-      strategy: string,
-      shares: BigNumberish,
+      curDepositShares: BigNumberish,
+      beaconChainSlashingFactorDecrease: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     delegateTo(
       operator: string,
-      approverSignatureAndExpiry: ISignatureUtils.SignatureWithExpiryStruct,
-      approverSalt: BytesLike,
-      overrides?: Overrides & { from?: string }
-    ): Promise<PopulatedTransaction>;
-
-    delegateToBySignature(
-      staker: string,
-      operator: string,
-      stakerSignatureAndExpiry: ISignatureUtils.SignatureWithExpiryStruct,
-      approverSignatureAndExpiry: ISignatureUtils.SignatureWithExpiryStruct,
+      approverSignatureAndExpiry: ISignatureUtilsMixinTypes.SignatureWithExpiryStruct,
       approverSalt: BytesLike,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     delegatedTo(
-      arg0: string,
+      staker: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -2133,8 +2078,14 @@ export interface DelegationManager extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     delegationApproverSaltIsSpent(
-      arg0: string,
-      arg1: BytesLike,
+      delegationApprover: string,
+      salt: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    depositScalingFactor(
+      staker: string,
+      strategy: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -2142,7 +2093,7 @@ export interface DelegationManager extends BaseContract {
 
     eigenPodManager(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
-    getDelegatableShares(
+    getDepositedShares(
       staker: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
@@ -2153,7 +2104,35 @@ export interface DelegationManager extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    getWithdrawalDelay(
+    getOperatorsShares(
+      operators: string[],
+      strategies: string[],
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getQueuedWithdrawal(
+      withdrawalRoot: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getQueuedWithdrawalRoots(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getQueuedWithdrawals(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getSlashableSharesInQueue(
+      operator: string,
+      strategy: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    getWithdrawableShares(
+      staker: string,
       strategies: string[],
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
@@ -2161,17 +2140,14 @@ export interface DelegationManager extends BaseContract {
     increaseDelegatedShares(
       staker: string,
       strategy: string,
-      shares: BigNumberish,
+      prevDepositShares: BigNumberish,
+      addedShares: BigNumberish,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     initialize(
       initialOwner: string,
-      _pauserRegistry: string,
       initialPausedStatus: BigNumberish,
-      _minWithdrawalDelayBlocks: BigNumberish,
-      _strategies: string[],
-      _withdrawalDelayBlocks: BigNumberish[],
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
@@ -2190,18 +2166,14 @@ export interface DelegationManager extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     modifyOperatorDetails(
-      newOperatorDetails: IDelegationManager.OperatorDetailsStruct,
+      operator: string,
+      newDelegationApprover: string,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
-    operatorDetails(
-      operator: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
     operatorShares(
-      arg0: string,
-      arg1: string,
+      operator: string,
+      strategy: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -2226,17 +2198,34 @@ export interface DelegationManager extends BaseContract {
     pauserRegistry(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     pendingWithdrawals(
-      arg0: BytesLike,
+      withdrawalRoot: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    permissionController(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     queueWithdrawals(
-      queuedWithdrawalParams: IDelegationManager.QueuedWithdrawalParamsStruct[],
+      params: IDelegationManagerTypes.QueuedWithdrawalParamsStruct[],
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    queuedWithdrawals(
+      withdrawalRoot: BytesLike,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    redelegate(
+      newOperator: string,
+      newOperatorApproverSig: ISignatureUtilsMixinTypes.SignatureWithExpiryStruct,
+      approverSalt: BytesLike,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     registerAsOperator(
-      registeringOperatorDetails: IDelegationManager.OperatorDetailsStruct,
+      initDelegationApprover: string,
+      allocationDelay: BigNumberish,
       metadataURI: string,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
@@ -2245,40 +2234,15 @@ export interface DelegationManager extends BaseContract {
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
-    setMinWithdrawalDelayBlocks(
-      newMinWithdrawalDelayBlocks: BigNumberish,
-      overrides?: Overrides & { from?: string }
-    ): Promise<PopulatedTransaction>;
-
-    setPauserRegistry(
-      newPauserRegistry: string,
-      overrides?: Overrides & { from?: string }
-    ): Promise<PopulatedTransaction>;
-
-    setStrategyWithdrawalDelayBlocks(
-      strategies: string[],
-      withdrawalDelayBlocks: BigNumberish[],
-      overrides?: Overrides & { from?: string }
-    ): Promise<PopulatedTransaction>;
-
-    slasher(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    stakerNonce(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    stakerOptOutWindowBlocks(
+    slashOperatorShares(
       operator: string,
-      overrides?: CallOverrides
+      strategy: string,
+      prevMaxMagnitude: BigNumberish,
+      newMaxMagnitude: BigNumberish,
+      overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     strategyManager(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    strategyWithdrawalDelayBlocks(
-      arg0: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
 
     transferOwnership(
       newOwner: string,
@@ -2296,8 +2260,11 @@ export interface DelegationManager extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     updateOperatorMetadataURI(
+      operator: string,
       metadataURI: string,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
+
+    version(overrides?: CallOverrides): Promise<PopulatedTransaction>;
   };
 }
