@@ -130,6 +130,7 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
     "setAppointee(address,address,bytes4)": FunctionFragment;
     "setClaimerFor(address)": FunctionFragment;
     "setRewardsInitiator(address)": FunctionFragment;
+    "slashingRegistryCoordinator()": FunctionFragment;
     "taskManager()": FunctionFragment;
     "transferOwnership(address)": FunctionFragment;
     "updateAVSMetadataURI(string)": FunctionFragment;
@@ -160,6 +161,7 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
       | "setAppointee"
       | "setClaimerFor"
       | "setRewardsInitiator"
+      | "slashingRegistryCoordinator"
       | "taskManager"
       | "transferOwnership"
       | "updateAVSMetadataURI"
@@ -247,6 +249,10 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "setRewardsInitiator",
     values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "slashingRegistryCoordinator",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "taskManager",
@@ -345,6 +351,10 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "setRewardsInitiator",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "slashingRegistryCoordinator",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -537,6 +547,8 @@ export interface ReclaimServiceManager extends BaseContract {
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
+    slashingRegistryCoordinator(overrides?: CallOverrides): Promise<[string]>;
+
     taskManager(overrides?: CallOverrides): Promise<[string]>;
 
     transferOwnership(
@@ -659,6 +671,8 @@ export interface ReclaimServiceManager extends BaseContract {
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
+  slashingRegistryCoordinator(overrides?: CallOverrides): Promise<string>;
+
   taskManager(overrides?: CallOverrides): Promise<string>;
 
   transferOwnership(
@@ -769,6 +783,8 @@ export interface ReclaimServiceManager extends BaseContract {
       newRewardsInitiator: string,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    slashingRegistryCoordinator(overrides?: CallOverrides): Promise<string>;
 
     taskManager(overrides?: CallOverrides): Promise<string>;
 
@@ -916,6 +932,8 @@ export interface ReclaimServiceManager extends BaseContract {
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
+    slashingRegistryCoordinator(overrides?: CallOverrides): Promise<BigNumber>;
+
     taskManager(overrides?: CallOverrides): Promise<BigNumber>;
 
     transferOwnership(
@@ -1039,6 +1057,10 @@ export interface ReclaimServiceManager extends BaseContract {
     setRewardsInitiator(
       newRewardsInitiator: string,
       overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    slashingRegistryCoordinator(
+      overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
     taskManager(overrides?: CallOverrides): Promise<PopulatedTransaction>;

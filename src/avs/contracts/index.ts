@@ -2,6 +2,7 @@
 /* tslint:disable */
 /* eslint-disable */
 export type { AVSDirectory } from "./AVSDirectory";
+export type { AllocationManager } from "./AllocationManager";
 export type { DelegationManager } from "./DelegationManager";
 export type { ECDSAStakeRegistry } from "./ECDSAStakeRegistry";
 export type { ERC20Mock } from "./ERC20Mock";
@@ -14,6 +15,7 @@ export * as factories from "./factories";
 export { ReclaimServiceManager__factory } from "./factories/ReclaimServiceManager__factory";
 export { ReclaimTaskManager__factory } from "./factories/ReclaimTaskManager__factory";
 export { ReclaimSlashingRegistryCoordinator__factory } from "./factories/ReclaimSlashingRegistryCoordinator__factory";
+export { AllocationManager__factory } from "./factories/AllocationManager__factory";
 export { AVSDirectory__factory } from "./factories/AVSDirectory__factory";
 export { DelegationManager__factory } from "./factories/DelegationManager__factory";
 export { ECDSAStakeRegistry__factory } from "./factories/ECDSAStakeRegistry__factory";

@@ -24,6 +24,8 @@ type RegisterOpts = {
 	reclaimRpcUrl?: string
 }
 
+const OP_SET_ID = 0
+
 /**
  * Registers the operator on the chain, if required.
  * If already registered -- will just pass through
@@ -35,6 +37,8 @@ export async function registerOperator({
 	reclaimRpcUrl = RECLAIM_PUBLIC_URL
 }: RegisterOpts = {}) {
 	const contracts = getContracts(chainId)
+	const allocationManager = contracts.allocationManager
+		.connect(wallet)
 	const delegationManager = contracts.delegationManager
 		.connect(wallet)
 	const avsDirectory = contracts.avsDirectory
@@ -47,6 +51,7 @@ export async function registerOperator({
 		.connect(wallet)
 
 	const addr = await wallet.address
+
 	try {
 		const tx1 = await delegationManager.registerAsOperator(
 			'0x0000000000000000000000000000000000000000',
@@ -66,41 +71,50 @@ export async function registerOperator({
 		logger.info('Operator already registered on EL')
 	}
 
-	const salt = ethers.utils.hexlify(ethers.utils.randomBytes(32))
-	// Example expiry, 1 hour from now
-	const expiry = Math.floor(Date.now() / 1000) + 3600
-	// Define the output structure
-	const operatorSignature = { expiry, salt, signature: '' }
-	// Calculate the digest hash using the avsDirectory's method
-	const digestHash = await avsDirectory
-		.calculateOperatorAVSRegistrationDigestHash(
-			addr,
-			contract.address,
-			salt,
-			expiry
-		)
+	const tx = await allocationManager.registerForOperatorSets(addr, {
+		operatorSetIds: [OP_SET_ID],
+		avs: contract.address,
+		data: new Uint8Array(0)
+	})
+	await tx.wait()
 
-	// Sign the digest hash with the operator's private key
-	const signingKey = new ethers.utils.SigningKey(
-		wallet.privateKey
-	)
-	const signature = signingKey.signDigest(digestHash)
+	logger.info('operator registered on AM successfully')
 
-	// Encode the signature in the required format
-	operatorSignature.signature = ethers.utils.joinSignature(signature)
+	// const salt = ethers.utils.hexlify(ethers.utils.randomBytes(32))
+	// // Example expiry, 1 hour from now
+	// const expiry = Math.floor(Date.now() / 1000) + 3600
+	// // Define the output structure
+	// const operatorSignature = { expiry, salt, signature: '' }
+	// // Calculate the digest hash using the avsDirectory's method
+	// const digestHash = await avsDirectory
+	// 	.calculateOperatorAVSRegistrationDigestHash(
+	// 		addr,
+	// 		contract.address,
+	// 		salt,
+	// 		expiry
+	// 	)
 
-	logger.info('operator signature generated successfully')
+	// // Sign the digest hash with the operator's private key
+	// const signingKey = new ethers.utils.SigningKey(
+	// 	wallet.privateKey
+	// )
+	// const signature = signingKey.signDigest(digestHash)
 
-	const isRegistered = await registryContract.operatorRegistered(addr)
-	if(!isRegistered) {
-		logger.info('registering operator on AVS...')
-		const tx2 = await registryContract
-			.registerOperatorWithSignature(operatorSignature, addr)
-		await tx2.wait()
-		logger.info('operator registered on AVS successfully')
-	} else {
-		logger.info('operator already registered on AVS')
-	}
+	// // Encode the signature in the required format
+	// operatorSignature.signature = ethers.utils.joinSignature(signature)
+
+	// logger.info('operator signature generated successfully')
+
+	// const isRegistered = await registryContract.operatorRegistered(addr)
+	// if(!isRegistered) {
+	// 	logger.info('registering operator on AVS...')
+	// 	const tx2 = await registryContract
+	// 		.registerOperatorWithSignature(operatorSignature, addr)
+	// 	await tx2.wait()
+	// 	logger.info('operator registered on AVS successfully')
+	// } else {
+	// 	logger.info('operator already registered on AVS')
+	// }
 
 	// eslint-disable-next-line camelcase
 	const socketRegistry = SocketRegistry__factory.connect(
