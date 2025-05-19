@@ -9,10 +9,6 @@ parent_path=$(
 )
 cd "$parent_path"
 
-set -a
-source ./utils.sh
-set +a
-
 cleanup() {
     echo "Executing cleanup function..."
     set +e
@@ -24,19 +20,21 @@ cleanup() {
 }
 trap 'cleanup $LINENO "$BASH_COMMAND"' EXIT
 
-# start an anvil instance in the background that has eigenlayer contracts deployed
-# we start anvil in the background so that we can run the below script
-# anvil --load-state avs-and-eigenlayer-deployed-anvil-state.json &
-# FIXME: bug in latest foundry version, so we use this pinned version instead of latest
-start_anvil_docker $parent_path/avs-and-eigenlayer-deployed-anvil-state.json ""
+set -e
 
-cd ../../contracts
-# we need to restart the anvil chain at the correct block, otherwise the indexRegistry has a quorumUpdate at the block number
-# at which it was deployed (aka quorum was created/updated), but when we start anvil by loading state file it starts at block number 0
-# so calling getOperatorListAtBlockNumber reverts because it thinks there are no quorums registered at block 0
-# advancing chain manually like this is a current hack until https://github.com/foundry-rs/foundry/issues/6679 is merged
-cast rpc anvil_mine 100 --rpc-url $RPC_URL
-echo "advancing chain... current block-number:" $(cast block-number)
+docker run --rm -d --name anvil -p 8545:8545 \
+	--entrypoint anvil \
+	--env ANVIL_IP_ADDR=0.0.0.0 \
+	ghcr.io/foundry-rs/foundry:v1.0.0
+
+echo "Waiting for Anvil to start..."
+sleep 2
+
+npm run deploy:eigen-core
+echo "Deployed Eigen Core contracts"
+
+npm run deploy:reclaim-debug
+echo "Deployed Reclaim contracts"
 
 # Bring Anvil back to the foreground
 docker attach anvil
