@@ -1,6 +1,6 @@
 import { ethers } from 'ethers'
 import { RECLAIM_PUBLIC_URL, SELECTED_CHAIN_ID } from 'src/avs/config'
-import { SocketRegistry__factory } from 'src/avs/contracts'
+import { AllocationManager__factory, SocketRegistry__factory } from 'src/avs/contracts'
 import { getContracts } from 'src/avs/utils/contracts'
 import { logger as LOGGER } from 'src/utils'
 
@@ -37,8 +37,6 @@ export async function registerOperator({
 	reclaimRpcUrl = RECLAIM_PUBLIC_URL
 }: RegisterOpts = {}) {
 	const contracts = getContracts(chainId)
-	const allocationManager = contracts.allocationManager
-		.connect(wallet)
 	const delegationManager = contracts.delegationManager
 		.connect(wallet)
 	const avsDirectory = contracts.avsDirectory
@@ -49,6 +47,11 @@ export async function registerOperator({
 		.connect(wallet)
 	const slashingCoordinator = contracts.slashingCoordinator
 		.connect(wallet)
+	// eslint-disable-next-line camelcase
+	const allocationManager = await AllocationManager__factory.connect(
+		await slashingCoordinator.allocationManager(),
+		wallet
+	)
 
 	const addr = await wallet.address
 

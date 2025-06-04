@@ -6,12 +6,13 @@ import "@eigenlayer-middleware/src/ServiceManagerBase.sol";
 import {IAllocationManager, IAllocationManagerTypes} from "@eigenlayer/contracts/interfaces/IAllocationManager.sol";
 import {IRewardsCoordinator} from "@eigenlayer/contracts/interfaces/IRewardsCoordinator.sol";
 import {ISlashingRegistryCoordinator} from "@eigenlayer-middleware/src/interfaces/ISlashingRegistryCoordinator.sol";
+import {IAVSRegistrar} from "@eigenlayer/contracts/interfaces/IAVSRegistrar.sol";
 
 /**
  * @title Primary entrypoint for procuring services from Reclaim.
  * @author Layr Labs, Inc.
  */
-contract ReclaimServiceManager is ServiceManagerBase {
+contract ReclaimServiceManager is ServiceManagerBase, IAVSRegistrar {
 	IReclaimTaskManager public immutable taskManager;
 	ISlashingRegistryCoordinator public immutable slashingRegistryCoordinator;
 
@@ -47,6 +48,35 @@ contract ReclaimServiceManager is ServiceManagerBase {
 	{
 		taskManager = _taskManager;
 		slashingRegistryCoordinator = _slashingRegistryCoordinator;
+	}
+
+	function registerOperator(
+		address operator,
+		address avs,
+		uint32[] calldata operatorSetIds,
+		bytes calldata data
+	) external {
+
+	}
+
+	function deregisterOperator(
+		address operator,
+		address avs, uint32[]
+		calldata operatorSetIds
+	) external {
+
+	}
+
+	function supportsAVS(
+			address avs
+	) external view returns (bool) {
+		return true;
+	}
+
+	function registerOperatorSets(
+		uint256[] calldata operatorSetIds
+	) external {
+		// For example, forward to SlashingRegistryCoordinator:
 	}
 
 	function initialize(
