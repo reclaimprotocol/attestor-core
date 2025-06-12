@@ -11,6 +11,7 @@ import {IRegistryCoordinator} from "@eigenlayer-middleware/src/interfaces/IRegis
 import {IStrategy} from "@eigenlayer/contracts/interfaces/IStrategy.sol";
 import {IRewardsCoordinator} from "@eigenlayer/contracts/interfaces/IRewardsCoordinator.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { OwnableUpgradeable } from "@openzeppelin-upgrades/contracts/access/OwnableUpgradeable.sol";
 import "./IReclaimTaskManager.sol";
 import "./utils/Random.sol";
 import "./utils/Claims.sol";

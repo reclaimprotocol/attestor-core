@@ -25,12 +25,18 @@ set -e
 docker run --rm -d --name anvil -p 8545:8545 \
 	--entrypoint anvil \
 	--env ANVIL_IP_ADDR=0.0.0.0 \
-	ghcr.io/foundry-rs/foundry:v1.0.0
+	ghcr.io/foundry-rs/foundry:v1.2.2
 
 echo "Waiting for Anvil to start..."
 sleep 2
 
-npm run deploy:eigen-core
+cd ../../contracts/lib/eigenlayer-middleware/lib/eigenlayer-contracts
+forge script script/deploy/devnet/deploy_from_scratch.s.sol \
+  --rpc-url http://localhost:8545 \
+  --broadcast \
+  --private-key $PRIVATE_KEY \
+  --sig "run(string memory configFile)" \
+  -- local/deploy_from_scratch.slashing.anvil.config.json
 echo "Deployed Eigen Core contracts"
 
 npm run deploy:reclaim-debug

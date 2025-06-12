@@ -18,7 +18,7 @@ contract SetupPayments is Script, Test {
     CoreDeploymentLib.DeploymentConfigData coreConfig;
 
     ReclaimDeploymentLib.DeploymentData reclaimDeployment;
-    ReclaimDeploymentLib.DeploymentConfigData reclaimConfig;
+    ReclaimDeploymentLib.SetupConfig reclaimConfig;
 
     RewardsCoordinator rewardsCoordinator;
     string internal constant paymentInfofilePath = "mockData/payment_info.json";

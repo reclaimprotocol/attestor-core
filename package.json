@@ -19,7 +19,6 @@
     "verify:root-ca": "npm run run:tsc -- src/scripts/verify-root-ca.ts",
     "create:claim": "npm run run:tsc -- src/scripts/generate-receipt.ts",
     "build:contracts": "cd avs/contracts && forge build --via-ir",
-    "deploy:eigen-core": "cd avs/contracts && forge script script/DeployEigenLayerCore.s.sol --rpc-url http://localhost:8545 --broadcast --via-ir --revert-strings debug",
     "deploy:reclaim-debug": "cd avs/contracts && forge script script/ReclaimDeployer.s.sol --rpc-url http://localhost:8545 --broadcast --via-ir --revert-strings debug",
     "deploy:contracts": "sh avs/utils/anvil/deploy-all-to-anvil-and-save-state.sh",
     "deploy:contracts-to-chain": "sh avs/utils/anvil/deploy-to-chain.sh",
