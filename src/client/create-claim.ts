@@ -99,10 +99,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		params,
 		provider.additionalClientOptions
 	)
-	const tlsOpts = {
-		...getDefaultTlsOptions(),
-		...providerTlsOpts,
-	}
+	const tlsOpts = { ...getDefaultTlsOptions(), ...providerTlsOpts }
 	const { zkEngine = 'snarkjs' } = zkOpts
 
 	let redactionMode = getProviderValue(params, provider.writeRedactionMode)
@@ -124,6 +121,8 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		geoLocation,
 		id: generateTunnelId()
 	}
+
+	logger = logger.child({ tunnelId: createTunnelReq.id })
 
 	const authRequest = 'authRequest' in clientInit
 		? (
@@ -191,6 +190,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			} catch{ }
 		},
 	})
+
 	const {
 		version: tlsVersion,
 		cipherSuite
