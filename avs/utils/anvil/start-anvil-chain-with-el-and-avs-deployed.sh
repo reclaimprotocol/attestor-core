@@ -9,6 +9,8 @@ parent_path=$(
 )
 cd "$parent_path"
 
+EIGEN_CONTRACTS_DIR=../../contracts/lib/eigenlayer-middleware/lib/eigenlayer-contracts
+
 cleanup() {
     echo "Executing cleanup function..."
     set +e
@@ -30,13 +32,20 @@ docker run --rm -d --name anvil -p 8545:8545 \
 echo "Waiting for Anvil to start..."
 sleep 2
 
-cd ../../contracts/lib/eigenlayer-middleware/lib/eigenlayer-contracts
-forge script script/deploy/devnet/deploy_from_scratch.s.sol \
+cd $EIGEN_CONTRACTS_DIR
+forge script script/deploy/local/deploy_from_scratch.slashing.s.sol \
   --rpc-url http://localhost:8545 \
   --broadcast \
   --private-key $PRIVATE_KEY \
   --sig "run(string memory configFile)" \
   -- local/deploy_from_scratch.slashing.anvil.config.json
+# back to the original directory
+# and copy in the deployment data
+cd "$parent_path"
+
+cp "$EIGEN_CONTRACTS_DIR/script/output/devnet/SLASHING_deploy_from_scratch_deployment_data.json" \
+    ../../contracts/script/deployments/core/31337.json
+
 echo "Deployed Eigen Core contracts"
 
 npm run deploy:reclaim-debug

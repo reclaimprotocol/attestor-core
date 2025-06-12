@@ -25,22 +25,6 @@ contract Utils is Script {
         }
     }
 
-    function convertOperatorStatusToString(IRegistryCoordinator.OperatorStatus operatorStatus)
-        public
-        pure
-        returns (string memory)
-    {
-        if (operatorStatus == IRegistryCoordinator.OperatorStatus.NEVER_REGISTERED) {
-            return "NEVER_REGISTERED";
-        } else if (operatorStatus == IRegistryCoordinator.OperatorStatus.REGISTERED) {
-            return "REGISTERED";
-        } else if (operatorStatus == IRegistryCoordinator.OperatorStatus.DEREGISTERED) {
-            return "DEREGISTERED";
-        } else {
-            return "UNKNOWN";
-        }
-    }
-
     // Forge scripts best practice: https://book.getfoundry.sh/tutorials/best-practices#scripts
     function readInput(string memory inputFileName) internal returns (string memory) {
         string memory inputDir = string.concat(vm.projectRoot(), "/script/input/");

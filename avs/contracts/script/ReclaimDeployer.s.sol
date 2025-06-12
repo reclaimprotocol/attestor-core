@@ -29,6 +29,7 @@ import "forge-std/Script.sol";
 import "forge-std/StdJson.sol";
 import "forge-std/console.sol";
 import {StrategyFactory} from "@eigenlayer/contracts/strategies/StrategyFactory.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {ContractsRegistry} from "../src/test/ContractsRegistry.sol";
 import {ReclaimDeploymentLib} from "../script/utils/ReclaimDeploymentLib.sol";
@@ -74,7 +75,7 @@ contract ReclaimDeployer is Script {
     CoreDeploymentLib.DeploymentData internal configData;
     IStrategy strategy;
     address private deployer;
-    ERC20Mock public erc20Mock;
+    IERC20 public erc20Mock;
     ReclaimDeploymentLib.DeploymentData deployment;
 
     using UpgradeableProxyLib for address;
@@ -90,16 +91,17 @@ contract ReclaimDeployer is Script {
         // Eigenlayer contracts
         vm.startBroadcast(deployer);
         ReclaimDeploymentLib.SetupConfig memory isConfig =
-            ReclaimDeploymentLib.readSetupConfigJson("reclaim");
-        configData = CoreDeploymentLib.readDeploymentJson("script/deployments/core/", block.chainid);
+            ReclaimDeploymentLib.readSetupConfigJson("reclaim.json");
+        configData = CoreDeploymentLib
+            .readDeploymentJson("script/deployments/core/", block.chainid);
 
-        erc20Mock = new ERC20Mock();
-        FundOperator.fund_operator(address(erc20Mock), isConfig.operator_addr, 15000e18);
-        FundOperator.fund_operator(address(erc20Mock), isConfig.operator_2_addr, 30000e18);
-        console.log(isConfig.operator_2_addr);
-        (bool s,) = isConfig.operator_2_addr.call{value: 0.1 ether}("");
-        require(s);
-        strategy = IStrategy(StrategyFactory(configData.strategyFactory).deployNewStrategy(erc20Mock));
+        // erc20Mock = new ERC20Mock();
+        // FundOperator.fund_operator(address(erc20Mock), isConfig.operator_addr, 15000e18);
+        // FundOperator.fund_operator(address(erc20Mock), isConfig.operator_2_addr, 30000e18);
+        console.log("op 2", isConfig.operator_2_addr);
+        // (bool s,) = isConfig.operator_2_addr.call{value: 0.1 ether}("");
+        // require(s);
+        strategy = IStrategy(configData.strategy);
         rewardscoordinator = configData.rewardsCoordinator;
 
         proxyAdmin = UpgradeableProxyLib.deployProxyAdmin();
@@ -109,10 +111,10 @@ contract ReclaimDeployer is Script {
         );
         console.log("instantSlasher", deployment.slasher);
 
-        FundOperator.fund_operator(
-            address(erc20Mock), deployment.serviceManager, 1e18
-        );
-        deployment.token = address(erc20Mock);
+        // FundOperator.fund_operator(
+        //     address(erc20Mock), deployment.serviceManager, 1e18
+        // );
+        deployment.token = address(strategy.underlyingToken());
 
         ReclaimDeploymentLib.writeDeploymentJson(deployment);
 

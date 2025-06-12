@@ -50,7 +50,7 @@ contract SetupPayments is Script, Test {
         coreDeployment = CoreDeploymentLib.readDeploymentJson("deployments/core/", block.chainid);
         coreConfig = CoreDeploymentLib.readDeploymentConfigValues("config/core/", block.chainid);
         reclaimDeployment = ReclaimDeploymentLib.readDeploymentJson("deployments/reclaim/", block.chainid);
-        reclaimConfig = ReclaimDeploymentLib.readDeploymentConfigValues("config/reclaim/", block.chainid);
+        reclaimConfig = ReclaimDeploymentLib.readSetupConfigJson("reclaim.json");
 
         rewardsCoordinator = RewardsCoordinator(coreDeployment.rewardsCoordinator);
 
@@ -134,11 +134,11 @@ contract SetupPayments is Script, Test {
     function createAVSRewardsSubmissions(uint256 numPayments, uint256 amountPerPayment, uint32 startTimestamp) public {
         ERC20Mock(reclaimDeployment.token).mint(reclaimConfig.rewardsInitiator, amountPerPayment * numPayments);
         ERC20Mock(reclaimDeployment.token).increaseAllowance(
-            reclaimDeployment.reclaimServiceManager, amountPerPayment * numPayments
+            reclaimDeployment.serviceManager, amountPerPayment * numPayments
         );
         uint32 duration = rewardsCoordinator.MAX_REWARDS_DURATION();
         SetupPaymentsLib.createAVSRewardsSubmissions(
-            reclaimDeployment.reclaimServiceManager,
+            reclaimDeployment.serviceManager,
             reclaimDeployment.strategy,
             numPayments,
             amountPerPayment,
@@ -154,7 +154,7 @@ contract SetupPayments is Script, Test {
     ) public {
         ERC20Mock(reclaimDeployment.token).mint(reclaimConfig.rewardsInitiator, amountPerPayment * numPayments);
         ERC20Mock(reclaimDeployment.token).increaseAllowance(
-            reclaimDeployment.reclaimServiceManager, amountPerPayment * numPayments
+            reclaimDeployment.serviceManager, amountPerPayment * numPayments
         );
         uint32 duration = 0;
         address[] memory operators = new address[](2);
@@ -164,7 +164,7 @@ contract SetupPayments is Script, Test {
         uint256 numOperators = operators.length;
 
         SetupPaymentsLib.createOperatorDirectedAVSRewardsSubmissions(
-            reclaimDeployment.reclaimServiceManager,
+            reclaimDeployment.serviceManager,
             operators,
             numOperators,
             reclaimDeployment.strategy,

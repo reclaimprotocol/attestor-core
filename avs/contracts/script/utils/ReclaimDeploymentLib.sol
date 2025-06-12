@@ -93,7 +93,7 @@ library ReclaimDeploymentLib {
     ) internal returns (DeploymentData memory) {
         /// read EL deployment address
         CoreDeploymentLib.DeploymentData memory coredata =
-            readCoreDeploymentJson("script/deployments/core/", block.chainid);
+            CoreDeploymentLib.readDeploymentJson("script/deployments/core/", block.chainid);
         address avsdirectory = coredata.avsDirectory;
 
         DeploymentData memory result;
@@ -253,11 +253,12 @@ library ReclaimDeploymentLib {
         return readDeploymentJson("script/deployments/reclaim/", chainId);
     }
 
-    function readSetupConfigJson(string memory directoryPath)
+    function readSetupConfigJson(
+        string memory fileName
+    )
         internal view
         returns (SetupConfig memory)
     {
-        string memory fileName = string.concat(directoryPath, ".json");
         require(vm.exists(fileName), "Deployment file does not exist");
         string memory json = vm.readFile(fileName);
 
@@ -371,34 +372,6 @@ library ReclaimDeploymentLib {
             data.socketRegistry.toHexString(),
             '"}'
         );
-    }
-
-    function readCoreDeploymentJson(string memory directoryPath, uint256 chainId)
-        internal
-        returns (CoreDeploymentLib.DeploymentData memory)
-    {
-        return readCoreDeploymentJson(directoryPath, string.concat(vm.toString(chainId), ".json"));
-    }
-
-    function readCoreDeploymentJson(string memory path, string memory fileName)
-        internal
-        returns (CoreDeploymentLib.DeploymentData memory)
-    {
-        string memory pathToFile = string.concat(path, fileName);
-
-        require(vm.exists(pathToFile), "Deployment file does not exist");
-
-        string memory json = vm.readFile(pathToFile);
-
-        CoreDeploymentLib.DeploymentData memory data;
-        data.strategyFactory = json.readAddress(".addresses.strategyFactory");
-        data.strategyManager = json.readAddress(".addresses.strategyManager");
-        data.eigenPodManager = json.readAddress(".addresses.eigenPodManager");
-        data.delegationManager = json.readAddress(".addresses.delegation");
-        data.avsDirectory = json.readAddress(".addresses.avsDirectory");
-        data.pauserRegistry = json.readAddress(".addresses.pauserRegistry");
-
-        return data;
     }
 
     function verify_deployment(DeploymentData memory result) internal view {

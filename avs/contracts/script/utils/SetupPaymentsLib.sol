@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.0;
 
-import {IRewardsCoordinator} from "@eigenlayer/contracts/interfaces/IRewardsCoordinator.sol";
+import {IRewardsCoordinator,IRewardsCoordinatorTypes} from "@eigenlayer/contracts/interfaces/IRewardsCoordinator.sol";
 import {IStrategy} from "eigenlayer-contracts/src/contracts/interfaces/IStrategyManager.sol";
 import {ECDSAServiceManagerBase} from "@eigenlayer-middleware/src/unaudited/ECDSAServiceManagerBase.sol";
 import {Vm} from "forge-std/Vm.sol";
@@ -25,12 +25,12 @@ library SetupPaymentsLib {
         IRewardsCoordinator.RewardsSubmission[] memory rewardsSubmissions =
             new IRewardsCoordinator.RewardsSubmission[](numPayments);
         for (uint256 i = 0; i < numPayments; i++) {
-            IRewardsCoordinator.StrategyAndMultiplier[] memory strategiesAndMultipliers =
-                new IRewardsCoordinator.StrategyAndMultiplier[](1);
+            IRewardsCoordinatorTypes.StrategyAndMultiplier[] memory strategiesAndMultipliers =
+                new IRewardsCoordinatorTypes.StrategyAndMultiplier[](1);
             strategiesAndMultipliers[0] =
-                IRewardsCoordinator.StrategyAndMultiplier({strategy: IStrategy(strategy), multiplier: 10000});
+                IRewardsCoordinatorTypes.StrategyAndMultiplier({strategy: IStrategy(strategy), multiplier: 10000});
 
-            IRewardsCoordinator.RewardsSubmission memory rewardsSubmission = IRewardsCoordinator.RewardsSubmission({
+            IRewardsCoordinatorTypes.RewardsSubmission memory rewardsSubmission = IRewardsCoordinatorTypes.RewardsSubmission({
                 strategiesAndMultipliers: strategiesAndMultipliers,
                 token: IStrategy(strategy).underlyingToken(),
                 amount: amountPerPayment,
@@ -58,18 +58,18 @@ library SetupPaymentsLib {
         IRewardsCoordinator.OperatorReward[] memory operatorRewards = new IRewardsCoordinator.OperatorReward[](2);
         for (uint256 i = 0; i < 2; i++) {
             operatorRewards[i] =
-                IRewardsCoordinator.OperatorReward({operator: operators[i], amount: operatorRewardAmount});
+                IRewardsCoordinatorTypes.OperatorReward({operator: operators[i], amount: operatorRewardAmount});
         }
 
         IRewardsCoordinator.OperatorDirectedRewardsSubmission[] memory rewardsSubmissions =
             new IRewardsCoordinator.OperatorDirectedRewardsSubmission[](numPayments);
         for (uint256 i = 0; i < numPayments; i++) {
-            IRewardsCoordinator.StrategyAndMultiplier[] memory strategiesAndMultipliers =
-                new IRewardsCoordinator.StrategyAndMultiplier[](1);
+            IRewardsCoordinatorTypes.StrategyAndMultiplier[] memory strategiesAndMultipliers =
+                new IRewardsCoordinatorTypes.StrategyAndMultiplier[](1);
             strategiesAndMultipliers[0] =
-                IRewardsCoordinator.StrategyAndMultiplier({strategy: IStrategy(strategy), multiplier: 10000});
+                IRewardsCoordinatorTypes.StrategyAndMultiplier({strategy: IStrategy(strategy), multiplier: 10000});
 
-            IRewardsCoordinator.OperatorDirectedRewardsSubmission memory rewardsSubmission = IRewardsCoordinator
+            IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmission memory rewardsSubmission = IRewardsCoordinatorTypes
                 .OperatorDirectedRewardsSubmission({
                 strategiesAndMultipliers: strategiesAndMultipliers,
                 token: IStrategy(strategy).underlyingToken(),
@@ -111,7 +111,7 @@ library SetupPaymentsLib {
         // this workflow assumes a new root submitted for every payment claimed.  So we get the latest rood index to process a claim for
         uint256 rootIndex = rewardsCoordinator.getDistributionRootsLength() - 1;
 
-        IRewardsCoordinator.RewardsMerkleClaim memory claim = IRewardsCoordinator.RewardsMerkleClaim({
+        IRewardsCoordinator.RewardsMerkleClaim memory claim = IRewardsCoordinatorTypes.RewardsMerkleClaim({
             rootIndex: uint32(rootIndex),
             earnerIndex: uint32(indexToProve),
             earnerTreeProof: proof,
@@ -167,7 +167,7 @@ library SetupPaymentsLib {
         IRewardsCoordinator.EarnerTreeMerkleLeaf[] memory leaves =
             new IRewardsCoordinator.EarnerTreeMerkleLeaf[](earners.length);
         for (uint256 i = 0; i < earners.length; i++) {
-            leaves[i] = IRewardsCoordinator.EarnerTreeMerkleLeaf({
+            leaves[i] = IRewardsCoordinatorTypes.EarnerTreeMerkleLeaf({
                 earner: earners[i],
                 earnerTokenRoot: createTokenRoot(tokenLeaves)
             });
@@ -198,7 +198,7 @@ library SetupPaymentsLib {
         view
         returns (IRewardsCoordinator.TokenTreeMerkleLeaf memory)
     {
-        IRewardsCoordinator.TokenTreeMerkleLeaf memory leaf = IRewardsCoordinator.TokenTreeMerkleLeaf({
+        IRewardsCoordinator.TokenTreeMerkleLeaf memory leaf = IRewardsCoordinatorTypes.TokenTreeMerkleLeaf({
             token: IStrategy(strategy).underlyingToken(),
             cumulativeEarnings: TOKEN_EARNINGS
         });
