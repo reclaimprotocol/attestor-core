@@ -167,14 +167,16 @@ export declare class IAttestorClient extends IAttestorSocket {
 	 * the promise will reject.
 	 */
 	waitForResponse<T extends RPCType>(
-		id: number
+		id: number,
+		timeoutMs?: number
 	): Promise<RPCResponseData<T>>
 	/**
 	 * Make an RPC request to the other end of the WebSocket.
 	 */
 	rpc<T extends RPCType>(
 		type: T,
-		request: Partial<RPCRequestData<T>>
+		request: Partial<RPCRequestData<T>>,
+		timeoutMs?: number
 	): Promise<RPCResponseData<T>>
 	/**
 	 * Waits for the "init" request to be responded to

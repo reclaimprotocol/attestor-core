@@ -75,6 +75,8 @@ export class AttestorSocket implements IAttestorSocket {
 		const msg = packRpcMessages(...msgs)
 		const bytes = RPCMessages.encode(msg).finish()
 
+		this.logger.trace({ msg }, 'sending messages')
+
 		if('sendPromise' in this.socket && this.socket.sendPromise) {
 			await this.socket.sendPromise(bytes)
 		} else {

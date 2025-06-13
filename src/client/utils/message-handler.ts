@@ -12,6 +12,7 @@ export async function wsMessageHandler(this: IAttestorSocket, data: unknown) {
 }
 
 export function handleMessage(this: IAttestorSocket, msg: RPCMessage) {
+	this.logger?.trace({ msg }, 'received message')
 	// handle connection termination alert
 	if(msg.connectionTerminationAlert) {
 		const err = AttestorError.fromProto(

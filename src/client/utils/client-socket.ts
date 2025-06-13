@@ -1,8 +1,8 @@
 import { base64 } from 'ethers/lib/utils'
-import { DEFAULT_METADATA } from 'src/config'
+import { DEFAULT_METADATA, DEFAULT_RPC_TIMEOUT_MS } from 'src/config'
 import { InitResponse, RPCMessages } from 'src/proto/api'
 import { IAttestorClient, IAttestorClientCreateOpts, RPCEvent, RPCRequestData, RPCResponseData, RPCType } from 'src/types'
-import { AttestorError, getRpcRequestType, logger as LOGGER, packRpcMessages } from 'src/utils'
+import { AttestorError, generateRpcMessageId, getRpcRequestType, logger as LOGGER, packRpcMessages } from 'src/utils'
 import { AttestorSocket } from 'src/utils/socket-base'
 import { makeWebSocket as defaultMakeWebSocket } from 'src/utils/ws'
 
@@ -40,7 +40,7 @@ export class AttestorClient extends AttestorSocket implements IAttestorClient {
 
 		const initReqId = msg.messages[0].id
 		this.waitForInitPromise = this
-			.waitForResponse<'init'>(initReqId)
+			.waitForResponse<'init'>(initReqId, DEFAULT_RPC_TIMEOUT_MS)
 			.then(res => {
 				logger.info('client initialised')
 				this.isInitialised = true
@@ -58,15 +58,15 @@ export class AttestorClient extends AttestorSocket implements IAttestorClient {
 
 	async rpc<T extends RPCType>(
 		type: T,
-		request: Partial<RPCRequestData<T>>
+		request: Partial<RPCRequestData<T>>,
+		timeoutMs: number = DEFAULT_RPC_TIMEOUT_MS
 	) {
 		this.logger.debug({ type }, 'sending rpc request')
 		const now = Date.now()
 		try {
-			const {
-				messages: [{ id }]
-			} = await this.sendMessage({ [getRpcRequestType(type)]: request })
-			const rslt = await this.waitForResponse<T>(id)
+			const msgId = generateRpcMessageId()
+			const rslt = await this.waitForResponse<T>(msgId, timeoutMs)
+			await this.sendMessage({ id: msgId, [getRpcRequestType(type)]: request })
 
 			return rslt
 		} finally {
@@ -75,7 +75,10 @@ export class AttestorClient extends AttestorSocket implements IAttestorClient {
 		}
 	}
 
-	waitForResponse<T extends RPCType>(id: number) {
+	waitForResponse<T extends RPCType>(
+		id: number,
+		timeoutMs: number = DEFAULT_RPC_TIMEOUT_MS
+	) {
 		if(this.isClosed) {
 			throw new AttestorError(
 				'ERROR_NETWORK_ERROR',
@@ -118,7 +121,19 @@ export class AttestorClient extends AttestorSocket implements IAttestorClient {
 				reject(event.data)
 			}
 
+			const timeout = setTimeout(() => {
+				removeHandlers()
+				reject(
+					new AttestorError(
+						'ERROR_TIMEOUT',
+						`RPC request timed out after ${timeoutMs}ms`,
+						{ id }
+					)
+				)
+			}, timeoutMs)
+
 			const removeHandlers = () => {
+				clearTimeout(timeout)
 				this.removeEventListener('rpc-response', handler)
 				this.removeEventListener('connection-terminated', terminateHandler)
 			}

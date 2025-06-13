@@ -50,6 +50,8 @@ enum ErrorCode {
 	ERROR_BGP_ANNOUNCEMENT_OVERLAP = 8;
 	// authentication failed
 	ERROR_AUTHENTICATION_FAILED = 9;
+	// timed out waiting for the server to respond
+	ERROR_TIMEOUT = 10;
 }
 
 enum ZKProofEngine {

@@ -1,4 +1,5 @@
 import { handleMessage } from 'src/client/utils/message-handler'
+import { DEFAULT_RPC_TIMEOUT_MS } from 'src/config'
 import { TunnelMessage } from 'src/proto/api'
 import { HANDLERS } from 'src/server/handlers'
 import { getApm } from 'src/server/utils/apm'
@@ -102,13 +103,7 @@ async function handleTunnelMessage(
 		const tunnel = this.getTunnel(tunnelId)
 		await tunnel.write(message)
 	} catch(err) {
-		this.logger?.error(
-			{
-				err,
-				tunnelId,
-			},
-			'error writing to tunnel'
-		)
+		this.logger?.error({ err, tunnelId }, 'error writing to tunnel')
 	}
 }
 
@@ -116,10 +111,7 @@ async function handleRpcRequest(
 	this: IAttestorServerSocket,
 	{ data: { data, requestId, respond, type } }: RPCEvent<'rpc-request'>
 ) {
-	const logger = this.logger.child({
-		rpc: type,
-		requestId
-	})
+	const logger = this.logger.child({ rpc: type, requestId })
 
 	const apm = getApm()
 	const tx = apm?.startTransaction(type)
@@ -130,6 +122,10 @@ async function handleRpcRequest(
 	if(userId) {
 		tx?.setLabel('authUserId', userId)
 	}
+
+	const timeout = setTimeout(() => {
+		logger.warn({ type, requestId }, 'RPC took too long to respond')
+	}, DEFAULT_RPC_TIMEOUT_MS)
 
 	try {
 		logger.debug({ data }, 'handling RPC request')
@@ -147,6 +143,7 @@ async function handleRpcRequest(
 
 		apm?.captureError(err, { parent: tx })
 	} finally {
+		clearTimeout(timeout)
 		tx?.end()
 	}
 }

@@ -47,6 +47,8 @@ export const MAX_PAYLOAD_SIZE = 512 * 1024 * 1024 // 512MB
 
 export const DEFAULT_AUTH_EXPIRY_S = 15 * 60 // 15m
 
+export const DEFAULT_RPC_TIMEOUT_MS = 90_000
+
 export const TOPRF_DOMAIN_SEPARATOR = 'reclaim-toprf'
 
 export const BGP_WS_URL = 'wss://ris-live.ripe.net/v1/ws/?client=reclaim-hijack-detector'
