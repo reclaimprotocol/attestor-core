@@ -174,7 +174,7 @@ export function makeHttpResponseParser() {
 			}
 
 			if(remaining.length) {
-				throw new Error('stream ended with remaining data')
+				throw new Error('stream ended before remaining data arrived')
 			}
 
 			if(remainingBodyBytes > 0) {
