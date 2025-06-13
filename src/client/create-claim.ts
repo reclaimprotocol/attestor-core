@@ -70,6 +70,12 @@ function shouldRetry(err: Error) {
 		return false
 	}
 
+	// possibly a network error, or the server
+	// closed the connection before we received the full data
+	if(err.message?.includes('stream ended before')) {
+		return true
+	}
+
 	return err instanceof AttestorError
 		&& err.code !== 'ERROR_INVALID_CLAIM'
 		&& err.code !== 'ERROR_BAD_REQUEST'
