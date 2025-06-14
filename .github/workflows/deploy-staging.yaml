@@ -1,0 +1,27 @@
+name: Deploy Reclaim Attestors (Staging)
+
+on:
+  workflow_run:
+    workflows: ["Build & Publish Docker Image (Staging)"]
+    branches:
+      - staging
+    types:
+      - completed
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Deploy Stage
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GH_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'reclaimprotocol',
+              repo: 'attestor-deployment',
+              workflow_id: 'update-deployment-staging.yaml',
+              ref: 'staging',
+            });
