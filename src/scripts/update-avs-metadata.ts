@@ -17,6 +17,7 @@ async function main() {
 		minSignaturesPerTask: +(minSignaturesPerTask || 0),
 		maxTaskCreationDelayS: 0,
 		maxTaskLifetimeS: 0,
+		minFee: 0
 	})
 	await tx.wait()
 
