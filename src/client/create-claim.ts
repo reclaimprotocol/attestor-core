@@ -258,7 +258,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 	await waitForAllData
 	await tunnel.close()
 
-	logger.info('got full response from server')
+	logger.info('session closed, processing response')
 
 	// update the response selections
 	if(updateProviderParams) {
