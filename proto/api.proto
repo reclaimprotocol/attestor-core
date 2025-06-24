@@ -52,6 +52,8 @@ enum ErrorCode {
 	ERROR_AUTHENTICATION_FAILED = 9;
 	// timed out waiting for the server to respond
 	ERROR_TIMEOUT = 10;
+	// toprf couldn't be computed, as it went out of bounds
+	ERROR_TOPRF_OUT_OF_BOUNDS = 11;
 }
 
 enum ZKProofEngine {

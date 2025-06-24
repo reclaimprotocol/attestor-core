@@ -80,6 +80,7 @@ function shouldRetry(err: Error) {
 		&& err.code !== 'ERROR_INVALID_CLAIM'
 		&& err.code !== 'ERROR_BAD_REQUEST'
 		&& err.code !== 'ERROR_AUTHENTICATION_FAILED'
+		&& err.code !== 'ERROR_TOPRF_OUT_OF_BOUNDS'
 }
 
 async function _createClaimOnAttestor<N extends ProviderName>(
@@ -509,10 +510,12 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 				if(updateParametersFromOprfData && toprfs) {
 					let strParams = canonicalStringify(params)
 					for(const toprf of toprfs) {
-						strParams = strParams.replaceAll(uint8ArrayToStr(toprf.plaintext), binaryHashToStr(
+						const ogText = uint8ArrayToStr(toprf.plaintext)
+						const hashedText = binaryHashToStr(
 							toprf.nullifier,
 							toprf.dataLocation!.length
-						))
+						)
+						strParams = strParams.replaceAll(ogText, hashedText)
 					}
 
 					params = JSON.parse(strParams)

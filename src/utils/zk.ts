@@ -135,6 +135,19 @@ export async function makeZkProofGenerator(
 			// we do these first, because they can span multiple chunks
 			// & we need to be able to span the right chunks
 			for(const toprf of toprfs || []) {
+				if(
+					toprf.dataLocation!.fromIndex + toprf.dataLocation!.length
+						> ciphertext.length
+				) {
+					throw new AttestorError(
+						'ERROR_TOPRF_OUT_OF_BOUNDS',
+						'OPRF data spread across multiple chunks, please '
+						+ 'retry the request. If this error persists, '
+						+ 'try a different cipher suite, or try manipulating the location'
+						+ ' of the OPRF data in the TLS packet.'
+					)
+				}
+
 				const fromIndex = getIdealOffsetForToprfBlock(alg, toprf)
 				const toIndex = Math.min(fromIndex + chunkSizeBytes, ciphertext.length)
 
@@ -667,7 +680,7 @@ function getIdealOffsetForToprfBlock(
 	const chunkSizeBytes = getChunkSizeBytes(alg)
 	const offsetChunks = Math.floor(
 		dataLocation!.fromIndex / chunkSizeBytes
-	) * chunkSizeBytes
+	)
 	const endOffsetChunks = Math.floor(
 		(dataLocation!.fromIndex + dataLocation!.length) / chunkSizeBytes
 	)
@@ -682,10 +695,10 @@ function getIdealOffsetForToprfBlock(
 	const offsetBytes = Math.floor(
 		dataLocation!.fromIndex / blockSizeBytes
 	) * blockSizeBytes
-	if(
-		(dataLocation!.fromIndex + dataLocation!.length) - offsetBytes
-			> chunkSizeBytes
-	) {
+	const endOffsetBytes = Math.ceil(
+		(dataLocation!.fromIndex + dataLocation!.length) / blockSizeBytes
+	)
+	if(endOffsetBytes - offsetBytes > chunkSizeBytes) {
 		throw new AttestorError(
 			'ERROR_BAD_REQUEST',
 			'OPRF data cannot fit into a single chunk'

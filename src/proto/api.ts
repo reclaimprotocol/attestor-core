@@ -172,6 +172,8 @@ export enum ErrorCode {
   ERROR_AUTHENTICATION_FAILED = 9,
   /** ERROR_TIMEOUT - timed out waiting for the server to respond */
   ERROR_TIMEOUT = 10,
+  /** ERROR_TOPRF_OUT_OF_BOUNDS - toprf couldn't be computed, as it went out of bounds */
+  ERROR_TOPRF_OUT_OF_BOUNDS = 11,
   UNRECOGNIZED = -1,
 }
 
@@ -210,6 +212,9 @@ export function errorCodeFromJSON(object: any): ErrorCode {
     case 10:
     case "ERROR_TIMEOUT":
       return ErrorCode.ERROR_TIMEOUT;
+    case 11:
+    case "ERROR_TOPRF_OUT_OF_BOUNDS":
+      return ErrorCode.ERROR_TOPRF_OUT_OF_BOUNDS;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -241,6 +246,8 @@ export function errorCodeToJSON(object: ErrorCode): string {
       return "ERROR_AUTHENTICATION_FAILED";
     case ErrorCode.ERROR_TIMEOUT:
       return "ERROR_TIMEOUT";
+    case ErrorCode.ERROR_TOPRF_OUT_OF_BOUNDS:
+      return "ERROR_TOPRF_OUT_OF_BOUNDS";
     case ErrorCode.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
