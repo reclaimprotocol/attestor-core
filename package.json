@@ -1,6 +1,6 @@
 {
   "name": "@reclaimprotocol/attestor-core",
-  "version": "4.0.1",
+  "version": "4.0.2",
   "description": "",
   "main": "lib/index",
   "scripts": {
