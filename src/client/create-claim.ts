@@ -72,7 +72,7 @@ function shouldRetry(err: Error) {
 
 	// possibly a network error, or the server
 	// closed the connection before we received the full data
-	if(err.message?.includes('stream ended before')) {
+	if(err?.message?.includes('stream ended before')) {
 		return true
 	}
 

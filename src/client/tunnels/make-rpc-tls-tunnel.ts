@@ -144,7 +144,9 @@ export const makeRpcTlsTunnel: MakeTunnelFn<ExtraTLSOptions, TLSTunnelProperties
 		// want to send `onClose` events back to the caller
 		// of this function.
 		onClose = undefined
-		handshakeReject?.(err)
+		handshakeReject?.(
+			err || new Error('TLS connection closed')
+		)
 	}
 
 	async function makeTunnel() {
