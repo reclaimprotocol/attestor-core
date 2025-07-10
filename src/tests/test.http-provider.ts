@@ -95,14 +95,14 @@ describeWithServer('HTTP Provider', opts => {
 		const resp = await createClaimOnAttestor({
 			name: 'http',
 			params: {
-				url: 'https://httpstat.us/201',
+				url: 'https://the-internet.herokuapp.com/status_codes/201',
 				method: 'GET',
 				responseMatches: [{
 					type: 'contains',
-					value: 'Created',
+					value: 'Status Codes',
 				}],
 				responseRedactions: [{
-					jsonPath: '$.description',
+					xPath: '/html/body/div[2]/div/div/h3',
 				}],
 				headers: {
 					accept: 'application/json, text/plain, */*'
@@ -117,6 +117,6 @@ describeWithServer('HTTP Provider', opts => {
 		})
 		expect(resp.error).toBeUndefined()
 		expect(resp.claim?.context)
-			.toContain('0xd18ff964dfce6a3074791ec6a6c358f7f122c838b01c3e0565b33eac29515bc6')
+			.toContain('0x51004e4a2d91eda6fa8cf2e6fa9a8dd973070114a7c670a4c47797e9a55ab872')
 	})
 })
