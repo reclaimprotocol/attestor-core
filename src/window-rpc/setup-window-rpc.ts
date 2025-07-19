@@ -247,6 +247,12 @@ export function setupWindowRpc(baseUrl?: string) {
 					response: await Benchmark(),
 				})
 				break
+			case 'ping':
+				respond({
+					type: 'pingDone',
+					response: { pong: new Date().toJSON() }
+				})
+				break
 			default:
 				break
 			}

@@ -141,6 +141,8 @@ export type WindowRPCClient = {
 	setLogLevel(options: LogLevelOptions): Promise<void>
 
 	benchmarkZK(): Promise<string>
+
+	ping(): Promise<{ pong: string }>
 }
 
 type AsFunction<K> = K extends (...args: any[]) => any ? K : never
@@ -203,7 +205,8 @@ export type WindowRPCIncomingMsg = (
 	| WindowRPCRequest<WindowRPCClient, 'extractJSONValueIndex'>
 	| WindowRPCRequest<WindowRPCClient, 'getCurrentMemoryUsage'>
 	| WindowRPCRequest<WindowRPCClient, 'setLogLevel'>
-    | WindowRPCRequest<WindowRPCClient, 'benchmarkZK'>
+  | WindowRPCRequest<WindowRPCClient, 'benchmarkZK'>
+	| WindowRPCRequest<WindowRPCClient, 'ping'>
 	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'executeZkFunctionV3'>>
 	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'executeOprfFunctionV3'>>
 	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'updateProviderParams'>>
@@ -221,7 +224,8 @@ export type WindowRPCOutgoingMsg = (
 	| AsResponse<WindowRPCResponse<WindowRPCClient, 'extractJSONValueIndex'>>
 	| AsResponse<WindowRPCResponse<WindowRPCClient, 'getCurrentMemoryUsage'>>
 	| AsResponse<WindowRPCResponse<WindowRPCClient, 'setLogLevel'>>
-    | AsResponse<WindowRPCResponse<WindowRPCClient, 'benchmarkZK'>>
+  | AsResponse<WindowRPCResponse<WindowRPCClient, 'benchmarkZK'>>
+	| AsResponse<WindowRPCResponse<WindowRPCClient, 'ping'>>
 	| WindowRPCRequest<WindowRPCAppClient, 'executeZkFunctionV3'>
 	| WindowRPCRequest<WindowRPCAppClient, 'executeOprfFunctionV3'>
 	| WindowRPCRequest<WindowRPCAppClient, 'updateProviderParams'>
