@@ -7,20 +7,18 @@ module.exports = {
 	output: {
 		libraryTarget: 'commonjs2',
 		filename: 'attestor.min.js',
-		path: process.env.BUNDLE_PATH
-			|| path.resolve(__dirname, 'browser/resources')
+		path: process.env.BUNDLE_PATH || path.resolve(__dirname, 'browser/resources')
 	},
-	mode: process.env.NODE_ENV
-		|| 'development',
+	mode: process.env.NODE_ENV || 'development',
 	resolve: {
 		extensions: ['.webpack.js', '.web.js', '.ts', '.js', '.json'],
 		alias: {
 			'jsdom': false,
 			'dotenv': false,
 			're2': false,
-            'koffi':false,
+      'koffi':false,
 			[path.resolve(__dirname, 'node_modules/@reclaimprotocol/zk-symmetric-crypto/lib/expander/operator.js')]:
-                path.resolve(__dirname, 'expander-operator.js')
+      	path.resolve(__dirname, 'expander-operator.js')
 		},
 		fallback: {
 			"fs": false,

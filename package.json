@@ -63,9 +63,6 @@
   "author": "Adhiraj Singh",
   "license": "AGPL-3.0-only",
   "dependencies": {
-    "@bufbuild/protobuf": "^2.2.2",
-    "@commitlint/cli": "^17.8.1",
-    "@commitlint/config-conventional": "^17.8.1",
     "@reclaimprotocol/tls": "github:reclaimprotocol/tls",
     "@reclaimprotocol/zk-symmetric-crypto": "^3.0.5",
     "ajv": "^8.17.1",
@@ -88,6 +85,9 @@
   },
   "devDependencies": {
     "@adiwajshing/eslint-config": "github:adiwajshing/eslint-config",
+    "@bufbuild/protobuf": "^2.2.2",
+    "@commitlint/cli": "^17.8.1",
+    "@commitlint/config-conventional": "^17.8.1",
     "@swc-node/register": "^1.10.9",
     "@swc/core": "^1.9.3",
     "@swc/jest": "^0.2.37",

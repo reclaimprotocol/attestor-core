@@ -25,7 +25,12 @@ export async function createServer(port = PORT) {
 	const http = createHttpServer()
 	const serveBrowserRpc = serveStatic(
 		'browser',
-		{ index: ['index.html'] }
+		{
+			index: ['index.html'],
+			setHeaders(res) {
+				res.setHeader('Access-Control-Allow-Origin', '*')
+			},
+		}
 	)
 	const bgpListener = !DISABLE_BGP_CHECKS
 		? createBgpListener(LOGGER.child({ service: 'bgp-listener' }))
@@ -70,9 +75,7 @@ export async function createServer(port = PORT) {
 			port,
 			apiPath: WS_PATHNAME,
 			browserRpcPath: BROWSER_RPC_PATHNAME,
-			signerAddress: getAttestorAddress(
-				SelectedServiceSignatureType
-			)
+			signerAddress: getAttestorAddress(SelectedServiceSignatureType)
 		},
 		'WS server listening'
 	)

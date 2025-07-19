@@ -264,6 +264,11 @@ export type CommunicationBridge = {
 }
 
 declare global {
+
+	interface Window {
+		WINDOW_RPC_ATTESTOR_BASE_URL: string
+	}
+
 	interface Performance {
 		measureUserAgentSpecificMemory(): { bytes: number }
 	}
