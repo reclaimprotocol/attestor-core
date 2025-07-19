@@ -97,6 +97,21 @@ This is available on `https://attestor.reclaimprotocol.org/browser-rpc`
 	- If making changes & you want to see changes live, run `npm exec webpack -- --watch`
 2. Run the API & browser server using `npm run start:tsc`
 
+## Serving the Attestor Window RPC From Another Website
+
+You can also serve the attestor window RPC from another website. This is useful if you want to host the attestor window RPC SDK on your own domain.
+Eg.
+``` html
+<script src="https://<attestor-host>/browser-rpc/js/jsdom.js"></script>
+```
+<script src="https://<attestor-host>/browser-rpc/resources/attestor.min.js"></script>
+<script>
+// initialize the SDK with the path to the attestor RPC server
+// (this is the URL where the attestor RPC server is hosted)
+module.exports.setupWindowRpc('https://<attestor-host>')
+</script>
+```
+
 ## Implementation Details
 
 The full implementation can be accessed [here](/src/window-rpc/)

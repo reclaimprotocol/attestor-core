@@ -9,7 +9,7 @@ import { logger as LOGGER, makeLogger } from 'src/utils'
 import { B64_JSON_REPLACER, B64_JSON_REVIVER } from 'src/utils/b64-json'
 import { Benchmark } from 'src/utils/benchmark'
 import { CommunicationBridge, CreateClaimResponse, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from 'src/window-rpc/types'
-import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromLocation, mapToCreateClaimResponse, waitForResponse } from 'src/window-rpc/utils'
+import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromBaseUrl, mapToCreateClaimResponse, waitForResponse } from 'src/window-rpc/utils'
 import { ALL_ENC_ALGORITHMS, makeWindowRpcOprfOperator, makeWindowRpcZkOperator } from 'src/window-rpc/window-rpc-zk'
 
 class WindowRPCEvent extends Event {
@@ -29,13 +29,19 @@ let logger = LOGGER
  * Sets up the current window to listen for RPC requests
  * from React Native or other windows
  */
-export function setupWindowRpc() {
+export function setupWindowRpc(baseUrl?: string) {
+	if(baseUrl) {
+		window.WINDOW_RPC_ATTESTOR_BASE_URL = baseUrl
+	} else {
+		window.WINDOW_RPC_ATTESTOR_BASE_URL = window.location.toString()
+	}
+
 	logger = makeLogger(true)
 
 	window.addEventListener('message', handleMessage, false)
 	const windowMsgs = new EventTarget()
 
-	const defaultUrl = getWsApiUrlFromLocation()
+	const defaultUrl = getWsApiUrlFromBaseUrl()
 
 	logger.info({ defaultUrl }, 'window RPC setup')
 
@@ -239,6 +245,12 @@ export function setupWindowRpc() {
 				respond({
 					type: 'benchmarkZKDone',
 					response: await Benchmark(),
+				})
+				break
+			case 'ping':
+				respond({
+					type: 'pingDone',
+					response: { pong: new Date().toJSON() }
 				})
 				break
 			default:

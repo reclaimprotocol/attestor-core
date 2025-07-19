@@ -46,8 +46,13 @@ export function generateRpcRequestId() {
  * The window RPC will be served from the same origin as the API server.
  * so we can get the API server's origin from the location.
  */
-export function getWsApiUrlFromLocation() {
-	const { host, protocol } = location
+export function getWsApiUrlFromBaseUrl() {
+	const parsed = URL.parse(window.WINDOW_RPC_ATTESTOR_BASE_URL || '')
+	if(!parsed) {
+		throw new Error(`Invalid base URL: ${window.WINDOW_RPC_ATTESTOR_BASE_URL}`)
+	}
+
+	const { host, protocol } = parsed
 	const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:'
 	return `${wsProtocol}//${host}${WS_PATHNAME}`
 }
@@ -65,7 +70,7 @@ export function mapToCreateClaimResponse(
 		witnesses: [
 			{
 				id: res.signatures!.attestorAddress,
-				url: getWsApiUrlFromLocation()
+				url: getWsApiUrlFromBaseUrl()
 			}
 		],
 		signatures: [

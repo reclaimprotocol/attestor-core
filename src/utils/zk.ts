@@ -73,8 +73,7 @@ type ZKPacketToProve = {
 }
 
 const ZK_CONCURRENCY = +(
-	getEnvVariable('ZK_CONCURRENCY')
-	|| DEFAULT_ZK_CONCURRENCY
+	getEnvVariable('ZK_CONCURRENCY') || DEFAULT_ZK_CONCURRENCY
 )
 
 export async function makeZkProofGenerator(
@@ -557,13 +556,13 @@ export function makeDefaultZkOperator(
 	if(!zkOperators[algorithm]) {
 		const isNode = detectEnvironment() === 'node'
 		const opType = isNode ? 'local' : 'remote'
-		logger?.info({ type: opType, algorithm }, 'fetching zk operator')
+		const zkBaseUrl = opType === 'remote' ? getZkResourcesBaseUrl()	: undefined
+
+		logger?.info({ type: opType, algorithm, zkBaseUrl }, 'fetching zk operator')
 
 		const fetcher = opType === 'local'
 			? makeLocalFileFetch()
-			: makeRemoteFileFetch({
-				baseUrl: DEFAULT_REMOTE_FILE_FETCH_BASE_URL,
-			})
+			: makeRemoteFileFetch({ baseUrl: zkBaseUrl })
 		const maker = operatorMakers[zkEngine]
 		if(!maker) {
 			throw new Error(`No ZK operator maker for ${zkEngine}`)
@@ -589,13 +588,13 @@ export function makeDefaultOPRFOperator(
 	if(!operators[algorithm]) {
 		const isNode = detectEnvironment() === 'node'
 		const type = isNode ? 'local' : 'remote'
-		logger?.info({ type, algorithm }, 'fetching oprf operator')
+		const zkBaseUrl = type === 'remote' ? getZkResourcesBaseUrl() : undefined
+
+		logger?.info({ type, algorithm, zkBaseUrl }, 'fetching oprf operator')
 
 		const fetcher = type === 'local'
 			? makeLocalFileFetch()
-			: makeRemoteFileFetch({
-				baseUrl: DEFAULT_REMOTE_FILE_FETCH_BASE_URL,
-			})
+			: makeRemoteFileFetch({ baseUrl: zkBaseUrl })
 		const maker = OPRF_OPERATOR_MAKERS[zkEngine]
 		if(!maker) {
 			throw new Error(`No OPRF operator maker for ${zkEngine}`)
@@ -706,6 +705,15 @@ function getIdealOffsetForToprfBlock(
 	}
 
 	return offsetBytes
+}
+
+function getZkResourcesBaseUrl() {
+	return typeof window !== 'undefined' && window.WINDOW_RPC_ATTESTOR_BASE_URL
+		? new URL(
+			DEFAULT_REMOTE_FILE_FETCH_BASE_URL,
+			window.WINDOW_RPC_ATTESTOR_BASE_URL
+		).toString()
+		: DEFAULT_REMOTE_FILE_FETCH_BASE_URL
 }
 
 function sortSlices(slices: ArraySlice[]) {
