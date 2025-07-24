@@ -23,6 +23,10 @@ const NAMED_CURVE_LIST = detectEnvironment() === 'node'
 	// X25519 is not supported in the browser
 	: SUPPORTED_NAMED_CURVES.filter(c => c !== 'X25519')
 
+TLS_ADDITIONAL_ROOT_CA_LIST.push(
+	// ... add any additional root CA PEMs here
+)
+
 export function getDefaultTlsOptions(): TLSConnectionOptions {
 	return {
 		cipherSuites: ZK_CIPHER_SUITES,
