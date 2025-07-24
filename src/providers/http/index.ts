@@ -332,9 +332,10 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 				logger.info({ dateHeader:dateHeader[0], current: Date.now() }, 'date header is off')
 
-				throw new Error(
-					`Server date is off by "${(Date.now() - serverDate.getTime()) / 1000} s"`
-				)
+				// too many false positives
+				// throw new Error(
+				// 	`Server date is off by "${(Date.now() - serverDate.getTime()) / 1000} s"`
+				// )
 			}
 		}
 
