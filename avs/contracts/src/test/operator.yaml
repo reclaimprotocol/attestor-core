@@ -1,0 +1,10 @@
+operator:
+    address: 0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266
+    delegation_approver_address: "0x0000000000000000000000000000000000000000"
+    metadata_url: "https://raw.githubusercontent.com/reclaimprotocol/attestor-core/refs/heads/avs-rewards/avs/contracts/src/test/metadata.json"
+    allocation_delay: 1200
+el_delegation_manager_address: "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0"
+eth_rpc_url: http://localhost:8545
+chain_id: 31337
+private_key_store_path: avs/contracts/src/test/reclaim_test_operator.ecdsa.key.json
+signer_type: local_keystore
