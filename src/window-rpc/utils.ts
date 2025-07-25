@@ -47,7 +47,7 @@ export function generateRpcRequestId() {
  * so we can get the API server's origin from the location.
  */
 export function getWsApiUrlFromBaseUrl() {
-	const parsed = URL.parse(window.WINDOW_RPC_ATTESTOR_BASE_URL || '')
+	const parsed = new URL(window.WINDOW_RPC_ATTESTOR_BASE_URL || '')
 	if(!parsed) {
 		throw new Error(`Invalid base URL: ${window.WINDOW_RPC_ATTESTOR_BASE_URL}`)
 	}
