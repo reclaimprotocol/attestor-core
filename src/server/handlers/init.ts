@@ -1,5 +1,5 @@
 import { ethers } from 'ethers'
-import { RPCHandler } from 'src/types/index.ts'
+import type { RPCHandler } from 'src/types/index.ts'
 import { assertValidAuthRequest } from 'src/utils/auth.ts'
 import { getEnvVariable } from 'src/utils/env.ts'
 import { AttestorError } from 'src/utils/index.ts'

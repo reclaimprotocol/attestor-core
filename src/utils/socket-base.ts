@@ -1,6 +1,7 @@
 import { wsMessageHandler } from 'src/client/utils/message-handler.ts'
-import { InitRequest, RPCMessage, RPCMessages } from 'src/proto/api.ts'
-import { IAttestorSocket, Logger, RPCEvent, RPCEventMap } from 'src/types/index.ts'
+import type { InitRequest, RPCMessage } from 'src/proto/api.ts'
+import { RPCMessages } from 'src/proto/api.ts'
+import type { IAttestorSocket, Logger, RPCEvent, RPCEventMap } from 'src/types/index.ts'
 import { AttestorError, makeRpcEvent, packRpcMessages } from 'src/utils/index.ts'
 import type { WebSocket as WSWebSocket } from 'ws'
 

@@ -1,10 +1,12 @@
-import { CipherSuite, crypto, encryptWrappedRecord, strToUint8Array, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
-import { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
+import type { CipherSuite } from '@reclaimprotocol/tls'
+import { crypto, encryptWrappedRecord, strToUint8Array, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
+import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import assert from 'assert'
 import { TOPRF_DOMAIN_SEPARATOR } from 'src/config/index.ts'
-import { MessageReveal_ZKProof as ZKProof, ZKProofEngine } from 'src/proto/api.ts'
+import type { MessageReveal_ZKProof as ZKProof } from 'src/proto/api.ts'
+import { ZKProofEngine } from 'src/proto/api.ts'
 import { toprf } from 'src/server/handlers/toprf.ts'
-import { CompleteTLSPacket, MessageRevealInfo, RedactedOrHashedArraySlice, TOPRFProofParams } from 'src/types/index.ts'
+import type { CompleteTLSPacket, MessageRevealInfo, RedactedOrHashedArraySlice, TOPRFProofParams } from 'src/types/index.ts'
 import {
 	getBlocksToReveal,
 	logger,

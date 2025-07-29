@@ -9,3 +9,4 @@ browser
 src/avs/abis
 src/avs/contracts
 expander-operator.js
+src/test.ts

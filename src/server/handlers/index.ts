@@ -6,7 +6,7 @@ import { createTunnel } from 'src/server/handlers/createTunnel.ts'
 import { disconnectTunnel } from 'src/server/handlers/disconnectTunnel.ts'
 import { init } from 'src/server/handlers/init.ts'
 import { toprf } from 'src/server/handlers/toprf.ts'
-import { RPCHandler, RPCType } from 'src/types/index.ts'
+import type { RPCHandler, RPCType } from 'src/types/index.ts'
 
 export const HANDLERS: { [T in RPCType]: RPCHandler<T> } = {
 	createTunnel,

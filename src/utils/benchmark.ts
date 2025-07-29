@@ -1,10 +1,11 @@
+import type {
+	CipherSuite } from '@reclaimprotocol/tls'
 import {
-	CipherSuite,
 	crypto,
 	encryptWrappedRecord, strToUint8Array,
 	SUPPORTED_CIPHER_SUITE_MAP
 } from '@reclaimprotocol/tls'
-import { CompleteTLSPacket } from 'src/types/index.ts'
+import type { CompleteTLSPacket } from 'src/types/index.ts'
 import { logger } from 'src/utils/logger.ts'
 import { makeZkProofGenerator } from 'src/utils/zk.ts'
 

@@ -1,5 +1,6 @@
-import { RPCMessage, RPCMessages } from 'src/proto/api.ts'
-import { IAttestorSocket } from 'src/types/index.ts'
+import type { RPCMessage } from 'src/proto/api.ts'
+import { RPCMessages } from 'src/proto/api.ts'
+import type { IAttestorSocket } from 'src/types/index.ts'
 import { AttestorError, extractArrayBufferFromWsData, getRpcRequest, getRpcRequestType, getRpcResponseType } from 'src/utils/index.ts'
 
 export async function wsMessageHandler(this: IAttestorSocket, data: unknown) {

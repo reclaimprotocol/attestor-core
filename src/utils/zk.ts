@@ -1,18 +1,21 @@
-import { CipherSuite, concatenateUint8Arrays, crypto, generateIV, strToUint8Array } from '@reclaimprotocol/tls'
-import {
-	CONFIG as ZK_CONFIG,
+import type { CipherSuite } from '@reclaimprotocol/tls'
+import { concatenateUint8Arrays, crypto, generateIV, strToUint8Array } from '@reclaimprotocol/tls'
+import type {
 	EncryptionAlgorithm,
-	generateProof,
-	getBlockSizeBytes,
-	makeLocalFileFetch,
 	MakeOPRFOperator,
-	makeRemoteFileFetch,
 	MakeZKOperatorOpts,
 	OPRFOperator,	PrivateInput,
 	PublicInput,
-	verifyProof,
 	ZKEngine,
 	ZKOperator
+} from '@reclaimprotocol/zk-symmetric-crypto'
+import {
+	CONFIG as ZK_CONFIG,
+	generateProof,
+	getBlockSizeBytes,
+	makeLocalFileFetch,
+	makeRemoteFileFetch,
+	verifyProof
 } from '@reclaimprotocol/zk-symmetric-crypto'
 import {
 	makeGnarkOPRFOperator,
@@ -20,8 +23,9 @@ import {
 } from '@reclaimprotocol/zk-symmetric-crypto/gnark'
 import { makeSnarkJsZKOperator } from '@reclaimprotocol/zk-symmetric-crypto/snarkjs'
 import { DEFAULT_REMOTE_FILE_FETCH_BASE_URL, DEFAULT_ZK_CONCURRENCY, TOPRF_DOMAIN_SEPARATOR } from 'src/config/index.ts'
-import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof, ZKProofEngine } from 'src/proto/api.ts'
-import { ArraySlice, CompleteTLSPacket, Logger, OPRFOperators, PrepareZKProofsBaseOpts, TOPRFProofParams, ZKOperators, ZKRevealInfo } from 'src/types/index.ts'
+import type { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof } from 'src/proto/api.ts'
+import { ZKProofEngine } from 'src/proto/api.ts'
+import type { ArraySlice, CompleteTLSPacket, Logger, OPRFOperators, PrepareZKProofsBaseOpts, TOPRFProofParams, ZKOperators, ZKRevealInfo } from 'src/types/index.ts'
 import { detectEnvironment, getEnvVariable } from 'src/utils/env.ts'
 import { AttestorError } from 'src/utils/error.ts'
 import { getPureCiphertext, getRecordIV, getZkAlgorithmForCipherSuite, uint8ArrayToStr } from 'src/utils/generics.ts'

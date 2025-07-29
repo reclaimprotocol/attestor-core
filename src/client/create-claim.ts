@@ -1,4 +1,5 @@
-import { strToUint8Array, TLSPacketContext } from '@reclaimprotocol/tls'
+import type { TLSPacketContext } from '@reclaimprotocol/tls'
+import { strToUint8Array } from '@reclaimprotocol/tls'
 import { makeRpcTlsTunnel } from 'src/client/tunnels/make-rpc-tls-tunnel.ts'
 import { getAttestorClientFromPool } from 'src/client/utils/attestor-pool.ts'
 import { DEFAULT_HTTPS_PORT, PROVIDER_CTX, TOPRF_DOMAIN_SEPARATOR } from 'src/config/index.ts'
@@ -12,6 +13,8 @@ import type {
 	TOPRFProofParams,
 	Transcript
 } from 'src/types/index.ts'
+import type {
+	RevealedSlices } from 'src/utils/index.ts'
 import {
 	AttestorError,
 	binaryHashToStr,
@@ -26,7 +29,6 @@ import {
 	makeHttpResponseParser,
 	preparePacketsForReveal,
 	redactSlices,
-	RevealedSlices,
 	uint8ArrayToStr,
 	unixTimestampSeconds
 } from 'src/utils/index.ts'

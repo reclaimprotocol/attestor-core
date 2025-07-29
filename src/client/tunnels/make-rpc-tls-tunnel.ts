@@ -1,8 +1,9 @@
-import { concatenateUint8Arrays, makeTLSClient, TLSConnectionOptions } from '@reclaimprotocol/tls'
+import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
+import { concatenateUint8Arrays, makeTLSClient } from '@reclaimprotocol/tls'
 import { makeRpcTcpTunnel } from 'src/client/tunnels/make-rpc-tcp-tunnel.ts'
 import { DEFAULT_HTTPS_PORT } from 'src/config/index.ts'
-import { CreateTunnelRequest, RPCMessage } from 'src/proto/api.ts'
-import { CompleteTLSPacket, IAttestorClient, Logger, MakeTunnelFn, Transcript, Tunnel } from 'src/types/index.ts'
+import type { CreateTunnelRequest, RPCMessage } from 'src/proto/api.ts'
+import type { CompleteTLSPacket, IAttestorClient, Logger, MakeTunnelFn, Transcript, Tunnel } from 'src/types/index.ts'
 import { generateRpcMessageId, generateTunnelId } from 'src/utils/index.ts'
 
 type ExtraTLSOptions = {

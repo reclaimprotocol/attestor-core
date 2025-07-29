@@ -4,7 +4,7 @@ import { makeRpcTlsTunnel } from 'src/client/tunnels/make-rpc-tls-tunnel.ts'
 import { describeWithServer } from 'src/tests/describe-with-server.ts'
 import { delay } from 'src/tests/utils.ts'
 import { logger } from 'src/utils/index.ts'
-import { TLSSocket } from 'tls'
+import type { TLSSocket } from 'tls'
 
 describeWithServer('RPC Tunnel', opts => {
 

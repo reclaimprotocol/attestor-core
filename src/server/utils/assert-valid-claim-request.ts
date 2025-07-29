@@ -2,20 +2,21 @@ import {
 	areUint8ArraysEqual,
 	concatenateUint8Arrays
 } from '@reclaimprotocol/tls'
-import { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
-import {
-	ClaimTunnelRequest,
+import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
+import type {
 	InitRequest,
 	MessageReveal_MessageRevealDirect as MessageRevealDirect,
 	MessageReveal_MessageRevealZk as MessageRevealZk,
-	ProviderClaimInfo,
+	ProviderClaimInfo } from 'src/proto/api.ts'
+import {
+	ClaimTunnelRequest,
 	TranscriptMessageSenderType,
 	ZKProofEngine
 } from 'src/proto/api.ts'
 import { providers } from 'src/providers/index.ts'
 import { niceParseJsonObject } from 'src/server/utils/generics.ts'
 import { processHandshake } from 'src/server/utils/process-handshake.ts'
-import {
+import type {
 	IDecryptedTranscript, IDecryptedTranscriptMessage,
 	Logger,
 	ProviderCtx,

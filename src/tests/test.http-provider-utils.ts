@@ -10,7 +10,7 @@ import {
 } from 'src/providers/http/utils.ts'
 import { providers } from 'src/providers/index.ts'
 import { RES_CHUNKED_PARTIAL_BODY } from 'src/tests/test.http-parser.ts'
-import { ProviderParams, Transcript } from 'src/types/index.ts'
+import type { ProviderParams, Transcript } from 'src/types/index.ts'
 import { assertValidateProviderParams, getBlocksToReveal, getProviderValue, hashProviderParams, logger, uint8ArrayToStr } from 'src/utils/index.ts'
 import { deserialize, serialize } from 'v8'
 

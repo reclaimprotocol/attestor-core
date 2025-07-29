@@ -1,4 +1,5 @@
-import ElasticAPM, { Agent } from 'elastic-apm-node'
+import type { Agent } from 'elastic-apm-node'
+import ElasticAPM from 'elastic-apm-node'
 import { getEnvVariable } from 'src/utils/env.ts'
 import { logger } from 'src/utils/logger.ts'
 

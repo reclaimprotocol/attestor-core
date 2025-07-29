@@ -1,9 +1,10 @@
 // noinspection ExceptionCaughtLocallyJS
 
 import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
+import type {
+	Expression } from 'esprima-next'
 import {
 	ArrayExpression,
-	Expression,
 	ExpressionStatement,
 	ObjectExpression,
 	parseScript,
@@ -11,8 +12,9 @@ import {
 	Syntax
 } from 'esprima-next'
 import { JSONPath } from 'jsonpath-plus'
-import { ArraySlice, CompleteTLSPacket, ProviderParams, RedactedOrHashedArraySlice, Transcript } from 'src/types/index.ts'
-import { getHttpRequestDataFromTranscript, HttpRequest, HttpResponse, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from 'src/utils/index.ts'
+import type { ArraySlice, CompleteTLSPacket, ProviderParams, RedactedOrHashedArraySlice, Transcript } from 'src/types/index.ts'
+import type { HttpRequest, HttpResponse } from 'src/utils/index.ts'
+import { getHttpRequestDataFromTranscript, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from 'src/utils/index.ts'
 
 export type JSONIndex = {
     start: number

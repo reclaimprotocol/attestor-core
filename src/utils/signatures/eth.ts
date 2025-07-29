@@ -1,5 +1,5 @@
 import { utils, Wallet } from 'ethers'
-import { ServiceSignatureProvider } from 'src/types/index.ts'
+import type { ServiceSignatureProvider } from 'src/types/index.ts'
 
 const { computeAddress, computePublicKey } = utils
 

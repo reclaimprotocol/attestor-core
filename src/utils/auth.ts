@@ -1,6 +1,7 @@
 import { ethers } from 'ethers'
 import { DEFAULT_AUTH_EXPIRY_S } from 'src/config/index.ts'
-import { AuthenticatedUserData, AuthenticationRequest, ServiceSignatureType } from 'src/proto/api.ts'
+import type { AuthenticationRequest, ServiceSignatureType } from 'src/proto/api.ts'
+import { AuthenticatedUserData } from 'src/proto/api.ts'
 import { getEnvVariable } from 'src/utils/env.ts'
 import { AttestorError } from 'src/utils/error.ts'
 import { unixTimestampSeconds } from 'src/utils/generics.ts'

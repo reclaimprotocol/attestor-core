@@ -1,16 +1,17 @@
+import type {
+	CipherSuite, TLSProtocolVersion } from '@reclaimprotocol/tls'
 import {
 	areUint8ArraysEqual,
-	CipherSuite,
 	CONTENT_TYPE_MAP,
 	crypto, decryptWrappedRecord,
 	PACKET_TYPE,
 	strToUint8Array,
-	SUPPORTED_CIPHER_SUITE_MAP, TLSProtocolVersion,
+	SUPPORTED_CIPHER_SUITE_MAP,
 	uint8ArrayToDataView
 } from '@reclaimprotocol/tls'
 import { REDACTION_CHAR_CODE } from '@reclaimprotocol/zk-symmetric-crypto'
 import { RPCMessage, RPCMessages } from 'src/proto/api.ts'
-import {
+import type {
 	CompleteTLSPacket,
 	IDecryptedTranscript, IDecryptedTranscriptMessage,
 	ProviderField,

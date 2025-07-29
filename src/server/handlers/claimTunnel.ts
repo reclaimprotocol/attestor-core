@@ -3,7 +3,7 @@ import { ClaimTunnelResponse } from 'src/proto/api.ts'
 import { getApm } from 'src/server/utils/apm.ts'
 import { assertTranscriptsMatch, assertValidClaimRequest } from 'src/server/utils/assert-valid-claim-request.ts'
 import { getAttestorAddress, signAsAttestor } from 'src/server/utils/generics.ts'
-import { RPCHandler } from 'src/types/index.ts'
+import type { RPCHandler } from 'src/types/index.ts'
 import { AttestorError, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from 'src/utils/index.ts'
 
 export const claimTunnel: RPCHandler<'claimTunnel'> = async(

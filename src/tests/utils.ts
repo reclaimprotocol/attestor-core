@@ -1,5 +1,5 @@
 import { randomBytes } from 'crypto'
-import { ClaimTunnelRequest } from 'src/proto/api.ts'
+import type { ClaimTunnelRequest } from 'src/proto/api.ts'
 import { SPY_PREPARER } from 'src/tests/mocks.ts'
 
 export function delay(ms: number) {

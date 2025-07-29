@@ -1,5 +1,5 @@
-import { MAX_PAYLOAD_SIZE } from 'src/config/index.ts'
-import { detectEnvironment } from 'src/utils/env.ts'
+// import { MAX_PAYLOAD_SIZE } from 'src/config/index.ts'
+// import { detectEnvironment } from 'src/utils/env.ts'
 import type { WebSocket as WSWebSocket } from 'ws'
 
 /**
@@ -8,13 +8,12 @@ import type { WebSocket as WSWebSocket } from 'ws'
  * environments.
  */
 export function makeWebSocket(url: string) {
-	if(detectEnvironment() === 'node') {
-		const ws = require('ws') as typeof import('ws')
-		return promisifySend(
-			new ws.WebSocket(url, { maxPayload: MAX_PAYLOAD_SIZE })
-		)
-	}
-
+	// if(detectEnvironment() === 'node') {
+	// 	const ws = require('ws').WebSocket as WSWebSocket
+	// 	return promisifySend(
+	// 		new ws.WebSocket(url, { maxPayload: MAX_PAYLOAD_SIZE })
+	// 	)
+	// }
 	return new WebSocket(url)
 }
 

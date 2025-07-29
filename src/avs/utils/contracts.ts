@@ -4,7 +4,7 @@ import { delegationABI } from 'src/avs/abis/delegationABI.ts'
 import { registryABI } from 'src/avs/abis/registryABI.ts'
 import { CHAIN_CONFIGS, PRIVATE_KEY, SELECTED_CHAIN_ID } from 'src/avs/config.ts'
 import { ReclaimServiceManager__factory } from 'src/avs/contracts/index.ts'
-import { ChainConfig } from 'src/avs/types/index.ts'
+import type { ChainConfig } from 'src/avs/types/index.ts'
 
 type Contracts = ReturnType<typeof initialiseContracts>
 
