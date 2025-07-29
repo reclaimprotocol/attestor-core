@@ -1,6 +1,7 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
-import { uint8ArrayToStr } from 'src/utils/generics.ts'
-import { makeHttpResponseParser } from 'src/utils/http-parser.ts'
+
+import { uint8ArrayToStr } from '#src/utils/generics.ts'
+import { makeHttpResponseParser } from '#src/utils/http-parser.ts'
 
 describe.each(['complete', 'byte-by-byte'] as const)('HTTP Parser tests (mode=%s)', (parseMode) => {
 

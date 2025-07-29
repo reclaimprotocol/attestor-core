@@ -1,9 +1,9 @@
-import type { IReclaimServiceManager } from 'src/avs/contracts/ReclaimServiceManager.ts'
-import { getContracts } from 'src/avs/utils/contracts.ts'
-import { createNewClaimRequestOnChain } from 'src/avs/utils/tasks.ts'
-import type { RPCHandler } from 'src/types/index.ts'
-import { getEnvVariable } from 'src/utils/env.ts'
-import { AttestorError, ethersStructToPlainObject } from 'src/utils/index.ts'
+import type { IReclaimServiceManager } from '#src/avs/contracts/ReclaimServiceManager.ts'
+import { getContracts } from '#src/avs/utils/contracts.ts'
+import { createNewClaimRequestOnChain } from '#src/avs/utils/tasks.ts'
+import type { RPCHandler } from '#src/types/index.ts'
+import { getEnvVariable } from '#src/utils/env.ts'
+import { AttestorError, ethersStructToPlainObject } from '#src/utils/index.ts'
 
 const ACCEPT_CLAIM_PAYMENT_REQUESTS = getEnvVariable('ACCEPT_CLAIM_PAYMENT_REQUESTS') === '1'
 

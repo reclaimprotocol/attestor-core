@@ -1,6 +1,7 @@
 import type { Logger } from 'pino'
-import { MAX_NO_DATA_INTERVAL_MS, PING_INTERVAL_MS } from 'src/config/index.ts'
 import type { WebSocket } from 'ws'
+
+import { MAX_NO_DATA_INTERVAL_MS, PING_INTERVAL_MS } from '#src/config/index.ts'
 
 /**
  * Adds a keep-alive mechanism to the WebSocket

@@ -1,5 +1,5 @@
-import type { InitRequest } from 'src/proto/api.ts'
-import { AttestorVersion, ServiceSignatureType } from 'src/proto/api.ts'
+import type { InitRequest } from '#src/proto/api.ts'
+import { AttestorVersion, ServiceSignatureType } from '#src/proto/api.ts'
 
 export const DEFAULT_ZK_CONCURRENCY = 10
 

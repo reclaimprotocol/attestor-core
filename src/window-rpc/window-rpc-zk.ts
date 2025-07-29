@@ -1,7 +1,8 @@
 import type { EncryptionAlgorithm, OPRFOperator, ZKEngine, ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
-import { logger, makeDefaultZkOperator } from 'src/utils/index.ts'
-import type { CommunicationBridge, ExecuteOPRFOpts, ExecuteZKOpts } from 'src/window-rpc/types.ts'
-import { generateRpcRequestId, waitForResponse } from 'src/window-rpc/utils.ts'
+
+import { logger, makeDefaultZkOperator } from '#src/utils/index.ts'
+import type { CommunicationBridge, ExecuteOPRFOpts, ExecuteZKOpts } from '#src/window-rpc/types.ts'
+import { generateRpcRequestId, waitForResponse } from '#src/window-rpc/utils.ts'
 
 export const ALL_ENC_ALGORITHMS: EncryptionAlgorithm[] = [
 	'aes-256-ctr',

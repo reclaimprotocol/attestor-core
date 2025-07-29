@@ -1,6 +1,6 @@
 // eslint-disable-next-line simple-import-sort/imports
 import 'src/server/utils/config-env'
-import { getContracts } from 'src/avs/utils/contracts.ts'
+import { getContracts } from '#src/avs/utils/contracts.ts'
 
 
 async function main() {

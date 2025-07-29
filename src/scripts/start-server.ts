@@ -1,5 +1,6 @@
-import { getApm } from 'src/server/utils/apm.ts'
 import 'src/server/utils/config-env'
+
+import { getApm } from '#src/server/utils/apm.ts'
 getApm()
 
 function main() {

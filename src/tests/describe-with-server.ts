@@ -1,13 +1,14 @@
-import { AttestorClient } from 'src/client/utils/client-socket.ts'
-import { WS_PATHNAME } from 'src/config/index.ts'
-import { createServer } from 'src/server/index.ts'
-import { createMockServer } from 'src/tests/mock-provider-server.ts'
-import { SPY_PREPARER } from 'src/tests/mocks.ts'
-import { getRandomPort, randomPrivateKey } from 'src/tests/utils.ts'
-import type { IAttestorServerSocket } from 'src/types/index.ts'
-import { logger } from 'src/utils/index.ts'
 import type { WebSocket } from 'ws'
 import { type WebSocketServer } from 'ws'
+
+import { AttestorClient } from '#src/client/utils/client-socket.ts'
+import { WS_PATHNAME } from '#src/config/index.ts'
+import { createServer } from '#src/server/index.ts'
+import { createMockServer } from '#src/tests/mock-provider-server.ts'
+import { SPY_PREPARER } from '#src/tests/mocks.ts'
+import { getRandomPort, randomPrivateKey } from '#src/tests/utils.ts'
+import type { IAttestorServerSocket } from '#src/types/index.ts'
+import { logger } from '#src/utils/index.ts'
 
 type ServerOpts = {
 	/**

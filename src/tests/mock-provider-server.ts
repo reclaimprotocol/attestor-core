@@ -3,7 +3,8 @@
  */
 import { readFileSync } from 'fs'
 import { createServer } from 'https'
-import { logger } from 'src/utils/index.ts'
+
+import { logger } from '#src/utils/index.ts'
 
 /**
  * Mock https server to test claim creation.

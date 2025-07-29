@@ -1,14 +1,19 @@
 import CIDR from 'ip-cidr'
 import type { Logger } from 'pino'
-import { BGP_WS_URL } from 'src/config/index.ts'
-import type { BGPAnnouncementOverlapData, BGPListener } from 'src/types/index.ts'
-import { makeWebSocket } from 'src/utils/ws.ts'
+
+import { BGP_WS_URL } from '#src/config/index.ts'
+import type { BGPAnnouncementOverlapData, BGPListener } from '#src/types/index.ts'
+import { makeWebSocket } from '#src/utils/ws.ts'
 
 const ANNOUNCEMENT_OVERLAP = 'announcement-overlap'
 
 class BGPAnnouncementOverlapEvent extends Event {
-	constructor(public readonly data: BGPAnnouncementOverlapData) {
+
+	readonly data: BGPAnnouncementOverlapData
+
+	constructor(data: BGPAnnouncementOverlapData) {
 		super(ANNOUNCEMENT_OVERLAP)
+		this.data = data
 	}
 }
 

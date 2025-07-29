@@ -11,16 +11,17 @@
 
 import { utils, Wallet } from 'ethers'
 import assert from 'node:assert'
-import { createClaimOnAvs } from 'src/avs/client/create-claim-on-avs.ts'
-import type { NewTaskCreatedEventObject, TaskCompletedEventObject } from 'src/avs/contracts/ReclaimServiceManager.ts'
-import { runFreshChain, sendGasToAddress } from 'src/avs/tests/utils.ts'
-import { getContracts } from 'src/avs/utils/contracts.ts'
-import { registerOperator } from 'src/avs/utils/register.ts'
-import { createNewClaimRequestOnChain } from 'src/avs/utils/tasks.ts'
-import type { createClaimOnAttestor } from 'src/client/index.ts'
-import { describeWithServer } from 'src/tests/describe-with-server.ts'
-import type { ClaimInfo } from 'src/types/index.ts'
-import { canonicalStringify, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from 'src/utils/index.ts'
+
+import { createClaimOnAvs } from '#src/avs/client/create-claim-on-avs.ts'
+import type { NewTaskCreatedEventObject, TaskCompletedEventObject } from '#src/avs/contracts/ReclaimServiceManager.ts'
+import { runFreshChain, sendGasToAddress } from '#src/avs/tests/utils.ts'
+import { getContracts } from '#src/avs/utils/contracts.ts'
+import { registerOperator } from '#src/avs/utils/register.ts'
+import { createNewClaimRequestOnChain } from '#src/avs/utils/tasks.ts'
+import type { createClaimOnAttestor } from '#src/client/index.ts'
+import { describeWithServer } from '#src/tests/describe-with-server.ts'
+import type { ClaimInfo } from '#src/types/index.ts'
+import { canonicalStringify, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from '#src/utils/index.ts'
 
 const contracts = getContracts()
 

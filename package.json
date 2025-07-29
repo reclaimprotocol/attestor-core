@@ -4,6 +4,9 @@
   "description": "",
   "main": "lib/index",
   "type": "module",
+  "imports": {
+    "#src/*.ts": "./src/*.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && tsc-alias",
     "build:browser": "sh ./src/scripts/build-browser.sh",
@@ -11,7 +14,7 @@
     "start:tsc": "npm run run:tsc -- src/scripts/start-server",
     "start": "node lib/scripts/start-server",
     "prepare": "sh ./src/scripts/prepare.sh",
-    "test": "NODE_ENV=test TZ=utc jest --verbose --forceExit --detectOpenHandles",
+    "test": "NODE_ENV=test TZ=utc npm run run:tsc -- --test-force-exit --test",
     "test:avs": "NODE_ENV=test TZ=utc jest --verbose --forceExit --detectOpenHandles --test-match **/src/avs/tests/test.*.ts",
     "lint": "eslint ./ --ext .js,.ts,.jsx,.tsx",
     "lint:fix": "eslint ./ --fix --ext .js,.ts,.jsx,.tsx",

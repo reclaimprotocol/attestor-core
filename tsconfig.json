@@ -11,12 +11,11 @@
     "skipLibCheck": true,
     "declaration": true,
     "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "src/*": [
-        "./src/*"
-      ]
+      "#src/*": ["src/*"]
     }
   },
   "include": [

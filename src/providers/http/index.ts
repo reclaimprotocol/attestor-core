@@ -1,8 +1,9 @@
 import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
 import { areUint8ArraysEqual, concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
 import { utils } from 'ethers'
-import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from 'src/config/index.ts'
-import { AttestorVersion } from 'src/proto/api.ts'
+
+import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '#src/config/index.ts'
+import { AttestorVersion } from '#src/proto/api.ts'
 import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
@@ -11,15 +12,15 @@ import {
 	makeRegex,
 	matchRedactedStrings,
 	parseHttpResponse,
-} from 'src/providers/http/utils.ts'
-import type { ArraySlice, Provider, ProviderCtx, ProviderParams, ProviderSecretParams, RedactedOrHashedArraySlice } from 'src/types/index.ts'
+} from '#src/providers/http/utils.ts'
+import type { ArraySlice, Provider, ProviderCtx, ProviderParams, ProviderSecretParams, RedactedOrHashedArraySlice } from '#src/types/index.ts'
 import {
 	findIndexInUint8Array,
 	getHttpRequestDataFromTranscript, logger,
 	REDACTION_CHAR_CODE,
 	uint8ArrayToBinaryStr,
 	uint8ArrayToStr,
-} from 'src/utils/index.ts'
+} from '#src/utils/index.ts'
 
 const { base64 } = utils
 

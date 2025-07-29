@@ -1,5 +1,5 @@
-import type { ChainConfig } from 'src/avs/types/index.ts'
-import { getEnvVariable } from 'src/utils/env.ts'
+import type { ChainConfig } from '#src/avs/types/index.ts'
+import { getEnvVariable } from '#src/utils/env.ts'
 
 export const CHAIN_CONFIGS: { [key: string]: ChainConfig } = {
 	'31337': {

@@ -1,10 +1,11 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
 import canonicalizeLib from 'canonicalize'
 import { utils } from 'ethers'
-import { DEFAULT_METADATA } from 'src/config/index.ts'
-import { ClaimTunnelResponse } from 'src/proto/api.ts'
-import type { ClaimID, ClaimInfo, CompleteClaimData, ProviderParams } from 'src/types/index.ts'
-import { SIGNATURES } from 'src/utils/signatures/index.ts'
+
+import { DEFAULT_METADATA } from '#src/config/index.ts'
+import { ClaimTunnelResponse } from '#src/proto/api.ts'
+import type { ClaimID, ClaimInfo, CompleteClaimData, ProviderParams } from '#src/types/index.ts'
+import { SIGNATURES } from '#src/utils/signatures/index.ts'
 
 const { default: canonicalize } = canonicalizeLib
 

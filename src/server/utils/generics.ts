@@ -1,10 +1,11 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
 import type { IncomingMessage } from 'http'
-import type { ServiceSignatureType } from 'src/proto/api.ts'
-import { RPCMessages } from 'src/proto/api.ts'
-import { getEnvVariable } from 'src/utils/env.ts'
-import { AttestorError } from 'src/utils/index.ts'
-import { SIGNATURES } from 'src/utils/signatures/index.ts'
+
+import type { ServiceSignatureType } from '#src/proto/api.ts'
+import { RPCMessages } from '#src/proto/api.ts'
+import { getEnvVariable } from '#src/utils/env.ts'
+import { AttestorError } from '#src/utils/index.ts'
+import { SIGNATURES } from '#src/utils/signatures/index.ts'
 
 const PRIVATE_KEY = getEnvVariable('PRIVATE_KEY')!
 

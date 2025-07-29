@@ -1,8 +1,9 @@
 import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
 import type { IncomingHttpHeaders } from 'http'
-import type { ArraySlice, Transcript } from 'src/types/index.ts'
-import { findIndexInUint8Array, uint8ArrayToStr } from 'src/utils/generics.ts'
-import { REDACTION_CHAR_CODE } from 'src/utils/redactions.ts'
+
+import type { ArraySlice, Transcript } from '#src/types/index.ts'
+import { findIndexInUint8Array, uint8ArrayToStr } from '#src/utils/generics.ts'
+import { REDACTION_CHAR_CODE } from '#src/utils/redactions.ts'
 
 export type HttpRequest = {
     method: string

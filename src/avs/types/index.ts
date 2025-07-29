@@ -1,8 +1,8 @@
 
-import type { NewTaskCreatedEventObject } from 'src/avs/contracts/ReclaimServiceManager.ts'
-import type { createClaimOnAttestor } from 'src/client/index.ts'
-import type { ClaimTunnelResponse } from 'src/proto/api.ts'
-import type { CreateClaimOnAttestorOpts, ProofGenerationStep, ProviderName } from 'src/types/index.ts'
+import type { NewTaskCreatedEventObject } from '#src/avs/contracts/ReclaimServiceManager.ts'
+import type { createClaimOnAttestor } from '#src/client/index.ts'
+import type { ClaimTunnelResponse } from '#src/proto/api.ts'
+import type { CreateClaimOnAttestorOpts, ProofGenerationStep, ProviderName } from '#src/types/index.ts'
 
 export type ChainConfig = {
 	rpcUrl: string

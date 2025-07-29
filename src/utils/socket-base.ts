@@ -1,9 +1,10 @@
-import { wsMessageHandler } from 'src/client/utils/message-handler.ts'
-import type { InitRequest, RPCMessage } from 'src/proto/api.ts'
-import { RPCMessages } from 'src/proto/api.ts'
-import type { IAttestorSocket, Logger, RPCEvent, RPCEventMap } from 'src/types/index.ts'
-import { AttestorError, makeRpcEvent, packRpcMessages } from 'src/utils/index.ts'
 import type { WebSocket as WSWebSocket } from 'ws'
+
+import { wsMessageHandler } from '#src/client/utils/message-handler.ts'
+import type { InitRequest, RPCMessage } from '#src/proto/api.ts'
+import { RPCMessages } from '#src/proto/api.ts'
+import type { IAttestorSocket, Logger, RPCEvent, RPCEventMap } from '#src/types/index.ts'
+import { AttestorError, makeRpcEvent, packRpcMessages } from '#src/utils/index.ts'
 
 /**
  * Common AttestorSocket class used on the client & server side as the
@@ -12,20 +13,26 @@ import type { WebSocket as WSWebSocket } from 'ws'
 export class AttestorSocket implements IAttestorSocket {
 
 	private eventTarget = new EventTarget()
+	protected socket: WebSocket | WSWebSocket
+	readonly logger: Logger
+	readonly metadata: InitRequest
 
 	isInitialised = false
 
 	constructor(
-		protected socket: WebSocket | WSWebSocket,
-		public metadata: InitRequest,
-		public logger: Logger
+		socket: WebSocket | WSWebSocket,
+		metadata: InitRequest,
+		logger: Logger
 	) {
+		this.socket = socket
+		this.metadata = metadata
+		this.logger = logger
+
 		socket.addEventListener('error', (event) => {
 			const witErr = AttestorError.fromError(
-				event.error
-					|| new Error(event.message)
+				event.error || new Error(event.message),
+				'ERROR_NETWORK_ERROR'
 			)
-			witErr.code = 'ERROR_NETWORK_ERROR'
 
 			this.dispatchRPCEvent('connection-terminated', witErr)
 		})

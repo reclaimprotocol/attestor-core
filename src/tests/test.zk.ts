@@ -1,12 +1,16 @@
+import { jestExpect as expect } from '@jest/expect'
 import type { CipherSuite } from '@reclaimprotocol/tls'
 import { crypto, encryptWrappedRecord, strToUint8Array, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import assert from 'assert'
-import { TOPRF_DOMAIN_SEPARATOR } from 'src/config/index.ts'
-import type { MessageReveal_ZKProof as ZKProof } from 'src/proto/api.ts'
-import { ZKProofEngine } from 'src/proto/api.ts'
-import { toprf } from 'src/server/handlers/toprf.ts'
-import type { CompleteTLSPacket, MessageRevealInfo, RedactedOrHashedArraySlice, TOPRFProofParams } from 'src/types/index.ts'
+import { describe, it } from 'node:test'
+import '#src/server/utils/config-env.ts'
+
+import { TOPRF_DOMAIN_SEPARATOR } from '#src/config/index.ts'
+import type { MessageReveal_ZKProof as ZKProof } from '#src/proto/api.ts'
+import { ZKProofEngine } from '#src/proto/api.ts'
+import { toprf } from '#src/server/handlers/toprf.ts'
+import type { CompleteTLSPacket, MessageRevealInfo, RedactedOrHashedArraySlice, TOPRFProofParams } from '#src/types/index.ts'
 import {
 	getBlocksToReveal,
 	logger,
@@ -16,8 +20,7 @@ import {
 	redactSlices,
 	uint8ArrayToStr,
 	verifyZkPacket
-} from 'src/utils/index.ts'
-import 'src/server/utils/config-env'
+} from '#src/utils/index.ts'
 
 const ZK_CIPHER_SUITES: CipherSuite[] = [
 	'TLS_CHACHA20_POLY1305_SHA256',
@@ -35,8 +38,6 @@ type RedactionTestVector = {
 	output: string[]
 	redactions: RedactedOrHashedArraySlice[]
 }
-
-jest.setTimeout(90_000) // 90s
 
 describe('Redaction Tests', () => {
 
@@ -332,9 +333,12 @@ describe('OPRF Slicing Tests', () => {
 	}
 })
 
-describe.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some ciphertext', (cipherSuite) => {
-	describe.each(ZK_ENGINES)('[%s]', (zkEngine) => {
+const ZK_TEST_MATRIX = ZK_CIPHER_SUITES.flatMap(cipherSuite => (
+	ZK_ENGINES.map(zkEngine => ({ cipherSuite, zkEngine }))
+))
 
+for(const { cipherSuite, zkEngine } of ZK_TEST_MATRIX) {
+	describe(`[${cipherSuite}]-[${zkEngine}] should generate ZK proof for ciphertext`, () => {
 		const zkProofConcurrency = zkEngine === 'snarkjs' ? 1 : undefined
 
 		it(zkEngine + '-' + cipherSuite, async() => {
@@ -442,4 +446,4 @@ describe.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some cipherte
 			}
 		})
 	})
-})
+}

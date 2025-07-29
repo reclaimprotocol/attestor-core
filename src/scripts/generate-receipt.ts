@@ -1,8 +1,11 @@
 import { readFile } from 'fs/promises'
+import type { WebSocketServer } from 'ws'
+import '#src/server/utils/config-env.ts'
+
 import type {
 	ProviderName,
 	ProviderParams,
-	ProviderSecretParams } from 'src/index.ts'
+	ProviderSecretParams } from '#src/index.ts'
 import {
 	API_SERVER_PORT,
 	createClaimOnAttestor,
@@ -11,13 +14,11 @@ import {
 	logger,
 	providers,
 	WS_PATHNAME,
-} from 'src/index.ts'
-import { getCliArgument } from 'src/scripts/utils.ts'
-import { createServer, decryptTranscript } from 'src/server/index.ts'
-import { getEnvVariable } from 'src/utils/env.ts'
-import { assertValidateProviderParams } from 'src/utils/index.ts'
-import type { WebSocketServer } from 'ws'
-import 'src/server/utils/config-env.ts'
+} from '#src/index.ts'
+import { getCliArgument } from '#src/scripts/utils.ts'
+import { createServer, decryptTranscript } from '#src/server/index.ts'
+import { getEnvVariable } from '#src/utils/env.ts'
+import { assertValidateProviderParams } from '#src/utils/index.ts'
 
 type ProviderReceiptGenerationParams<P extends ProviderName> = {
     name: P
@@ -52,7 +53,7 @@ export async function main<T extends ProviderName>(
 	}
 
 	const zkEngine = getCliArgument('zk') === 'gnark' ? 'gnark' : 'snarkjs'
-	const receipt = await createClaimOnAttestor({
+	const { request, error, claim } = await createClaimOnAttestor({
 		name: paramsJson.name,
 		secretParams: paramsJson.secretParams,
 		params: paramsJson.params,
@@ -62,11 +63,11 @@ export async function main<T extends ProviderName>(
 		zkEngine
 	})
 
-	if(receipt.error) {
-		console.error('claim creation failed:', receipt.error)
+	if(error) {
+		console.error('claim creation failed:', error)
 	} else {
-		const ctx = receipt.claim?.context
-			? JSON.parse(receipt.claim.context)
+		const ctx = claim?.context
+			? JSON.parse(claim.context)
 			: {}
 		console.log(`receipt is valid for ${paramsJson.name} provider`)
 		if(ctx.extractedParameters) {
@@ -74,12 +75,17 @@ export async function main<T extends ProviderName>(
 		}
 	}
 
+
+	if(!request) {
+		throw new Error('Missing request in claim')
+	}
+
 	const decTranscript = await decryptTranscript(
-		receipt.request?.transcript!,
+		request?.transcript,
 		logger,
 		zkEngine,
-		receipt.request?.fixedServerIV!,
-		receipt.request?.fixedClientIV!
+		request?.fixedServerIV,
+		request?.fixedClientIV
 	)
 	const transcriptStr = getTranscriptString(decTranscript)
 	console.log('receipt:\n', transcriptStr)
@@ -118,13 +124,10 @@ async function getInputParameters(): Promise<ProviderReceiptGenerationParams<any
 	return JSON.parse(fileContents)
 }
 
-if(require.main === module) {
-	main()
-		.catch(err => {
-			console.error('error in receipt gen', err)
-		})
-		.finally(() => {
-			server?.close()
-		})
-}
-
+main()
+	.catch(err => {
+		console.error('error in receipt gen', err)
+	})
+	.finally(() => {
+		server?.close()
+	})

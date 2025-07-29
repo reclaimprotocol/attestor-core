@@ -3,19 +3,20 @@ import {
 	concatenateUint8Arrays
 } from '@reclaimprotocol/tls'
 import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
+
 import type {
 	InitRequest,
 	MessageReveal_MessageRevealDirect as MessageRevealDirect,
 	MessageReveal_MessageRevealZk as MessageRevealZk,
-	ProviderClaimInfo } from 'src/proto/api.ts'
+	ProviderClaimInfo } from '#src/proto/api.ts'
 import {
 	ClaimTunnelRequest,
 	TranscriptMessageSenderType,
 	ZKProofEngine
-} from 'src/proto/api.ts'
-import { providers } from 'src/providers/index.ts'
-import { niceParseJsonObject } from 'src/server/utils/generics.ts'
-import { processHandshake } from 'src/server/utils/process-handshake.ts'
+} from '#src/proto/api.ts'
+import { providers } from '#src/providers/index.ts'
+import { niceParseJsonObject } from '#src/server/utils/generics.ts'
+import { processHandshake } from '#src/server/utils/process-handshake.ts'
 import type {
 	IDecryptedTranscript, IDecryptedTranscriptMessage,
 	Logger,
@@ -23,14 +24,14 @@ import type {
 	ProviderName,
 	TCPSocketProperties,
 	Transcript,
-} from 'src/types/index.ts'
+} from '#src/types/index.ts'
 import {
 	assertValidateProviderParams,
 	AttestorError,
 	canonicalStringify, decryptDirect,
 	extractApplicationDataFromTranscript,
 	hashProviderParams, 	SIGNATURES,
-	verifyZkPacket } from 'src/utils/index.ts'
+	verifyZkPacket } from '#src/utils/index.ts'
 
 /**
  * Asserts that the claim request is valid.

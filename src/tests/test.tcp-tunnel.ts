@@ -1,6 +1,7 @@
 import { strToUint8Array, uint8ArrayToStr } from '@reclaimprotocol/tls'
-import { makeTcpTunnel } from 'src/server/index.ts'
-import { logger, makeHttpResponseParser } from 'src/utils/index.ts'
+
+import { makeTcpTunnel } from '#src/server/index.ts'
+import { logger, makeHttpResponseParser } from '#src/utils/index.ts'
 
 const DEMO_GEO_LOCATIONS = ['in', 'us']
 

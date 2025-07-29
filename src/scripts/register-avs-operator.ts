@@ -1,5 +1,5 @@
 // eslint-disable-next-line simple-import-sort/imports
 import 'src/server/utils/config-env'
-import { registerOperator } from 'src/avs/utils/register.ts'
+import { registerOperator } from '#src/avs/utils/register.ts'
 
 void registerOperator()

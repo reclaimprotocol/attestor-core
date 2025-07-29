@@ -11,37 +11,32 @@ import {
 	Property,
 	Syntax
 } from 'esprima-next'
+import * as jsd from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
-import type { ArraySlice, CompleteTLSPacket, ProviderParams, RedactedOrHashedArraySlice, Transcript } from 'src/types/index.ts'
-import type { HttpRequest, HttpResponse } from 'src/utils/index.ts'
-import { getHttpRequestDataFromTranscript, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from 'src/utils/index.ts'
+import RE2 from 're2'
+
+import type { ArraySlice, CompleteTLSPacket, ProviderParams, RedactedOrHashedArraySlice, Transcript } from '#src/types/index.ts'
+import type { HttpRequest, HttpResponse } from '#src/utils/index.ts'
+import { getHttpRequestDataFromTranscript, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from '#src/utils/index.ts'
 
 export type JSONIndex = {
-    start: number
-    end: number
+	start: number
+	end: number
+}
+
+// creating these types here as they're imported from parse5
+type NodeLocation = ReturnType<typeof jsd.JSDOM.prototype.nodeLocation>
+type ElementLocation = NodeLocation & {
+	/** Element's start tag location info. */
+	startTag?: NodeLocation
+	/**
+	 * Element's end tag location info.
+	 * This property is undefined, if the element has no closing tag.
+	 */
+	endTag?: NodeLocation
 }
 
 type HTTPProviderParams = ProviderParams<'http'>
-
-let RE2
-try {
-	RE2 = require('re2')
-	if(!Object.keys(RE2).length) {
-		RE2 = undefined
-		throw new Error()
-	}
-} catch{
-	console.log('RE2 not found. Using standard regex')
-}
-
-let jsd
-
-if(typeof window !== 'undefined') {
-	// @ts-ignore
-	jsd = window.jsdom
-} else {
-	jsd = require('jsdom')
-}
 
 /**
  * Returns only first extracted element
@@ -115,7 +110,12 @@ export function extractHTMLElementsIndexes(
 	if(xpathResult?.resultType === dom.window.XPathResult.ORDERED_NODE_SNAPSHOT_TYPE &&
 		xpathResult?.snapshotLength) {
 		for(let i = 0; i < xpathResult.snapshotLength; ++i) {
-			nodes.push(xpathResult.snapshotItem(i))
+			const item = xpathResult.snapshotItem(i)
+			if(!item) {
+				continue
+			}
+
+			nodes.push(item)
 		}
 	}
 
@@ -123,11 +123,10 @@ export function extractHTMLElementsIndexes(
 		throw new Error(`Failed to find XPath: "${xpathExpression}"`)
 	}
 
-
 	const res: { start: number, end: number }[] = []
 
 	for(const node of nodes) {
-		const nodeLocation = dom.nodeLocation(node)
+		const nodeLocation = dom.nodeLocation(node) as ElementLocation
 		if(!nodeLocation) {
 			throw new Error(`Failed to find XPath node location: "${xpathExpression}"`)
 		}
@@ -332,11 +331,7 @@ export function parseHttpResponse(buff: Uint8Array) {
 }
 
 export function makeRegex(str: string) {
-	if(RE2 !== undefined) {
-		return RE2(str, 'sgiu')
-	}
-
-	return new RegExp(str, 'sgi')
+	return RE2(str, 'sgiu')
 }
 
 const TEMPLATE_START_CHARCODE = '{'.charCodeAt(0)

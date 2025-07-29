@@ -1,20 +1,23 @@
 import { uint8ArrayToStr } from '@reclaimprotocol/tls'
 import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
-import { createClaimOnAvs } from 'src/avs/client/create-claim-on-avs.ts'
-import { createClaimOnAttestor } from 'src/client/index.ts'
-import { createClaimOnMechain } from 'src/mechain/client/create-claim-on-mechain.ts'
-import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from 'src/providers/http/utils.ts'
-import type { OPRFOperators, ProviderParams, ProviderSecretParams, ZKOperators } from 'src/types/index.ts'
-import { B64_JSON_REPLACER, B64_JSON_REVIVER } from 'src/utils/b64-json.ts'
-import { Benchmark } from 'src/utils/benchmark.ts'
-import { logger as LOGGER, makeLogger } from 'src/utils/index.ts'
-import type { CommunicationBridge, CreateClaimResponse, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from 'src/window-rpc/types.ts'
-import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromBaseUrl, mapToCreateClaimResponse, waitForResponse } from 'src/window-rpc/utils.ts'
-import { ALL_ENC_ALGORITHMS, makeWindowRpcOprfOperator, makeWindowRpcZkOperator } from 'src/window-rpc/window-rpc-zk.ts'
+
+import { createClaimOnAvs } from '#src/avs/client/create-claim-on-avs.ts'
+import { createClaimOnAttestor } from '#src/client/index.ts'
+import { createClaimOnMechain } from '#src/mechain/client/create-claim-on-mechain.ts'
+import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from '#src/providers/http/utils.ts'
+import type { OPRFOperators, ProviderParams, ProviderSecretParams, ZKOperators } from '#src/types/index.ts'
+import { B64_JSON_REPLACER, B64_JSON_REVIVER } from '#src/utils/b64-json.ts'
+import { Benchmark } from '#src/utils/benchmark.ts'
+import { logger as LOGGER, makeLogger } from '#src/utils/index.ts'
+import type { CommunicationBridge, CreateClaimResponse, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from '#src/window-rpc/types.ts'
+import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromBaseUrl, mapToCreateClaimResponse, waitForResponse } from '#src/window-rpc/utils.ts'
+import { ALL_ENC_ALGORITHMS, makeWindowRpcOprfOperator, makeWindowRpcZkOperator } from '#src/window-rpc/window-rpc-zk.ts'
 
 class WindowRPCEvent extends Event {
-	constructor(public readonly data: WindowRPCIncomingMsg) {
+	data: WindowRPCIncomingMsg
+	constructor(data: WindowRPCIncomingMsg) {
 		super('message')
+		this.data = data
 	}
 }
 

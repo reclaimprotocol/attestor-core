@@ -1,5 +1,5 @@
-import type { createClaimOnAttestor } from 'src/client/index.ts'
-import type { CreateClaimOnAttestorOpts, ProviderName } from 'src/types/index.ts'
+import type { createClaimOnAttestor } from '#src/client/index.ts'
+import type { CreateClaimOnAttestorOpts, ProviderName } from '#src/types/index.ts'
 
 export type CreateClaimOnMechainStep =
 {

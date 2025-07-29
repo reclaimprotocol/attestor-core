@@ -1,27 +1,34 @@
-import { handleMessage } from 'src/client/utils/message-handler.ts'
-import { DEFAULT_RPC_TIMEOUT_MS } from 'src/config/index.ts'
-import type { TunnelMessage } from 'src/proto/api.ts'
-import { HANDLERS } from 'src/server/handlers/index.ts'
-import { getApm } from 'src/server/utils/apm.ts'
-import { getInitialMessagesFromQuery } from 'src/server/utils/generics.ts'
-import type { AcceptNewConnectionOpts, BGPListener, IAttestorServerSocket, Logger, RPCEvent, RPCHandler } from 'src/types/index.ts'
-import { AttestorError, generateSessionId } from 'src/utils/index.ts'
-import { AttestorSocket } from 'src/utils/socket-base.ts'
 import { promisify } from 'util'
 import type { WebSocket as WS } from 'ws'
+
+import { handleMessage } from '#src/client/utils/message-handler.ts'
+import { DEFAULT_RPC_TIMEOUT_MS } from '#src/config/index.ts'
+import type { TunnelMessage } from '#src/proto/api.ts'
+import { HANDLERS } from '#src/server/handlers/index.ts'
+import { getApm } from '#src/server/utils/apm.ts'
+import { getInitialMessagesFromQuery } from '#src/server/utils/generics.ts'
+import type { AcceptNewConnectionOpts, BGPListener, IAttestorServerSocket, Logger, RPCEvent, RPCHandler } from '#src/types/index.ts'
+import { AttestorError, generateSessionId } from '#src/utils/index.ts'
+import { AttestorSocket } from '#src/utils/socket-base.ts'
 
 export class AttestorServerSocket extends AttestorSocket implements IAttestorServerSocket {
 
 	tunnels: IAttestorServerSocket['tunnels'] = {}
+	readonly sessionId: number
+	readonly bgpListener: BGPListener | undefined
 
 	private constructor(
 		socket: WS,
-		public sessionId: number,
-		public bgpListener: BGPListener | undefined,
+		sessionId: number,
+		bgpListener: BGPListener | undefined,
 		logger: Logger
 	) {
 		// @ts-ignore
 		super(socket, {}, logger)
+
+		this.sessionId = sessionId
+		this.bgpListener = bgpListener
+
 		// handle RPC requests
 		this.addEventListener('rpc-request', handleRpcRequest.bind(this))
 		// forward packets to the appropriate tunnel

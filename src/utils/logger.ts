@@ -1,6 +1,7 @@
 import { type LoggerOptions, pino, stdTimeFunctions } from 'pino'
-import type { LogLevel } from 'src/types/index.ts'
-import { getEnvVariable } from 'src/utils/env.ts'
+
+import type { LogLevel } from '#src/types/index.ts'
+import { getEnvVariable } from '#src/utils/env.ts'
 
 const PII_PROPERTIES = ['ownerPrivateKey', 'secretParams']
 const redactedText = '[REDACTED]'

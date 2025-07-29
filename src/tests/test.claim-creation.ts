@@ -1,19 +1,20 @@
 import type { CipherSuite, TLSProtocolVersion } from '@reclaimprotocol/tls'
 import { uint8ArrayToStr } from '@reclaimprotocol/tls'
 import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
-import type { AttestorClient } from 'src/client/index.ts'
-import { createClaimOnAttestor, getAttestorClientFromPool } from 'src/client/index.ts'
-import { providers } from 'src/providers/index.ts'
-import { decryptTranscript } from 'src/server/index.ts'
-import { describeWithServer } from 'src/tests/describe-with-server.ts'
-import { SPY_PREPARER } from 'src/tests/mocks.ts'
-import { getFirstTOprfBlock, verifyNoDirectRevealLeaks } from 'src/tests/utils.ts'
+
+import type { AttestorClient } from '#src/client/index.ts'
+import { createClaimOnAttestor, getAttestorClientFromPool } from '#src/client/index.ts'
+import { providers } from '#src/providers/index.ts'
+import { decryptTranscript } from '#src/server/index.ts'
+import { describeWithServer } from '#src/tests/describe-with-server.ts'
+import { SPY_PREPARER } from '#src/tests/mocks.ts'
+import { getFirstTOprfBlock, verifyNoDirectRevealLeaks } from '#src/tests/utils.ts'
 import {
 	assertValidClaimSignatures,
 	AttestorError,
 	binaryHashToStr,
 	extractApplicationDataFromTranscript,
-	logger } from 'src/utils/index.ts'
+	logger } from '#src/utils/index.ts'
 
 const TLS_VERSIONS: TLSProtocolVersion[] = [
 	'TLS1_3',

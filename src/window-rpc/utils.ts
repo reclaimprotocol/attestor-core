@@ -1,8 +1,9 @@
 import { ethers } from 'ethers'
-import { WS_PATHNAME } from 'src/config/index.ts'
-import type { ClaimTunnelResponse } from 'src/proto/api.ts'
-import { AttestorError, getIdentifierFromClaimInfo } from 'src/utils/index.ts'
-import type { CommunicationBridge, CreateClaimResponse, WindowRPCAppClient } from 'src/window-rpc/types.ts'
+
+import { WS_PATHNAME } from '#src/config/index.ts'
+import type { ClaimTunnelResponse } from '#src/proto/api.ts'
+import { AttestorError, getIdentifierFromClaimInfo } from '#src/utils/index.ts'
+import type { CommunicationBridge, CreateClaimResponse, WindowRPCAppClient } from '#src/window-rpc/types.ts'
 
 // track memory usage
 export async function getCurrentMemoryUsage() {

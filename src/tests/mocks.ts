@@ -1,4 +1,4 @@
-import type { preparePacketsForReveal } from 'src/utils/prepare-packets.ts'
+import type { preparePacketsForReveal } from '#src/utils/prepare-packets.ts'
 
 /**
  * Spies on the preparePacketsForReveal function

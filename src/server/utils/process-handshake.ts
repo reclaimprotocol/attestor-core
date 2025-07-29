@@ -14,10 +14,11 @@ import { concatenateUint8Arrays,
 	SUPPORTED_RECORD_TYPE_MAP, uint8ArrayToDataView,
 	verifyCertificateChain,
 	verifyCertificateSignature } from '@reclaimprotocol/tls'
-import type { ClaimTunnelRequest } from 'src/proto/api.ts'
-import { TranscriptMessageSenderType } from 'src/proto/api.ts'
-import type { Logger } from 'src/types/index.ts'
-import { decryptDirect } from 'src/utils/index.ts'
+
+import type { ClaimTunnelRequest } from '#src/proto/api.ts'
+import { TranscriptMessageSenderType } from '#src/proto/api.ts'
+import type { Logger } from '#src/types/index.ts'
+import { decryptDirect } from '#src/utils/index.ts'
 
 const RECORD_LENGTH_BYTES = 3
 

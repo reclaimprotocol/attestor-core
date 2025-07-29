@@ -1,6 +1,6 @@
-import { ServiceSignatureType } from 'src/proto/api.ts'
-import type { ServiceSignatureProvider } from 'src/types/index.ts'
-import { ETH_SIGNATURE_PROVIDER } from 'src/utils/signatures/eth.ts'
+import { ServiceSignatureType } from '#src/proto/api.ts'
+import type { ServiceSignatureProvider } from '#src/types/index.ts'
+import { ETH_SIGNATURE_PROVIDER } from '#src/utils/signatures/eth.ts'
 
 export const SIGNATURES = {
 	[ServiceSignatureType.SERVICE_SIGNATURE_TYPE_ETH]: ETH_SIGNATURE_PROVIDER,

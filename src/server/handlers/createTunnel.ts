@@ -1,8 +1,8 @@
-import { makeTcpTunnel } from 'src/server/tunnels/make-tcp-tunnel.ts'
-import { getApm } from 'src/server/utils/apm.ts'
-import { resolveHostnames } from 'src/server/utils/dns.ts'
-import type { RPCHandler, Tunnel } from 'src/types/index.ts'
-import { AttestorError } from 'src/utils/index.ts'
+import { makeTcpTunnel } from '#src/server/tunnels/make-tcp-tunnel.ts'
+import { getApm } from '#src/server/utils/apm.ts'
+import { resolveHostnames } from '#src/server/utils/dns.ts'
+import type { RPCHandler, Tunnel } from '#src/types/index.ts'
+import { AttestorError } from '#src/utils/index.ts'
 
 export const createTunnel: RPCHandler<'createTunnel'> = async(
 	{ id, ...opts },

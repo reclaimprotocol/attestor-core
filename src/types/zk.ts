@@ -1,5 +1,6 @@
 import type { EncryptionAlgorithm, OPRFOperator, ZKEngine, ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
-import type { TOPRFPayload } from 'src/proto/api.ts'
+
+import type { TOPRFPayload } from '#src/proto/api.ts'
 
 export type ZKOperators = { [E in EncryptionAlgorithm]?: ZKOperator }
 

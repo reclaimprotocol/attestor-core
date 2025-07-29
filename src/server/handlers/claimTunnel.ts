@@ -1,10 +1,10 @@
-import { MAX_CLAIM_TIMESTAMP_DIFF_S } from 'src/config/index.ts'
-import { ClaimTunnelResponse } from 'src/proto/api.ts'
-import { getApm } from 'src/server/utils/apm.ts'
-import { assertTranscriptsMatch, assertValidClaimRequest } from 'src/server/utils/assert-valid-claim-request.ts'
-import { getAttestorAddress, signAsAttestor } from 'src/server/utils/generics.ts'
-import type { RPCHandler } from 'src/types/index.ts'
-import { AttestorError, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from 'src/utils/index.ts'
+import { MAX_CLAIM_TIMESTAMP_DIFF_S } from '#src/config/index.ts'
+import { ClaimTunnelResponse } from '#src/proto/api.ts'
+import { getApm } from '#src/server/utils/apm.ts'
+import { assertTranscriptsMatch, assertValidClaimRequest } from '#src/server/utils/assert-valid-claim-request.ts'
+import { getAttestorAddress, signAsAttestor } from '#src/server/utils/generics.ts'
+import type { RPCHandler } from '#src/types/index.ts'
+import { AttestorError, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from '#src/utils/index.ts'
 
 export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 	claimRequest,
@@ -78,8 +78,7 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 		}
 	} catch(err) {
 		logger.error({ err }, 'invalid claim request')
-		const attestorErr = AttestorError.fromError(err)
-		attestorErr.code = 'ERROR_INVALID_CLAIM'
+		const attestorErr = AttestorError.fromError(err, 'ERROR_INVALID_CLAIM')
 		res.error = attestorErr.toProto()
 	}
 

@@ -9,11 +9,23 @@ import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 
 export const protobufPackage = "reclaim_attestor";
 
-export enum TranscriptMessageSenderType {
-  TRANSCRIPT_MESSAGE_SENDER_TYPE_UNKNOWN = 0,
-  TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT = 1,
-  TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER = 2,
-  UNRECOGNIZED = -1,
+export const TranscriptMessageSenderType = {
+  TRANSCRIPT_MESSAGE_SENDER_TYPE_UNKNOWN: 0,
+  TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT: 1,
+  TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER: 2,
+  UNRECOGNIZED: -1,
+} as const;
+
+export type TranscriptMessageSenderType = typeof TranscriptMessageSenderType[keyof typeof TranscriptMessageSenderType];
+
+export namespace TranscriptMessageSenderType {
+  export type TRANSCRIPT_MESSAGE_SENDER_TYPE_UNKNOWN =
+    typeof TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_UNKNOWN;
+  export type TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT =
+    typeof TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT;
+  export type TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER =
+    typeof TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER;
+  export type UNRECOGNIZED = typeof TranscriptMessageSenderType.UNRECOGNIZED;
 }
 
 export function transcriptMessageSenderTypeFromJSON(object: any): TranscriptMessageSenderType {
@@ -48,15 +60,23 @@ export function transcriptMessageSenderTypeToJSON(object: TranscriptMessageSende
   }
 }
 
-export enum ServiceSignatureType {
-  SERVICE_SIGNATURE_TYPE_UNKNOWN = 0,
+export const ServiceSignatureType = {
+  SERVICE_SIGNATURE_TYPE_UNKNOWN: 0,
   /**
    * SERVICE_SIGNATURE_TYPE_ETH - ETH keys & signature
    * keys: secp256k1
    * signature: ethereum flavor of ECDSA (https://goethereumbook.org/signature-generate/)
    */
-  SERVICE_SIGNATURE_TYPE_ETH = 1,
-  UNRECOGNIZED = -1,
+  SERVICE_SIGNATURE_TYPE_ETH: 1,
+  UNRECOGNIZED: -1,
+} as const;
+
+export type ServiceSignatureType = typeof ServiceSignatureType[keyof typeof ServiceSignatureType];
+
+export namespace ServiceSignatureType {
+  export type SERVICE_SIGNATURE_TYPE_UNKNOWN = typeof ServiceSignatureType.SERVICE_SIGNATURE_TYPE_UNKNOWN;
+  export type SERVICE_SIGNATURE_TYPE_ETH = typeof ServiceSignatureType.SERVICE_SIGNATURE_TYPE_ETH;
+  export type UNRECOGNIZED = typeof ServiceSignatureType.UNRECOGNIZED;
 }
 
 export function serviceSignatureTypeFromJSON(object: any): ServiceSignatureType {
@@ -86,13 +106,24 @@ export function serviceSignatureTypeToJSON(object: ServiceSignatureType): string
   }
 }
 
-export enum AttestorVersion {
-  ATTESTOR_VERSION_UNKNOWN = 0,
-  ATTESTOR_VERSION_1_0_0 = 1,
-  ATTESTOR_VERSION_1_1_0 = 2,
-  ATTESTOR_VERSION_2_0_0 = 3,
-  ATTESTOR_VERSION_2_0_1 = 4,
-  UNRECOGNIZED = -1,
+export const AttestorVersion = {
+  ATTESTOR_VERSION_UNKNOWN: 0,
+  ATTESTOR_VERSION_1_0_0: 1,
+  ATTESTOR_VERSION_1_1_0: 2,
+  ATTESTOR_VERSION_2_0_0: 3,
+  ATTESTOR_VERSION_2_0_1: 4,
+  UNRECOGNIZED: -1,
+} as const;
+
+export type AttestorVersion = typeof AttestorVersion[keyof typeof AttestorVersion];
+
+export namespace AttestorVersion {
+  export type ATTESTOR_VERSION_UNKNOWN = typeof AttestorVersion.ATTESTOR_VERSION_UNKNOWN;
+  export type ATTESTOR_VERSION_1_0_0 = typeof AttestorVersion.ATTESTOR_VERSION_1_0_0;
+  export type ATTESTOR_VERSION_1_1_0 = typeof AttestorVersion.ATTESTOR_VERSION_1_1_0;
+  export type ATTESTOR_VERSION_2_0_0 = typeof AttestorVersion.ATTESTOR_VERSION_2_0_0;
+  export type ATTESTOR_VERSION_2_0_1 = typeof AttestorVersion.ATTESTOR_VERSION_2_0_1;
+  export type UNRECOGNIZED = typeof AttestorVersion.UNRECOGNIZED;
 }
 
 export function attestorVersionFromJSON(object: any): AttestorVersion {
@@ -137,44 +168,62 @@ export function attestorVersionToJSON(object: AttestorVersion): string {
   }
 }
 
-export enum ErrorCode {
+export const ErrorCode = {
   /**
    * ERROR_NO_ERROR - 0 should be treated as the absence of an error
    * should be used when gracefully closing the connection
    */
-  ERROR_NO_ERROR = 0,
+  ERROR_NO_ERROR: 0,
   /**
    * ERROR_INTERNAL - internal error in the attestor -- all "Error/TypeError"
    * messages are mapped to this
    */
-  ERROR_INTERNAL = 1,
+  ERROR_INTERNAL: 1,
   /** ERROR_BAD_REQUEST - bad request from the client */
-  ERROR_BAD_REQUEST = 2,
+  ERROR_BAD_REQUEST: 2,
   /** ERROR_NOT_FOUND - the item requested was not found */
-  ERROR_NOT_FOUND = 3,
+  ERROR_NOT_FOUND: 3,
   /** ERROR_PROXY_ERROR - error in the proxy */
-  ERROR_PROXY_ERROR = 4,
+  ERROR_PROXY_ERROR: 4,
   /**
    * ERROR_INVALID_CLAIM - claim creation failed -- i.e. the transcript
    * did not result in a valid claim
    */
-  ERROR_INVALID_CLAIM = 5,
+  ERROR_INVALID_CLAIM: 5,
   /** ERROR_NETWORK_ERROR - any network error */
-  ERROR_NETWORK_ERROR = 6,
+  ERROR_NETWORK_ERROR: 6,
   /** ERROR_PAYMENT_REFUSED - attestor refused to pay the costs */
-  ERROR_PAYMENT_REFUSED = 7,
+  ERROR_PAYMENT_REFUSED: 7,
   /**
    * ERROR_BGP_ANNOUNCEMENT_OVERLAP - BGP announcement overlapped, potentially
    * compromising the claim's authenticity
    */
-  ERROR_BGP_ANNOUNCEMENT_OVERLAP = 8,
+  ERROR_BGP_ANNOUNCEMENT_OVERLAP: 8,
   /** ERROR_AUTHENTICATION_FAILED - authentication failed */
-  ERROR_AUTHENTICATION_FAILED = 9,
+  ERROR_AUTHENTICATION_FAILED: 9,
   /** ERROR_TIMEOUT - timed out waiting for the server to respond */
-  ERROR_TIMEOUT = 10,
+  ERROR_TIMEOUT: 10,
   /** ERROR_TOPRF_OUT_OF_BOUNDS - toprf couldn't be computed, as it went out of bounds */
-  ERROR_TOPRF_OUT_OF_BOUNDS = 11,
-  UNRECOGNIZED = -1,
+  ERROR_TOPRF_OUT_OF_BOUNDS: 11,
+  UNRECOGNIZED: -1,
+} as const;
+
+export type ErrorCode = typeof ErrorCode[keyof typeof ErrorCode];
+
+export namespace ErrorCode {
+  export type ERROR_NO_ERROR = typeof ErrorCode.ERROR_NO_ERROR;
+  export type ERROR_INTERNAL = typeof ErrorCode.ERROR_INTERNAL;
+  export type ERROR_BAD_REQUEST = typeof ErrorCode.ERROR_BAD_REQUEST;
+  export type ERROR_NOT_FOUND = typeof ErrorCode.ERROR_NOT_FOUND;
+  export type ERROR_PROXY_ERROR = typeof ErrorCode.ERROR_PROXY_ERROR;
+  export type ERROR_INVALID_CLAIM = typeof ErrorCode.ERROR_INVALID_CLAIM;
+  export type ERROR_NETWORK_ERROR = typeof ErrorCode.ERROR_NETWORK_ERROR;
+  export type ERROR_PAYMENT_REFUSED = typeof ErrorCode.ERROR_PAYMENT_REFUSED;
+  export type ERROR_BGP_ANNOUNCEMENT_OVERLAP = typeof ErrorCode.ERROR_BGP_ANNOUNCEMENT_OVERLAP;
+  export type ERROR_AUTHENTICATION_FAILED = typeof ErrorCode.ERROR_AUTHENTICATION_FAILED;
+  export type ERROR_TIMEOUT = typeof ErrorCode.ERROR_TIMEOUT;
+  export type ERROR_TOPRF_OUT_OF_BOUNDS = typeof ErrorCode.ERROR_TOPRF_OUT_OF_BOUNDS;
+  export type UNRECOGNIZED = typeof ErrorCode.UNRECOGNIZED;
 }
 
 export function errorCodeFromJSON(object: any): ErrorCode {
@@ -254,10 +303,14 @@ export function errorCodeToJSON(object: ErrorCode): string {
   }
 }
 
-export enum ZKProofEngine {
-  ZK_ENGINE_SNARKJS = 0,
-  ZK_ENGINE_GNARK = 1,
-  UNRECOGNIZED = -1,
+export const ZKProofEngine = { ZK_ENGINE_SNARKJS: 0, ZK_ENGINE_GNARK: 1, UNRECOGNIZED: -1 } as const;
+
+export type ZKProofEngine = typeof ZKProofEngine[keyof typeof ZKProofEngine];
+
+export namespace ZKProofEngine {
+  export type ZK_ENGINE_SNARKJS = typeof ZKProofEngine.ZK_ENGINE_SNARKJS;
+  export type ZK_ENGINE_GNARK = typeof ZKProofEngine.ZK_ENGINE_GNARK;
+  export type UNRECOGNIZED = typeof ZKProofEngine.UNRECOGNIZED;
 }
 
 export function zKProofEngineFromJSON(object: any): ZKProofEngine {

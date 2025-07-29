@@ -1,13 +1,14 @@
 import { ethers } from 'ethers'
-import { createClaimOnAttestor } from 'src/client/index.ts'
-import { WS_PATHNAME } from 'src/config/index.ts'
-import type { AuthenticationRequest } from 'src/proto/api.ts'
-import { providers } from 'src/providers/index.ts'
-import { createServer } from 'src/server/index.ts'
-import { createMockServer } from 'src/tests/mock-provider-server.ts'
-import { getRandomPort, randomPrivateKey } from 'src/tests/utils.ts'
-import { createAuthRequest } from 'src/utils/index.ts'
 import type { WebSocketServer } from 'ws'
+
+import { createClaimOnAttestor } from '#src/client/index.ts'
+import { WS_PATHNAME } from '#src/config/index.ts'
+import type { AuthenticationRequest } from '#src/proto/api.ts'
+import { providers } from '#src/providers/index.ts'
+import { createServer } from '#src/server/index.ts'
+import { createMockServer } from '#src/tests/mock-provider-server.ts'
+import { getRandomPort, randomPrivateKey } from '#src/tests/utils.ts'
+import { createAuthRequest } from '#src/utils/index.ts'
 
 describe('Authentication Tests', () => {
 

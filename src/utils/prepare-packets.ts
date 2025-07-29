@@ -1,12 +1,13 @@
 import type { CipherSuite, TLSPacketContext } from '@reclaimprotocol/tls'
 import { concatenateUint8Arrays, crypto } from '@reclaimprotocol/tls'
+
 import type {
-	ClaimTunnelRequest_TranscriptMessage as TranscriptMessage } from 'src/proto/api.ts'
+	ClaimTunnelRequest_TranscriptMessage as TranscriptMessage } from '#src/proto/api.ts'
 import {
 	TranscriptMessageSenderType
-} from 'src/proto/api.ts'
-import type { CompleteTLSPacket, Logger, MessageRevealInfo, PrepareZKProofsBaseOpts, Transcript } from 'src/types/index.ts'
-import { makeZkProofGenerator } from 'src/utils/zk.ts'
+} from '#src/proto/api.ts'
+import type { CompleteTLSPacket, Logger, MessageRevealInfo, PrepareZKProofsBaseOpts, Transcript } from '#src/types/index.ts'
+import { makeZkProofGenerator } from '#src/utils/zk.ts'
 
 export type PreparePacketsForRevealOpts = {
 	cipherSuite: CipherSuite

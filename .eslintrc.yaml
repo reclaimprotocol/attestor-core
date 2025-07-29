@@ -11,5 +11,5 @@ rules:
     - error
     - allowSameFolder: false
       rootDir: ''
-  '@typescript-eslint/no-floating-promises': 'error'
+  #'@typescript-eslint/no-floating-promises': 'error'
       

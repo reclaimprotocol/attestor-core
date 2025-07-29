@@ -1,10 +1,11 @@
-import { AttestorClient } from 'src/client/index.ts'
-import { makeRpcTcpTunnel } from 'src/client/tunnels/make-rpc-tcp-tunnel.ts'
-import { makeRpcTlsTunnel } from 'src/client/tunnels/make-rpc-tls-tunnel.ts'
-import { describeWithServer } from 'src/tests/describe-with-server.ts'
-import { delay } from 'src/tests/utils.ts'
-import { logger } from 'src/utils/index.ts'
 import type { TLSSocket } from 'tls'
+
+import { AttestorClient } from '#src/client/index.ts'
+import { makeRpcTcpTunnel } from '#src/client/tunnels/make-rpc-tcp-tunnel.ts'
+import { makeRpcTlsTunnel } from '#src/client/tunnels/make-rpc-tls-tunnel.ts'
+import { describeWithServer } from '#src/tests/describe-with-server.ts'
+import { delay } from '#src/tests/utils.ts'
+import { logger } from '#src/utils/index.ts'
 
 describeWithServer('RPC Tunnel', opts => {
 

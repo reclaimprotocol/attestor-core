@@ -1,14 +1,15 @@
 import type { IncomingHttpHeaders } from 'http'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 import { Socket } from 'net'
-import { CONNECTION_TIMEOUT_MS } from 'src/config/index.ts'
-import type { CreateTunnelRequest } from 'src/proto/api.ts'
-import { resolveHostnames } from 'src/server/utils/dns.ts'
-import { isValidCountryCode } from 'src/server/utils/iso.ts'
-import type { Logger } from 'src/types/index.ts'
-import type { MakeTunnelFn, TCPSocketProperties } from 'src/types/index.ts'
-import { getEnvVariable } from 'src/utils/env.ts'
-import { AttestorError } from 'src/utils/index.ts'
+
+import { CONNECTION_TIMEOUT_MS } from '#src/config/index.ts'
+import type { CreateTunnelRequest } from '#src/proto/api.ts'
+import { resolveHostnames } from '#src/server/utils/dns.ts'
+import { isValidCountryCode } from '#src/server/utils/iso.ts'
+import type { Logger } from '#src/types/index.ts'
+import type { MakeTunnelFn, TCPSocketProperties } from '#src/types/index.ts'
+import { getEnvVariable } from '#src/utils/env.ts'
+import { AttestorError } from '#src/utils/index.ts'
 
 const HTTPS_PROXY_URL = getEnvVariable('HTTPS_PROXY_URL')
 

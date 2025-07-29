@@ -1,6 +1,7 @@
 import { randomBytes } from 'crypto'
-import type { ClaimTunnelRequest } from 'src/proto/api.ts'
-import { SPY_PREPARER } from 'src/tests/mocks.ts'
+
+import type { ClaimTunnelRequest } from '#src/proto/api.ts'
+import { SPY_PREPARER } from '#src/tests/mocks.ts'
 
 export function delay(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms))
