@@ -1,5 +1,5 @@
-import { jestExpect as expect } from '@jest/expect'
 import { utils, Wallet } from 'ethers'
+import assert from 'node:assert'
 import { describe, it } from 'node:test'
 
 import { ServiceSignatureType } from '#src/proto/api.ts'
@@ -28,10 +28,10 @@ for(const { algorithm } of ALGS) {
 			const addr = algorithm.getAddress(utils.arrayify(alice.publicKey))
 			let res = await algorithm.verify(data, signature, addr)
 
-			expect(res).toBeTruthy()
+			assert.ok(res)
 			res = await algorithm.verify(data, utils.hexlify(signature), addr)
 
-			expect(res).toBeTruthy()
+			assert.ok(res)
 		})
 	})
 }

@@ -1,4 +1,4 @@
-import { jestExpect as expect } from '@jest/expect'
+import assert from 'assert'
 import { afterEach, beforeEach, describe, it } from 'node:test'
 import type { TLSSocket } from 'tls'
 
@@ -7,6 +7,7 @@ import { makeRpcTcpTunnel } from '#src/client/tunnels/make-rpc-tcp-tunnel.ts'
 import { makeRpcTlsTunnel } from '#src/client/tunnels/make-rpc-tls-tunnel.ts'
 import { describeWithServer } from '#src/tests/describe-with-server.ts'
 import { delay } from '#src/tests/utils.ts'
+import type { AttestorError } from '#src/utils/index.ts'
 import { logger } from '#src/utils/index.ts'
 
 describeWithServer('RPC Tunnel', opts => {
@@ -38,17 +39,19 @@ describeWithServer('RPC Tunnel', opts => {
 
 		const ws = getClientOnServer()
 		const socketTunnel = ws?.tunnels[1]
-		expect(socketTunnel).toBeTruthy()
+		assert.ok(socketTunnel)
 
 		await tunnel.close()
 
 		// check that the server actually closed the tunnel
 		// upon our request
-		await expect(
-			socketTunnel?.write(Buffer.from('hello'))
-		).rejects.toMatchObject({
-			code: 'ERR_STREAM_DESTROYED'
-		})
+		await assert.rejects(
+			async() => socketTunnel?.write(Buffer.from('hello')),
+			(err: AttestorError) => {
+				assert.strictEqual(err.code, 'ERR_STREAM_DESTROYED')
+				return true
+			}
+		)
 	})
 
 	describe('TLS', () => {
@@ -71,13 +74,12 @@ describeWithServer('RPC Tunnel', opts => {
 					// was sent to the server along the
 					// "createTunnel" request -- that saves
 					// us a round-trip
-					expect(initMessages[1].tunnelMessage)
-						.toBeTruthy()
+					assert.ok(initMessages[1].tunnelMessage)
 					return client
 				},
 			})
 
-			expect(ws?.tunnels[1]).toBeTruthy()
+			assert.ok(ws?.tunnels[1])
 
 			await tunnel.close()
 		})
@@ -137,19 +139,19 @@ describeWithServer('RPC Tunnel', opts => {
 
 			await delay(100)
 
-			expect(socket).toBeTruthy()
+			assert.ok(socket)
 			socket?.end()
 
 			const err = await new Promise<Error | undefined>((resolve) => {
 				closeResolve = resolve
 			})
 			// since it was a graceful close, there should be no error
-			expect(err).toBeUndefined()
+			assert.ok(!err)
 		})
 
 		it('should handle TLS handshake errors', async() => {
-			await expect(
-				makeRpcTlsTunnel({
+			await assert.rejects(
+				async() => makeRpcTlsTunnel({
 					request: {
 						id: 1,
 						host: 'localhost',
@@ -166,15 +168,17 @@ describeWithServer('RPC Tunnel', opts => {
 							.catch(() => {})
 						return client
 					},
-				})
-			).rejects.toMatchObject({
-				message: /NO_APPLICATION_PROTOCOL/
-			})
+				}),
+				(err: AttestorError) => {
+					assert.match(err.message, /NO_APPLICATION_PROTOCOL/)
+					return true
+				}
+			)
 		})
 
 		it('should handle tunnel creation errors', async() => {
-			await expect(
-				makeRpcTlsTunnel({
+			await assert.rejects(
+				async() => makeRpcTlsTunnel({
 					request: {
 						id: 1,
 						host: 'localhost',
@@ -193,10 +197,12 @@ describeWithServer('RPC Tunnel', opts => {
 							.catch(() => {})
 						return client
 					},
-				})
-			).rejects.toMatchObject({
-				message: /NO_APPLICATION_PROTOCOL/
-			})
+				}),
+				(err: AttestorError) => {
+					assert.match(err.message, /Geolocation "XZ" is invalid/)
+					return true
+				}
+			)
 		})
 	})
 })

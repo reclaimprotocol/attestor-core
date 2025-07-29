@@ -14,7 +14,7 @@
     "start:tsc": "npm run run:tsc -- src/scripts/start-server",
     "start": "node lib/scripts/start-server",
     "prepare": "sh ./src/scripts/prepare.sh",
-    "test": "NODE_ENV=test TZ=utc npm run run:tsc -- --import=#src/tests/mocks.ts --experimental-test-module-mocks --test-force-exit --test",
+    "test": "NODE_ENV=test TZ=utc npm run run:tsc -- --import=#src/tests/mocks.ts --experimental-test-module-mocks --test-force-exit --test src/tests/*.test.ts",
     "test:avs": "NODE_ENV=test TZ=utc jest --verbose --forceExit --detectOpenHandles --test-match **/src/avs/tests/test.*.ts",
     "lint": "eslint ./ --ext .js,.ts,.jsx,.tsx",
     "lint:fix": "eslint ./ --fix --ext .js,.ts,.jsx,.tsx",

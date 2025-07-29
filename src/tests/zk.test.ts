@@ -1,8 +1,7 @@
-import { jestExpect as expect } from '@jest/expect'
 import type { CipherSuite } from '@reclaimprotocol/tls'
 import { crypto, encryptWrappedRecord, strToUint8Array, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
-import assert from 'assert'
+import assert from 'node:assert'
 import { describe, it } from 'node:test'
 import '#src/server/utils/config-env.ts'
 
@@ -103,11 +102,12 @@ describe('Redaction Tests', () => {
 			)
 			assert(realOutput !== 'all', 'should not return "all"')
 
-			expect(realOutput).toHaveLength(output.length)
+			assert.equal(realOutput.length, output.length)
 			for(const [i, element] of output.entries()) {
-				expect(
-					uint8ArrayToStr(realOutput[i].redactedPlaintext)
-				).toEqual(element)
+				assert.equal(
+					uint8ArrayToStr(realOutput[i].redactedPlaintext),
+					element
+				)
 			}
 		}
 	})
@@ -158,11 +158,12 @@ describe('Redaction Tests', () => {
 			)
 			assert(realOutput !== 'all', 'should not return "all"')
 
-			expect(realOutput).toHaveLength(output.length)
+			assert.equal(realOutput.length, output.length)
 			for(const [i, element] of output.entries()) {
-				expect(
-					uint8ArrayToStr(realOutput[i].redactedPlaintext)
-				).toEqual(element)
+				assert.equal(
+					uint8ArrayToStr(realOutput[i].redactedPlaintext),
+					element
+				)
 			}
 		}
 	})
@@ -247,8 +248,8 @@ describe('OPRF Slicing Tests', () => {
 				[packet], () => redactions, performOprf
 			)
 			assert(blocksToReveal !== 'all')
-			expect(blocksToReveal).toHaveLength(1)
-			expect(blocksToReveal[0].toprfs).toBeTruthy()
+			assert.equal(blocksToReveal.length, 1)
+			assert.ok(blocksToReveal[0].toprfs)
 
 			const revealsMap: Map<CompleteTLSPacket, MessageRevealInfo> = new Map()
 			revealsMap.set(packet, {
@@ -268,12 +269,12 @@ describe('OPRF Slicing Tests', () => {
 			)
 
 			const proofs = revealedMessages[0].reveal?.zkReveal?.proofs
-			expect(proofs?.length).toBeTruthy()
+			assert.ok(proofs?.length)
 
 			const x = await verifyZkPacket(
 				{
 					ciphertext,
-					zkReveal: { proofs: proofs! },
+					zkReveal: { proofs },
 					logger,
 					cipherSuite,
 					zkEngine: zkEngine,
@@ -282,9 +283,7 @@ describe('OPRF Slicing Tests', () => {
 				},
 			)
 
-			expect(x.redactedPlaintext).toEqual(
-				blocksToReveal[0].redactedPlaintext
-			)
+			assert.deepEqual(x.redactedPlaintext, blocksToReveal[0].redactedPlaintext)
 
 			console.log(`done: ${i + 1}/${vectors.length}`)
 		}
@@ -388,7 +387,7 @@ for(const { cipherSuite, zkEngine } of ZK_TEST_MATRIX) {
 				const plaintextArr = Buffer.from(plaintext)
 				const redactedPlaintext = redactSlices(plaintextArr, redactions)
 				// ensure redaction fn kinda works at least
-				expect(redactedPlaintext).not.toEqual(plaintextArr)
+				assert.notEqual(redactedPlaintext, plaintextArr)
 
 				const { ciphertext, iv } = await encryptWrappedRecord(
 					plaintextArr,
@@ -435,9 +434,7 @@ for(const { cipherSuite, zkEngine } of ZK_TEST_MATRIX) {
 					},
 				)
 
-				expect(redactedPlaintext).toEqual(
-					x.redactedPlaintext
-				)
+				assert.deepEqual(redactedPlaintext, x.redactedPlaintext)
 			}
 		})
 	})
