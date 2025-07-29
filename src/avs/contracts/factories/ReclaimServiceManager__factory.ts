@@ -6,7 +6,7 @@ import type { Provider, TransactionRequest } from "@ethersproject/providers";
 import type {
   ReclaimServiceManager,
   ReclaimServiceManagerInterface,
-} from "../ReclaimServiceManager";
+} from "../ReclaimServiceManager.ts";
 
 const _abi = [
   {

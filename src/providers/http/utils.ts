@@ -11,8 +11,8 @@ import {
 	Syntax
 } from 'esprima-next'
 import { JSONPath } from 'jsonpath-plus'
-import { ArraySlice, CompleteTLSPacket, ProviderParams, RedactedOrHashedArraySlice, Transcript } from 'src/types'
-import { getHttpRequestDataFromTranscript, HttpRequest, HttpResponse, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from 'src/utils'
+import { ArraySlice, CompleteTLSPacket, ProviderParams, RedactedOrHashedArraySlice, Transcript } from 'src/types/index.ts'
+import { getHttpRequestDataFromTranscript, HttpRequest, HttpResponse, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from 'src/utils/index.ts'
 
 export type JSONIndex = {
     start: number

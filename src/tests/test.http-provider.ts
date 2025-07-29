@@ -1,7 +1,7 @@
-import { createClaimOnAttestor } from 'src/client'
-import { describeWithServer } from 'src/tests/describe-with-server'
-import { getFirstTOprfBlock, verifyNoDirectRevealLeaks } from 'src/tests/utils'
-import { binaryHashToStr } from 'src/utils'
+import { createClaimOnAttestor } from 'src/client/index.ts'
+import { describeWithServer } from 'src/tests/describe-with-server.ts'
+import { getFirstTOprfBlock, verifyNoDirectRevealLeaks } from 'src/tests/utils.ts'
+import { binaryHashToStr } from 'src/utils/index.ts'
 
 jest.setTimeout(300_000)
 

@@ -1,5 +1,5 @@
-import type { BGPListener } from 'src/types'
-import { logger } from 'src/utils/logger'
+import type { BGPListener } from 'src/types/index.ts'
+import { logger } from 'src/utils/logger.ts'
 
 jest.mock('../utils/ws', () => {
 	return {
@@ -10,8 +10,8 @@ jest.mock('../utils/ws', () => {
 	}
 })
 
-import { delay } from 'src/tests/utils'
-import { createBgpListener } from 'src/utils/bgp-listener'
+import { delay } from 'src/tests/utils.ts'
+import { createBgpListener } from 'src/utils/bgp-listener.ts'
 
 describe('BGP Listener', () => {
 

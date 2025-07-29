@@ -24,7 +24,7 @@ import type {
   TypedEvent,
   TypedListener,
   OnEvent,
-} from "./common";
+} from "./common.ts";
 
 export declare namespace IReclaimServiceManager {
   export type ClaimRequestStruct = {

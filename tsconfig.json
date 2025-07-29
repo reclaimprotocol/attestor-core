@@ -1,23 +1,17 @@
 {
   "compilerOptions": {
-    "target": "es2018",
-    "module": "node16",
+    "lib": ["ES2022", "DOM"],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "allowJs": true,
-    "checkJs": false,
     "outDir": "lib",
     "strict": false,
     "strictNullChecks": true,
     "noImplicitThis": true,
-    "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
     "declaration": true,
-    "resolveJsonModule": true,
-    "inlineSourceMap": true,
-    "lib": [
-      "es2021",
-      "DOM"
-    ],
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "baseUrl": ".",
     "paths": {
       "src/*": [

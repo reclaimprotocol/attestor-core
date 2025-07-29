@@ -1,9 +1,9 @@
 import type { IncomingMessage } from 'http'
-import type { AuthenticationRequest, InitRequest, InitResponse, RPCMessage, RPCMessages, ServiceSignatureType, TunnelMessage } from 'src/proto/api'
-import type { BGPListener } from 'src/types/bgp'
-import type { Logger } from 'src/types/general'
-import type { RPCEvent, RPCEventMap, RPCEventType, RPCRequestData, RPCResponseData, RPCType } from 'src/types/rpc'
-import type { TCPSocketProperties, Tunnel } from 'src/types/tunnel'
+import type { AuthenticationRequest, InitRequest, InitResponse, RPCMessage, RPCMessages, ServiceSignatureType, TunnelMessage } from 'src/proto/api.ts'
+import type { BGPListener } from 'src/types/bgp.ts'
+import type { Logger } from 'src/types/general.ts'
+import type { RPCEvent, RPCEventMap, RPCEventType, RPCRequestData, RPCResponseData, RPCType } from 'src/types/rpc.ts'
+import type { TCPSocketProperties, Tunnel } from 'src/types/tunnel.ts'
 import type { WebSocket as WSWebSocket } from 'ws'
 
 /**

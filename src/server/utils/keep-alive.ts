@@ -1,5 +1,5 @@
 import { Logger } from 'pino'
-import { MAX_NO_DATA_INTERVAL_MS, PING_INTERVAL_MS } from 'src/config'
+import { MAX_NO_DATA_INTERVAL_MS, PING_INTERVAL_MS } from 'src/config/index.ts'
 import { WebSocket } from 'ws'
 
 /**

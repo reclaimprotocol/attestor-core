@@ -1,9 +1,9 @@
 import type { OPRFOperator, ZKEngine, ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
-import type { TaskCompletedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
-import type { CreateClaimOnAvsOpts, CreateClaimOnAvsStep } from 'src/avs/types'
-import type { CreateClaimOnMechainStep } from 'src/mechain/types'
-import { AuthenticationRequest } from 'src/proto/api'
-import type { extractHTMLElement, extractJSONValueIndex } from 'src/providers/http/utils'
+import type { TaskCompletedEventObject } from 'src/avs/contracts/ReclaimServiceManager.ts'
+import type { CreateClaimOnAvsOpts, CreateClaimOnAvsStep } from 'src/avs/types/index.ts'
+import type { CreateClaimOnMechainStep } from 'src/mechain/types/index.ts'
+import { AuthenticationRequest } from 'src/proto/api.ts'
+import type { extractHTMLElement, extractJSONValueIndex } from 'src/providers/http/utils.ts'
 import type {
 	AttestorData,
 	CompleteClaimData,
@@ -13,8 +13,8 @@ import type {
 	ProviderName,
 	ProviderParams,
 	ProviderSecretParams,
-} from 'src/types'
-import { HttpRequest, HttpResponse } from 'src/utils'
+} from 'src/types/index.ts'
+import { HttpRequest, HttpResponse } from 'src/utils/index.ts'
 
 type IdentifiedMessage = {
 	module: 'attestor-core'

@@ -3,26 +3,30 @@ import {
 	CONFIG as ZK_CONFIG,
 	EncryptionAlgorithm,
 	generateProof,
-	getBlockSizeBytes,	makeGnarkOPRFOperator,
-	makeGnarkZkOperator,
+	getBlockSizeBytes,
 	makeLocalFileFetch,
 	MakeOPRFOperator,
 	makeRemoteFileFetch,
-	makeSnarkJsZKOperator,
 	MakeZKOperatorOpts,
 	OPRFOperator,	PrivateInput,
 	PublicInput,
 	verifyProof,
 	ZKEngine,
-	ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
-import { DEFAULT_REMOTE_FILE_FETCH_BASE_URL, DEFAULT_ZK_CONCURRENCY, TOPRF_DOMAIN_SEPARATOR } from 'src/config'
-import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof, ZKProofEngine } from 'src/proto/api'
-import { ArraySlice, CompleteTLSPacket, Logger, OPRFOperators, PrepareZKProofsBaseOpts, TOPRFProofParams, ZKOperators, ZKRevealInfo } from 'src/types'
-import { detectEnvironment, getEnvVariable } from 'src/utils/env'
-import { AttestorError } from 'src/utils/error'
-import { getPureCiphertext, getRecordIV, getZkAlgorithmForCipherSuite, uint8ArrayToStr } from 'src/utils/generics'
-import { logger as LOGGER } from 'src/utils/logger'
-import { binaryHashToStr, isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from 'src/utils/redactions'
+	ZKOperator
+} from '@reclaimprotocol/zk-symmetric-crypto'
+import {
+	makeGnarkOPRFOperator,
+	makeGnarkZkOperator,
+} from '@reclaimprotocol/zk-symmetric-crypto/gnark'
+import { makeSnarkJsZKOperator } from '@reclaimprotocol/zk-symmetric-crypto/snarkjs'
+import { DEFAULT_REMOTE_FILE_FETCH_BASE_URL, DEFAULT_ZK_CONCURRENCY, TOPRF_DOMAIN_SEPARATOR } from 'src/config/index.ts'
+import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof, ZKProofEngine } from 'src/proto/api.ts'
+import { ArraySlice, CompleteTLSPacket, Logger, OPRFOperators, PrepareZKProofsBaseOpts, TOPRFProofParams, ZKOperators, ZKRevealInfo } from 'src/types/index.ts'
+import { detectEnvironment, getEnvVariable } from 'src/utils/env.ts'
+import { AttestorError } from 'src/utils/error.ts'
+import { getPureCiphertext, getRecordIV, getZkAlgorithmForCipherSuite, uint8ArrayToStr } from 'src/utils/generics.ts'
+import { logger as LOGGER } from 'src/utils/logger.ts'
+import { binaryHashToStr, isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from 'src/utils/redactions.ts'
 
 type GenerateZKChunkProofOpts = {
 	key: Uint8Array

@@ -1,17 +1,17 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
 import assert from 'assert'
-import { PROVIDER_CTX } from 'src/config'
-import { providers } from 'src/providers'
-import httpProvider from 'src/providers/http'
+import { PROVIDER_CTX } from 'src/config/index.ts'
+import httpProvider from 'src/providers/http/index.ts'
 import {
 	extractHTMLElement, extractHTMLElements,
 	extractJSONValueIndex, extractJSONValueIndexes,
 	makeRegex,
 	matchRedactedStrings,
-} from 'src/providers/http/utils'
-import { RES_CHUNKED_PARTIAL_BODY } from 'src/tests/test.http-parser'
-import { ProviderParams, Transcript } from 'src/types'
-import { assertValidateProviderParams, getBlocksToReveal, getProviderValue, hashProviderParams, logger, uint8ArrayToStr } from 'src/utils'
+} from 'src/providers/http/utils.ts'
+import { providers } from 'src/providers/index.ts'
+import { RES_CHUNKED_PARTIAL_BODY } from 'src/tests/test.http-parser.ts'
+import { ProviderParams, Transcript } from 'src/types/index.ts'
+import { assertValidateProviderParams, getBlocksToReveal, getProviderValue, hashProviderParams, logger, uint8ArrayToStr } from 'src/utils/index.ts'
 import { deserialize, serialize } from 'v8'
 
 jest.setTimeout(60_000)

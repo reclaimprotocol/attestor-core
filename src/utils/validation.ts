@@ -1,7 +1,7 @@
-import Ajv, { ValidateFunction } from 'ajv'
-import { ProviderName, ProviderParams } from 'src/types'
-import { PROVIDER_SCHEMAS } from 'src/types/providers.gen'
-import { AttestorError } from 'src/utils/error'
+import { Ajv, ValidateFunction } from 'ajv'
+import { ProviderName, ProviderParams } from 'src/types/index.ts'
+import { PROVIDER_SCHEMAS } from 'src/types/providers.gen.ts'
+import { AttestorError } from 'src/utils/error.ts'
 
 const PROVIDER_VALIDATOR_MAP: { [N in ProviderName]?: ValidateFunction } = {}
 
@@ -38,14 +38,14 @@ export function assertValidateProviderParams<T extends ProviderName>(
 		if(!schema) {
 			throw new AttestorError(
 				'ERROR_BAD_REQUEST',
-				`Invalid provider name "${name}"`
+				`Invalid provider name "${String(name)}"`
 			)
 		}
 
 		validate = AJV.compile(schema)
 	}
 
-	if(!validate(params)) {
+	if(!validate?.(params)) {
 		throw new AttestorError(
 			'ERROR_BAD_REQUEST',
 			'Params validation failed',

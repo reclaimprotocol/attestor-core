@@ -1,10 +1,4 @@
 import { readFile } from 'fs/promises'
-import { getCliArgument } from 'src/scripts/utils'
-import { createServer, decryptTranscript } from 'src/server'
-import { assertValidateProviderParams } from 'src/utils'
-import { getEnvVariable } from 'src/utils/env'
-import { WebSocketServer } from 'ws'
-import 'src/server/utils/config-env'
 import {
 	API_SERVER_PORT,
 	createClaimOnAttestor,
@@ -16,7 +10,13 @@ import {
 	providers,
 	ProviderSecretParams,
 	WS_PATHNAME,
-} from '..'
+} from 'src/index.ts'
+import { getCliArgument } from 'src/scripts/utils.ts'
+import { createServer, decryptTranscript } from 'src/server/index.ts'
+import { getEnvVariable } from 'src/utils/env.ts'
+import { assertValidateProviderParams } from 'src/utils/index.ts'
+import { WebSocketServer } from 'ws'
+import 'src/server/utils/config-env.ts'
 
 type ProviderReceiptGenerationParams<P extends ProviderName> = {
     name: P

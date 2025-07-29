@@ -9,19 +9,18 @@
  * and the nesting helps save time by not repeating the same setup code.
  */
 
-import { Wallet } from 'ethers'
-import { arrayify } from 'ethers/lib/utils'
+import { utils, Wallet } from 'ethers'
 import assert from 'node:assert'
-import { createClaimOnAvs } from 'src/avs/client/create-claim-on-avs'
-import { NewTaskCreatedEventObject, TaskCompletedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
-import { runFreshChain, sendGasToAddress } from 'src/avs/tests/utils'
-import { getContracts } from 'src/avs/utils/contracts'
-import { registerOperator } from 'src/avs/utils/register'
-import { createNewClaimRequestOnChain } from 'src/avs/utils/tasks'
-import type { createClaimOnAttestor } from 'src/client'
-import { describeWithServer } from 'src/tests/describe-with-server'
-import { ClaimInfo } from 'src/types'
-import { canonicalStringify, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from 'src/utils'
+import { createClaimOnAvs } from 'src/avs/client/create-claim-on-avs.ts'
+import { NewTaskCreatedEventObject, TaskCompletedEventObject } from 'src/avs/contracts/ReclaimServiceManager.ts'
+import { runFreshChain, sendGasToAddress } from 'src/avs/tests/utils.ts'
+import { getContracts } from 'src/avs/utils/contracts.ts'
+import { registerOperator } from 'src/avs/utils/register.ts'
+import { createNewClaimRequestOnChain } from 'src/avs/utils/tasks.ts'
+import type { createClaimOnAttestor } from 'src/client/index.ts'
+import { describeWithServer } from 'src/tests/describe-with-server.ts'
+import { ClaimInfo } from 'src/types/index.ts'
+import { canonicalStringify, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from 'src/utils/index.ts'
 
 const contracts = getContracts()
 
@@ -75,7 +74,7 @@ describe('Operators', () => {
 			})
 
 			const signData = await op.wallet.signMessage(data)
-			const signArray = arrayify(signData)
+			const signArray = utils.arrayify(signData)
 
 			return {
 				signatures: { claimSignature: signArray }

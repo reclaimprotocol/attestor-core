@@ -1,10 +1,10 @@
 import { CipherSuite, crypto, encryptWrappedRecord, strToUint8Array, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 import { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import assert from 'assert'
-import { TOPRF_DOMAIN_SEPARATOR } from 'src/config'
-import { MessageReveal_ZKProof as ZKProof, ZKProofEngine } from 'src/proto/api'
-import { toprf } from 'src/server/handlers/toprf'
-import { CompleteTLSPacket, MessageRevealInfo, RedactedOrHashedArraySlice, TOPRFProofParams } from 'src/types'
+import { TOPRF_DOMAIN_SEPARATOR } from 'src/config/index.ts'
+import { MessageReveal_ZKProof as ZKProof, ZKProofEngine } from 'src/proto/api.ts'
+import { toprf } from 'src/server/handlers/toprf.ts'
+import { CompleteTLSPacket, MessageRevealInfo, RedactedOrHashedArraySlice, TOPRFProofParams } from 'src/types/index.ts'
 import {
 	getBlocksToReveal,
 	logger,
@@ -14,7 +14,7 @@ import {
 	redactSlices,
 	uint8ArrayToStr,
 	verifyZkPacket
-} from 'src/utils'
+} from 'src/utils/index.ts'
 import 'src/server/utils/config-env'
 
 const ZK_CIPHER_SUITES: CipherSuite[] = [

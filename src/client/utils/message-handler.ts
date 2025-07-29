@@ -1,6 +1,6 @@
-import { RPCMessage, RPCMessages } from 'src/proto/api'
-import { IAttestorSocket } from 'src/types'
-import { AttestorError, extractArrayBufferFromWsData, getRpcRequest, getRpcRequestType, getRpcResponseType } from 'src/utils'
+import { RPCMessage, RPCMessages } from 'src/proto/api.ts'
+import { IAttestorSocket } from 'src/types/index.ts'
+import { AttestorError, extractArrayBufferFromWsData, getRpcRequest, getRpcRequestType, getRpcResponseType } from 'src/utils/index.ts'
 
 export async function wsMessageHandler(this: IAttestorSocket, data: unknown) {
 	// extract array buffer from WS data & decode proto

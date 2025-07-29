@@ -4,9 +4,9 @@ import {
 	encryptWrappedRecord, strToUint8Array,
 	SUPPORTED_CIPHER_SUITE_MAP
 } from '@reclaimprotocol/tls'
-import { CompleteTLSPacket } from 'src/types'
-import { logger } from 'src/utils/logger'
-import { makeZkProofGenerator } from 'src/utils/zk'
+import { CompleteTLSPacket } from 'src/types/index.ts'
+import { logger } from 'src/utils/logger.ts'
+import { makeZkProofGenerator } from 'src/utils/zk.ts'
 
 
 const ZK_CIPHER_SUITES: CipherSuite[] = [

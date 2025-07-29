@@ -1,5 +1,5 @@
 import { ethers } from 'ethers'
-import { logger, makeDefaultOPRFOperator } from 'src/utils'
+import { logger, makeDefaultOPRFOperator } from 'src/utils/index.ts'
 
 const ENGINE = 'gnark'
 const TOTAL_KEYS = 10

@@ -1,9 +1,9 @@
 import { Contract, providers, utils, Wallet } from 'ethers'
-import { governanceABI } from 'src/mechain/abis/governanceABI'
-import { taskABI } from 'src/mechain/abis/taskABI'
-import { GOVERNANCE_CONTRACT_ADDRESS, RPC_URL, TASK_CONTRACT_ADDRESS } from 'src/mechain/constants'
-import { RPCHandler } from 'src/types'
-import { getEnvVariable } from 'src/utils/env'
+import { governanceABI } from 'src/mechain/abis/governanceABI.ts'
+import { taskABI } from 'src/mechain/abis/taskABI.ts'
+import { GOVERNANCE_CONTRACT_ADDRESS, RPC_URL, TASK_CONTRACT_ADDRESS } from 'src/mechain/constants/index.ts'
+import { RPCHandler } from 'src/types/index.ts'
+import { getEnvVariable } from 'src/utils/env.ts'
 
 
 export const createTaskOnMechain: RPCHandler<'createTaskOnMechain'> = async({

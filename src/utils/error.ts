@@ -1,4 +1,4 @@
-import { ErrorCode, ErrorData } from 'src/proto/api'
+import { ErrorCode, ErrorData } from 'src/proto/api.ts'
 
 /**
  * Represents an error that can be thrown by the Attestor Core

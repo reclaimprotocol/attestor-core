@@ -1,1 +1,1 @@
-export * from './create-claim-on-mechain'
+export * from './create-claim-on-mechain.ts'

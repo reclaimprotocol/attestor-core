@@ -1,4 +1,4 @@
-import { Logger } from 'src/types'
+import { Logger } from 'src/types/index.ts'
 
 type RetryLoopOptions = {
 	maxRetries?: number

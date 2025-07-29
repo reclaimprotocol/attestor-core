@@ -1,5 +1,5 @@
 import { resolve, setServers } from 'dns'
-import { DNS_SERVERS } from 'src/config'
+import { DNS_SERVERS } from 'src/config/index.ts'
 
 setDnsServers()
 

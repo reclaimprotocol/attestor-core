@@ -2,9 +2,9 @@ import { CipherSuite, concatenateUint8Arrays, crypto, TLSPacketContext } from '@
 import {
 	ClaimTunnelRequest_TranscriptMessage as TranscriptMessage,
 	TranscriptMessageSenderType
-} from 'src/proto/api'
-import { CompleteTLSPacket, Logger, MessageRevealInfo, PrepareZKProofsBaseOpts, Transcript } from 'src/types'
-import { makeZkProofGenerator } from 'src/utils/zk'
+} from 'src/proto/api.ts'
+import { CompleteTLSPacket, Logger, MessageRevealInfo, PrepareZKProofsBaseOpts, Transcript } from 'src/types/index.ts'
+import { makeZkProofGenerator } from 'src/utils/zk.ts'
 
 export type PreparePacketsForRevealOpts = {
 	cipherSuite: CipherSuite

@@ -1,7 +1,7 @@
 import { ethers } from 'ethers'
-import { RPCHandler } from 'src/types'
-import { getEngineString, makeDefaultOPRFOperator } from 'src/utils'
-import { getEnvVariable } from 'src/utils/env'
+import { RPCHandler } from 'src/types/index.ts'
+import { getEngineString, makeDefaultOPRFOperator } from 'src/utils/index.ts'
+import { getEnvVariable } from 'src/utils/env.ts'
 
 export const toprf: RPCHandler<'toprf'> = async(
 	{ maskedData, engine },

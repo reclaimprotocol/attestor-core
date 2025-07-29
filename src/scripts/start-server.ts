@@ -1,4 +1,4 @@
-import { getApm } from 'src/server/utils/apm'
+import { getApm } from 'src/server/utils/apm.ts'
 import 'src/server/utils/config-env'
 getApm()
 

@@ -1,6 +1,6 @@
-import { AttestorClient } from 'src/client'
-import { describeWithServer } from 'src/tests/describe-with-server'
-import { AttestorError, logger } from 'src/utils'
+import { AttestorClient } from 'src/client/index.ts'
+import { describeWithServer } from 'src/tests/describe-with-server.ts'
+import { AttestorError, logger } from 'src/utils/index.ts'
 import { WebSocket } from 'ws'
 
 describeWithServer('RPC Communication', opts => {

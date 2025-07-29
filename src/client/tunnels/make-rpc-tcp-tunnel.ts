@@ -1,6 +1,6 @@
-import { CreateTunnelRequest } from 'src/proto/api'
-import { IAttestorClient, MakeTunnelFn, RPCEvent } from 'src/types'
-import { AttestorError } from 'src/utils'
+import { CreateTunnelRequest } from 'src/proto/api.ts'
+import { IAttestorClient, MakeTunnelFn, RPCEvent } from 'src/types/index.ts'
+import { AttestorError } from 'src/utils/index.ts'
 
 export type TCPTunnelCreateOpts = {
 	/**

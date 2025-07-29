@@ -3,6 +3,7 @@
   "version": "4.0.3",
   "description": "",
   "main": "lib/index",
+  "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.build.json && tsc-alias",
     "build:browser": "sh ./src/scripts/build-browser.sh",

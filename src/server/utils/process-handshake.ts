@@ -10,14 +10,12 @@ import {
 	processServerKeyShare,
 	SUPPORTED_RECORD_TYPE_MAP,
 	TLSProtocolVersion, uint8ArrayToDataView,
+	verifyCertificateChain,
 	verifyCertificateSignature,
-	X509Certificate
-} from '@reclaimprotocol/tls'
-import { verifyCertificateChain } from '@reclaimprotocol/tls/lib/utils/parse-certificate'
-import { ClaimTunnelRequest, TranscriptMessageSenderType } from 'src/proto/api'
-import { Logger } from 'src/types'
-import { decryptDirect } from 'src/utils'
-
+	X509Certificate } from '@reclaimprotocol/tls'
+import { ClaimTunnelRequest, TranscriptMessageSenderType } from 'src/proto/api.ts'
+import { Logger } from 'src/types/index.ts'
+import { decryptDirect } from 'src/utils/index.ts'
 
 const RECORD_LENGTH_BYTES = 3
 

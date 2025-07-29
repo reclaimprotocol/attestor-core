@@ -1,5 +1,5 @@
-import { AttestorClient } from 'src/client/utils/client-socket'
-import { IAttestorClient, IAttestorClientCreateOpts } from 'src/types'
+import { AttestorClient } from 'src/client/utils/client-socket.ts'
+import { IAttestorClient, IAttestorClientCreateOpts } from 'src/types/index.ts'
 
 const POOL: { [url: string]: IAttestorClient | undefined } = {}
 

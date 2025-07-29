@@ -9,7 +9,7 @@ import {
 	uint8ArrayToDataView
 } from '@reclaimprotocol/tls'
 import { REDACTION_CHAR_CODE } from '@reclaimprotocol/zk-symmetric-crypto'
-import { RPCMessage, RPCMessages } from 'src/proto/api'
+import { RPCMessage, RPCMessages } from 'src/proto/api.ts'
 import {
 	CompleteTLSPacket,
 	IDecryptedTranscript, IDecryptedTranscriptMessage,
@@ -19,7 +19,7 @@ import {
 	RPCEventType,
 	RPCType,
 	Transcript
-} from 'src/types'
+} from 'src/types/index.ts'
 
 const DEFAULT_REDACTION_DATA = new Uint8Array(4)
 	.fill(REDACTION_CHAR_CODE)

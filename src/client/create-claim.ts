@@ -1,9 +1,9 @@
 import { strToUint8Array, TLSPacketContext } from '@reclaimprotocol/tls'
-import { makeRpcTlsTunnel } from 'src/client/tunnels/make-rpc-tls-tunnel'
-import { getAttestorClientFromPool } from 'src/client/utils/attestor-pool'
-import { DEFAULT_HTTPS_PORT, PROVIDER_CTX, TOPRF_DOMAIN_SEPARATOR } from 'src/config'
-import { ClaimTunnelRequest, ZKProofEngine } from 'src/proto/api'
-import { providers } from 'src/providers'
+import { makeRpcTlsTunnel } from 'src/client/tunnels/make-rpc-tls-tunnel.ts'
+import { getAttestorClientFromPool } from 'src/client/utils/attestor-pool.ts'
+import { DEFAULT_HTTPS_PORT, PROVIDER_CTX, TOPRF_DOMAIN_SEPARATOR } from 'src/config/index.ts'
+import { ClaimTunnelRequest, ZKProofEngine } from 'src/proto/api.ts'
+import { providers } from 'src/providers/index.ts'
 import type {
 	CreateClaimOnAttestorOpts,
 	IAttestorClient,
@@ -11,7 +11,7 @@ import type {
 	ProviderName,
 	TOPRFProofParams,
 	Transcript
-} from 'src/types'
+} from 'src/types/index.ts'
 import {
 	AttestorError,
 	binaryHashToStr,
@@ -29,10 +29,10 @@ import {
 	RevealedSlices,
 	uint8ArrayToStr,
 	unixTimestampSeconds
-} from 'src/utils'
-import { executeWithRetries } from 'src/utils/retries'
-import { SIGNATURES } from 'src/utils/signatures'
-import { getDefaultTlsOptions } from 'src/utils/tls'
+} from 'src/utils/index.ts'
+import { executeWithRetries } from 'src/utils/retries.ts'
+import { SIGNATURES } from 'src/utils/signatures/index.ts'
+import { getDefaultTlsOptions } from 'src/utils/tls.ts'
 
 type ServerAppDataPacket = {
 	plaintext: Uint8Array

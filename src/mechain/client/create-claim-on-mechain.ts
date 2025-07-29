@@ -1,8 +1,8 @@
-import { createClaimOnAttestor as _createClaimOnAttestor, getAttestorClientFromPool } from 'src/client'
-import { AttestorClient } from 'src/client'
-import { CreateClaimOnMechainOpts } from 'src/mechain/types'
-import { ClaimTunnelResponse } from 'src/proto/api'
-import { ProviderName } from 'src/types'
+import { createClaimOnAttestor as _createClaimOnAttestor, getAttestorClientFromPool } from 'src/client/index.ts'
+import { AttestorClient } from 'src/client/index.ts'
+import { CreateClaimOnMechainOpts } from 'src/mechain/types/index.ts'
+import { ClaimTunnelResponse } from 'src/proto/api.ts'
+import { ProviderName } from 'src/types/index.ts'
 
 /**
  * Creates a Reclaim claim on the AVS chain.
