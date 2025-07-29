@@ -13,7 +13,8 @@ import { concatenateUint8Arrays,
 	processServerKeyShare,
 	SUPPORTED_RECORD_TYPE_MAP, uint8ArrayToDataView,
 	verifyCertificateChain,
-	verifyCertificateSignature } from '@reclaimprotocol/tls'
+	verifyCertificateSignature
+} from '@reclaimprotocol/tls'
 
 import type { ClaimTunnelRequest } from '#src/proto/api.ts'
 import { TranscriptMessageSenderType } from '#src/proto/api.ts'

@@ -1,4 +1,5 @@
-import { WebSocket } from 'ws'
+import assert from 'node:assert'
+import { beforeEach, it } from 'node:test'
 
 import { AttestorClient } from '#src/client/index.ts'
 import { describeWithServer } from '#src/tests/describe-with-server.ts'
@@ -14,10 +15,10 @@ describeWithServer('RPC Communication', opts => {
 	})
 
 	it('should successfully initialise a session', async() => {
-		await expect(client.waitForInit()).resolves.toBeUndefined()
-		expect(client.isInitialised).toBe(true)
+		await client.waitForInit()
+		assert.ok(client.isInitialised)
 		// ensure the server has our client
-		expect(getClientOnServer()).toBeTruthy()
+		assert.ok(getClientOnServer())
 	})
 
 	it('should gracefully handle terminated connection during init', async() => {
@@ -27,7 +28,14 @@ describeWithServer('RPC Communication', opts => {
 			// a URL without a WS server
 			url: `ws://localhost:${opts.mockhttpsServerPort}`
 		})
-		await expect(client.waitForInit()).rejects.toHaveProperty('code')
+		await assert.rejects(
+			() => client.waitForInit(),
+			err => {
+				assert.ok(err instanceof AttestorError)
+				assert.strictEqual(err.code, 'ERROR_NETWORK_ERROR')
+				return true
+			}
+		)
 	})
 
 	it('should gracefully handle connection termination', async() => {
@@ -45,8 +53,8 @@ describeWithServer('RPC Communication', opts => {
 		const ws = getClientOnServer()!
 		await ws.terminateConnection(err)
 		const recvErr = await waitForEnd
-		expect(recvErr).toEqual(err)
-		expect(client.isOpen).not.toBe(WebSocket.OPEN)
+		assert.deepEqual(recvErr, err)
+		assert.ok(!client.isOpen)
 	})
 
 	it('should terminate connection to server', async() => {
@@ -74,14 +82,18 @@ describeWithServer('RPC Communication', opts => {
 			ev.data.respond(err)
 		})
 
-		await expect(
-			client.rpc(
+		await assert.rejects(
+			() => client.rpc(
 				'createTunnel',
 				{
 					host: 'localhost',
 					port: 9999,
 				}
-			)
-		).rejects.toMatchObject(err)
+			),
+			recvErr => {
+				assert.partialDeepStrictEqual(recvErr, err)
+				return true
+			}
+		)
 	})
 })

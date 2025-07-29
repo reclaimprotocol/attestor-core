@@ -1,5 +1,5 @@
-import type { WebSocket } from 'ws'
-import { type WebSocketServer } from 'ws'
+import { after, afterEach, before, beforeEach, describe } from 'node:test'
+import type { WebSocket, WebSocketServer } from 'ws'
 
 import { AttestorClient } from '#src/client/utils/client-socket.ts'
 import { WS_PATHNAME } from '#src/config/index.ts'
@@ -43,18 +43,18 @@ export const describeWithServer = (
 
 	const mockHttpsServer = createMockServer(httpsServerPort)
 
-	beforeAll(async() => {
+	before(async() => {
 		wsServer = await createServer(wsServerPort)
 		wsServerUrl = `ws://localhost:${wsServerPort}${WS_PATHNAME}`
 	})
 
-	afterAll(() => {
+	after(() => {
 		wsServer.close()
 		mockHttpsServer.server.close()
 	})
 
 	beforeEach(async() => {
-		SPY_PREPARER.mockClear()
+		SPY_PREPARER.mock.resetCalls()
 
 		privateKeyHex = randomPrivateKey()
 		client = new AttestorClient({

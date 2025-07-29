@@ -1,5 +1,7 @@
 import { ErrorCode, ErrorData } from '#src/proto/api.ts'
 
+const PROTO_ERROR = ErrorData.fromJSON({})
+
 /**
  * Represents an error that can be thrown by the Attestor Core
  * or server. Provides a code, and optional data
@@ -33,9 +35,11 @@ export class AttestorError extends Error {
 		})
 	}
 
-	static fromProto(data = ErrorData.fromJSON({})) {
+	static fromProto(data = PROTO_ERROR) {
 		return new AttestorError(
-			ErrorCode[data.code] as keyof typeof ErrorCode,
+			typeof data.code === 'number'
+				? getKeyForValue(ErrorCode, data.code) || 'UNRECOGNIZED'
+				: data.code,
 			data.message,
 			data.data ? JSON.parse(data.data) : undefined
 		)
@@ -59,4 +63,14 @@ export class AttestorError extends Error {
 			data
 		)
 	}
+}
+
+function getKeyForValue<T>(obj: T, value: T[keyof T]): keyof T | undefined {
+	for(const key in obj) {
+		if(obj[key] === value) {
+			return key as keyof T
+		}
+	}
+
+	return undefined
 }

@@ -1,70 +1,74 @@
 import { strToUint8Array, uint8ArrayToStr } from '@reclaimprotocol/tls'
+import assert from 'node:assert'
+import { describe, it } from 'node:test'
 
 import { makeTcpTunnel } from '#src/server/index.ts'
+import type { AttestorError } from '#src/utils/index.ts'
 import { logger, makeHttpResponseParser } from '#src/utils/index.ts'
 
 const DEMO_GEO_LOCATIONS = ['in', 'us']
-
-jest.setTimeout(15_000)
+const ALL_LOCATIONS = [...DEMO_GEO_LOCATIONS, 'none']
 
 describe.skip('TCP Tunnel', () => {
 
-	it.each([...DEMO_GEO_LOCATIONS, 'none'])('should generate a session using a geoLocation (%s)', async(geoLocation) => {
-		const resParser = makeHttpResponseParser()
+	for(const geoLocation of ALL_LOCATIONS) {
+		it(`should generate a session using a geoLocation (${geoLocation})`, async() => {
+			const resParser = makeHttpResponseParser()
 
-		let resolvePromise: (() => void) | undefined
-		let rejectPromise: ((err: Error) => void) | undefined
+			let resolvePromise: (() => void) | undefined
+			let rejectPromise: ((err: Error) => void) | undefined
 
-		const session = await makeTcpTunnel({
-			host: 'lumtest.com',
-			port: 80,
-			geoLocation: geoLocation === 'none' ? '' : geoLocation,
-			logger,
-			onClose(err) {
-				rejectPromise?.(err || new Error('session closed'))
-			},
-			onMessage(data) {
-				resParser.onChunk(data)
-				if(resParser.res.complete) {
-					resolvePromise?.()
-				}
-			},
+			const session = await makeTcpTunnel({
+				host: 'lumtest.com',
+				port: 80,
+				geoLocation: geoLocation === 'none' ? '' : geoLocation,
+				logger,
+				onClose(err) {
+					rejectPromise?.(err || new Error('session closed'))
+				},
+				onMessage(data) {
+					resParser.onChunk(data)
+					if(resParser.res.complete) {
+						resolvePromise?.()
+					}
+				},
+			})
+
+			const waitForRes = new Promise<void>((resolve, reject) => {
+				resolvePromise = resolve
+				rejectPromise = reject
+			})
+
+			const str = 'GET /myip.json HTTP/1.1\r\nHost: lumtest.com\r\n\r\n'
+			await session.write(strToUint8Array(str))
+			await waitForRes
+
+			await session.close()
+			assert.equal(resParser.res.statusCode, 200)
+			const resBody = uint8ArrayToStr(resParser.res.body)
+			const resJson = JSON.parse(resBody)
+
+			if(geoLocation === 'none') {
+				return
+			}
+
+			assert.equal(resJson.country, geoLocation.toUpperCase())
 		})
-
-		const waitForRes = new Promise<void>((resolve, reject) => {
-			resolvePromise = resolve
-			rejectPromise = reject
-		})
-
-		const str = 'GET /myip.json HTTP/1.1\r\nHost: lumtest.com\r\n\r\n'
-		await session.write(strToUint8Array(str))
-		await waitForRes
-
-		await session.close()
-		expect(resParser.res.statusCode).toBe(200)
-		const resBody = uint8ArrayToStr(resParser.res.body)
-		const resJson = JSON.parse(resBody)
-
-		if(geoLocation === 'none') {
-			return
-		}
-
-		expect(resJson.country).toBe(
-			geoLocation.toUpperCase()
-		)
-	})
+	}
 
 	it('should gracefully fail an invalid geoLocation', async() => {
-		await expect(
-			makeTcpTunnel({
+		assert.rejects(
+			async() => makeTcpTunnel({
 				host: 'lumtest.com',
 				port: 80,
 				geoLocation: 'xz',
 				logger,
-			})
-		).rejects.toMatchObject({
-			message: /failed with status code: 400/
-		})
+			}),
+			(err: AttestorError) => {
+				assert.match(err.message, /failed with status code: 400/)
+				return true
+			}
+		)
 	})
 
 	it('should connect to restricted server', async() => {

@@ -1,3 +1,5 @@
+import { jestExpect as expect } from '@jest/expect'
+import { afterEach, beforeEach, describe, it } from 'node:test'
 import type { TLSSocket } from 'tls'
 
 import { AttestorClient } from '#src/client/index.ts'

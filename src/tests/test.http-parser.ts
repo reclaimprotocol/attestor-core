@@ -1,77 +1,82 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
+import assert from 'node:assert'
+import { describe, it } from 'node:test'
 
 import { uint8ArrayToStr } from '#src/utils/generics.ts'
 import { makeHttpResponseParser } from '#src/utils/http-parser.ts'
 
-describe.each(['complete', 'byte-by-byte'] as const)('HTTP Parser tests (mode=%s)', (parseMode) => {
+const MODES = ['complete', 'byte-by-byte'] as const
 
-	it('should parse a response', () => {
-		const res = parseHttpResponse(RES1, parseMode)
-		expect(
-			RES1
-				.subarray(0, res.statusLineEndIndex)
-				.toString()
-		).toEqual('HTTP/1.1 401 Unauthorized')
+for(const parseMode of MODES) {
+	describe('HTTP Parser tests (mode=%s)', () => {
 
-		expect(res.complete).toEqual(true)
-		expect(res.statusCode).toEqual(401)
-		expect(res.body.length).toBeGreaterThan(0)
-
-		const json = JSON.parse(uint8ArrayToStr(res.body))
-		expect(json.error.code).toEqual(401)
-	})
-
-	it('should parse an empty body response', () => {
-		const res = parseHttpResponse(
-			strToUint8Array(RES_EMPTY),
-			parseMode
-		)
-		expect(res.complete).toEqual(true)
-		expect(res.statusCode).toEqual(200)
-		expect(res.body.length).toEqual(0)
-	})
-
-	it('should parse an empty chunked response', () => {
-		const res = parseHttpResponse(
-			strToUint8Array(RES_EMPTY_CHUNKED),
-			parseMode
-		)
-		expect(res.complete).toEqual(true)
-		expect(res.statusCode).toEqual(200)
-		expect(res.body.length).toEqual(0)
-	})
-
-	it('should read a set content-length', () => {
-		const buff = strToUint8Array(RES_BODY)
-		const res = parseHttpResponse(buff, parseMode)
-		expect(res.complete).toEqual(true)
-
-		expect(res.bodyStartIndex).toBeTruthy()
-		expect(
-			buff.slice(res.bodyStartIndex)
-		).toEqual(res.body)
-
-		const json = JSON.parse(uint8ArrayToStr(res.body))
-		expect(json.name).toBeTruthy()
-	})
-
-	it('should correctly set chunk indices', () => {
-		const buff = strToUint8Array(RES_CHUNKED_PARTIAL_BODY)
-		const res = parseHttpResponse(buff, parseMode)
-		expect(res.complete).toEqual(true)
-
-		// ensure all chunks are parsed correctly
-		const parsedChunks = res.chunks?.map((chunk) => {
-			return uint8ArrayToStr(
-				buff.slice(chunk.fromIndex, chunk.toIndex)
+		it('should parse a response', () => {
+			const res = parseHttpResponse(RES1, parseMode)
+			assert.equal(
+				RES1
+					.subarray(0, res.statusLineEndIndex)
+					.toString(),
+				'HTTP/1.1 401 Unauthorized'
 			)
-		})
-		expect(parsedChunks).toEqual(CHUNKS)
 
-		const json = JSON.parse(uint8ArrayToStr(res.body))
-		expect(json.name).toBeTruthy()
+			assert.ok(res.complete)
+			assert.equal(res.statusCode, 401)
+			assert.ok(res.body.length > 0)
+
+			const json = JSON.parse(uint8ArrayToStr(res.body))
+			assert.equal(json.error.code, 401)
+		})
+
+		it('should parse an empty body response', () => {
+			const res = parseHttpResponse(
+				strToUint8Array(RES_EMPTY),
+				parseMode
+			)
+			assert.ok(res.complete)
+			assert.equal(res.statusCode, 200)
+			assert.equal(res.body.length, 0)
+		})
+
+		it('should parse an empty chunked response', () => {
+			const res = parseHttpResponse(
+				strToUint8Array(RES_EMPTY_CHUNKED),
+				parseMode
+			)
+			assert.ok(res.complete)
+			assert.equal(res.statusCode, 200)
+			assert.equal(res.body.length, 0)
+		})
+
+		it('should read a set content-length', () => {
+			const buff = strToUint8Array(RES_BODY)
+			const res = parseHttpResponse(buff, parseMode)
+			assert.ok(res.complete)
+
+			assert.ok(res.bodyStartIndex)
+			assert.deepEqual(buff.slice(res.bodyStartIndex), res.body)
+
+			const json = JSON.parse(uint8ArrayToStr(res.body))
+			assert.ok(json.name)
+		})
+
+		it('should correctly set chunk indices', () => {
+			const buff = strToUint8Array(RES_CHUNKED_PARTIAL_BODY)
+			const res = parseHttpResponse(buff, parseMode)
+			assert.ok(res.complete)
+
+			// ensure all chunks are parsed correctly
+			const parsedChunks = res.chunks?.map((chunk) => {
+				return uint8ArrayToStr(
+					buff.slice(chunk.fromIndex, chunk.toIndex)
+				)
+			})
+			assert.deepEqual(parsedChunks, CHUNKS)
+
+			const json = JSON.parse(uint8ArrayToStr(res.body))
+			assert.ok(json.name)
+		})
 	})
-})
+}
 
 describe('General HTTP Parser Tests', () => {
 
@@ -81,7 +86,7 @@ describe('General HTTP Parser Tests', () => {
 		const parser = makeHttpResponseParser()
 		parser.onChunk(buff)
 
-		expect(parser.res.complete).toEqual(true)
+		assert.ok(parser.res.complete)
 	})
 })
 

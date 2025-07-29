@@ -1,8 +1,11 @@
-import type { BGPListener } from '#src/types/index.ts'
-import { logger } from '#src/utils/logger.ts'
+import assert from 'node:assert'
+import { afterEach, beforeEach, describe, it, mock } from 'node:test'
 
-jest.mock('../utils/ws', () => {
-	return {
+import { delay } from '#src/tests/utils.ts'
+import type { BGPListener } from '#src/types/index.ts'
+
+mock.module('#src/utils/ws.ts', {
+	namedExports: {
 		makeWebSocket() {
 			mockWs = new MockWS()
 			return mockWs
@@ -10,13 +13,11 @@ jest.mock('../utils/ws', () => {
 	}
 })
 
-import { delay } from '#src/tests/utils.ts'
-import { createBgpListener } from '#src/utils/bgp-listener.ts'
-
 describe('BGP Listener', () => {
 
 	let listener: BGPListener
 	beforeEach(async() => {
+		const { createBgpListener, logger } = await import('#src/utils/index.ts')
 		listener = createBgpListener(logger)
 		await delay(10)
 
@@ -25,35 +26,35 @@ describe('BGP Listener', () => {
 
 	afterEach(() => {
 		listener.close()
-		expect(mockWs.close).toHaveBeenCalled()
+		assert.ok(mockWs.close.mock.callCount())
 	})
 
 	it('should listen for BGP announcements', async() => {
-		expect(mockWs.send).toHaveBeenCalled()
+		assert.ok(mockWs.send.mock.callCount())
 	})
 
 	it('should callback on BGP announcement overlap', async() => {
-		const MOCK_CALLBACK = jest.fn()
+		const MOCK_CALLBACK = mock.fn()
 		const cancel = listener.onOverlap(['43.240.13.21'], MOCK_CALLBACK)
 
 		mockWs.onmessage(MOCK_MSG_EVENT)
 
-		expect(MOCK_CALLBACK).toHaveBeenCalled()
+		assert.ok(MOCK_CALLBACK.mock.callCount())
 
 		cancel()
 
 		mockWs.onmessage(MOCK_MSG_EVENT)
 
-		expect(MOCK_CALLBACK).toHaveBeenCalledTimes(1)
+		assert.equal(MOCK_CALLBACK.mock.callCount(), 1)
 	})
 
 	it('should not callback on BGP announcement if no overlap', async() => {
-		const MOCK_CALLBACK = jest.fn()
+		const MOCK_CALLBACK = mock.fn()
 		listener.onOverlap(['44.240.13.21'], MOCK_CALLBACK)
 
 		mockWs.onmessage(MOCK_MSG_EVENT)
 
-		expect(MOCK_CALLBACK).not.toHaveBeenCalled()
+		assert.ok(!MOCK_CALLBACK.mock.callCount())
 	})
 })
 
@@ -63,8 +64,8 @@ class MockWS {
 	constructor() {}
 	onopen: () => void
 	onmessage: (msg: MessageEvent) => void
-	send = jest.fn()
-	close = jest.fn()
+	send = mock.fn()
+	close = mock.fn()
 }
 
 const MOCK_ANNOUNCEMENT_MSG = {

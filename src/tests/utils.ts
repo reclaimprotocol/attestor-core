@@ -1,4 +1,5 @@
 import { randomBytes } from 'crypto'
+import assert from 'node:assert'
 
 import type { ClaimTunnelRequest } from '#src/proto/api.ts'
 import { SPY_PREPARER } from '#src/tests/mocks.ts'
@@ -28,7 +29,9 @@ export function verifyNoDirectRevealLeaks() {
 		return
 	}
 
-	const [tlsTranscript, revealsMap] = SPY_PREPARER.mock.calls[0]
+	const [
+		{ arguments: [tlsTranscript, revealsMap] }
+	] = SPY_PREPARER.mock.calls
 	for(const [packet, reveal] of revealsMap.entries()) {
 		if(reveal.type !== 'complete') {
 			continue
@@ -48,7 +51,7 @@ export function verifyNoDirectRevealLeaks() {
 				&& message.encKey === packet.encKey
 				&& message.contentType === 'APPLICATION_DATA'
 			))
-		expect(otherPacketsWKey).toHaveLength(0)
+		assert.equal(otherPacketsWKey.length, 0)
 	}
 }
 

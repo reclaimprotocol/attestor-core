@@ -299,9 +299,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			const statusRegex = makeRegex('^HTTP\\/1.1 (\\d{3})')
 			const matchRes = statusRegex.exec(res)
 			if(matchRes && matchRes.length > 1) {
-				throw new Error(
-					`Provider returned error ${matchRes[1]}"`
-				)
+				throw new Error(`Provider returned error ${matchRes[1]}`)
 			}
 
 			let lineEnd = res.indexOf('*')
@@ -330,7 +328,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		//validate server Date header if present
 		const dateHeader = makeRegex(dateHeaderRegex).exec(res)
-		if(dateHeader?.length > 1) {
+		if(dateHeader && dateHeader.length > 1) {
 			const serverDate = new Date(dateHeader[1])
 			if((Date.now() - serverDate.getTime()) > dateDiff) {
 
@@ -383,7 +381,12 @@ const HTTP_PROVIDER: Provider<'http'> = {
 						throw new Error(`Duplicate parameter ${paramName}`)
 					}
 
-					extractedParams[paramName] = groups[paramName]
+					const value = groups?.[paramName]
+					if(typeof value !== 'string') {
+						continue
+					}
+
+					extractedParams[paramName] = value
 				}
 
 				break
@@ -555,7 +558,7 @@ function *processRedactionRequest(
 
 
 		const fullStr = match[0]
-		const grp = Object.values(match.groups)[0] as string
+		const grp = Object.values(match.groups)[0]
 		const grpIdx = fullStr.indexOf(grp)
 
 		// don't hash the entire regex, we'll hash the group values

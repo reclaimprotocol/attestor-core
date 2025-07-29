@@ -1,5 +1,7 @@
+import { jestExpect as expect } from '@jest/expect'
 import { strToUint8Array } from '@reclaimprotocol/tls'
 import assert from 'assert'
+import { describe, it } from 'node:test'
 import { deserialize, serialize } from 'v8'
 
 import { PROVIDER_CTX } from '#src/config/index.ts'
@@ -14,8 +16,6 @@ import { providers } from '#src/providers/index.ts'
 import { RES_CHUNKED_PARTIAL_BODY } from '#src/tests/test.http-parser.ts'
 import type { ProviderParams, Transcript } from '#src/types/index.ts'
 import { assertValidateProviderParams, getBlocksToReveal, getProviderValue, hashProviderParams, logger, uint8ArrayToStr } from '#src/utils/index.ts'
-
-jest.setTimeout(60_000)
 
 const ctx = PROVIDER_CTX
 

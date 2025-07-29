@@ -101,10 +101,7 @@ describe('Redaction Tests', () => {
 					throw new Error('should not call this')
 				}
 			)
-			if(realOutput === 'all') {
-				fail('should not return "all"')
-				continue
-			}
+			assert(realOutput !== 'all', 'should not return "all"')
 
 			expect(realOutput).toHaveLength(output.length)
 			for(const [i, element] of output.entries()) {
@@ -159,9 +156,7 @@ describe('Redaction Tests', () => {
 					plaintext: strToUint8Array('abcdefg')
 				})
 			)
-			if(realOutput === 'all') {
-				fail('should not return "all"')
-			}
+			assert(realOutput !== 'all', 'should not return "all"')
 
 			expect(realOutput).toHaveLength(output.length)
 			for(const [i, element] of output.entries()) {

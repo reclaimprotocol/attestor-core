@@ -1,4 +1,6 @@
+import { jestExpect as expect } from '@jest/expect'
 import { utils, Wallet } from 'ethers'
+import { describe, it } from 'node:test'
 
 import { ServiceSignatureType } from '#src/proto/api.ts'
 import { SIGNATURES } from '#src/utils/signatures/index.ts'
@@ -10,24 +12,26 @@ const ALGS = [
 	}
 ]
 
-describe.each(ALGS)('$title Signatures', ({ algorithm }) => {
+for(const { algorithm } of ALGS) {
+	describe(`${algorithm} Signatures`, () => {
 
-	it('should sign & verify', async() => {
+		it('should sign & verify', async() => {
 
-		const alice = Wallet.createRandom()
+			const alice = Wallet.createRandom()
 
-		const data = Buffer.from('{"a":"123","b":123}', 'utf8')
-		const signature = await algorithm.sign(
-			data,
-			alice.privateKey,
-		)
+			const data = Buffer.from('{"a":"123","b":123}', 'utf8')
+			const signature = await algorithm.sign(
+				data,
+				alice.privateKey,
+			)
 
-		const addr = algorithm.getAddress(utils.arrayify(alice.publicKey))
-		let res = await algorithm.verify(data, signature, addr)
+			const addr = algorithm.getAddress(utils.arrayify(alice.publicKey))
+			let res = await algorithm.verify(data, signature, addr)
 
-		expect(res).toBeTruthy()
-		res = await algorithm.verify(data, utils.hexlify(signature), addr)
+			expect(res).toBeTruthy()
+			res = await algorithm.verify(data, utils.hexlify(signature), addr)
 
-		expect(res).toBeTruthy()
+			expect(res).toBeTruthy()
+		})
 	})
-})
+}
