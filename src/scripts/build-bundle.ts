@@ -15,11 +15,9 @@ const rslt = await esbuild.build({
 		'koffi': '#src/scripts/fallbacks/empty.ts',
 		'ip-cidr': '#src/scripts/fallbacks/empty.ts',
 		'snarkjs': '#src/scripts/fallbacks/snarkjs.ts',
-		'jsdom': '#src/scripts/fallbacks/jsdom.ts',
 		're2': '#src/scripts/fallbacks/empty.ts',
 	},
 	external: [
-		'koffi',
 		'dotenv',
 		'elastic-apm-node',
 		'https-proxy-agent',
@@ -29,7 +27,6 @@ const rslt = await esbuild.build({
 		'snarkjs',
 		'ws',
 
-		'jsdom',
 		'fs/promises',
 		'path',
 	],

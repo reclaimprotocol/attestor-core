@@ -1,6 +1,7 @@
 // noinspection ExceptionCaughtLocallyJS
 
 import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
+import type { Element, Node } from 'domhandler'
 import type {
 	Expression } from 'esprima-next'
 import {
@@ -11,9 +12,12 @@ import {
 	Property,
 	Syntax
 } from 'esprima-next'
-import { JSDOM } from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
+import { parse } from 'parse5'
+import { adapter as htmlAdapter, } from 'parse5-htmlparser2-tree-adapter'
 import RE2 from 're2'
+import xpath from 'xpath'
+import '#src/providers/http/patch-parse5-tree.ts'
 
 import type { ArraySlice, CompleteTLSPacket, ProviderParams, RedactedOrHashedArraySlice, Transcript } from '#src/types/index.ts'
 import type { HttpRequest, HttpResponse } from '#src/utils/index.ts'
@@ -22,18 +26,6 @@ import { getHttpRequestDataFromTranscript, isApplicationData, makeHttpResponsePa
 export type JSONIndex = {
 	start: number
 	end: number
-}
-
-// creating these types here as they're imported from parse5
-type NodeLocation = ReturnType<typeof JSDOM.prototype.nodeLocation>
-type ElementLocation = NodeLocation & {
-	/** Element's start tag location info. */
-	startTag?: NodeLocation
-	/**
-	 * Element's end tag location info.
-	 * This property is undefined, if the element has no closing tag.
-	 */
-	endTag?: NodeLocation
 }
 
 type HTTPProviderParams = ProviderParams<'http'>
@@ -91,56 +83,54 @@ export function extractHTMLElementIndex(
  * Returns indexes of all extracted elements
  * @param html
  * @param xpathExpression
- * @param contentsOnly
+ * @param contentsOnly indices of the start and end of the element's contents only,
+ * 	not the whole tag
  */
 export function extractHTMLElementsIndexes(
 	html: string,
 	xpathExpression: string,
 	contentsOnly: boolean
 ): { start: number, end: number }[] {
+	return extractHTMLElementIndexesParse5(html, xpathExpression, contentsOnly)
+}
 
-	const dom = new JSDOM(html, {
-		contentType: 'text/html',
-		includeNodeLocations: true
-	})
+export function extractHTMLElementIndexesParse5(
+	html: string,
+	xpathExpression: string,
+	contentsOnly: boolean
+) {
+	const domLight = parse(
+		html,
+		{ treeAdapter: htmlAdapter, sourceCodeLocationInfo: true }
+	)
+	const rootNode = domLight.childNodes
+		.find(c => 'name' in c && c.name === 'html')
+		|| domLight.childNodes[0]
+		|| domLight
 
-	const document = dom.window.document
-	const xpathResult = document.evaluate(xpathExpression, document, null, dom.window.XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)
-	const nodes: Node[] = []
-	if(xpathResult?.resultType === dom.window.XPathResult.ORDERED_NODE_SNAPSHOT_TYPE &&
-		xpathResult?.snapshotLength) {
-		for(let i = 0; i < xpathResult.snapshotLength; ++i) {
-			const item = xpathResult.snapshotItem(i)
-			if(!item) {
-				continue
-			}
-
-			nodes.push(item)
-		}
-	}
-
+	const parsedPath = xpath.parse(xpathExpression)
+	const nodes = parsedPath
+		.select({ node: rootNode, allowAnyNamespaceForNoPrefix: true })
 	if(!nodes.length) {
 		throw new Error(`Failed to find XPath: "${xpathExpression}"`)
 	}
 
-	const res: { start: number, end: number }[] = []
+	return nodes.map(node => getNodeRange(node, contentsOnly))
+}
 
-	for(const node of nodes) {
-		const nodeLocation = dom.nodeLocation(node) as ElementLocation
-		if(!nodeLocation) {
-			throw new Error(`Failed to find XPath node location: "${xpathExpression}"`)
-		}
-
-		if(contentsOnly) {
-			const start = nodeLocation.startTag ? nodeLocation.startTag.endOffset : nodeLocation.startOffset
-			const end = nodeLocation.endTag ? nodeLocation.endTag.startOffset : nodeLocation.endOffset
-			res.push({ start, end })
-		} else {
-			res.push({ start:nodeLocation.startOffset, end: nodeLocation.endOffset })
-		}
+function getNodeRange(node: Node | Element, contentsOnly: boolean) {
+	if(!contentsOnly) {
+		return { start: node.startIndex!, end: node.endIndex! }
 	}
 
-	return res
+	if(!('firstChild' in node) || !node.firstChild) {
+		throw new Error(`Node "${node['name']}" has no children`)
+	}
+
+	return {
+		start: node.firstChild.startIndex!,
+		end: node.lastChild!.endIndex!
+	}
 }
 
 export function extractJSONValueIndex(json: string, jsonPath: string) {
@@ -153,7 +143,7 @@ export function extractJSONValueIndexes(json: string, jsonPath: string): { start
 		json: JSON.parse(json),
 		wrap: false,
 		resultType: 'pointer',
-		eval:'safe',
+		eval: 'safe',
 		// @ts-ignore
 		ignoreEvalErrors: true
 	})

@@ -81,7 +81,6 @@ describe('HTTP Provider Utils tests', () => {
 		assert.ok(regexp.test(json.slice(val.start, val.end)))
 	})
 
-
 	it('should get inner & outer tag contents', () => {
 		const html = `<body>
 			  <div id="content123">This is <span>some</span> text!</div>
@@ -664,21 +663,19 @@ Content-Type: text/html; charset=utf-8\r
 \r
 1`
 		assert.throws(() => {
-			if(getResponseRedactions) {
-				getResponseRedactions({
-					response: strToUint8Array(res),
-					params: {
-						url: 'abc',
-						responseMatches: [],
-						responseRedactions: [{
-							xPath: 'abc'
-						}],
-						method: 'GET'
-					},
-					logger,
-					ctx
-				})
-			}
+			getResponseRedactions!({
+				response: strToUint8Array(res),
+				params: {
+					url: 'abc',
+					responseMatches: [],
+					responseRedactions: [{
+						xPath: 'abc'
+					}],
+					method: 'GET'
+				},
+				logger,
+				ctx
+			})
 		}, /Failed to find XPath: \"abc\"/)
 	})
 
