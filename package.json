@@ -8,7 +8,7 @@
     "#src/*.ts": "./src/*.ts"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && tsc-alias",
+    "build": "tsc -p tsconfig.build.json",
     "build:browser": "sh ./src/scripts/build-browser.sh",
     "run:tsc": "node --experimental-strip-types",
     "start:tsc": "npm run run:tsc -- src/scripts/start-server.ts",
