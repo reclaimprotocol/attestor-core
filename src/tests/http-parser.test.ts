@@ -1,6 +1,7 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
 import assert from 'node:assert'
 import { describe, it } from 'node:test'
+import { TEST_RES_BODY_CHUNKS, TEST_RES_CHUNKED_PARTIAL_BODY } from 'src/tests/utils.ts'
 
 import { uint8ArrayToStr } from '#src/utils/generics.ts'
 import { makeHttpResponseParser } from '#src/utils/http-parser.ts'
@@ -8,7 +9,7 @@ import { makeHttpResponseParser } from '#src/utils/http-parser.ts'
 const MODES = ['complete', 'byte-by-byte'] as const
 
 for(const parseMode of MODES) {
-	describe('HTTP Parser tests (mode=%s)', () => {
+	describe(`HTTP Parser tests (mode=${parseMode})`, () => {
 
 		it('should parse a response', () => {
 			const res = parseHttpResponse(RES1, parseMode)
@@ -60,7 +61,7 @@ for(const parseMode of MODES) {
 		})
 
 		it('should correctly set chunk indices', () => {
-			const buff = strToUint8Array(RES_CHUNKED_PARTIAL_BODY)
+			const buff = strToUint8Array(TEST_RES_CHUNKED_PARTIAL_BODY)
 			const res = parseHttpResponse(buff, parseMode)
 			assert.ok(res.complete)
 
@@ -70,7 +71,7 @@ for(const parseMode of MODES) {
 					buff.slice(chunk.fromIndex, chunk.toIndex)
 				)
 			})
-			assert.deepEqual(parsedChunks, CHUNKS)
+			assert.deepEqual(parsedChunks, TEST_RES_BODY_CHUNKS)
 
 			const json = JSON.parse(uint8ArrayToStr(res.body))
 			assert.ok(json.name)
@@ -133,26 +134,4 @@ const RES_EMPTY_CHUNKED = [
 	'',
 	'0',
 	'',
-].join('\r\n')
-
-const CHUNKS = [
-	'{"name":"John",',
-	'"age":30,',
-	'"car":null,',
-	'"house":"some',
-	'where"}'
-]
-
-export const RES_CHUNKED_PARTIAL_BODY = [
-	'HTTP/1.1 200 OK',
-	'Content-Type: application/json',
-	'Transfer-Encoding: chunked',
-	'',
-	...CHUNKS.flatMap((chunk) => {
-		const chunkSize = chunk.length.toString(16)
-		return [chunkSize, chunk]
-	}),
-	'0',
-	'',
-	''
 ].join('\r\n')

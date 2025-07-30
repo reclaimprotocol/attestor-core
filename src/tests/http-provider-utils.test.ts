@@ -1,4 +1,3 @@
-import { jestExpect as expect } from '@jest/expect'
 import { strToUint8Array } from '@reclaimprotocol/tls'
 import assert from 'assert'
 import { describe, it } from 'node:test'
@@ -13,7 +12,7 @@ import {
 	matchRedactedStrings,
 } from '#src/providers/http/utils.ts'
 import { providers } from '#src/providers/index.ts'
-import { RES_CHUNKED_PARTIAL_BODY } from '#src/tests/http-parser.test.ts'
+import { TEST_RES_CHUNKED_PARTIAL_BODY } from '#src/tests/utils.ts'
 import type { ProviderParams, Transcript } from '#src/types/index.ts'
 import { assertValidateProviderParams, getBlocksToReveal, getProviderValue, hashProviderParams, logger, uint8ArrayToStr } from '#src/utils/index.ts'
 
@@ -58,7 +57,7 @@ describe('HTTP Provider Utils tests', () => {
 		const rm = '"hasBookface":true'
 		const regexp = new RegExp(rm, 'gim')
 
-		expect(regexp.test(json.slice(val.start, val.end))).toBe(true)
+		assert.ok(regexp.test(json.slice(val.start, val.end)))
 	})
 
 
@@ -79,7 +78,7 @@ describe('HTTP Provider Utils tests', () => {
 		const rm = '"name": "John Doe"'
 		const regexp = new RegExp(rm, 'gim')
 
-		expect(regexp.test(json.slice(val.start, val.end))).toBe(true)
+		assert.ok(regexp.test(json.slice(val.start, val.end)))
 	})
 
 
@@ -91,9 +90,10 @@ describe('HTTP Provider Utils tests', () => {
 			</body>`
 
 		let content = extractHTMLElement(html, "//div[contains(@id, 'content123')]", true)
-		expect(content).toEqual('This is <span>some</span> text!')
+
+		assert.equal(content, 'This is <span>some</span> text!')
 		content = extractHTMLElement(html, "//div[contains(@id, 'content456')]", false)
-		expect(content).toEqual('<div id="content456">This is <span>some</span> other text!</div>')
+		assert.equal(content, '<div id="content456">This is <span>some</span> other text!</div>')
 	})
 
 
@@ -105,7 +105,10 @@ describe('HTTP Provider Utils tests', () => {
 			</body>`
 
 		const contents = extractHTMLElements(html, '//body/div', true)
-		expect(contents).toEqual(['This is <span>some</span> text!', 'This is <span>some</span> other text!', 'This is <span>some</span> irrelevant text!'])
+		assert.deepEqual(
+			contents,
+			['This is <span>some</span> text!', 'This is <span>some</span> other text!', 'This is <span>some</span> irrelevant text!']
+		)
 	})
 
 
@@ -138,20 +141,20 @@ describe('HTTP Provider Utils tests', () => {
 			res.push(jsonData.slice(start, end))
 		}
 
-		expect(res).toEqual(['"number": "0123-4567-8888"', '"number": "0123-4567-8910"'])
+		assert.deepEqual(
+			res, ['"number": "0123-4567-8888"', '"number": "0123-4567-8910"']
+		)
 	})
 
 	it('should error on incorrect jsonPath', () => {
-		expect(() => {
+		assert.throws(() => {
 			extractJSONValueIndex(('{"asdf": 1}'), '(alert(origin))')
-		}).toThrow('loc.indexOf is not a function')
+		}, /loc.indexOf is not a function/)
 	})
 
 	it('should not error on incorrect regex', () => {
-		expect(() => {
-			const regexp = makeRegex('([a-z]+)+$')
-			regexp.test('a'.repeat(31) + '\x00')
-		}).not.toThrow()
+		const regexp = makeRegex('([a-z]+)+$')
+		regexp.test('a'.repeat(31) + '\x00')
 	})
 
 	it('should hide chunked parts from response', () => {
@@ -176,7 +179,7 @@ describe('HTTP Provider Utils tests', () => {
 				logger,
 				ctx
 			})
-			expect(redactions).toEqual([
+			assert.deepEqual(redactions, [
 				{
 					'fromIndex': 15,
 					'toIndex': 88,
@@ -202,7 +205,7 @@ describe('HTTP Provider Utils tests', () => {
 				start = red.toIndex
 			}
 
-			expect(str).toEqual('HTTP/1.1 200 OK\r\n\r\nchunk 1, chunk 2')
+			assert.equal(str, 'HTTP/1.1 200 OK\r\n\r\nchunk 1, chunk 2')
 		}
 
 	})
@@ -211,81 +214,78 @@ describe('HTTP Provider Utils tests', () => {
 		const provider = httpProvider
 		const response = Buffer.from('HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\ncontent-length: 222\r\nConnection: close\r\n\r\n<body> <div id="c1">{"ages":[{"age":"26"},{"age":"27"},{"age":"28"}]}</div> <div id="c2">{"ages":[{"age":"27"},{"age":"28"},{"age":"29"}]}</div> <div id="c3">{"ages":[{"age":"29"},{"age":"30"},{"age":"31"}]}</div></body>\r\n')
 
-		if(provider.getResponseRedactions) {
-			const redactions = provider.getResponseRedactions({
-				response,
-				params: {
-					method: 'GET',
-					url: 'https://test.com',
-					'responseMatches': [],
-					'responseRedactions': [
-						{
-							'xPath': '//body/div',
-							'jsonPath':'$.ages[*].age',
-							'regex':'(2|3)\\d'
-						}
-					],
-				},
-				logger,
-				ctx,
-			})
-			expect(redactions).toEqual([
-				{
-					'fromIndex': 15,
-					'toIndex': 81,
-				},
-				{
-					'fromIndex': 85,
-					'toIndex': 122
-				},
-				{
-					'fromIndex': 124,
-					'toIndex': 135
-				},
-				{
-					'fromIndex': 137,
-					'toIndex': 148
-				},
-				{
-					'fromIndex': 150,
-					'toIndex': 191
-				},
-				{
-					'fromIndex': 193,
-					'toIndex': 204
-				},
-				{
-					'fromIndex': 206,
-					'toIndex': 217
-				},
-				{
-					'fromIndex': 219,
-					'toIndex': 260
-				},
-				{
-					'fromIndex': 262,
-					'toIndex': 273
-				},
-				{
-					'fromIndex': 275,
-					'toIndex': 286
-				},
-				{
-					'fromIndex': 288,
-					'toIndex': 307
-				}
-			])
-
-			let start = 0
-			let str = ''
-			for(const red of redactions) {
-				str += response.subarray(start, red.fromIndex)
-				start = red.toIndex
+		const redactions = provider.getResponseRedactions!({
+			response,
+			params: {
+				method: 'GET',
+				url: 'https://test.com',
+				'responseMatches': [],
+				'responseRedactions': [
+					{
+						'xPath': '//body/div',
+						'jsonPath':'$.ages[*].age',
+						'regex':'(2|3)\\d'
+					}
+				],
+			},
+			logger,
+			ctx,
+		})
+		assert.deepEqual(redactions, [
+			{
+				'fromIndex': 15,
+				'toIndex': 81,
+			},
+			{
+				'fromIndex': 85,
+				'toIndex': 122
+			},
+			{
+				'fromIndex': 124,
+				'toIndex': 135
+			},
+			{
+				'fromIndex': 137,
+				'toIndex': 148
+			},
+			{
+				'fromIndex': 150,
+				'toIndex': 191
+			},
+			{
+				'fromIndex': 193,
+				'toIndex': 204
+			},
+			{
+				'fromIndex': 206,
+				'toIndex': 217
+			},
+			{
+				'fromIndex': 219,
+				'toIndex': 260
+			},
+			{
+				'fromIndex': 262,
+				'toIndex': 273
+			},
+			{
+				'fromIndex': 275,
+				'toIndex': 286
+			},
+			{
+				'fromIndex': 288,
+				'toIndex': 307
 			}
+		])
 
-			expect(str).toEqual('HTTP/1.1 200 OK\r\n\r\n262728272829293031')
+		let start = 0
+		let str = ''
+		for(const red of redactions) {
+			str += response.subarray(start, red.fromIndex)
+			start = red.toIndex
 		}
 
+		assert.equal(str, 'HTTP/1.1 200 OK\r\n\r\n262728272829293031')
 	})
 
 	it('should perform complex redactions 2', () => {
@@ -311,7 +311,7 @@ describe('HTTP Provider Utils tests', () => {
 				logger,
 				ctx,
 			})
-			expect(redactions).toEqual([
+			assert.deepEqual(redactions, [
 				{
 					'fromIndex': 15,
 					'toIndex': 80,
@@ -341,7 +341,7 @@ describe('HTTP Provider Utils tests', () => {
 				start = red.toIndex
 			}
 
-			expect(str).toEqual('HTTP/1.1 200 OK\r\n\r\n262728')
+			assert.equal(str, 'HTTP/1.1 200 OK\r\n\r\n262728')
 		}
 
 	})
@@ -367,7 +367,7 @@ describe('HTTP Provider Utils tests', () => {
 				logger,
 				ctx,
 			})
-			expect(redactions).toEqual([
+			assert.deepEqual(redactions, [
 				{
 					'fromIndex': 15,
 					'toIndex': 81,
@@ -397,7 +397,7 @@ describe('HTTP Provider Utils tests', () => {
 				start = red.toIndex
 			}
 
-			expect(str).toEqual('HTTP/1.1 200 OK\r\n\r\n"age":"26""age":"27""age":"29"')
+			assert.equal(str, 'HTTP/1.1 200 OK\r\n\r\n"age":"26""age":"27""age":"29"')
 		}
 	})
 
@@ -429,7 +429,7 @@ describe('HTTP Provider Utils tests', () => {
 				logger,
 				ctx,
 			})
-			expect(redactions).toEqual([
+			assert.deepEqual(redactions, [
 				{
 					'fromIndex': 15,
 					'toIndex': 17
@@ -472,7 +472,7 @@ describe('HTTP Provider Utils tests', () => {
 			geoLocation: 'US',
 		}
 		const hash = hashProviderParams(params)
-		expect(hash).toEqual('0xe9624d26421a4d898d401e98821ccd645c25b06de97746a6c24a8b12d9aec143')
+		assert.equal(hash, '0xe9624d26421a4d898d401e98821ccd645c25b06de97746a6c24a8b12d9aec143')
 
 
 		const paramsEx: ProviderParams<'http'> = {
@@ -491,7 +491,7 @@ describe('HTTP Provider Utils tests', () => {
 				'regex': 'TOTAL_FOLLOWERS&quot;,&quot;\\$recipeTypes&quot;:(.*?),&quot;analyticsTitle&quot;:{&quot;textDirection&quot;:&quot;USER_LOCALE&quot;,&quot;text&quot;:&quot;(.*?)&quot;'
 			}]
 		}
-		expect(hashProviderParams(paramsEx)).toEqual('0x6fb81ebab0fb5dca0356abfd8726af97675e4a426712377bfc6ad9a0271c913b')
+		assert.equal(hashProviderParams(paramsEx), '0x6fb81ebab0fb5dca0356abfd8726af97675e4a426712377bfc6ad9a0271c913b')
 	})
 
 	it('should match redacted strings', () => {
@@ -523,7 +523,7 @@ describe('HTTP Provider Utils tests', () => {
 		]
 
 		for(const { a, b } of testCases) {
-			expect(matchRedactedStrings(strToUint8Array(a), strToUint8Array(b))).toBeTruthy()
+			assert.ok(matchRedactedStrings(strToUint8Array(a), strToUint8Array(b)))
 		}
 	})
 
@@ -560,13 +560,13 @@ describe('HTTP Provider Utils tests', () => {
 		]
 
 		for(const { a, b } of testCases) {
-			expect(matchRedactedStrings(strToUint8Array(a), strToUint8Array(b))).toBeFalsy()
+			assert.ok(!matchRedactedStrings(strToUint8Array(a), strToUint8Array(b)))
 		}
 	})
 
 
 	it('should throw on invalid URL', () => {
-		expect(
+		assert.throws(
 			() => (
 				getProviderValue(
 					{
@@ -577,18 +577,20 @@ describe('HTTP Provider Utils tests', () => {
 					},
 					hostPort
 				)
-			)
-		).toThrow('Invalid URL')
+			),
+			/Invalid URL/
+		)
 	})
 
 	it('should throw on invalid params', () => {
-		expect(() => {
-			assertValidateProviderParams('http', { a: 'b', body: 2 })
-		}).toThrow(/^Params validation failed/)
+		assert.throws(
+			() => assertValidateProviderParams('http', { a: 'b', body: 2 }),
+			/Params validation failed/
+		)
 	})
 
 	it('should throw on invalid secret params', () => {
-		expect(() => {
+		assert.throws(() => {
 			createRequest({
 				cookieStr: undefined,
 				authorisationHeader: undefined,
@@ -599,7 +601,7 @@ describe('HTTP Provider Utils tests', () => {
 				responseRedactions: [],
 				method: 'GET'
 			}, logger)
-		}).toThrow('auth parameters are not set')
+		}, /auth parameters are not set/)
 	})
 
 	it('should return empty redactions', () => {
@@ -623,7 +625,7 @@ Content-Type: text/html; charset=utf-8\r
 				ctx
 			})
 			: undefined
-		expect(redactions).toHaveLength(0)
+		assert.equal(redactions?.length, 0)
 	})
 
 	it('should throw on empty body', () => {
@@ -634,7 +636,7 @@ Connection: close\r
 Content-Type: text/html; charset=utf-8\r
 \r
 `
-		expect(() => {
+		assert.throws(() => {
 			if(getResponseRedactions) {
 				getResponseRedactions({
 					response: strToUint8Array(res),
@@ -650,7 +652,7 @@ Content-Type: text/html; charset=utf-8\r
 					ctx,
 				})
 			}
-		}).toThrow('Failed to find response body')
+		}, /Failed to find response body/)
 	})
 
 	it('should throw on bad xpath', () => {
@@ -661,7 +663,7 @@ Connection: close\r
 Content-Type: text/html; charset=utf-8\r
 \r
 1`
-		expect(() => {
+		assert.throws(() => {
 			if(getResponseRedactions) {
 				getResponseRedactions({
 					response: strToUint8Array(res),
@@ -677,7 +679,7 @@ Content-Type: text/html; charset=utf-8\r
 					ctx
 				})
 			}
-		}).toThrow('Failed to find XPath: \"abc\"')
+		}, /Failed to find XPath: \"abc\"/)
 	})
 
 	it('should throw on bad jsonPath', () => {
@@ -688,7 +690,7 @@ Connection: close\r
 Content-Type: text/html; charset=utf-8\r
 \r
 1`
-		expect(() => {
+		assert.throws(() => {
 			if(getResponseRedactions) {
 				getResponseRedactions({
 					response: strToUint8Array(res),
@@ -704,7 +706,7 @@ Content-Type: text/html; charset=utf-8\r
 					ctx,
 				})
 			}
-		}).toThrow('jsonPath not found')
+		}, /jsonPath not found/)
 	})
 
 	it('should throw on bad regex', () => {
@@ -715,7 +717,7 @@ Connection: close\r
 Content-Type: text/html; charset=utf-8\r
 \r
 1`
-		expect(() => {
+		assert.throws(() => {
 			if(getResponseRedactions) {
 				getResponseRedactions({
 					response: strToUint8Array(res),
@@ -731,11 +733,11 @@ Content-Type: text/html; charset=utf-8\r
 					ctx,
 				})
 			}
-		}).toThrow('regexp abc does not match found element \'MQ==\'')
+		}, /regexp abc does not match found element \'MQ==\'/)
 	})
 
 	it('should throw on bad method', async() => {
-		await expect(async() => {
+		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
 				params: {
@@ -747,12 +749,11 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx
 			})
-		}).rejects.toThrow('Invalid method: get')
+		}, /Invalid method: get/)
 	})
 
 	it('should throw on bad protocol', async() => {
-
-		await expect(async() => {
+		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
 				params: {
@@ -764,12 +765,12 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx,
 			})
-		}).rejects.toThrow('Expected protocol: https, found: http:')
+		}, /Expected protocol: https, found: http:/)
 	})
 
 	it('should throw on duplicate groups', async() => {
 
-		await expect(async() => {
+		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
 				params: {
@@ -787,12 +788,12 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx
 			})
-		}).rejects.toThrow('Duplicate parameter abc')
+		}, /Duplicate parameter abc/)
 	})
 
 	it('should throw on bad path', async() => {
 
-		await expect(async() => {
+		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
 				params: {
@@ -804,11 +805,11 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx
 			})
-		}).rejects.toThrow('Expected path: /abc, found: /')
+		}, /Expected path: \/abc, found: \//)
 	})
 
 	it('should throw on bad host', async() => {
-		await expect(async() => {
+		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
 				params: {
@@ -820,7 +821,7 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx,
 			})
-		}).rejects.toThrow('Expected host: abc.com, found: xargs.org')
+		}, /Expected host: abc.com, found: xargs.org/)
 	})
 
 	it('should throw on bad OK string', async() => {
@@ -829,7 +830,7 @@ Content-Type: text/html; charset=utf-8\r
 		// it'll be in the first server response packet
 		const firstServerMsg = temp.find((x, index) => x.sender === 'server' && index !== 0)!
 		firstServerMsg.message[0] = 32
-		await expect(async() => {
+		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: temp,
 				params: {
@@ -841,7 +842,7 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx,
 			})
-		}).rejects.toThrow('Response did not start with \"HTTP/1.1 2XX\"')
+		}, /Response did not start with \"HTTP\/1\.1 2XX\"/)
 	})
 
 	it('should throw on bad close header', async() => {
@@ -855,7 +856,7 @@ Content-Type: text/html; charset=utf-8\r
 				.includes('Connection: close')
 		})!
 		clientMsgWithClose.message[68] = 102
-		await expect(async() => {
+		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: temp,
 				params: {
@@ -867,11 +868,11 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx
 			})
-		}).rejects.toThrow('Connection header must be \"close\"')
+		}, /Connection header must be \"close\"/)
 	})
 
 	it('should throw on bad body', async() => {
-		await expect(async() => {
+		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
 				params: {
@@ -884,11 +885,11 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx
 			})
-		}).rejects.toThrow('request body mismatch')
+		}, /request body mismatch/)
 	})
 
 	it('should throw on bad regex match', async() => {
-		await expect(async() => {
+		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
 				params: {
@@ -903,11 +904,11 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx
 			})
-		}).rejects.toThrow('Invalid receipt. Regex \"abc\" didn\'t match')
+		}, /Invalid receipt. Regex \"abc\" didn\'t match/)
 	})
 
 	it('should throw on bad contains match', async() => {
-		await expect(async() => {
+		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
 				params: {
@@ -922,7 +923,7 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx,
 			})
-		}).rejects.toThrow('Invalid receipt. Response does not contain \"abc\"')
+		}, /Invalid receipt. Response does not contain \"abc\"/)
 	})
 
 	it('should get geo', () => {
@@ -935,12 +936,12 @@ Content-Type: text/html; charset=utf-8\r
 			} as unknown as ProviderParams<'http'>,
 			geoLocation
 		)
-		expect(geo).toEqual('US')
+		assert.equal(geo, 'US')
 	})
 
 	it('should throw on bad geo param', () => {
 
-		expect(() => {
+		assert.throws(() => {
 			// @ts-ignore
 			geoLocation({
 				geoLocation: '{{geo}}',
@@ -948,43 +949,39 @@ Content-Type: text/html; charset=utf-8\r
 					'geo1': 'US'
 				}
 			})
-		}).toThrow('parameter "geo" value not found in templateParams')
+		}, /parameter "geo" value not found in templateParams/)
 	})
 
 	it('should return empty geo', () => {
-
-		expect(// @ts-ignore
-			geoLocation({
-				geoLocation: '',
-			})).toEqual(undefined)
+		assert.equal(
+			// @ts-ignore
+			geoLocation({ geoLocation: '' }),
+			undefined
+		)
 	})
 
 	it('should throw on bad param in url', () => {
 
-		expect(() => {
+		assert.throws(
 			// @ts-ignore
-			return hostPort(
-				{
-					url: 'https://xargs.{{param1}}'
-				})
-		})
-			.toThrow('parameter "param1" value not found in templateParams')
+			() => hostPort({ url: 'https://xargs.{{param1}}' }),
+			/parameter "param1" value not found in templateParams/
+		)
 	})
 
 	it('should throw on bad url', () => {
 
-		expect(() => {
+		assert.throws(() => {
 			// @ts-ignore
 			hostPort(
 				{
 					url: 'file:///C:/path'
 				})
-		})
-			.toThrow('url is incorrect')
+		}, /url is incorrect/)
 	})
 
 	it('should throw on bad match type', async() => {
-		await expect(async() => {
+		await assert.rejects(async() => {
 			const params = {
 				url: 'https://xargs.org/',
 				responseMatches: [{
@@ -1001,11 +998,11 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx,
 			})
-		}).rejects.toThrow('Invalid response match type abc')
+		}, /Invalid response match type abc/)
 	})
 
 	it('should throw on no non present params', async() => {
-		await expect(async() => {
+		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
 				params: {
@@ -1020,11 +1017,11 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx
 			})
-		}).rejects.toThrow('Expected host: xargs.{{org}}, found: xargs.org')
+		}, /Expected host: xargs.{{org}}, found: xargs.org/)
 	})
 
 	it('should throw on non present secret params', () => {
-		expect(() => {
+		assert.throws(() => {
 			createRequest({
 				cookieStr: 'abc',
 
@@ -1034,7 +1031,7 @@ Content-Type: text/html; charset=utf-8\r
 				responseRedactions: [],
 				method: 'GET'
 			}, logger)
-		}).toThrow('parameter\'s \"com\" value not found in paramValues and secret parameter\'s paramValues')
+		}, /parameter\'s \"com\" value not found in paramValues and secret parameter\'s paramValues/)
 	})
 
 	it('should replace params in body correctly', () => {
@@ -1076,15 +1073,15 @@ Content-Type: text/html; charset=utf-8\r
 		const req = createRequest(secretParams, params, logger)
 
 		const reqText = uint8ArrayToStr(req.data as Uint8Array)
-		expect(reqText).toContain('hello crazy aaaaa crazy1 crazy2 {{b}} crazy1 crazy {{b}} crazy2 {{b}} aaaaa world')
-		expect(req.redactions.length).toEqual(7)
-		expect(getRedaction(0)).toEqual('Cookie: <cookie-str>\r\nAuthorization: abc')
-		expect(getRedaction(1)).toEqual('crazy')
-		expect(getRedaction(2)).toEqual('crazy1')
-		expect(getRedaction(3)).toEqual('crazy2')
-		expect(getRedaction(4)).toEqual('crazy1')
-		expect(getRedaction(5)).toEqual('crazy')
-		expect(getRedaction(6)).toEqual('crazy2')
+		assert.ok(reqText.includes('hello crazy aaaaa crazy1 crazy2 {{b}} crazy1 crazy {{b}} crazy2 {{b}} aaaaa world'))
+		assert.equal(req.redactions.length, 7)
+		assert.equal(getRedaction(0), 'Cookie: <cookie-str>\r\nAuthorization: abc')
+		assert.equal(getRedaction(1), 'crazy')
+		assert.equal(getRedaction(2), 'crazy1')
+		assert.equal(getRedaction(3), 'crazy2')
+		assert.equal(getRedaction(4), 'crazy1')
+		assert.equal(getRedaction(5), 'crazy')
+		assert.equal(getRedaction(6), 'crazy2')
 
 		function getRedaction(index: number) {
 			return uint8ArrayToStr((req.data as Uint8Array).slice(req.redactions[index].fromIndex, req.redactions[index].toIndex))
@@ -1125,10 +1122,10 @@ Content-Type: text/html; charset=utf-8\r
 		const req = createRequest(secretParams, params, logger)
 
 		const reqText = uint8ArrayToStr(req.data as Uint8Array)
-		expect(reqText).toContain('{\"includeGroups\":false,\"includeLogins\":false,\"includeVerificationStatus\":false}')
-		expect(req.redactions.length).toEqual(2)
-		expect(getRedaction(0)).toEqual('Authorization: abc')
-		expect(getRedaction(1)).toEqual('false')
+		assert.ok(reqText.includes('{\"includeGroups\":false,\"includeLogins\":false,\"includeVerificationStatus\":false}'))
+		assert.equal(req.redactions.length, 2)
+		assert.equal(getRedaction(0), 'Authorization: abc')
+		assert.equal(getRedaction(1), 'false')
 
 		function getRedaction(index: number) {
 			return uint8ArrayToStr((req.data as Uint8Array).slice(req.redactions[index].fromIndex, req.redactions[index].toIndex))
@@ -1160,7 +1157,7 @@ Content-Type: text/html; charset=utf-8\r
 			const redactedStr = await getRedactedStr(res, params)
 			// the transcript contained "Example Domain" in the title
 			// which should be replaced with the hash
-			expect(redactedStr).toContain('<title>AAAAAAAAAAAAAA</title>')
+			assert.ok(redactedStr.includes('<title>AAAAAAAAAAAAAA</title>'))
 		})
 
 		it('should handle OPRF replacements in a chunked res', async() => {
@@ -1180,10 +1177,10 @@ Content-Type: text/html; charset=utf-8\r
 					}
 				],
 			}
-			const arr = strToUint8Array(RES_CHUNKED_PARTIAL_BODY)
+			const arr = strToUint8Array(TEST_RES_CHUNKED_PARTIAL_BODY)
 			const redactedStr = await getRedactedStr(arr, params)
 			// "name":"John" should be replaced with the hash
-			expect(redactedStr).toContain('"name":"AAAA"')
+			assert.ok(redactedStr.includes('"name":"AAAA"'))
 		})
 
 		it('should gracefully error when OPRF spans multiple chunks', () => {
@@ -1204,12 +1201,11 @@ Content-Type: text/html; charset=utf-8\r
 				],
 			}
 
-			const response = strToUint8Array(RES_CHUNKED_PARTIAL_BODY)
-			expect(
-				() => getResponseRedactions!({
-					response, params, logger, ctx
-				})
-			).toThrow(/cannot be performed/)
+			const response = strToUint8Array(TEST_RES_CHUNKED_PARTIAL_BODY)
+			assert.throws(
+				() => getResponseRedactions!({ response, params, logger, ctx }),
+				/cannot be performed/
+			)
 		})
 	})
 
@@ -1247,11 +1243,11 @@ Content-Type: text/html; charset=utf-8\r
 		const req = createRequest(secretParams, params, logger)
 
 		const reqText = uint8ArrayToStr(req.data as Uint8Array)
-		expect(reqText).toContain('POST /1234567890?request=select * from users HTTP/1.1')
-		expect(req.redactions.length).toEqual(3)
-		expect(getRedaction(2)).toEqual('Authorization: abc')
-		expect(getRedaction(0)).toEqual('1234567890')
-		expect(getRedaction(1)).toEqual('select * from users')
+		assert.ok(reqText.includes('POST /1234567890?request=select * from users HTTP/1.1'))
+		assert.equal(req.redactions.length, 3)
+		assert.equal(getRedaction(2), 'Authorization: abc')
+		assert.equal(getRedaction(0), '1234567890')
+		assert.equal(getRedaction(1), 'select * from users')
 
 		function getRedaction(index: number) {
 			return uint8ArrayToStr((req.data as Uint8Array).slice(req.redactions[index].fromIndex, req.redactions[index].toIndex))

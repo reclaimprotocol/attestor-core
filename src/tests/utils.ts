@@ -68,3 +68,28 @@ export function getFirstTOprfBlock({ transcript }: ClaimTunnelRequest) {
 		}
 	}
 }
+
+export const TEST_RES_BODY_CHUNKS = [
+	'{"name":"John",',
+	'"age":30,',
+	'"car":null,',
+	'"house":"some',
+	'where"}'
+]
+
+/**
+ * A chunked response with the body split into multiple chunks
+ */
+export const TEST_RES_CHUNKED_PARTIAL_BODY = [
+	'HTTP/1.1 200 OK',
+	'Content-Type: application/json',
+	'Transfer-Encoding: chunked',
+	'',
+	...TEST_RES_BODY_CHUNKS.flatMap((chunk) => {
+		const chunkSize = chunk.length.toString(16)
+		return [chunkSize, chunk]
+	}),
+	'0',
+	'',
+	''
+].join('\r\n')
