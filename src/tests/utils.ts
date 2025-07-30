@@ -1,6 +1,8 @@
 import { randomBytes } from 'crypto'
-import { ClaimTunnelRequest } from 'src/proto/api'
-import { SPY_PREPARER } from 'src/tests/mocks'
+import assert from 'node:assert'
+
+import type { ClaimTunnelRequest } from '#src/proto/api.ts'
+import { SPY_PREPARER } from '#src/tests/mocks.ts'
 
 export function delay(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms))
@@ -27,7 +29,9 @@ export function verifyNoDirectRevealLeaks() {
 		return
 	}
 
-	const [tlsTranscript, revealsMap] = SPY_PREPARER.mock.calls[0]
+	const [
+		{ arguments: [tlsTranscript, revealsMap] }
+	] = SPY_PREPARER.mock.calls
 	for(const [packet, reveal] of revealsMap.entries()) {
 		if(reveal.type !== 'complete') {
 			continue
@@ -47,7 +51,7 @@ export function verifyNoDirectRevealLeaks() {
 				&& message.encKey === packet.encKey
 				&& message.contentType === 'APPLICATION_DATA'
 			))
-		expect(otherPacketsWKey).toHaveLength(0)
+		assert.equal(otherPacketsWKey.length, 0)
 	}
 }
 
@@ -64,3 +68,28 @@ export function getFirstTOprfBlock({ transcript }: ClaimTunnelRequest) {
 		}
 	}
 }
+
+export const TEST_RES_BODY_CHUNKS = [
+	'{"name":"John",',
+	'"age":30,',
+	'"car":null,',
+	'"house":"some',
+	'where"}'
+]
+
+/**
+ * A chunked response with the body split into multiple chunks
+ */
+export const TEST_RES_CHUNKED_PARTIAL_BODY = [
+	'HTTP/1.1 200 OK',
+	'Content-Type: application/json',
+	'Transfer-Encoding: chunked',
+	'',
+	...TEST_RES_BODY_CHUNKS.flatMap((chunk) => {
+		const chunkSize = chunk.length.toString(16)
+		return [chunkSize, chunk]
+	}),
+	'0',
+	'',
+	''
+].join('\r\n')

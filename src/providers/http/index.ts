@@ -1,7 +1,9 @@
-import { areUint8ArraysEqual, concatenateUint8Arrays, strToUint8Array, TLSConnectionOptions } from '@reclaimprotocol/tls'
-import { base64 } from 'ethers/lib/utils'
-import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from 'src/config'
-import { AttestorVersion } from 'src/proto/api'
+import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
+import { areUint8ArraysEqual, concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
+import { utils } from 'ethers'
+
+import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '#src/config/index.ts'
+import { AttestorVersion } from '#src/proto/api.ts'
 import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
@@ -10,15 +12,17 @@ import {
 	makeRegex,
 	matchRedactedStrings,
 	parseHttpResponse,
-} from 'src/providers/http/utils'
-import { ArraySlice, Provider, ProviderCtx, ProviderParams, ProviderSecretParams, RedactedOrHashedArraySlice } from 'src/types'
+} from '#src/providers/http/utils.ts'
+import type { ArraySlice, Provider, ProviderCtx, ProviderParams, ProviderSecretParams, RedactedOrHashedArraySlice } from '#src/types/index.ts'
 import {
 	findIndexInUint8Array,
 	getHttpRequestDataFromTranscript, logger,
 	REDACTION_CHAR_CODE,
 	uint8ArrayToBinaryStr,
 	uint8ArrayToStr,
-} from 'src/utils'
+} from '#src/utils/index.ts'
+
+const { base64 } = utils
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
 const dateHeaderRegex = '[dD]ate: ((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (?:[0-3][0-9]) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?:[0-9]{4}) (?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2} GMT)'
@@ -295,9 +299,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			const statusRegex = makeRegex('^HTTP\\/1.1 (\\d{3})')
 			const matchRes = statusRegex.exec(res)
 			if(matchRes && matchRes.length > 1) {
-				throw new Error(
-					`Provider returned error ${matchRes[1]}"`
-				)
+				throw new Error(`Provider returned error ${matchRes[1]}`)
 			}
 
 			let lineEnd = res.indexOf('*')
@@ -326,7 +328,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		//validate server Date header if present
 		const dateHeader = makeRegex(dateHeaderRegex).exec(res)
-		if(dateHeader?.length > 1) {
+		if(dateHeader && dateHeader.length > 1) {
 			const serverDate = new Date(dateHeader[1])
 			if((Date.now() - serverDate.getTime()) > dateDiff) {
 
@@ -379,7 +381,12 @@ const HTTP_PROVIDER: Provider<'http'> = {
 						throw new Error(`Duplicate parameter ${paramName}`)
 					}
 
-					extractedParams[paramName] = groups[paramName]
+					const value = groups?.[paramName]
+					if(typeof value !== 'string') {
+						continue
+					}
+
+					extractedParams[paramName] = value
 				}
 
 				break
@@ -551,7 +558,7 @@ function *processRedactionRequest(
 
 
 		const fullStr = match[0]
-		const grp = Object.values(match.groups)[0] as string
+		const grp = Object.values(match.groups)[0]
 		const grpIdx = fullStr.indexOf(grp)
 
 		// don't hash the entire regex, we'll hash the group values

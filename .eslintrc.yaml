@@ -6,11 +6,10 @@ plugins:
   - no-relative-import-paths
 rules:
   '@typescript-eslint/no-explicit-any': 0
+  '@typescript-eslint/consistent-type-imports': 'error'
   'no-relative-import-paths/no-relative-import-paths':
     - error
     - allowSameFolder: false
       rootDir: ''
-  '@typescript-eslint/no-floating-promises':
-    - error
-
+  #'@typescript-eslint/no-floating-promises': 'error'
       

@@ -1,16 +1,18 @@
+import type {
+	CipherSuite, TLSProtocolVersion } from '@reclaimprotocol/tls'
 import {
 	areUint8ArraysEqual,
-	CipherSuite,
 	CONTENT_TYPE_MAP,
 	crypto, decryptWrappedRecord,
 	PACKET_TYPE,
 	strToUint8Array,
-	SUPPORTED_CIPHER_SUITE_MAP, TLSProtocolVersion,
+	SUPPORTED_CIPHER_SUITE_MAP,
 	uint8ArrayToDataView
 } from '@reclaimprotocol/tls'
 import { REDACTION_CHAR_CODE } from '@reclaimprotocol/zk-symmetric-crypto'
-import { RPCMessage, RPCMessages } from 'src/proto/api'
-import {
+
+import { RPCMessage, RPCMessages } from '#src/proto/api.ts'
+import type {
 	CompleteTLSPacket,
 	IDecryptedTranscript, IDecryptedTranscriptMessage,
 	ProviderField,
@@ -19,7 +21,7 @@ import {
 	RPCEventType,
 	RPCType,
 	Transcript
-} from 'src/types'
+} from '#src/types/index.ts'
 
 const DEFAULT_REDACTION_DATA = new Uint8Array(4)
 	.fill(REDACTION_CHAR_CODE)
@@ -76,11 +78,6 @@ export function uint8ArrayToBinaryStr(buf: Uint8Array) {
 	}
 
 	return ret
-}
-
-export function gunzipSync(buf: Uint8Array): Uint8Array {
-	const { gunzipSync } = require('zlib')
-	return gunzipSync(buf)
 }
 
 /**

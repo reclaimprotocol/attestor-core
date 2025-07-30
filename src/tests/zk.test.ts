@@ -1,10 +1,15 @@
-import { CipherSuite, crypto, encryptWrappedRecord, strToUint8Array, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
-import { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
-import assert from 'assert'
-import { TOPRF_DOMAIN_SEPARATOR } from 'src/config'
-import { MessageReveal_ZKProof as ZKProof, ZKProofEngine } from 'src/proto/api'
-import { toprf } from 'src/server/handlers/toprf'
-import { CompleteTLSPacket, MessageRevealInfo, RedactedOrHashedArraySlice, TOPRFProofParams } from 'src/types'
+import type { CipherSuite } from '@reclaimprotocol/tls'
+import { crypto, encryptWrappedRecord, strToUint8Array, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
+import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
+import assert from 'node:assert'
+import { describe, it } from 'node:test'
+import '#src/server/utils/config-env.ts'
+
+import { TOPRF_DOMAIN_SEPARATOR } from '#src/config/index.ts'
+import type { MessageReveal_ZKProof as ZKProof } from '#src/proto/api.ts'
+import { ZKProofEngine } from '#src/proto/api.ts'
+import { toprf } from '#src/server/handlers/toprf.ts'
+import type { CompleteTLSPacket, MessageRevealInfo, RedactedOrHashedArraySlice, TOPRFProofParams } from '#src/types/index.ts'
 import {
 	getBlocksToReveal,
 	logger,
@@ -14,8 +19,7 @@ import {
 	redactSlices,
 	uint8ArrayToStr,
 	verifyZkPacket
-} from 'src/utils'
-import 'src/server/utils/config-env'
+} from '#src/utils/index.ts'
 
 const ZK_CIPHER_SUITES: CipherSuite[] = [
 	'TLS_CHACHA20_POLY1305_SHA256',
@@ -33,8 +37,6 @@ type RedactionTestVector = {
 	output: string[]
 	redactions: RedactedOrHashedArraySlice[]
 }
-
-jest.setTimeout(90_000) // 90s
 
 describe('Redaction Tests', () => {
 
@@ -98,16 +100,14 @@ describe('Redaction Tests', () => {
 					throw new Error('should not call this')
 				}
 			)
-			if(realOutput === 'all') {
-				fail('should not return "all"')
-				continue
-			}
+			assert(realOutput !== 'all', 'should not return "all"')
 
-			expect(realOutput).toHaveLength(output.length)
+			assert.equal(realOutput.length, output.length)
 			for(const [i, element] of output.entries()) {
-				expect(
-					uint8ArrayToStr(realOutput[i].redactedPlaintext)
-				).toEqual(element)
+				assert.equal(
+					uint8ArrayToStr(realOutput[i].redactedPlaintext),
+					element
+				)
 			}
 		}
 	})
@@ -156,15 +156,14 @@ describe('Redaction Tests', () => {
 					plaintext: strToUint8Array('abcdefg')
 				})
 			)
-			if(realOutput === 'all') {
-				fail('should not return "all"')
-			}
+			assert(realOutput !== 'all', 'should not return "all"')
 
-			expect(realOutput).toHaveLength(output.length)
+			assert.equal(realOutput.length, output.length)
 			for(const [i, element] of output.entries()) {
-				expect(
-					uint8ArrayToStr(realOutput[i].redactedPlaintext)
-				).toEqual(element)
+				assert.equal(
+					uint8ArrayToStr(realOutput[i].redactedPlaintext),
+					element
+				)
 			}
 		}
 	})
@@ -249,8 +248,8 @@ describe('OPRF Slicing Tests', () => {
 				[packet], () => redactions, performOprf
 			)
 			assert(blocksToReveal !== 'all')
-			expect(blocksToReveal).toHaveLength(1)
-			expect(blocksToReveal[0].toprfs).toBeTruthy()
+			assert.equal(blocksToReveal.length, 1)
+			assert.ok(blocksToReveal[0].toprfs)
 
 			const revealsMap: Map<CompleteTLSPacket, MessageRevealInfo> = new Map()
 			revealsMap.set(packet, {
@@ -270,12 +269,12 @@ describe('OPRF Slicing Tests', () => {
 			)
 
 			const proofs = revealedMessages[0].reveal?.zkReveal?.proofs
-			expect(proofs?.length).toBeTruthy()
+			assert.ok(proofs?.length)
 
 			const x = await verifyZkPacket(
 				{
 					ciphertext,
-					zkReveal: { proofs: proofs! },
+					zkReveal: { proofs },
 					logger,
 					cipherSuite,
 					zkEngine: zkEngine,
@@ -284,9 +283,7 @@ describe('OPRF Slicing Tests', () => {
 				},
 			)
 
-			expect(x.redactedPlaintext).toEqual(
-				blocksToReveal[0].redactedPlaintext
-			)
+			assert.deepEqual(x.redactedPlaintext, blocksToReveal[0].redactedPlaintext)
 
 			console.log(`done: ${i + 1}/${vectors.length}`)
 		}
@@ -330,9 +327,12 @@ describe('OPRF Slicing Tests', () => {
 	}
 })
 
-describe.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some ciphertext', (cipherSuite) => {
-	describe.each(ZK_ENGINES)('[%s]', (zkEngine) => {
+const ZK_TEST_MATRIX = ZK_CIPHER_SUITES.flatMap(cipherSuite => (
+	ZK_ENGINES.map(zkEngine => ({ cipherSuite, zkEngine }))
+))
 
+for(const { cipherSuite, zkEngine } of ZK_TEST_MATRIX) {
+	describe(`[${cipherSuite}]-[${zkEngine}] should generate ZK proof for ciphertext`, () => {
 		const zkProofConcurrency = zkEngine === 'snarkjs' ? 1 : undefined
 
 		it(zkEngine + '-' + cipherSuite, async() => {
@@ -387,7 +387,7 @@ describe.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some cipherte
 				const plaintextArr = Buffer.from(plaintext)
 				const redactedPlaintext = redactSlices(plaintextArr, redactions)
 				// ensure redaction fn kinda works at least
-				expect(redactedPlaintext).not.toEqual(plaintextArr)
+				assert.notEqual(redactedPlaintext, plaintextArr)
 
 				const { ciphertext, iv } = await encryptWrappedRecord(
 					plaintextArr,
@@ -434,10 +434,8 @@ describe.each(ZK_CIPHER_SUITES)('[%s] should generate ZK proof for some cipherte
 					},
 				)
 
-				expect(redactedPlaintext).toEqual(
-					x.redactedPlaintext
-				)
+				assert.deepEqual(redactedPlaintext, x.redactedPlaintext)
 			}
 		})
 	})
-})
+}

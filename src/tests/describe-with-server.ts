@@ -1,12 +1,14 @@
-import { AttestorClient } from 'src/client/utils/client-socket'
-import { WS_PATHNAME } from 'src/config'
-import { createServer } from 'src/server'
-import { createMockServer } from 'src/tests/mock-provider-server'
-import { SPY_PREPARER } from 'src/tests/mocks'
-import { getRandomPort, randomPrivateKey } from 'src/tests/utils'
-import { IAttestorServerSocket } from 'src/types'
-import { logger } from 'src/utils'
-import { WebSocket, type WebSocketServer } from 'ws'
+import { after, afterEach, before, beforeEach, describe } from 'node:test'
+import type { WebSocket, WebSocketServer } from 'ws'
+
+import { AttestorClient } from '#src/client/utils/client-socket.ts'
+import { WS_PATHNAME } from '#src/config/index.ts'
+import { createServer } from '#src/server/index.ts'
+import { createMockServer } from '#src/tests/mock-provider-server.ts'
+import { SPY_PREPARER } from '#src/tests/mocks.ts'
+import { getRandomPort, randomPrivateKey } from '#src/tests/utils.ts'
+import type { IAttestorServerSocket } from '#src/types/index.ts'
+import { logger } from '#src/utils/index.ts'
 
 type ServerOpts = {
 	/**
@@ -41,18 +43,18 @@ export const describeWithServer = (
 
 	const mockHttpsServer = createMockServer(httpsServerPort)
 
-	beforeAll(async() => {
+	before(async() => {
 		wsServer = await createServer(wsServerPort)
 		wsServerUrl = `ws://localhost:${wsServerPort}${WS_PATHNAME}`
 	})
 
-	afterAll(() => {
+	after(() => {
 		wsServer.close()
 		mockHttpsServer.server.close()
 	})
 
 	beforeEach(async() => {
-		SPY_PREPARER.mockClear()
+		SPY_PREPARER.mock.resetCalls()
 
 		privateKeyHex = randomPrivateKey()
 		client = new AttestorClient({

@@ -1,9 +1,10 @@
-import { createClaimOnAttestor } from 'src/client'
-import { describeWithServer } from 'src/tests/describe-with-server'
-import { getFirstTOprfBlock, verifyNoDirectRevealLeaks } from 'src/tests/utils'
-import { binaryHashToStr } from 'src/utils'
+import assert from 'node:assert'
+import { afterEach, it } from 'node:test'
 
-jest.setTimeout(300_000)
+import { createClaimOnAttestor } from '#src/client/index.ts'
+import { describeWithServer } from '#src/tests/describe-with-server.ts'
+import { getFirstTOprfBlock, verifyNoDirectRevealLeaks } from '#src/tests/utils.ts'
+import { binaryHashToStr } from '#src/utils/index.ts'
 
 describeWithServer('HTTP Provider', opts => {
 
@@ -28,7 +29,6 @@ describeWithServer('HTTP Provider', opts => {
 					param1: 'com',
 					param2: 'Top Links | Hacker News',
 					param3: 'title',
-
 				}
 			},
 			secretParams: {
@@ -41,11 +41,13 @@ describeWithServer('HTTP Provider', opts => {
 			},
 			ownerPrivateKey: opts.privateKeyHex,
 			client: opts.client,
-			zkEngine:'gnark'
+			zkEngine: 'gnark'
 		})
-		expect(resp.error).toBeUndefined()
-		expect(resp.claim?.context)
-			.toContain('0x5e3e976476ded7b58120d606b33b75be52adb8345a7979c181764f00763e7b2a')
+		assert.ok(!resp.error)
+		assert.match(
+			resp.claim?.context || '',
+			/0x5e3e976476ded7b58120d606b33b75be52adb8345a7979c181764f00763e7b2a/
+		)
 	})
 
 	it('should create claim with OPRF template params', async() => {
@@ -76,19 +78,19 @@ describeWithServer('HTTP Provider', opts => {
 			client: opts.client,
 			zkEngine: 'gnark',
 		})
-		expect(resp.error).toBeUndefined()
+		assert.ok(!resp.error)
 
 		const ctx = JSON.parse(resp.claim!.context)
 		const domainStr = ctx.extractedParameters.domain
 
 
 		const toprf = getFirstTOprfBlock(resp.request!)!
-		expect(toprf).toBeTruthy()
+		assert.ok(toprf)
 		const toprfStr = binaryHashToStr(
 			toprf.nullifier,
 			toprf.dataLocation!.length
 		)
-		expect(domainStr).toEqual(toprfStr.slice(0, domainStr.length))
+		assert.equal(domainStr, toprfStr.slice(0, domainStr.length))
 	})
 
 	it('should create claim with non 200 response', async() => {
@@ -115,8 +117,10 @@ describeWithServer('HTTP Provider', opts => {
 			client: opts.client,
 			zkEngine:'gnark'
 		})
-		expect(resp.error).toBeUndefined()
-		expect(resp.claim?.context)
-			.toContain('0x51004e4a2d91eda6fa8cf2e6fa9a8dd973070114a7c670a4c47797e9a55ab872')
+		assert.ok(!resp.error)
+		assert.match(
+			resp.claim?.context || '',
+			/0x51004e4a2d91eda6fa8cf2e6fa9a8dd973070114a7c670a4c47797e9a55ab872/
+		)
 	})
 })
