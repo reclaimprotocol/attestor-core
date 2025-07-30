@@ -260,10 +260,7 @@ export function setupWindowRpc(baseUrl?: string) {
 				break
 			}
 		} catch(err) {
-			logger.error(
-				{ msg: err.message, err, data: event.data },
-				'error in RPC'
-			)
+			console.error('Error in RPC', { id, channel, error: err })
 			respond({
 				type: 'error',
 				data: {

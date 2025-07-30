@@ -22,6 +22,7 @@ import {
 	makeGnarkZkOperator,
 } from '@reclaimprotocol/zk-symmetric-crypto/gnark'
 import { makeSnarkJsZKOperator } from '@reclaimprotocol/zk-symmetric-crypto/snarkjs'
+import PQueue from 'p-queue'
 
 import { DEFAULT_REMOTE_FILE_FETCH_BASE_URL, DEFAULT_ZK_CONCURRENCY, TOPRF_DOMAIN_SEPARATOR } from '#src/config/index.ts'
 import type { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof } from '#src/proto/api.ts'
@@ -96,7 +97,6 @@ export async function makeZkProofGenerator(
 	}: PrepareZKProofsOpts
 ) {
 
-	const { default: PQueue } = await import('p-queue')
 	const zkQueue = new PQueue({
 		concurrency: zkProofConcurrency,
 		autoStart: true,

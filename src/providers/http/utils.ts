@@ -11,7 +11,7 @@ import {
 	Property,
 	Syntax
 } from 'esprima-next'
-import * as jsd from 'jsdom'
+import { JSDOM } from 'jsdom'
 import { JSONPath } from 'jsonpath-plus'
 import RE2 from 're2'
 
@@ -25,7 +25,7 @@ export type JSONIndex = {
 }
 
 // creating these types here as they're imported from parse5
-type NodeLocation = ReturnType<typeof jsd.JSDOM.prototype.nodeLocation>
+type NodeLocation = ReturnType<typeof JSDOM.prototype.nodeLocation>
 type ElementLocation = NodeLocation & {
 	/** Element's start tag location info. */
 	startTag?: NodeLocation
@@ -99,7 +99,7 @@ export function extractHTMLElementsIndexes(
 	contentsOnly: boolean
 ): { start: number, end: number }[] {
 
-	const dom = new jsd.JSDOM(html, {
+	const dom = new JSDOM(html, {
 		contentType: 'text/html',
 		includeNodeLocations: true
 	})

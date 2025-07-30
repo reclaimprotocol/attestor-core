@@ -80,11 +80,6 @@ export function uint8ArrayToBinaryStr(buf: Uint8Array) {
 	return ret
 }
 
-export function gunzipSync(buf: Uint8Array): Uint8Array {
-	const { gunzipSync } = require('zlib')
-	return gunzipSync(buf)
-}
-
 /**
  * Fetch the ZK algorithm for the specified cipher suite
  */
