@@ -1,8 +1,8 @@
 import { strToUint8Array } from '@reclaimprotocol/tls'
 import assert from 'node:assert'
 import { describe, it } from 'node:test'
-import { TEST_RES_BODY_CHUNKS, TEST_RES_CHUNKED_PARTIAL_BODY } from 'src/tests/utils.ts'
 
+import { TEST_RES_BODY_CHUNKS, TEST_RES_CHUNKED_PARTIAL_BODY } from '#src/tests/utils.ts'
 import { uint8ArrayToStr } from '#src/utils/generics.ts'
 import { makeHttpResponseParser } from '#src/utils/http-parser.ts'
 

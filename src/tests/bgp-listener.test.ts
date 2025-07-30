@@ -17,6 +17,7 @@ describe('BGP Listener', () => {
 
 	let listener: BGPListener
 	beforeEach(async() => {
+		// dynamic import to let the mock take effect
 		const { createBgpListener, logger } = await import('#src/utils/index.ts')
 		listener = createBgpListener(logger)
 		await delay(10)

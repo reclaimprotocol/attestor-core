@@ -29,7 +29,6 @@ describeWithServer('HTTP Provider', opts => {
 					param1: 'com',
 					param2: 'Top Links | Hacker News',
 					param3: 'title',
-
 				}
 			},
 			secretParams: {
@@ -42,7 +41,7 @@ describeWithServer('HTTP Provider', opts => {
 			},
 			ownerPrivateKey: opts.privateKeyHex,
 			client: opts.client,
-			zkEngine:'gnark'
+			zkEngine: 'gnark'
 		})
 		assert.ok(!resp.error)
 		assert.match(

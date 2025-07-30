@@ -46,7 +46,6 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 
 	let closed = false
 
-
 	socket.on('data', message => {
 		if(closed) {
 			logger.warn('socket is closed, dropping message')
