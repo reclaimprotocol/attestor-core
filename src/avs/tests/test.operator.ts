@@ -11,6 +11,7 @@
 
 import { utils, Wallet } from 'ethers'
 import assert from 'node:assert'
+import { after, before, describe, it, mock } from 'node:test'
 
 import { createClaimOnAvs } from '#src/avs/client/create-claim-on-avs.ts'
 import type { NewTaskCreatedEventObject, TaskCompletedEventObject } from '#src/avs/contracts/ReclaimServiceManager.ts'
@@ -25,8 +26,6 @@ import { canonicalStringify, createSignDataForClaim, getIdentifierFromClaimInfo,
 
 const contracts = getContracts()
 
-jest.setTimeout(60_000)
-
 describe('Operators', () => {
 
 	let shutdownChain: () => void
@@ -34,21 +33,18 @@ describe('Operators', () => {
 		wallet: Wallet
 		url: string
 	}[] = []
-	const createClaimFn = jest.fn<
-		ReturnType<typeof createClaimOnAttestor>,
-		Parameters<typeof createClaimOnAttestor>
-	>(() => {
+	const createClaimFn = mock.fn<typeof createClaimOnAttestor>(() => {
 		throw new Error('Not implemented')
 	})
 
 	let registeredFirstOperator = false
 	let registeredSecondOperator = false
 
-	beforeAll(async() => {
+	before(async() => {
 		shutdownChain = await runFreshChain()
 		operators = [{ wallet: contracts.wallet!, url: 'ws://example.com' }]
 
-		createClaimFn.mockImplementation(async({
+		createClaimFn.mock.mockImplementation(async({
 			ownerPrivateKey, name, params, context, client, timestampS
 		}) => {
 			if(!('url' in client)) {
@@ -83,7 +79,7 @@ describe('Operators', () => {
 		})
 	})
 
-	afterAll(async() => {
+	after(async() => {
 		await shutdownChain?.()
 	})
 
@@ -94,15 +90,18 @@ describe('Operators', () => {
 
 		// using try-catch since jest.rejects.toMatchObject wasn't
 		// working as expected
-		try {
-			await registerOperator({
-				wallet: op,
-				reclaimRpcUrl: url
-			})
-			throw new Error('Should have thrown an error')
-		} catch(err) {
-			expect(err.message).toMatch(/Operator not whitelisted/)
-		}
+		await assert.rejects(
+			() => (
+				registerOperator({
+					wallet: op,
+					reclaimRpcUrl: url
+				})
+			),
+			(err: Error) => {
+				assert.match(err.message, /Operator not whitelisted/)
+				return true
+			}
+		)
 	})
 
 	it('should prevent non-admins from modifying internal settings', async() => {
@@ -128,12 +127,13 @@ describe('Operators', () => {
 		]
 
 		for(const op of OPS) {
-			try {
-				await op()
-				throw new Error('Should have thrown an error')
-			} catch(err) {
-				expect(err.message).toMatch(/Caller is not admin/)
-			}
+			await assert.rejects(
+				op,
+				(err: Error) => {
+					assert.match(err.message, /Caller is not admin/)
+					return true
+				}
+			)
 		}
 	})
 
@@ -156,7 +156,7 @@ describe('Operators', () => {
 		let userWallet: Wallet
 		let arg: NewTaskCreatedEventObject
 
-		beforeAll(async() => {
+		before(async() => {
 			await registerFirstOperator()
 			await registerSecondOperator()
 
@@ -184,7 +184,7 @@ describe('Operators', () => {
 	})
 
 	describeWithServer('With Task & Attestor Server', opts => {
-		beforeAll(async() => {
+		before(async() => {
 			await registerFirstOperator()
 			await registerSecondOperator()
 		})
