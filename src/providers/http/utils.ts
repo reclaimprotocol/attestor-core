@@ -94,7 +94,7 @@ export function extractHTMLElementsIndexes(
 	return extractHTMLElementIndexesParse5(html, xpathExpression, contentsOnly)
 }
 
-export function extractHTMLElementIndexesParse5(
+function extractHTMLElementIndexesParse5(
 	html: string,
 	xpathExpression: string,
 	contentsOnly: boolean

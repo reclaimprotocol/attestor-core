@@ -10,6 +10,7 @@ const rslt = await esbuild.build({
 	tsconfig: 'tsconfig.build.json',
 	legalComments: 'none',
 	metafile: true, // Enable metafile generation
+	treeShaking: true,
 	alias: {
 		'crypto': '#src/scripts/fallbacks/crypto.ts',
 		'koffi': '#src/scripts/fallbacks/empty.ts',
