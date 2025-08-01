@@ -13,7 +13,7 @@ export type RedactedOrHashedArraySlice = {
 	fromIndex: number
 	toIndex: number
 	/**
-	 * By default, the the data is redacted. Instead if you'd like
+	 * By default, the data is redacted. Instead if you'd like
 	 * a deterministic hash, set this to 'oprf'
 	 * @default undefined
 	 */
