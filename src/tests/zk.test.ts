@@ -1,5 +1,5 @@
 import type { CipherSuite } from '@reclaimprotocol/tls'
-import { crypto, encryptWrappedRecord, strToUint8Array, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
+import { crypto, encryptWrappedRecord, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import assert from 'node:assert'
 import { describe, it } from 'node:test'
@@ -17,6 +17,7 @@ import {
 	makeZkProofGenerator,
 	preparePacketsForReveal,
 	redactSlices,
+	strToUint8Array,
 	uint8ArrayToStr,
 	verifyZkPacket
 } from '#src/utils/index.ts'

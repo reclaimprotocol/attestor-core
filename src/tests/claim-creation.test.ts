@@ -1,4 +1,4 @@
-import { type CipherSuite, type TLSProtocolVersion, uint8ArrayToStr } from '@reclaimprotocol/tls'
+import { type CipherSuite, type TLSProtocolVersion } from '@reclaimprotocol/tls'
 import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
@@ -15,7 +15,8 @@ import {
 	AttestorError,
 	binaryHashToStr,
 	extractApplicationDataFromTranscript,
-	logger
+	logger,
+	uint8ArrayToStr
 } from '#src/utils/index.ts'
 
 const TLS_VERSIONS: TLSProtocolVersion[] = [

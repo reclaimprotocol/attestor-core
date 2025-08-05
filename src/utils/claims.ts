@@ -1,6 +1,6 @@
-import { strToUint8Array } from '@reclaimprotocol/tls'
 import canonicalize from 'canonicalize'
 import { utils } from 'ethers'
+import { strToUint8Array } from 'src/utils/generics.ts'
 
 import { DEFAULT_METADATA } from '#src/config/index.ts'
 import { ClaimTunnelResponse } from '#src/proto/api.ts'
@@ -57,14 +57,10 @@ export async function assertValidClaimSignatures(
 
 	const { verify } = SIGNATURES[metadata.signatureType]
 	if(signatures?.resultSignature) {
-		const resBytes = ClaimTunnelResponse.encode(
-			ClaimTunnelResponse.create(res)
-		).finish()
-		const verified = await verify(
-			resBytes,
-			resultSignature,
-			attestorAddress
-		)
+		const resBytes = ClaimTunnelResponse
+			.encode(ClaimTunnelResponse.create(res)).finish()
+		const verified
+			= await verify(resBytes, resultSignature, attestorAddress)
 		if(!verified) {
 			throw new Error('Invalid result signature')
 		}
@@ -101,14 +97,11 @@ export function getIdentifierFromClaimInfo(info: ClaimInfo): ClaimID {
 		} catch(e) {
 			throw new Error('unable to parse non-empty context. Must be JSON')
 		}
-
 	}
 
 	const str = `${info.provider}\n${info.parameters}\n${info.context || ''}`
 	//console.log('Identifier: ' + btoa(str))
-	return utils.keccak256(
-		strToUint8Array(str)
-	).toLowerCase()
+	return utils.keccak256(strToUint8Array(str)).toLowerCase()
 }
 
 /**

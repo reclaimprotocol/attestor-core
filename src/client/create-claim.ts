@@ -1,5 +1,5 @@
 import type { TLSPacketContext } from '@reclaimprotocol/tls'
-import { strToUint8Array } from '@reclaimprotocol/tls'
+import { asciiToUint8Array } from '@reclaimprotocol/tls'
 
 import { makeRpcTlsTunnel } from '#src/client/tunnels/make-rpc-tls-tunnel.ts'
 import { getAttestorClientFromPool } from '#src/client/utils/attestor-pool.ts'
@@ -220,7 +220,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		logger
 	)
 	const requestData = typeof requestStr === 'string'
-		? strToUint8Array(requestStr)
+		? asciiToUint8Array(requestStr)
 		: requestStr
 
 	logger.debug(

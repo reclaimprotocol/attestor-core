@@ -1,4 +1,4 @@
-import { concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
+import { asciiToUint8Array, concatenateUint8Arrays } from '@reclaimprotocol/tls'
 import type { IncomingHttpHeaders } from 'http'
 
 import type { ArraySlice, Transcript } from '#src/types/index.ts'
@@ -44,7 +44,7 @@ export type HttpResponse = {
 	headerEndIdx: number
 }
 
-const HTTP_HEADER_LINE_END = strToUint8Array('\r\n')
+const HTTP_HEADER_LINE_END = asciiToUint8Array('\r\n')
 
 /**
  * parses http/1.1 responses

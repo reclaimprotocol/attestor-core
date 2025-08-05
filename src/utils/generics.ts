@@ -5,10 +5,9 @@ import {
 	CONTENT_TYPE_MAP,
 	crypto, decryptWrappedRecord,
 	PACKET_TYPE,
-	strToUint8Array,
 	SUPPORTED_CIPHER_SUITE_MAP,
-	uint8ArrayToDataView
-} from '@reclaimprotocol/tls'
+	uint8ArrayToBinaryStr,
+	uint8ArrayToDataView } from '@reclaimprotocol/tls'
 import { REDACTION_CHAR_CODE } from '@reclaimprotocol/zk-symmetric-crypto'
 
 import { RPCMessage, RPCMessages } from '#src/proto/api.ts'
@@ -26,8 +25,20 @@ import type {
 const DEFAULT_REDACTION_DATA = new Uint8Array(4)
 	.fill(REDACTION_CHAR_CODE)
 
+export { uint8ArrayToBinaryStr }
+
+/**
+ * Decodes a Uint8Array to a UTF-8 string.
+ */
 export function uint8ArrayToStr(arr: Uint8Array) {
 	return new TextDecoder().decode(arr)
+}
+
+/**
+ * Encodes a UTF-8 string to a Uint8Array.
+ */
+export function strToUint8Array(str: string): Uint8Array {
+	return new TextEncoder().encode(str)
 }
 
 export function getTranscriptString(receipt: IDecryptedTranscript) {
@@ -61,23 +72,6 @@ export function findIndexInUint8Array(
 	}
 
 	return -1
-}
-
-/**
- * convert a Uint8Array to a binary encoded str
- * from: https://github.com/feross/buffer/blob/795bbb5bda1b39f1370ebd784bea6107b087e3a7/index.js#L1063
- * @param buf
- * @returns
- */
-export function uint8ArrayToBinaryStr(buf: Uint8Array) {
-	let ret = ''
-	for(const v of buf) {
-		(
-			ret += String.fromCharCode(v)
-		)
-	}
-
-	return ret
 }
 
 /**
@@ -155,9 +149,7 @@ export function getProviderValue<P, S, T>(params: P, fn: ProviderField<P, S, T>,
 }
 
 export function generateRpcMessageId() {
-	return uint8ArrayToDataView(
-		crypto.randomBytes(8)
-	).getUint32(0)
+	return uint8ArrayToDataView(crypto.randomBytes(4)).getUint32(0)
 }
 
 /**

@@ -1,4 +1,3 @@
-import { strToUint8Array } from '@reclaimprotocol/tls'
 import assert from 'assert'
 import { describe, it } from 'node:test'
 import { deserialize, serialize } from 'v8'
@@ -14,7 +13,7 @@ import {
 import { providers } from '#src/providers/index.ts'
 import { TEST_RES_CHUNKED_PARTIAL_BODY } from '#src/tests/utils.ts'
 import type { ProviderParams, Transcript } from '#src/types/index.ts'
-import { assertValidateProviderParams, getBlocksToReveal, getProviderValue, hashProviderParams, logger, uint8ArrayToStr } from '#src/utils/index.ts'
+import { assertValidateProviderParams, getBlocksToReveal, getProviderValue, hashProviderParams, logger, strToUint8Array, uint8ArrayToStr } from '#src/utils/index.ts'
 
 const ctx = PROVIDER_CTX
 

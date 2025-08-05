@@ -2,14 +2,14 @@ import type {
 	CipherSuite } from '@reclaimprotocol/tls'
 import {
 	crypto,
-	encryptWrappedRecord, strToUint8Array,
+	encryptWrappedRecord,
 	SUPPORTED_CIPHER_SUITE_MAP
 } from '@reclaimprotocol/tls'
+import { strToUint8Array } from 'src/utils/generics.ts'
 
 import type { CompleteTLSPacket } from '#src/types/index.ts'
 import { logger } from '#src/utils/logger.ts'
 import { makeZkProofGenerator } from '#src/utils/zk.ts'
-
 
 const ZK_CIPHER_SUITES: CipherSuite[] = [
 	'TLS_CHACHA20_POLY1305_SHA256',
@@ -17,7 +17,7 @@ const ZK_CIPHER_SUITES: CipherSuite[] = [
 	'TLS_AES_128_GCM_SHA256'
 ]
 
-export async function Benchmark() {
+export async function benchmark() {
 
 	let benchmarkRes = ''
 	for(const cipherSuite of ZK_CIPHER_SUITES) {

@@ -1,10 +1,8 @@
-import { strToUint8Array, uint8ArrayToStr } from '@reclaimprotocol/tls'
 import assert from 'node:assert'
 import { describe, it } from 'node:test'
 
 import { makeTcpTunnel } from '#src/server/index.ts'
-import type { AttestorError } from '#src/utils/index.ts'
-import { logger, makeHttpResponseParser } from '#src/utils/index.ts'
+import { type AttestorError, logger, makeHttpResponseParser, strToUint8Array, uint8ArrayToStr } from '#src/utils/index.ts'
 
 const DEMO_GEO_LOCATIONS = ['in', 'us']
 const ALL_LOCATIONS = [...DEMO_GEO_LOCATIONS, 'none']

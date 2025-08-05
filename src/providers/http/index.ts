@@ -1,5 +1,5 @@
 import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
-import { areUint8ArraysEqual, concatenateUint8Arrays, strToUint8Array } from '@reclaimprotocol/tls'
+import { areUint8ArraysEqual, concatenateUint8Arrays } from '@reclaimprotocol/tls'
 import { utils } from 'ethers'
 
 import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '#src/config/index.ts'
@@ -18,6 +18,7 @@ import {
 	findIndexInUint8Array,
 	getHttpRequestDataFromTranscript, logger,
 	REDACTION_CHAR_CODE,
+	strToUint8Array,
 	uint8ArrayToBinaryStr,
 	uint8ArrayToStr,
 } from '#src/utils/index.ts'
@@ -92,10 +93,9 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const { pathname } = url
 		const searchParams = params.url.includes('?') ? params.url.split('?')[1] : ''
 		logger.info({ url: params.url, path: pathname, query: searchParams.toString() })
-		const body =
-            params.body instanceof Uint8Array
-            	? params.body
-            	: strToUint8Array(params.body || '')
+		const body = params.body instanceof Uint8Array
+			? params.body
+			: strToUint8Array(params.body || '')
 		const contentLength = body.length
 		const reqLine = `${params.method} ${pathname}${searchParams?.length ? '?' + searchParams : ''} HTTP/1.1`
 		const secHeadersList = buildHeaders(secHeaders)
@@ -116,10 +116,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		// hide all secret headers
 		const secHeadersStr = secHeadersList.join('\r\n')
-		const tokenStartIndex = findIndexInUint8Array(
-			data,
-			strToUint8Array(secHeadersStr)
-		)
+		const tokenStartIndex
+			= findIndexInUint8Array(data, strToUint8Array(secHeadersStr))
 
 		const redactions = [
 			{
@@ -527,13 +525,15 @@ function *processRedactionRequest(
 	}
 
 	function *processRegexp() {
-		logger.debug({ element: base64.encode(strToUint8Array(element)), body: base64.encode(strToUint8Array(body)) })
+		logger.debug({
+			element: base64.encode(strToUint8Array(element)),
+			body: base64.encode(strToUint8Array(body))
+		})
 		const regexp = makeRegex(rs.regex!)
 		const elem = element || body
 		const match = regexp.exec(elem)
 		// eslint-disable-next-line max-depth
 		if(!match?.[0]) {
-
 			throw new Error(
 				`regexp ${rs.regex} does not match found element '${base64.encode(strToUint8Array(elem))}'`
 			)
