@@ -5,5 +5,5 @@ cp node_modules/snarkjs/build/snarkjs.min.js ./browser/resources/snarkjs/snarkjs
 rm -r ./browser/resources/snarkjs/*/*.r1cs
 # remove gnark libs, they are only for nodejs
 rm -r ./browser/resources/gnark
-npm run run:tsc -- src/scripts/build-bundle.ts
+npm run run:tsc -- src/scripts/build-browser.ts
 npm run run:tsc -- src/scripts/build-jsc.ts

@@ -13,7 +13,7 @@ const rslt = await esbuild.build({
 			}
 			: {
 				minify: true,
-				entryPoints: ['src/external-rpc/index.ts'],
+				entryPoints: ['src/external-rpc/setup-jsc.ts'],
 				outfile: 'browser/resources/attestor-jsc.min.mjs'
 			}
 	),

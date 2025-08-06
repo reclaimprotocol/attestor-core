@@ -1,5 +1,4 @@
-import { setCryptoImplementation } from '@reclaimprotocol/tls'
-import { webcryptoCrypto } from '@reclaimprotocol/tls/webcrypto'
+
 import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import { utils } from 'ethers'
 
@@ -14,48 +13,12 @@ import type { ClaimTunnelResponse } from '#src/proto/api.ts'
 import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from '#src/providers/http/utils.ts'
 import type { OPRFOperators, ProviderParams, ProviderSecretParams, ZKOperators } from '#src/types/index.ts'
 import { B64_JSON_REVIVER } from '#src/utils/b64-json.ts'
-import { AttestorError, getIdentifierFromClaimInfo, logger as LOGGER, makeLogger, uint8ArrayToStr } from '#src/utils/index.ts'
+import { AttestorError, getIdentifierFromClaimInfo, logger, makeLogger, uint8ArrayToStr } from '#src/utils/index.ts'
 
 const VALID_MODULES = [
 	'attestor-core',
 	'witness-sdk'
 ]
-
-let logger = LOGGER
-
-/**
- * For browsers only. Sets up the current window to listen for RPC requests
- * from React Native or other windows
- */
-export function setupWindowRpc(baseUrl?: string, channel = 'attestor-core') {
-	if(baseUrl) {
-		globalThis.ATTESTOR_BASE_URL = baseUrl
-	} else if(typeof window !== 'undefined' && window.location) {
-		globalThis.ATTESTOR_BASE_URL = window.location.toString()
-	} else {
-		throw new Error('No base URL provided and window.location unavailable')
-	}
-
-	if(channel) {
-		globalThis.RPC_CHANNEL_NAME = channel
-	} else if(!globalThis.RPC_CHANNEL_NAME) {
-		throw new Error('No channel name provided and globalThis.RPC_CHANNEL_NAME unavailable')
-	}
-
-	setCryptoImplementation(webcryptoCrypto)
-
-	logger = makeLogger(true)
-
-	if(typeof window !== 'undefined') {
-		window.addEventListener(
-			'message',
-			ev => handleIncomingMessage(ev.data),
-			false
-		)
-	}
-
-	logger.info({ defaultUrl: getWsApiUrlFromBaseUrl() }, 'window RPC setup')
-}
 
 export async function handleIncomingMessage(data: string | ExternalRPCIncomingMsg) {
 	let id = ''
@@ -243,7 +206,7 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 			response: await getCurrentMemoryUsage(),
 		}
 	case 'setLogLevel':
-		logger = makeLogger(
+		makeLogger(
 			true,
 			req.request.logLevel,
 			req.request.sendLogsToApp

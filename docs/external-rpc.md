@@ -6,6 +6,59 @@ The latest version of this JS bundle is hosted & available at `https://attestor.
 
 Communication with the attestor can be done via channels exposed in the native runtime, such as `postMessage` in React Native. We have tests that ensure the attestor can be run in a `javascriptcore` environment using the `jsc` CLI.
 
+## Integrating with a JS Runtime
+
+For flutter, using `flutter_js`:
+``` js
+import { setupFlutterJsRpc } from 'path/to/attestor-jsc.min.mjs'
+
+setupFlutterJsRpc('https://attestor.reclaimprotocol.org')
+```
+
+You can call a method on the attestor like this:
+``` js
+import { setupFlutterJsRpc } from 'path/to/attestor-jsc.min.mjs'
+
+handleIncomingMessage({
+	// lets the window know this is a request
+	// intended for it
+	module: 'attestor-core',
+	// this is a random ID you generate,
+	// use to match the response to the request
+	id: '123',
+	// the type of request you want to make
+	type: 'createClaim',
+	request: {
+		name: 'http',
+		params: {
+			"url": "https://bookface.ycombinator.com/home",
+			"method": "GET",
+			"responseMatches": [
+				{
+					"type": "regex",
+					"value": "{\"id\":111111,.*?waas_admin.*?:{.*?}.*?:{.*?}.*?(?:full_name|first_name).*?}"
+				}
+			]
+		},
+		secretParams: {
+			cookieStr: '<cookie-str>'
+		},
+		ownerPrivateKey: '0x1234...',
+		// limit ZK proof concurrency
+		// to limit memory consumption
+		// as webview has max 500mb memory
+		zkProofConcurrency: 1,
+	}
+})
+```
+
+Listen for responses to requests (and requests from the attestor) using:
+``` dart
+javascriptRuntime.onMessage('attestor-core', (args) async {
+	// do something
+})
+```
+
 ## Implementation Details
 
 The full implementation can be accessed [here](/src/external-rpc/)
