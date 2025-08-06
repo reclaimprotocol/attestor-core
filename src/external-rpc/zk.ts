@@ -1,8 +1,8 @@
 import type { EncryptionAlgorithm, OPRFOperator, ZKEngine, ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
 
+import type { ExecuteOPRFOpts, ExecuteZKOpts } from '#src/external-rpc/types.ts'
+import { rpcRequest } from '#src/external-rpc/utils.ts'
 import { logger, makeDefaultZkOperator } from '#src/utils/index.ts'
-import type { CommunicationBridge, ExecuteOPRFOpts, ExecuteZKOpts } from '#src/window-rpc/types.ts'
-import { generateRpcRequestId, waitForResponse } from '#src/window-rpc/utils.ts'
 
 export const ALL_ENC_ALGORITHMS: EncryptionAlgorithm[] = [
 	'aes-256-ctr',
@@ -17,7 +17,6 @@ export const ALL_ENC_ALGORITHMS: EncryptionAlgorithm[] = [
  */
 export function makeWindowRpcZkOperator(
 	algorithm: EncryptionAlgorithm,
-	bridge: CommunicationBridge,
 	zkEngine: ZKEngine = 'snarkjs'
 ): ZKOperator {
 	return {
@@ -26,28 +25,17 @@ export function makeWindowRpcZkOperator(
 			return operator.generateWitness(input)
 		},
 		groth16Prove(input) {
-			return callFn({ fn: 'groth16Prove', args: [input] })
+			return callFnZk({ fn: 'groth16Prove', args: [input] })
 		},
 		groth16Verify(publicSignals, proof) {
-			return callFn({ fn: 'groth16Verify', args: [publicSignals, proof] })
+			return callFnZk({ fn: 'groth16Verify', args: [publicSignals, proof] })
 		},
 	}
+}
 
-	function callFn(opts: ExecuteZKOpts) {
-		const id = generateRpcRequestId()
-		const waitForRes = waitForResponse(
-			'executeZkFunctionV3', id, bridge
-		)
 
-		bridge.send({
-			type: 'executeZkFunctionV3',
-			id,
-			request: opts,
-			module: 'attestor-core'
-		})
-
-		return waitForRes
-	}
+function callFnZk(request: ExecuteZKOpts) {
+	return rpcRequest({ type: 'executeZkFunctionV3', request })
 }
 
 
@@ -58,7 +46,6 @@ export function makeWindowRpcZkOperator(
  */
 export function makeWindowRpcOprfOperator(
 	algorithm: EncryptionAlgorithm,
-	bridge: CommunicationBridge,
 	zkEngine: ZKEngine = 'snarkjs'
 ): OPRFOperator {
 	return {
@@ -67,38 +54,26 @@ export function makeWindowRpcOprfOperator(
 			return operator.generateWitness(input)
 		},
 		groth16Prove(input) {
-			return callFn({ fn: 'groth16Prove', args: [input] })
+			return callFnOprf({ fn: 'groth16Prove', args: [input] })
 		},
 		groth16Verify(publicSignals, proof) {
-			return callFn({ fn: 'groth16Verify', args: [publicSignals, proof] })
+			return callFnOprf({ fn: 'groth16Verify', args: [publicSignals, proof] })
 		},
 		generateThresholdKeys(total, threshold) {
-			return callFn({ fn: 'generateThresholdKeys', args: [total, threshold] })
+			return callFnOprf({ fn: 'generateThresholdKeys', args: [total, threshold] })
 		},
 		generateOPRFRequestData(data, domainSeparator) {
-			return callFn({ fn: 'generateOPRFRequestData', args: [data, domainSeparator] })
+			return callFnOprf({ fn: 'generateOPRFRequestData', args: [data, domainSeparator] })
 		},
 		finaliseOPRF(serverPublicKey, request, responses) {
-			return callFn({ fn: 'finaliseOPRF', args: [serverPublicKey, request, responses] })
+			return callFnOprf({ fn: 'finaliseOPRF', args: [serverPublicKey, request, responses] })
 		},
 		evaluateOPRF(serverPrivateKey, request) {
-			return callFn({ fn: 'evaluateOPRF', args: [serverPrivateKey, request] })
+			return callFnOprf({ fn: 'evaluateOPRF', args: [serverPrivateKey, request] })
 		},
 	}
+}
 
-	function callFn(opts: ExecuteOPRFOpts) {
-		const id = generateRpcRequestId()
-		const waitForRes = waitForResponse(
-			'executeOprfFunctionV3', id, bridge
-		)
-
-		bridge.send({
-			type: 'executeOprfFunctionV3',
-			id,
-			request: opts,
-			module: 'attestor-core'
-		})
-
-		return waitForRes
-	}
+function callFnOprf(request: ExecuteOPRFOpts) {
+	return rpcRequest({ type: 'executeOprfFunctionV3', request })
 }

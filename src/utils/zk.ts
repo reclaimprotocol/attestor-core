@@ -717,12 +717,14 @@ function getIdealOffsetForToprfBlock(
 }
 
 function getZkResourcesBaseUrl() {
-	return typeof window !== 'undefined' && window.WINDOW_RPC_ATTESTOR_BASE_URL
-		? new URL(
-			DEFAULT_REMOTE_FILE_FETCH_BASE_URL,
-			window.WINDOW_RPC_ATTESTOR_BASE_URL
-		).toString()
-		: DEFAULT_REMOTE_FILE_FETCH_BASE_URL
+	if(typeof ATTESTOR_BASE_URL !== 'string') {
+		return DEFAULT_REMOTE_FILE_FETCH_BASE_URL
+	}
+
+	return new URL(
+		DEFAULT_REMOTE_FILE_FETCH_BASE_URL,
+		ATTESTOR_BASE_URL
+	).toString()
 }
 
 function sortSlices(slices: ArraySlice[]) {

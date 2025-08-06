@@ -1,1 +1,1 @@
-export const webcrypto = window.crypto
+export const webcrypto = globalThis.crypto

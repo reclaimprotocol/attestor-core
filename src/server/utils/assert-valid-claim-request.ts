@@ -17,6 +17,7 @@ import {
 import { providers } from '#src/providers/index.ts'
 import { niceParseJsonObject } from '#src/server/utils/generics.ts'
 import { processHandshake } from '#src/server/utils/process-handshake.ts'
+import { assertValidateProviderParams } from '#src/server/utils/validation.ts'
 import type {
 	IDecryptedTranscript, IDecryptedTranscriptMessage,
 	Logger,
@@ -26,11 +27,10 @@ import type {
 	Transcript,
 } from '#src/types/index.ts'
 import {
-	assertValidateProviderParams,
 	AttestorError,
 	canonicalStringify, decryptDirect,
 	extractApplicationDataFromTranscript,
-	hashProviderParams, 	SIGNATURES,
+	hashProviderParams,	SIGNATURES,
 	verifyZkPacket } from '#src/utils/index.ts'
 
 /**

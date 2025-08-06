@@ -115,7 +115,7 @@ describeWithServer('HTTP Provider', opts => {
 			},
 			ownerPrivateKey: opts.privateKeyHex,
 			client: opts.client,
-			zkEngine:'gnark'
+			zkEngine: 'gnark'
 		})
 		assert.ok(!resp.error)
 		assert.match(

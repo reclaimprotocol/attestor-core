@@ -1,4 +1,5 @@
 import type { OPRFOperator, ZKEngine, ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
+import '#src/external-rpc/global.d.ts'
 
 import type { TaskCompletedEventObject } from '#src/avs/contracts/ReclaimServiceManager.ts'
 import type { CreateClaimOnAvsOpts, CreateClaimOnAvsStep } from '#src/avs/types/index.ts'
@@ -19,12 +20,6 @@ import type { HttpRequest, HttpResponse } from '#src/utils/index.ts'
 
 type IdentifiedMessage = {
 	module: 'attestor-core'
-	/**
-	 * Optionally, name of the channel to respond to
-	 * Useful for specifying 'flutter_webview'
-	 * channel
-	 */
-	channel?: string
 	id: string
 }
 
@@ -170,6 +165,10 @@ export type WindowRPCAppClient = {
 		params: Partial<ProviderParams<'http'>>
 		secretParams: Partial<ProviderSecretParams<'http'>>
 	}>
+
+	connectWs(opts: { id: string, url: string }): Promise<{}>
+	disconnectWs(opts: { id: string, code?: number, reason?: any }): Promise<{}>
+	sendWsMessage(opts: { id: string, data: ArrayBufferView | string }): Promise<{}>
 }
 
 type AnyRPCClient = { [_: string]: (opts: any) => any }
@@ -211,7 +210,18 @@ export type WindowRPCIncomingMsg = (
 	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'executeZkFunctionV3'>>
 	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'executeOprfFunctionV3'>>
 	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'updateProviderParams'>>
+	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'connectWs'>>
+	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'disconnectWs'>>
+	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'sendWsMessage'>>
 	| AsResponse<WindowRPCErrorResponse>
+	| WindowRPCRequest<WindowRPCAppClient, 'sendWsMessage'>
+	| {
+		type: 'disconnectWs'
+		request: {
+			id: string
+			err?: string
+		}
+	}
 ) & IdentifiedMessage
 
 /**
@@ -230,6 +240,9 @@ export type WindowRPCOutgoingMsg = (
 	| WindowRPCRequest<WindowRPCAppClient, 'executeZkFunctionV3'>
 	| WindowRPCRequest<WindowRPCAppClient, 'executeOprfFunctionV3'>
 	| WindowRPCRequest<WindowRPCAppClient, 'updateProviderParams'>
+	| WindowRPCRequest<WindowRPCAppClient, 'connectWs'>
+	| WindowRPCRequest<WindowRPCAppClient, 'disconnectWs'>
+	| WindowRPCRequest<WindowRPCAppClient, 'sendWsMessage'>
 	| (
 		{
 			type: 'createClaimStep'
@@ -260,21 +273,3 @@ export type WindowRPCOutgoingMsg = (
 	)
 	| AsResponse<WindowRPCErrorResponse>
 ) & IdentifiedMessage
-
-export type CommunicationBridge = {
-	send(msg: WindowRPCOutgoingMsg): void
-	onMessage(
-		cb: (msg: WindowRPCIncomingMsg) => void
-	): (() => void)
-}
-
-declare global {
-
-	interface Window {
-		WINDOW_RPC_ATTESTOR_BASE_URL: string
-	}
-
-	interface Performance {
-		measureUserAgentSpecificMemory(): { bytes: number }
-	}
-}

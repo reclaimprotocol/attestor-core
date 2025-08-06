@@ -6,6 +6,8 @@ const POOL: { [url: string]: IAttestorClient | undefined } = {}
 /**
  * Get a attestor client from the pool,
  * if it doesn't exist, create one.
+ * @param [getCreateOpts] - Function to get the options for creating a new client.
+ *  called synchronously, in the same tick as this function.
  */
 export function getAttestorClientFromPool(
 	url: string | URL,

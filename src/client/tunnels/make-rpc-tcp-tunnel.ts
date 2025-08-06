@@ -29,9 +29,7 @@ export const makeRpcTcpTunnel: MakeTunnelFn<TCPTunnelCreateOpts> = ({
 
 	return {
 		async write(message) {
-			await client.sendMessage({
-				tunnelMessage: { tunnelId, message }
-			})
+			await client.sendMessage({ tunnelMessage: { tunnelId, message } })
 		},
 		async close(err) {
 			if(closed) {

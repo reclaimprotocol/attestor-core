@@ -1,12 +1,12 @@
 import { randomBytes } from 'crypto'
 import assert from 'node:assert'
+import type { Mock } from 'node:test'
+import { setTimeout } from 'node:timers/promises'
 
 import type { ClaimTunnelRequest } from '#src/proto/api.ts'
 import { SPY_PREPARER } from '#src/tests/mocks.ts'
 
-export function delay(ms: number) {
-	return new Promise((resolve) => setTimeout(resolve, ms))
-}
+export const delay = setTimeout
 
 export function randomPrivateKey() {
 	return '0x' + randomBytes(32).toString('hex')
@@ -52,6 +52,21 @@ export function verifyNoDirectRevealLeaks() {
 				&& message.contentType === 'APPLICATION_DATA'
 			))
 		assert.equal(otherPacketsWKey.length, 0)
+	}
+}
+
+
+export async function waitForMockCall<T extends Function>(
+	{ mock }: Mock<T>,
+	timeoutMs = 5000
+) {
+	const start = Date.now()
+	while(!mock.calls.length) {
+		if(Date.now() - start > timeoutMs) {
+			throw new Error('Timed out waiting for mock call')
+		}
+
+		await delay(100)
 	}
 }
 

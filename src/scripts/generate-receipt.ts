@@ -17,8 +17,8 @@ import {
 } from '#src/index.ts'
 import { getCliArgument } from '#src/scripts/utils.ts'
 import { createServer, decryptTranscript } from '#src/server/index.ts'
+import { assertValidateProviderParams } from '#src/server/utils/validation.ts'
 import { getEnvVariable } from '#src/utils/env.ts'
-import { assertValidateProviderParams } from '#src/utils/index.ts'
 
 type ProviderReceiptGenerationParams<P extends ProviderName> = {
     name: P

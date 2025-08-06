@@ -20,6 +20,7 @@ type ServerOpts = {
 	mockHttpsServer: ReturnType<typeof createMockServer>
 	mockhttpsServerPort: number
 	serverUrl: string
+	serverPort: number
 }
 
 
@@ -81,6 +82,9 @@ export const describeWithServer = (
 		},
 		mockHttpsServer,
 		mockhttpsServerPort: httpsServerPort,
+		get serverPort() {
+			return wsServerPort
+		}
 	})
 
 	function getClientOnServer() {

@@ -11,9 +11,10 @@ import {
 	matchRedactedStrings,
 } from '#src/providers/http/utils.ts'
 import { providers } from '#src/providers/index.ts'
+import { assertValidateProviderParams } from '#src/server/utils/validation.ts'
 import { TEST_RES_CHUNKED_PARTIAL_BODY } from '#src/tests/utils.ts'
 import type { ProviderParams, Transcript } from '#src/types/index.ts'
-import { assertValidateProviderParams, getBlocksToReveal, getProviderValue, hashProviderParams, logger, strToUint8Array, uint8ArrayToStr } from '#src/utils/index.ts'
+import { getBlocksToReveal, getProviderValue, hashProviderParams, logger, strToUint8Array, uint8ArrayToStr } from '#src/utils/index.ts'
 
 const ctx = PROVIDER_CTX
 

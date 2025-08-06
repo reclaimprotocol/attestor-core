@@ -3,7 +3,8 @@ import type {
 import {
 	areUint8ArraysEqual,
 	CONTENT_TYPE_MAP,
-	crypto, decryptWrappedRecord,
+	crypto,
+	decryptWrappedRecord,
 	PACKET_TYPE,
 	SUPPORTED_CIPHER_SUITE_MAP,
 	uint8ArrayToBinaryStr,

@@ -1,9 +1,9 @@
-import { ethers } from 'ethers'
-
 import { WS_PATHNAME } from '#src/config/index.ts'
-import type { ClaimTunnelResponse } from '#src/proto/api.ts'
-import { AttestorError, getIdentifierFromClaimInfo } from '#src/utils/index.ts'
-import type { CommunicationBridge, CreateClaimResponse, WindowRPCAppClient } from '#src/window-rpc/types.ts'
+import { EventBus } from '#src/external-rpc/event-bus.ts'
+import type { WindowRPCAppClient, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCRequest, WindowRPCResponse } from '#src/external-rpc/types.ts'
+import { AttestorError, B64_JSON_REPLACER } from '#src/utils/index.ts'
+
+export const RPC_MSG_BRIDGE = new EventBus<WindowRPCIncomingMsg>()
 
 // track memory usage
 export async function getCurrentMemoryUsage() {
@@ -22,16 +22,10 @@ export async function getCurrentMemoryUsage() {
 			const result = performance.measureUserAgentSpecificMemory()
 			const totalmb = Math.round(result.bytes / 1024 / 1024)
 
-			return {
-				available: true,
-				content: `${totalmb}mb`,
-			}
+			return { available: true, content: `${totalmb}mb` }
 		} catch(error) {
 			if(error instanceof DOMException && error.name === 'SecurityError') {
-				return {
-					available: false,
-					content: `N/A (${error.message})`,
-				}
+				return { available: false, content: `N/A (${error.message})` }
 			}
 
 			throw error
@@ -48,44 +42,36 @@ export function generateRpcRequestId() {
  * so we can get the API server's origin from the location.
  */
 export function getWsApiUrlFromBaseUrl() {
-	const parsed = new URL(window.WINDOW_RPC_ATTESTOR_BASE_URL || '')
-	if(!parsed) {
-		throw new Error(`Invalid base URL: ${window.WINDOW_RPC_ATTESTOR_BASE_URL}`)
+	if(typeof ATTESTOR_BASE_URL !== 'string') {
+		throw new Error('ATTESTOR_BASE_URL is not set')
 	}
 
+	const parsed = new URL(ATTESTOR_BASE_URL)
 	const { host, protocol } = parsed
 	const wsProtocol = protocol === 'https:' ? 'wss:' : 'ws:'
 	return `${wsProtocol}//${host}${WS_PATHNAME}`
 }
 
-export function mapToCreateClaimResponse(
-	res: ClaimTunnelResponse
-): CreateClaimResponse {
-	if(!res.claim) {
-		throw AttestorError.fromProto(res.error)
-	}
+export function rpcRequest<T extends keyof WindowRPCAppClient>(
+	opts: WindowRPCRequest<WindowRPCAppClient, T>
+): Promise<WindowRPCResponse<WindowRPCAppClient, T>['response']> {
+	const id = generateRpcRequestId()
+	const waitForRes = waitForResponse(opts.type, id)
 
-	return {
-		identifier: getIdentifierFromClaimInfo(res.claim),
-		claimData: res.claim,
-		witnesses: [
-			{
-				id: res.signatures!.attestorAddress,
-				url: getWsApiUrlFromBaseUrl()
-			}
-		],
-		signatures: [
-			ethers.utils
-				.hexlify(res.signatures!.claimSignature)
-				.toLowerCase()
-		]
-	}
+	// @ts-expect-error
+	sendMessage({
+		id,
+		module: 'attestor-core',
+		type: opts.type,
+		request: opts.request,
+	})
+
+	return waitForRes
 }
 
 export function waitForResponse<T extends keyof WindowRPCAppClient>(
 	type: T,
 	requestId: string,
-	bridge: CommunicationBridge,
 	timeoutMs = 60_000
 ) {
 	type R = Awaited<ReturnType<WindowRPCAppClient[T]>>
@@ -102,7 +88,7 @@ export function waitForResponse<T extends keyof WindowRPCAppClient>(
 			cancel()
 		}, timeoutMs)
 
-		const cancel = bridge.onMessage(msg => {
+		const cancel = RPC_MSG_BRIDGE.addListener(msg => {
 			if(msg.id !== requestId) {
 				return
 			}
@@ -119,4 +105,18 @@ export function waitForResponse<T extends keyof WindowRPCAppClient>(
 			cancel()
 		})
 	})
+}
+
+export function sendMessage(data: WindowRPCOutgoingMsg) {
+	const str = JSON.stringify(data, B64_JSON_REPLACER)
+	if(!RPC_CHANNEL_NAME) {
+		throw new Error('global RPC_CHANNEL_NAME is not set')
+	}
+
+	const channel = globalThis[RPC_CHANNEL_NAME] as AttestorRPCChannel
+	if(!channel) {
+		throw new Error(`RPC channel ${RPC_CHANNEL_NAME} not set on globalThis`)
+	}
+
+	channel.postMessage(str)
 }

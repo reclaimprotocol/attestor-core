@@ -1,11 +1,10 @@
 import canonicalize from 'canonicalize'
 import { utils } from 'ethers'
-import { strToUint8Array } from 'src/utils/generics.ts'
 
 import { DEFAULT_METADATA } from '#src/config/index.ts'
 import { ClaimTunnelResponse } from '#src/proto/api.ts'
 import type { ClaimID, ClaimInfo, CompleteClaimData, ProviderParams } from '#src/types/index.ts'
-import { SIGNATURES } from '#src/utils/signatures/index.ts'
+import { SIGNATURES, strToUint8Array } from '#src/utils/index.ts'
 
 /**
  * Creates the standard string to sign for a claim.
