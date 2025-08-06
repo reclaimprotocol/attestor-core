@@ -1,9 +1,9 @@
 import { WS_PATHNAME } from '#src/config/index.ts'
 import { EventBus } from '#src/external-rpc/event-bus.ts'
-import type { WindowRPCAppClient, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCRequest, WindowRPCResponse } from '#src/external-rpc/types.ts'
+import type { ExternalRPCAppClient, ExternalRPCIncomingMsg, ExternalRPCOutgoingMsg, ExternalRPCRequest, ExternalRPCResponse } from '#src/external-rpc/types.ts'
 import { AttestorError, B64_JSON_REPLACER } from '#src/utils/index.ts'
 
-export const RPC_MSG_BRIDGE = new EventBus<WindowRPCIncomingMsg>()
+export const RPC_MSG_BRIDGE = new EventBus<ExternalRPCIncomingMsg>()
 
 // track memory usage
 export async function getCurrentMemoryUsage() {
@@ -52,9 +52,9 @@ export function getWsApiUrlFromBaseUrl() {
 	return `${wsProtocol}//${host}${WS_PATHNAME}`
 }
 
-export function rpcRequest<T extends keyof WindowRPCAppClient>(
-	opts: WindowRPCRequest<WindowRPCAppClient, T>
-): Promise<WindowRPCResponse<WindowRPCAppClient, T>['response']> {
+export function rpcRequest<T extends keyof ExternalRPCAppClient>(
+	opts: ExternalRPCRequest<ExternalRPCAppClient, T>
+): Promise<ExternalRPCResponse<ExternalRPCAppClient, T>['response']> {
 	const id = generateRpcRequestId()
 	const waitForRes = waitForResponse(opts.type, id)
 
@@ -69,12 +69,12 @@ export function rpcRequest<T extends keyof WindowRPCAppClient>(
 	return waitForRes
 }
 
-export function waitForResponse<T extends keyof WindowRPCAppClient>(
+export function waitForResponse<T extends keyof ExternalRPCAppClient>(
 	type: T,
 	requestId: string,
 	timeoutMs = 60_000
 ) {
-	type R = Awaited<ReturnType<WindowRPCAppClient[T]>>
+	type R = Awaited<ReturnType<ExternalRPCAppClient[T]>>
 	const returnType = `${type}Done` as const
 	return new Promise<R>((resolve, reject) => {
 		const timeout = setTimeout(() => {
@@ -107,7 +107,7 @@ export function waitForResponse<T extends keyof WindowRPCAppClient>(
 	})
 }
 
-export function sendMessage(data: WindowRPCOutgoingMsg) {
+export function sendMessage(data: ExternalRPCOutgoingMsg) {
 	const str = JSON.stringify(data, B64_JSON_REPLACER)
 	if(!RPC_CHANNEL_NAME) {
 		throw new Error('global RPC_CHANNEL_NAME is not set')

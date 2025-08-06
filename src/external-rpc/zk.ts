@@ -15,7 +15,7 @@ export const ALL_ENC_ALGORITHMS: EncryptionAlgorithm[] = [
  * is running in a WebView, it can call the native
  * application to perform the ZK operations
  */
-export function makeWindowRpcZkOperator(
+export function makeExternalRpcZkOperator(
 	algorithm: EncryptionAlgorithm,
 	zkEngine: ZKEngine = 'snarkjs'
 ): ZKOperator {
@@ -44,7 +44,7 @@ function callFnZk(request: ExecuteZKOpts) {
  * is running in a WebView, it can call the native
  * application to perform the OPRF operations
  */
-export function makeWindowRpcOprfOperator(
+export function makeExternalRpcOprfOperator(
 	algorithm: EncryptionAlgorithm,
 	zkEngine: ZKEngine = 'snarkjs'
 ): OPRFOperator {

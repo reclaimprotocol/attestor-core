@@ -2,7 +2,7 @@ import { TextDecoder, TextEncoder } from '@kayahr/text-encoding'
 import { crypto } from '@reclaimprotocol/tls'
 import { EventTarget } from 'event-target-shim'
 
-import type { WindowRPCIncomingMsg, WindowRPCOutgoingMsg } from '#src/external-rpc/types.ts'
+import type { ExternalRPCIncomingMsg, ExternalRPCOutgoingMsg } from '#src/external-rpc/types.ts'
 
 declare global {
 	function readline(): string
@@ -10,14 +10,14 @@ declare global {
 	function debug(...args: any[]): void
 	function quit(): void
 
-	type JSCIncomingMsg = WindowRPCIncomingMsg
+	type JSCIncomingMsg = ExternalRPCIncomingMsg
 		| { type: 'quit' }
 		| {
 			type: 'init'
 			attestorBaseUrl: string
 		}
 
-	type JSCOutgoingMsg = WindowRPCOutgoingMsg
+	type JSCOutgoingMsg = ExternalRPCOutgoingMsg
 }
 
 if(typeof global === 'undefined') {

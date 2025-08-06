@@ -1,4 +1,4 @@
-import type { WindowRPCIncomingMsg } from '#src/external-rpc/types.ts'
+import type { ExternalRPCIncomingMsg } from '#src/external-rpc/types.ts'
 import { RPC_MSG_BRIDGE, rpcRequest } from '#src/external-rpc/utils.ts'
 
 export class RPCWebSocket extends EventTarget implements WebSocket {
@@ -79,7 +79,7 @@ export class RPCWebSocket extends EventTarget implements WebSocket {
 		this.dispatchEvent(ev)
 	}
 
-	#onMessage = (msg: WindowRPCIncomingMsg) => {
+	#onMessage = (msg: ExternalRPCIncomingMsg) => {
 		if(msg.type === 'sendWsMessage' && msg.request.id === this.id) {
 			const data = msg.request.data
 			const event = new MessageEvent('message', { data })

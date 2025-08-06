@@ -4,9 +4,9 @@ import { utils } from 'ethers'
 import { createClaimOnAvs } from '#src/avs/client/create-claim-on-avs.ts'
 import { createClaimOnAttestor } from '#src/client/index.ts'
 import { benchmark } from '#src/external-rpc/benchmark.ts'
-import type { CreateClaimResponse, RPCCreateClaimOptions, WindowRPCClient, WindowRPCErrorResponse, WindowRPCIncomingMsg, WindowRPCOutgoingMsg, WindowRPCResponse } from '#src/external-rpc/types.ts'
+import type { CreateClaimResponse, ExternalRPCClient, ExternalRPCErrorResponse, ExternalRPCIncomingMsg, ExternalRPCOutgoingMsg, ExternalRPCResponse, RPCCreateClaimOptions } from '#src/external-rpc/types.ts'
 import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromBaseUrl, RPC_MSG_BRIDGE, sendMessage, waitForResponse } from '#src/external-rpc/utils.ts'
-import { ALL_ENC_ALGORITHMS, makeWindowRpcOprfOperator, makeWindowRpcZkOperator } from '#src/external-rpc/zk.ts'
+import { ALL_ENC_ALGORITHMS, makeExternalRpcOprfOperator, makeExternalRpcZkOperator } from '#src/external-rpc/zk.ts'
 import { createClaimOnMechain } from '#src/mechain/client/create-claim-on-mechain.ts'
 import type { ClaimTunnelResponse } from '#src/proto/api.ts'
 import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from '#src/providers/http/utils.ts'
@@ -53,10 +53,10 @@ export function setupWindowRpc(baseUrl?: string, channel = 'attestor-core') {
 	logger.info({ defaultUrl: getWsApiUrlFromBaseUrl() }, 'window RPC setup')
 }
 
-export async function handleIncomingMessage(data: string | WindowRPCIncomingMsg) {
+export async function handleIncomingMessage(data: string | ExternalRPCIncomingMsg) {
 	let id = ''
 	try {
-		const req: WindowRPCIncomingMsg = (
+		const req: ExternalRPCIncomingMsg = (
 			typeof data === 'string'
 				? JSON.parse(data, B64_JSON_REVIVER)
 				: data
@@ -82,21 +82,21 @@ export async function handleIncomingMessage(data: string | WindowRPCIncomingMsg)
 	}
 
 	function respond(
-		data: WindowRPCResponse<WindowRPCClient, keyof WindowRPCClient>
-			| WindowRPCErrorResponse
+		data: ExternalRPCResponse<ExternalRPCClient, keyof ExternalRPCClient>
+			| ExternalRPCErrorResponse
 	) {
 		const res = {
 			...data,
 			id,
 			module: 'attestor-core',
 			isResponse: true
-		} as WindowRPCOutgoingMsg
+		} as ExternalRPCOutgoingMsg
 		return sendMessage(res)
 	}
 }
 
-async function _handleIncomingMessage(req: WindowRPCIncomingMsg): Promise<
-	WindowRPCResponse<WindowRPCClient, keyof WindowRPCClient> | undefined
+async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
+	ExternalRPCResponse<ExternalRPCClient, keyof ExternalRPCClient> | undefined
 > {
 	const { module, id: reqId } = req
 	// ignore any messages not for us
@@ -278,7 +278,7 @@ function getZkOperators(
 	// a ZK operator & wants to use it
 	const operators: ZKOperators = {}
 	for(const alg of ALL_ENC_ALGORITHMS) {
-		operators[alg] = makeWindowRpcZkOperator(alg, zkEngine)
+		operators[alg] = makeExternalRpcZkOperator(alg, zkEngine)
 	}
 
 	return operators
@@ -297,7 +297,7 @@ function getOprfOperators(
 	// a ZK operator & wants to use it
 	const operators: OPRFOperators = {}
 	for(const alg of ALL_ENC_ALGORITHMS) {
-		operators[alg] = makeWindowRpcOprfOperator(alg, zkEngine)
+		operators[alg] = makeExternalRpcOprfOperator(alg, zkEngine)
 	}
 
 	return operators

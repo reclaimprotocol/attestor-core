@@ -107,7 +107,7 @@ export type CreateClaimResponse = {
  * Fns the app calls on the attestor.
  * These are things done inside the attestor
  */
-export type WindowRPCClient = {
+export type ExternalRPCClient = {
 	/**
 	 * Create a claim on the attestor where the RPC SDK is hosted.
 	 */
@@ -157,7 +157,7 @@ export type ExecuteOPRFOpts<T extends keyof OPRFOperator = keyof OPRFOperator>
 /**
  * Fns the attestor calls on the app
  */
-export type WindowRPCAppClient = {
+export type ExternalRPCAppClient = {
 	executeZkFunctionV3(opts: ExecuteZKOpts): Promise<any>
 	executeOprfFunctionV3(opts: ExecuteOPRFOpts): Promise<any>
 
@@ -173,17 +173,17 @@ export type WindowRPCAppClient = {
 
 type AnyRPCClient = { [_: string]: (opts: any) => any }
 
-export type WindowRPCRequest<T extends AnyRPCClient, K extends keyof T> = {
+export type ExternalRPCRequest<T extends AnyRPCClient, K extends keyof T> = {
 	type: K
 	request: Parameters<T[K]>[0]
 }
 
-export type WindowRPCResponse<T extends AnyRPCClient, K extends (keyof T) & string> = {
+export type ExternalRPCResponse<T extends AnyRPCClient, K extends (keyof T) & string> = {
 	type: `${K}Done`
 	response: Awaited<ReturnType<T[K]>>
 }
 
-export type WindowRPCErrorResponse = {
+export type ExternalRPCErrorResponse = {
 	type: 'error'
 	data: {
 		message: string
@@ -197,24 +197,24 @@ type AsResponse<T> = T & { isResponse: true }
  * Data sent to the attestor from the window/application
  */
 // spread out each key because TS can't handle
-export type WindowRPCIncomingMsg = (
-	WindowRPCRequest<WindowRPCClient, 'createClaim'>
-	| WindowRPCRequest<WindowRPCClient, 'createClaimOnAvs'>
-	| WindowRPCRequest<WindowRPCClient, 'createClaimOnMechain'>
-	| WindowRPCRequest<WindowRPCClient, 'extractHtmlElement'>
-	| WindowRPCRequest<WindowRPCClient, 'extractJSONValueIndex'>
-	| WindowRPCRequest<WindowRPCClient, 'getCurrentMemoryUsage'>
-	| WindowRPCRequest<WindowRPCClient, 'setLogLevel'>
-  | WindowRPCRequest<WindowRPCClient, 'benchmarkZK'>
-	| WindowRPCRequest<WindowRPCClient, 'ping'>
-	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'executeZkFunctionV3'>>
-	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'executeOprfFunctionV3'>>
-	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'updateProviderParams'>>
-	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'connectWs'>>
-	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'disconnectWs'>>
-	| AsResponse<WindowRPCResponse<WindowRPCAppClient, 'sendWsMessage'>>
-	| AsResponse<WindowRPCErrorResponse>
-	| WindowRPCRequest<WindowRPCAppClient, 'sendWsMessage'>
+export type ExternalRPCIncomingMsg = (
+	ExternalRPCRequest<ExternalRPCClient, 'createClaim'>
+	| ExternalRPCRequest<ExternalRPCClient, 'createClaimOnAvs'>
+	| ExternalRPCRequest<ExternalRPCClient, 'createClaimOnMechain'>
+	| ExternalRPCRequest<ExternalRPCClient, 'extractHtmlElement'>
+	| ExternalRPCRequest<ExternalRPCClient, 'extractJSONValueIndex'>
+	| ExternalRPCRequest<ExternalRPCClient, 'getCurrentMemoryUsage'>
+	| ExternalRPCRequest<ExternalRPCClient, 'setLogLevel'>
+  | ExternalRPCRequest<ExternalRPCClient, 'benchmarkZK'>
+	| ExternalRPCRequest<ExternalRPCClient, 'ping'>
+	| AsResponse<ExternalRPCResponse<ExternalRPCAppClient, 'executeZkFunctionV3'>>
+	| AsResponse<ExternalRPCResponse<ExternalRPCAppClient, 'executeOprfFunctionV3'>>
+	| AsResponse<ExternalRPCResponse<ExternalRPCAppClient, 'updateProviderParams'>>
+	| AsResponse<ExternalRPCResponse<ExternalRPCAppClient, 'connectWs'>>
+	| AsResponse<ExternalRPCResponse<ExternalRPCAppClient, 'disconnectWs'>>
+	| AsResponse<ExternalRPCResponse<ExternalRPCAppClient, 'sendWsMessage'>>
+	| AsResponse<ExternalRPCErrorResponse>
+	| ExternalRPCRequest<ExternalRPCAppClient, 'sendWsMessage'>
 	| {
 		type: 'disconnectWs'
 		request: {
@@ -228,21 +228,21 @@ export type WindowRPCIncomingMsg = (
  * Data sent back from the attestor to
  * the window/application containing the attestor
  */
-export type WindowRPCOutgoingMsg = (
-	AsResponse<WindowRPCResponse<WindowRPCClient, 'createClaim'>>
-	| AsResponse<WindowRPCResponse<WindowRPCClient, 'createClaimOnAvs'>>
-	| AsResponse<WindowRPCResponse<WindowRPCClient, 'extractHtmlElement'>>
-	| AsResponse<WindowRPCResponse<WindowRPCClient, 'extractJSONValueIndex'>>
-	| AsResponse<WindowRPCResponse<WindowRPCClient, 'getCurrentMemoryUsage'>>
-	| AsResponse<WindowRPCResponse<WindowRPCClient, 'setLogLevel'>>
-  | AsResponse<WindowRPCResponse<WindowRPCClient, 'benchmarkZK'>>
-	| AsResponse<WindowRPCResponse<WindowRPCClient, 'ping'>>
-	| WindowRPCRequest<WindowRPCAppClient, 'executeZkFunctionV3'>
-	| WindowRPCRequest<WindowRPCAppClient, 'executeOprfFunctionV3'>
-	| WindowRPCRequest<WindowRPCAppClient, 'updateProviderParams'>
-	| WindowRPCRequest<WindowRPCAppClient, 'connectWs'>
-	| WindowRPCRequest<WindowRPCAppClient, 'disconnectWs'>
-	| WindowRPCRequest<WindowRPCAppClient, 'sendWsMessage'>
+export type ExternalRPCOutgoingMsg = (
+	AsResponse<ExternalRPCResponse<ExternalRPCClient, 'createClaim'>>
+	| AsResponse<ExternalRPCResponse<ExternalRPCClient, 'createClaimOnAvs'>>
+	| AsResponse<ExternalRPCResponse<ExternalRPCClient, 'extractHtmlElement'>>
+	| AsResponse<ExternalRPCResponse<ExternalRPCClient, 'extractJSONValueIndex'>>
+	| AsResponse<ExternalRPCResponse<ExternalRPCClient, 'getCurrentMemoryUsage'>>
+	| AsResponse<ExternalRPCResponse<ExternalRPCClient, 'setLogLevel'>>
+  | AsResponse<ExternalRPCResponse<ExternalRPCClient, 'benchmarkZK'>>
+	| AsResponse<ExternalRPCResponse<ExternalRPCClient, 'ping'>>
+	| ExternalRPCRequest<ExternalRPCAppClient, 'executeZkFunctionV3'>
+	| ExternalRPCRequest<ExternalRPCAppClient, 'executeOprfFunctionV3'>
+	| ExternalRPCRequest<ExternalRPCAppClient, 'updateProviderParams'>
+	| ExternalRPCRequest<ExternalRPCAppClient, 'connectWs'>
+	| ExternalRPCRequest<ExternalRPCAppClient, 'disconnectWs'>
+	| ExternalRPCRequest<ExternalRPCAppClient, 'sendWsMessage'>
 	| (
 		{
 			type: 'createClaimStep'
@@ -271,5 +271,5 @@ export type WindowRPCOutgoingMsg = (
 			message: object
 		}
 	)
-	| AsResponse<WindowRPCErrorResponse>
+	| AsResponse<ExternalRPCErrorResponse>
 ) & IdentifiedMessage
