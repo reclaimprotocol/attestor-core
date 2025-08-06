@@ -1,10 +1,10 @@
 import * as esbuild from 'esbuild'
 
 const rslt = await esbuild.build({
-	entryPoints: ['src/index.ts'],
+	entryPoints: ['src/external-rpc/index.ts'],
 	bundle: true,
 	minify: true,
-	outfile: 'browser/resources/attestor.min.js',
+	outfile: 'browser/resources/attestor-browser.min.mjs',
 	platform: 'browser',
 	format: 'esm',
 	tsconfig: 'tsconfig.build.json',
@@ -16,7 +16,7 @@ const rslt = await esbuild.build({
 		'koffi': '#src/scripts/fallbacks/empty.ts',
 		'ip-cidr': '#src/scripts/fallbacks/empty.ts',
 		'snarkjs': '#src/scripts/fallbacks/snarkjs.ts',
-		're2': '#src/scripts/fallbacks/empty.ts',
+		're2': '#src/scripts/fallbacks/re2.ts',
 	},
 	external: [
 		'dotenv',

@@ -1,3 +1,5 @@
+import { setCryptoImplementation } from '@reclaimprotocol/tls'
+import { webcryptoCrypto } from '@reclaimprotocol/tls/webcrypto'
 import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import { utils } from 'ethers'
 
@@ -22,7 +24,7 @@ const VALID_MODULES = [
 let logger = LOGGER
 
 /**
- * Sets up the current window to listen for RPC requests
+ * For browsers only. Sets up the current window to listen for RPC requests
  * from React Native or other windows
  */
 export function setupWindowRpc(baseUrl?: string, channel = 'attestor-core') {
@@ -39,6 +41,8 @@ export function setupWindowRpc(baseUrl?: string, channel = 'attestor-core') {
 	} else if(!globalThis.RPC_CHANNEL_NAME) {
 		throw new Error('No channel name provided and globalThis.RPC_CHANNEL_NAME unavailable')
 	}
+
+	setCryptoImplementation(webcryptoCrypto)
 
 	logger = makeLogger(true)
 

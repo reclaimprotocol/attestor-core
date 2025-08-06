@@ -1,9 +1,22 @@
 import * as esbuild from 'esbuild'
 
+// are we building for the CLI (used for testing)?
+const isCliBuild = process.argv.includes('--cli')
+
 const rslt = await esbuild.build({
-	entryPoints: ['src/scripts/jsc-cli-rpc.ts'],
 	bundle: true,
-	outfile: 'out/jsc-cli-rpc.mjs',
+	...(
+		isCliBuild
+			? {
+				entryPoints: ['src/scripts/jsc-cli-rpc.ts'],
+				outfile: 'out/jsc-cli-rpc.mjs'
+			}
+			: {
+				minify: true,
+				entryPoints: ['src/external-rpc/index.ts'],
+				outfile: 'browser/resources/attestor-jsc.min.mjs'
+			}
+	),
 	format: 'esm',
 	tsconfig: 'tsconfig.build.json',
 	legalComments: 'none',

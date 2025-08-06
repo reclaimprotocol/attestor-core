@@ -165,9 +165,24 @@ export type ExternalRPCAppClient = {
 		params: Partial<ProviderParams<'http'>>
 		secretParams: Partial<ProviderSecretParams<'http'>>
 	}>
-
+	/**
+	 * The runtime needs to open a WebSocket connection. Is required for
+	 * runtimes that do not support WebSockets natively.
+	 *
+	 * The app should facilitate this by opening a WebSocket connection
+	 * to the given URL.
+	 * "id" is a unique identifier for the WebSocket connection.
+	 */
 	connectWs(opts: { id: string, url: string }): Promise<{}>
+	/**
+	 * Runtime wants to disconnect a WebSocket connection.
+	 * "code" is an optional close code,
+	 * and "reason" is an optional reason for closing.
+	 */
 	disconnectWs(opts: { id: string, code?: number, reason?: any }): Promise<{}>
+	/**
+	 * Runtime wants to send a message over a WebSocket connection.
+	 */
 	sendWsMessage(opts: { id: string, data: ArrayBufferView | string }): Promise<{}>
 }
 
