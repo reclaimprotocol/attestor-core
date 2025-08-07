@@ -93,7 +93,7 @@
     "parse5": "^8.0.0",
     "parse5-htmlparser2-tree-adapter": "^8.0.0",
     "pino": "^9.5.0",
-    "re2": "^1.21.4",
+    "re2": "^1.22.1",
     "serve-static": "^1.16.2",
     "snarkjs": "^0.7.5",
     "ws": "^8.18.0",

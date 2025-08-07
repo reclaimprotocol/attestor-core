@@ -18,12 +18,17 @@ const ZK_CIPHER_SUITES: CipherSuite[] = [
 	'TLS_AES_128_GCM_SHA256',
 	'TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256',
 	'TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256',
+	'TLS_RSA_WITH_AES_128_GCM_SHA256'
 ]
 
 const NAMED_CURVE_LIST = detectEnvironment() === 'node'
 	? SUPPORTED_NAMED_CURVES
 	// X25519 is not supported in the browser
 	: SUPPORTED_NAMED_CURVES.filter(c => c !== 'X25519')
+
+TLS_ADDITIONAL_ROOT_CA_LIST.push(
+	// ... add any additional root CA PEMs here
+)
 
 export function getDefaultTlsOptions(): TLSConnectionOptions {
 	return {
