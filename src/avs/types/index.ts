@@ -1,5 +1,6 @@
 
-import type { NewTaskCreatedEventObject } from 'src/avs/contracts/ReclaimServiceManager'
+import type { ethers } from 'ethers'
+import type { NewTaskCreatedEventObject } from 'src/avs/contracts/ReclaimTaskManager'
 import type { createClaimOnAttestor } from 'src/client'
 import type { ClaimTunnelResponse } from 'src/proto/api'
 import type { CreateClaimOnAttestorOpts, ProofGenerationStep, ProviderName } from 'src/types'
@@ -11,6 +12,8 @@ export type ChainConfig = {
 	 */
 	contractAddress: string
 	delegationManagerAddress: string
+	rewardsCoordinatorAddress: string
+	slashingCoordinatorAddress: string
 	stakeRegistryAddress: string
 	avsDirectoryAddress: string
 }
@@ -51,6 +54,14 @@ export type CreateClaimOnAvsOpts<N extends ProviderName> = (
 	 * @default undefined (owner of the claim)
 	 */
 	payer?: { attestor: string }
+
+	/**
+	 * Specify the fee to pay for this claim. Ensure the wallet
+	 * has enough balance to pay for the fee.
+	 *
+	 * @default 'minimum fee configured in the contract'
+	 */
+	fee?: ethers.BigNumberish
 
 	onStep?(step: CreateClaimOnAvsStep): void
 	/**

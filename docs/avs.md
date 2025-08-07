@@ -132,13 +132,14 @@ Regardless, if you're one of the chosen few -- here's how you can register yours
 2. Run `npm install`
 3. Install the submodules with `git submodule update --init --recursive`
 	- this'll enable you to work on the contracts
-4. Run `npm run start:chain` to start the local chain with the contracts already deployed
 
 **Building the contracts**:
 	- `npm run build:contracts`
+	- `npm run generate:avs-types` to generate the types for the AVS contracts
+		- before generating types, make sure contracts are built first
 **Deploying the contracts locally**:
-	- `npm run deploy:contracts`
-	- This will deploy the contracts on the local anvil network, and save the state of the contracts.
+	- `npm run start:chain`
+	- This will start the local chain, build the contracts & deploy them on the local chain too.
 **Testing**:
 	- `npm run test` to run all the tests
 	- `npm run test:avs` to run the AVS tests

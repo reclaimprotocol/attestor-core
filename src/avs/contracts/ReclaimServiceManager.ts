@@ -26,92 +26,7 @@ import type {
   OnEvent,
 } from "./common";
 
-export declare namespace IReclaimServiceManager {
-  export type ClaimRequestStruct = {
-    provider: string;
-    claimUserId: BytesLike;
-    claimHash: BytesLike;
-    requestedAt: BigNumberish;
-    owner: string;
-  };
-
-  export type ClaimRequestStructOutput = [
-    string,
-    string,
-    string,
-    number,
-    string
-  ] & {
-    provider: string;
-    claimUserId: string;
-    claimHash: string;
-    requestedAt: number;
-    owner: string;
-  };
-
-  export type OperatorMetadataStruct = { addr: string; url: string };
-
-  export type OperatorMetadataStructOutput = [string, string] & {
-    addr: string;
-    url: string;
-  };
-
-  export type OperatorStruct = { addr: string; url: string };
-
-  export type OperatorStructOutput = [string, string] & {
-    addr: string;
-    url: string;
-  };
-
-  export type TaskStruct = {
-    request: IReclaimServiceManager.ClaimRequestStruct;
-    createdAt: BigNumberish;
-    expiresAt: BigNumberish;
-    minimumSignatures: BigNumberish;
-    operators: IReclaimServiceManager.OperatorStruct[];
-    feePaid: BigNumberish;
-  };
-
-  export type TaskStructOutput = [
-    IReclaimServiceManager.ClaimRequestStructOutput,
-    number,
-    number,
-    number,
-    IReclaimServiceManager.OperatorStructOutput[],
-    BigNumber
-  ] & {
-    request: IReclaimServiceManager.ClaimRequestStructOutput;
-    createdAt: number;
-    expiresAt: number;
-    minimumSignatures: number;
-    operators: IReclaimServiceManager.OperatorStructOutput[];
-    feePaid: BigNumber;
-  };
-
-  export type CompletedTaskStruct = {
-    task: IReclaimServiceManager.TaskStruct;
-    signatures: BytesLike[];
-  };
-
-  export type CompletedTaskStructOutput = [
-    IReclaimServiceManager.TaskStructOutput,
-    string[]
-  ] & { task: IReclaimServiceManager.TaskStructOutput; signatures: string[] };
-
-  export type TaskCreationMetadataStruct = {
-    maxTaskLifetimeS: BigNumberish;
-    minSignaturesPerTask: BigNumberish;
-    maxTaskCreationDelayS: BigNumberish;
-  };
-
-  export type TaskCreationMetadataStructOutput = [number, number, number] & {
-    maxTaskLifetimeS: number;
-    minSignaturesPerTask: number;
-    maxTaskCreationDelayS: number;
-  };
-}
-
-export declare namespace IPaymentCoordinator {
+export declare namespace IRewardsCoordinatorTypes {
   export type StrategyAndMultiplierStruct = {
     strategy: string;
     multiplier: BigNumberish;
@@ -122,30 +37,62 @@ export declare namespace IPaymentCoordinator {
     multiplier: BigNumber;
   };
 
-  export type RangePaymentStruct = {
-    strategiesAndMultipliers: IPaymentCoordinator.StrategyAndMultiplierStruct[];
+  export type RewardsSubmissionStruct = {
+    strategiesAndMultipliers: IRewardsCoordinatorTypes.StrategyAndMultiplierStruct[];
     token: string;
     amount: BigNumberish;
     startTimestamp: BigNumberish;
     duration: BigNumberish;
   };
 
-  export type RangePaymentStructOutput = [
-    IPaymentCoordinator.StrategyAndMultiplierStructOutput[],
+  export type RewardsSubmissionStructOutput = [
+    IRewardsCoordinatorTypes.StrategyAndMultiplierStructOutput[],
     string,
     BigNumber,
     number,
     number
   ] & {
-    strategiesAndMultipliers: IPaymentCoordinator.StrategyAndMultiplierStructOutput[];
+    strategiesAndMultipliers: IRewardsCoordinatorTypes.StrategyAndMultiplierStructOutput[];
     token: string;
     amount: BigNumber;
     startTimestamp: number;
     duration: number;
   };
+
+  export type OperatorRewardStruct = { operator: string; amount: BigNumberish };
+
+  export type OperatorRewardStructOutput = [string, BigNumber] & {
+    operator: string;
+    amount: BigNumber;
+  };
+
+  export type OperatorDirectedRewardsSubmissionStruct = {
+    strategiesAndMultipliers: IRewardsCoordinatorTypes.StrategyAndMultiplierStruct[];
+    token: string;
+    operatorRewards: IRewardsCoordinatorTypes.OperatorRewardStruct[];
+    startTimestamp: BigNumberish;
+    duration: BigNumberish;
+    description: string;
+  };
+
+  export type OperatorDirectedRewardsSubmissionStructOutput = [
+    IRewardsCoordinatorTypes.StrategyAndMultiplierStructOutput[],
+    string,
+    IRewardsCoordinatorTypes.OperatorRewardStructOutput[],
+    number,
+    number,
+    string
+  ] & {
+    strategiesAndMultipliers: IRewardsCoordinatorTypes.StrategyAndMultiplierStructOutput[];
+    token: string;
+    operatorRewards: IRewardsCoordinatorTypes.OperatorRewardStructOutput[];
+    startTimestamp: number;
+    duration: number;
+    description: string;
+  };
 }
 
-export declare namespace ISignatureUtils {
+export declare namespace ISignatureUtilsMixinTypes {
   export type SignatureWithSaltAndExpiryStruct = {
     signature: BytesLike;
     salt: BytesLike;
@@ -161,115 +108,93 @@ export declare namespace ISignatureUtils {
 
 export interface ReclaimServiceManagerInterface extends utils.Interface {
   functions: {
-    "admins(uint256)": FunctionFragment;
-    "allTaskHashes(uint32)": FunctionFragment;
+    "addOperatorToWhitelist(address)": FunctionFragment;
+    "addPendingAdmin(address)": FunctionFragment;
     "avsDirectory()": FunctionFragment;
-    "checkSignerAddress((string,bytes32,bytes32,uint32,address),bytes)": FunctionFragment;
-    "createNewTask((string,bytes32,bytes32,uint32,address),bytes)": FunctionFragment;
+    "createAVSRewardsSubmission(((address,uint96)[],address,uint256,uint32,uint32)[])": FunctionFragment;
+    "createOperatorDirectedAVSRewardsSubmission(((address,uint96)[],address,(address,uint256)[],uint32,uint32,string)[])": FunctionFragment;
     "deregisterOperatorFromAVS(address)": FunctionFragment;
-    "encodeClaimRequest((string,bytes32,bytes32,uint32,address))": FunctionFragment;
-    "getMetadataForOperator(address)": FunctionFragment;
+    "deregisterOperatorFromOperatorSets(address,uint32[])": FunctionFragment;
     "getOperatorRestakedStrategies(address)": FunctionFragment;
     "getRestakeableStrategies()": FunctionFragment;
-    "isAdmin(address)": FunctionFragment;
+    "initialize(address,address)": FunctionFragment;
     "isOperatorWhitelisted(address)": FunctionFragment;
-    "latestTaskNum()": FunctionFragment;
-    "operatorHasMinimumWeight(address)": FunctionFragment;
     "owner()": FunctionFragment;
-    "pause(uint256)": FunctionFragment;
-    "pauseAll()": FunctionFragment;
-    "paused(uint8)": FunctionFragment;
-    "paused()": FunctionFragment;
-    "pauserRegistry()": FunctionFragment;
-    "payForRange(((address,uint96)[],address,uint256,uint32,uint32)[])": FunctionFragment;
     "registerOperatorToAVS(address,(bytes,bytes32,uint256))": FunctionFragment;
-    "registeredOperators(uint256)": FunctionFragment;
+    "removeAdmin(address)": FunctionFragment;
+    "removeAppointee(address,address,bytes4)": FunctionFragment;
+    "removeOperatorFromWhitelist(address)": FunctionFragment;
+    "removePendingAdmin(address)": FunctionFragment;
     "renounceOwnership()": FunctionFragment;
-    "setPauserRegistry(address)": FunctionFragment;
-    "setup(address)": FunctionFragment;
-    "stakeRegistry()": FunctionFragment;
-    "taskCompleted((((string,bytes32,bytes32,uint32,address),uint32,uint32,uint8,(address,string)[],uint256),bytes[]),uint32)": FunctionFragment;
-    "taskCreationMetadata()": FunctionFragment;
+    "rewardsInitiator()": FunctionFragment;
+    "setAppointee(address,address,bytes4)": FunctionFragment;
+    "setClaimerFor(address)": FunctionFragment;
+    "setRewardsInitiator(address)": FunctionFragment;
+    "slashingRegistryCoordinator()": FunctionFragment;
+    "taskManager()": FunctionFragment;
     "transferOwnership(address)": FunctionFragment;
-    "unpause(uint256)": FunctionFragment;
     "updateAVSMetadataURI(string)": FunctionFragment;
-    "updateOperatorMetadata((address,string))": FunctionFragment;
-    "updateTaskCreationMetadata((uint32,uint8,uint32))": FunctionFragment;
-    "whitelistAddressAsOperator(address,bool)": FunctionFragment;
     "whitelistedOperators(uint256)": FunctionFragment;
   };
 
   getFunction(
     nameOrSignatureOrTopic:
-      | "admins"
-      | "allTaskHashes"
+      | "addOperatorToWhitelist"
+      | "addPendingAdmin"
       | "avsDirectory"
-      | "checkSignerAddress"
-      | "createNewTask"
+      | "createAVSRewardsSubmission"
+      | "createOperatorDirectedAVSRewardsSubmission"
       | "deregisterOperatorFromAVS"
-      | "encodeClaimRequest"
-      | "getMetadataForOperator"
+      | "deregisterOperatorFromOperatorSets"
       | "getOperatorRestakedStrategies"
       | "getRestakeableStrategies"
-      | "isAdmin"
+      | "initialize"
       | "isOperatorWhitelisted"
-      | "latestTaskNum"
-      | "operatorHasMinimumWeight"
       | "owner"
-      | "pause"
-      | "pauseAll"
-      | "paused(uint8)"
-      | "paused()"
-      | "pauserRegistry"
-      | "payForRange"
       | "registerOperatorToAVS"
-      | "registeredOperators"
+      | "removeAdmin"
+      | "removeAppointee"
+      | "removeOperatorFromWhitelist"
+      | "removePendingAdmin"
       | "renounceOwnership"
-      | "setPauserRegistry"
-      | "setup"
-      | "stakeRegistry"
-      | "taskCompleted"
-      | "taskCreationMetadata"
+      | "rewardsInitiator"
+      | "setAppointee"
+      | "setClaimerFor"
+      | "setRewardsInitiator"
+      | "slashingRegistryCoordinator"
+      | "taskManager"
       | "transferOwnership"
-      | "unpause"
       | "updateAVSMetadataURI"
-      | "updateOperatorMetadata"
-      | "updateTaskCreationMetadata"
-      | "whitelistAddressAsOperator"
       | "whitelistedOperators"
   ): FunctionFragment;
 
   encodeFunctionData(
-    functionFragment: "admins",
-    values: [BigNumberish]
+    functionFragment: "addOperatorToWhitelist",
+    values: [string]
   ): string;
   encodeFunctionData(
-    functionFragment: "allTaskHashes",
-    values: [BigNumberish]
+    functionFragment: "addPendingAdmin",
+    values: [string]
   ): string;
   encodeFunctionData(
     functionFragment: "avsDirectory",
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "checkSignerAddress",
-    values: [IReclaimServiceManager.ClaimRequestStruct, BytesLike]
+    functionFragment: "createAVSRewardsSubmission",
+    values: [IRewardsCoordinatorTypes.RewardsSubmissionStruct[]]
   ): string;
   encodeFunctionData(
-    functionFragment: "createNewTask",
-    values: [IReclaimServiceManager.ClaimRequestStruct, BytesLike]
+    functionFragment: "createOperatorDirectedAVSRewardsSubmission",
+    values: [IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[]]
   ): string;
   encodeFunctionData(
     functionFragment: "deregisterOperatorFromAVS",
     values: [string]
   ): string;
   encodeFunctionData(
-    functionFragment: "encodeClaimRequest",
-    values: [IReclaimServiceManager.ClaimRequestStruct]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getMetadataForOperator",
-    values: [string]
+    functionFragment: "deregisterOperatorFromOperatorSets",
+    values: [string, BigNumberish[]]
   ): string;
   encodeFunctionData(
     functionFragment: "getOperatorRestakedStrategies",
@@ -279,62 +204,58 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
     functionFragment: "getRestakeableStrategies",
     values?: undefined
   ): string;
-  encodeFunctionData(functionFragment: "isAdmin", values: [string]): string;
+  encodeFunctionData(
+    functionFragment: "initialize",
+    values: [string, string]
+  ): string;
   encodeFunctionData(
     functionFragment: "isOperatorWhitelisted",
     values: [string]
   ): string;
-  encodeFunctionData(
-    functionFragment: "latestTaskNum",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "operatorHasMinimumWeight",
-    values: [string]
-  ): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
-  encodeFunctionData(functionFragment: "pause", values: [BigNumberish]): string;
-  encodeFunctionData(functionFragment: "pauseAll", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "paused(uint8)",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(functionFragment: "paused()", values?: undefined): string;
-  encodeFunctionData(
-    functionFragment: "pauserRegistry",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "payForRange",
-    values: [IPaymentCoordinator.RangePaymentStruct[]]
-  ): string;
   encodeFunctionData(
     functionFragment: "registerOperatorToAVS",
-    values: [string, ISignatureUtils.SignatureWithSaltAndExpiryStruct]
+    values: [string, ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct]
+  ): string;
+  encodeFunctionData(functionFragment: "removeAdmin", values: [string]): string;
+  encodeFunctionData(
+    functionFragment: "removeAppointee",
+    values: [string, string, BytesLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "registeredOperators",
-    values: [BigNumberish]
+    functionFragment: "removeOperatorFromWhitelist",
+    values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "removePendingAdmin",
+    values: [string]
   ): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "setPauserRegistry",
-    values: [string]
-  ): string;
-  encodeFunctionData(functionFragment: "setup", values: [string]): string;
-  encodeFunctionData(
-    functionFragment: "stakeRegistry",
+    functionFragment: "rewardsInitiator",
     values?: undefined
   ): string;
   encodeFunctionData(
-    functionFragment: "taskCompleted",
-    values: [IReclaimServiceManager.CompletedTaskStruct, BigNumberish]
+    functionFragment: "setAppointee",
+    values: [string, string, BytesLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "taskCreationMetadata",
+    functionFragment: "setClaimerFor",
+    values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setRewardsInitiator",
+    values: [string]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "slashingRegistryCoordinator",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "taskManager",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -342,33 +263,20 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
     values: [string]
   ): string;
   encodeFunctionData(
-    functionFragment: "unpause",
-    values: [BigNumberish]
-  ): string;
-  encodeFunctionData(
     functionFragment: "updateAVSMetadataURI",
     values: [string]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "updateOperatorMetadata",
-    values: [IReclaimServiceManager.OperatorMetadataStruct]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "updateTaskCreationMetadata",
-    values: [IReclaimServiceManager.TaskCreationMetadataStruct]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "whitelistAddressAsOperator",
-    values: [string, boolean]
   ): string;
   encodeFunctionData(
     functionFragment: "whitelistedOperators",
     values: [BigNumberish]
   ): string;
 
-  decodeFunctionResult(functionFragment: "admins", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "allTaskHashes",
+    functionFragment: "addOperatorToWhitelist",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "addPendingAdmin",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -376,11 +284,11 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "checkSignerAddress",
+    functionFragment: "createAVSRewardsSubmission",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "createNewTask",
+    functionFragment: "createOperatorDirectedAVSRewardsSubmission",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -388,11 +296,7 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "encodeClaimRequest",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getMetadataForOperator",
+    functionFragment: "deregisterOperatorFromOperatorSets",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -403,41 +307,30 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
     functionFragment: "getRestakeableStrategies",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "isAdmin", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "isOperatorWhitelisted",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(
-    functionFragment: "latestTaskNum",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "operatorHasMinimumWeight",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "pause", data: BytesLike): Result;
-  decodeFunctionResult(functionFragment: "pauseAll", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "paused(uint8)",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "paused()", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "pauserRegistry",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "payForRange",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(
     functionFragment: "registerOperatorToAVS",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "registeredOperators",
+    functionFragment: "removeAdmin",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "removeAppointee",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "removeOperatorFromWhitelist",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "removePendingAdmin",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -445,41 +338,35 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "setPauserRegistry",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "setup", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "stakeRegistry",
+    functionFragment: "rewardsInitiator",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "taskCompleted",
+    functionFragment: "setAppointee",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "taskCreationMetadata",
+    functionFragment: "setClaimerFor",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setRewardsInitiator",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "slashingRegistryCoordinator",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "taskManager",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "transferOwnership",
     data: BytesLike
   ): Result;
-  decodeFunctionResult(functionFragment: "unpause", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "updateAVSMetadataURI",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "updateOperatorMetadata",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "updateTaskCreationMetadata",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "whitelistAddressAsOperator",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -489,21 +376,13 @@ export interface ReclaimServiceManagerInterface extends utils.Interface {
 
   events: {
     "Initialized(uint8)": EventFragment;
-    "NewTaskCreated(uint32,((string,bytes32,bytes32,uint32,address),uint32,uint32,uint8,(address,string)[],uint256))": EventFragment;
     "OwnershipTransferred(address,address)": EventFragment;
-    "Paused(address,uint256)": EventFragment;
-    "PauserRegistrySet(address,address)": EventFragment;
-    "TaskCompleted(uint32,(((string,bytes32,bytes32,uint32,address),uint32,uint32,uint8,(address,string)[],uint256),bytes[]))": EventFragment;
-    "Unpaused(address,uint256)": EventFragment;
+    "RewardsInitiatorUpdated(address,address)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "Initialized"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "NewTaskCreated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "OwnershipTransferred"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "Paused"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "PauserRegistrySet"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "TaskCompleted"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "Unpaused"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "RewardsInitiatorUpdated"): EventFragment;
 }
 
 export interface InitializedEventObject {
@@ -512,17 +391,6 @@ export interface InitializedEventObject {
 export type InitializedEvent = TypedEvent<[number], InitializedEventObject>;
 
 export type InitializedEventFilter = TypedEventFilter<InitializedEvent>;
-
-export interface NewTaskCreatedEventObject {
-  taskIndex: number;
-  task: IReclaimServiceManager.TaskStructOutput;
-}
-export type NewTaskCreatedEvent = TypedEvent<
-  [number, IReclaimServiceManager.TaskStructOutput],
-  NewTaskCreatedEventObject
->;
-
-export type NewTaskCreatedEventFilter = TypedEventFilter<NewTaskCreatedEvent>;
 
 export interface OwnershipTransferredEventObject {
   previousOwner: string;
@@ -536,47 +404,17 @@ export type OwnershipTransferredEvent = TypedEvent<
 export type OwnershipTransferredEventFilter =
   TypedEventFilter<OwnershipTransferredEvent>;
 
-export interface PausedEventObject {
-  account: string;
-  newPausedStatus: BigNumber;
+export interface RewardsInitiatorUpdatedEventObject {
+  prevRewardsInitiator: string;
+  newRewardsInitiator: string;
 }
-export type PausedEvent = TypedEvent<[string, BigNumber], PausedEventObject>;
-
-export type PausedEventFilter = TypedEventFilter<PausedEvent>;
-
-export interface PauserRegistrySetEventObject {
-  pauserRegistry: string;
-  newPauserRegistry: string;
-}
-export type PauserRegistrySetEvent = TypedEvent<
+export type RewardsInitiatorUpdatedEvent = TypedEvent<
   [string, string],
-  PauserRegistrySetEventObject
+  RewardsInitiatorUpdatedEventObject
 >;
 
-export type PauserRegistrySetEventFilter =
-  TypedEventFilter<PauserRegistrySetEvent>;
-
-export interface TaskCompletedEventObject {
-  taskIndex: number;
-  task: IReclaimServiceManager.CompletedTaskStructOutput;
-}
-export type TaskCompletedEvent = TypedEvent<
-  [number, IReclaimServiceManager.CompletedTaskStructOutput],
-  TaskCompletedEventObject
->;
-
-export type TaskCompletedEventFilter = TypedEventFilter<TaskCompletedEvent>;
-
-export interface UnpausedEventObject {
-  account: string;
-  newPausedStatus: BigNumber;
-}
-export type UnpausedEvent = TypedEvent<
-  [string, BigNumber],
-  UnpausedEventObject
->;
-
-export type UnpausedEventFilter = TypedEventFilter<UnpausedEvent>;
+export type RewardsInitiatorUpdatedEventFilter =
+  TypedEventFilter<RewardsInitiatorUpdatedEvent>;
 
 export interface ReclaimServiceManager extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
@@ -605,24 +443,25 @@ export interface ReclaimServiceManager extends BaseContract {
   removeListener: OnEvent<this>;
 
   functions: {
-    admins(arg0: BigNumberish, overrides?: CallOverrides): Promise<[string]>;
+    addOperatorToWhitelist(
+      operator: string,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-    allTaskHashes(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string]>;
+    addPendingAdmin(
+      admin: string,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
     avsDirectory(overrides?: CallOverrides): Promise<[string]>;
 
-    checkSignerAddress(
-      request: IReclaimServiceManager.ClaimRequestStruct,
-      requestSignature: BytesLike,
-      overrides?: CallOverrides
-    ): Promise<[string]>;
+    createAVSRewardsSubmission(
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
-    createNewTask(
-      request: IReclaimServiceManager.ClaimRequestStruct,
-      requestSignature: BytesLike,
+    createOperatorDirectedAVSRewardsSubmission(
+      operatorDirectedRewardsSubmissions: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[],
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
@@ -631,133 +470,94 @@ export interface ReclaimServiceManager extends BaseContract {
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
-    encodeClaimRequest(
-      request: IReclaimServiceManager.ClaimRequestStruct,
-      overrides?: CallOverrides
-    ): Promise<[string]>;
-
-    getMetadataForOperator(
+    deregisterOperatorFromOperatorSets(
       operator: string,
-      overrides?: CallOverrides
-    ): Promise<[IReclaimServiceManager.OperatorMetadataStructOutput]>;
+      operatorSetIds: BigNumberish[],
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
     getOperatorRestakedStrategies(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<[string[]]>;
 
     getRestakeableStrategies(overrides?: CallOverrides): Promise<[string[]]>;
 
-    isAdmin(_admin: string, overrides?: CallOverrides): Promise<[boolean]>;
+    initialize(
+      initialOwner: string,
+      rewardsInitiator: string,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
     isOperatorWhitelisted(
       operator: string,
       overrides?: CallOverrides
     ): Promise<[boolean]>;
 
-    latestTaskNum(overrides?: CallOverrides): Promise<[number]>;
-
-    operatorHasMinimumWeight(
-      operator: string,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>;
-
     owner(overrides?: CallOverrides): Promise<[string]>;
-
-    pause(
-      newPausedStatus: BigNumberish,
-      overrides?: Overrides & { from?: string }
-    ): Promise<ContractTransaction>;
-
-    pauseAll(
-      overrides?: Overrides & { from?: string }
-    ): Promise<ContractTransaction>;
-
-    "paused(uint8)"(
-      index: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>;
-
-    "paused()"(overrides?: CallOverrides): Promise<[BigNumber]>;
-
-    pauserRegistry(overrides?: CallOverrides): Promise<[string]>;
-
-    payForRange(
-      rangePayments: IPaymentCoordinator.RangePaymentStruct[],
-      overrides?: Overrides & { from?: string }
-    ): Promise<ContractTransaction>;
 
     registerOperatorToAVS(
       operator: string,
-      operatorSignature: ISignatureUtils.SignatureWithSaltAndExpiryStruct,
+      operatorSignature: ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
-    registeredOperators(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<[string, string] & { addr: string; url: string }>;
+    removeAdmin(
+      admin: string,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
+
+    removeAppointee(
+      appointee: string,
+      target: string,
+      selector: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
+
+    removeOperatorFromWhitelist(
+      operator: string,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
+
+    removePendingAdmin(
+      pendingAdmin: string,
+      overrides?: Overrides & { from?: string }
+    ): Promise<ContractTransaction>;
 
     renounceOwnership(
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
-    setPauserRegistry(
-      newPauserRegistry: string,
+    rewardsInitiator(overrides?: CallOverrides): Promise<[string]>;
+
+    setAppointee(
+      appointee: string,
+      target: string,
+      selector: BytesLike,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
-    setup(
-      initialAdmin: string,
+    setClaimerFor(
+      claimer: string,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
-    stakeRegistry(overrides?: CallOverrides): Promise<[string]>;
-
-    taskCompleted(
-      completedTask: IReclaimServiceManager.CompletedTaskStruct,
-      referenceTaskIndex: BigNumberish,
+    setRewardsInitiator(
+      newRewardsInitiator: string,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
-    taskCreationMetadata(
-      overrides?: CallOverrides
-    ): Promise<
-      [number, number, number] & {
-        maxTaskLifetimeS: number;
-        minSignaturesPerTask: number;
-        maxTaskCreationDelayS: number;
-      }
-    >;
+    slashingRegistryCoordinator(overrides?: CallOverrides): Promise<[string]>;
+
+    taskManager(overrides?: CallOverrides): Promise<[string]>;
 
     transferOwnership(
       newOwner: string,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
-    unpause(
-      newPausedStatus: BigNumberish,
-      overrides?: Overrides & { from?: string }
-    ): Promise<ContractTransaction>;
-
     updateAVSMetadataURI(
       _metadataURI: string,
-      overrides?: Overrides & { from?: string }
-    ): Promise<ContractTransaction>;
-
-    updateOperatorMetadata(
-      metadata: IReclaimServiceManager.OperatorMetadataStruct,
-      overrides?: Overrides & { from?: string }
-    ): Promise<ContractTransaction>;
-
-    updateTaskCreationMetadata(
-      newMetadata: IReclaimServiceManager.TaskCreationMetadataStruct,
-      overrides?: Overrides & { from?: string }
-    ): Promise<ContractTransaction>;
-
-    whitelistAddressAsOperator(
-      operator: string,
-      isWhitelisted: boolean,
       overrides?: Overrides & { from?: string }
     ): Promise<ContractTransaction>;
 
@@ -767,21 +567,25 @@ export interface ReclaimServiceManager extends BaseContract {
     ): Promise<[string]>;
   };
 
-  admins(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>;
+  addOperatorToWhitelist(
+    operator: string,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
 
-  allTaskHashes(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>;
+  addPendingAdmin(
+    admin: string,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
 
   avsDirectory(overrides?: CallOverrides): Promise<string>;
 
-  checkSignerAddress(
-    request: IReclaimServiceManager.ClaimRequestStruct,
-    requestSignature: BytesLike,
-    overrides?: CallOverrides
-  ): Promise<string>;
+  createAVSRewardsSubmission(
+    rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
 
-  createNewTask(
-    request: IReclaimServiceManager.ClaimRequestStruct,
-    requestSignature: BytesLike,
+  createOperatorDirectedAVSRewardsSubmission(
+    operatorDirectedRewardsSubmissions: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[],
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
@@ -790,133 +594,94 @@ export interface ReclaimServiceManager extends BaseContract {
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
-  encodeClaimRequest(
-    request: IReclaimServiceManager.ClaimRequestStruct,
-    overrides?: CallOverrides
-  ): Promise<string>;
-
-  getMetadataForOperator(
+  deregisterOperatorFromOperatorSets(
     operator: string,
-    overrides?: CallOverrides
-  ): Promise<IReclaimServiceManager.OperatorMetadataStructOutput>;
+    operatorSetIds: BigNumberish[],
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
 
   getOperatorRestakedStrategies(
-    _operator: string,
+    operator: string,
     overrides?: CallOverrides
   ): Promise<string[]>;
 
   getRestakeableStrategies(overrides?: CallOverrides): Promise<string[]>;
 
-  isAdmin(_admin: string, overrides?: CallOverrides): Promise<boolean>;
+  initialize(
+    initialOwner: string,
+    rewardsInitiator: string,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
 
   isOperatorWhitelisted(
     operator: string,
     overrides?: CallOverrides
   ): Promise<boolean>;
 
-  latestTaskNum(overrides?: CallOverrides): Promise<number>;
-
-  operatorHasMinimumWeight(
-    operator: string,
-    overrides?: CallOverrides
-  ): Promise<boolean>;
-
   owner(overrides?: CallOverrides): Promise<string>;
-
-  pause(
-    newPausedStatus: BigNumberish,
-    overrides?: Overrides & { from?: string }
-  ): Promise<ContractTransaction>;
-
-  pauseAll(
-    overrides?: Overrides & { from?: string }
-  ): Promise<ContractTransaction>;
-
-  "paused(uint8)"(
-    index: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<boolean>;
-
-  "paused()"(overrides?: CallOverrides): Promise<BigNumber>;
-
-  pauserRegistry(overrides?: CallOverrides): Promise<string>;
-
-  payForRange(
-    rangePayments: IPaymentCoordinator.RangePaymentStruct[],
-    overrides?: Overrides & { from?: string }
-  ): Promise<ContractTransaction>;
 
   registerOperatorToAVS(
     operator: string,
-    operatorSignature: ISignatureUtils.SignatureWithSaltAndExpiryStruct,
+    operatorSignature: ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
-  registeredOperators(
-    arg0: BigNumberish,
-    overrides?: CallOverrides
-  ): Promise<[string, string] & { addr: string; url: string }>;
+  removeAdmin(
+    admin: string,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  removeAppointee(
+    appointee: string,
+    target: string,
+    selector: BytesLike,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  removeOperatorFromWhitelist(
+    operator: string,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
+
+  removePendingAdmin(
+    pendingAdmin: string,
+    overrides?: Overrides & { from?: string }
+  ): Promise<ContractTransaction>;
 
   renounceOwnership(
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
-  setPauserRegistry(
-    newPauserRegistry: string,
+  rewardsInitiator(overrides?: CallOverrides): Promise<string>;
+
+  setAppointee(
+    appointee: string,
+    target: string,
+    selector: BytesLike,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
-  setup(
-    initialAdmin: string,
+  setClaimerFor(
+    claimer: string,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
-  stakeRegistry(overrides?: CallOverrides): Promise<string>;
-
-  taskCompleted(
-    completedTask: IReclaimServiceManager.CompletedTaskStruct,
-    referenceTaskIndex: BigNumberish,
+  setRewardsInitiator(
+    newRewardsInitiator: string,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
-  taskCreationMetadata(
-    overrides?: CallOverrides
-  ): Promise<
-    [number, number, number] & {
-      maxTaskLifetimeS: number;
-      minSignaturesPerTask: number;
-      maxTaskCreationDelayS: number;
-    }
-  >;
+  slashingRegistryCoordinator(overrides?: CallOverrides): Promise<string>;
+
+  taskManager(overrides?: CallOverrides): Promise<string>;
 
   transferOwnership(
     newOwner: string,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
-  unpause(
-    newPausedStatus: BigNumberish,
-    overrides?: Overrides & { from?: string }
-  ): Promise<ContractTransaction>;
-
   updateAVSMetadataURI(
     _metadataURI: string,
-    overrides?: Overrides & { from?: string }
-  ): Promise<ContractTransaction>;
-
-  updateOperatorMetadata(
-    metadata: IReclaimServiceManager.OperatorMetadataStruct,
-    overrides?: Overrides & { from?: string }
-  ): Promise<ContractTransaction>;
-
-  updateTaskCreationMetadata(
-    newMetadata: IReclaimServiceManager.TaskCreationMetadataStruct,
-    overrides?: Overrides & { from?: string }
-  ): Promise<ContractTransaction>;
-
-  whitelistAddressAsOperator(
-    operator: string,
-    isWhitelisted: boolean,
     overrides?: Overrides & { from?: string }
   ): Promise<ContractTransaction>;
 
@@ -926,24 +691,22 @@ export interface ReclaimServiceManager extends BaseContract {
   ): Promise<string>;
 
   callStatic: {
-    admins(arg0: BigNumberish, overrides?: CallOverrides): Promise<string>;
-
-    allTaskHashes(
-      arg0: BigNumberish,
+    addOperatorToWhitelist(
+      operator: string,
       overrides?: CallOverrides
-    ): Promise<string>;
+    ): Promise<void>;
+
+    addPendingAdmin(admin: string, overrides?: CallOverrides): Promise<void>;
 
     avsDirectory(overrides?: CallOverrides): Promise<string>;
 
-    checkSignerAddress(
-      request: IReclaimServiceManager.ClaimRequestStruct,
-      requestSignature: BytesLike,
+    createAVSRewardsSubmission(
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
       overrides?: CallOverrides
-    ): Promise<string>;
+    ): Promise<void>;
 
-    createNewTask(
-      request: IReclaimServiceManager.ClaimRequestStruct,
-      requestSignature: BytesLike,
+    createOperatorDirectedAVSRewardsSubmission(
+      operatorDirectedRewardsSubmissions: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[],
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -952,126 +715,86 @@ export interface ReclaimServiceManager extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
-    encodeClaimRequest(
-      request: IReclaimServiceManager.ClaimRequestStruct,
-      overrides?: CallOverrides
-    ): Promise<string>;
-
-    getMetadataForOperator(
+    deregisterOperatorFromOperatorSets(
       operator: string,
+      operatorSetIds: BigNumberish[],
       overrides?: CallOverrides
-    ): Promise<IReclaimServiceManager.OperatorMetadataStructOutput>;
+    ): Promise<void>;
 
     getOperatorRestakedStrategies(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<string[]>;
 
     getRestakeableStrategies(overrides?: CallOverrides): Promise<string[]>;
 
-    isAdmin(_admin: string, overrides?: CallOverrides): Promise<boolean>;
+    initialize(
+      initialOwner: string,
+      rewardsInitiator: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
 
     isOperatorWhitelisted(
       operator: string,
       overrides?: CallOverrides
     ): Promise<boolean>;
 
-    latestTaskNum(overrides?: CallOverrides): Promise<number>;
-
-    operatorHasMinimumWeight(
-      operator: string,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
-
     owner(overrides?: CallOverrides): Promise<string>;
-
-    pause(
-      newPausedStatus: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    pauseAll(overrides?: CallOverrides): Promise<void>;
-
-    "paused(uint8)"(
-      index: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
-
-    "paused()"(overrides?: CallOverrides): Promise<BigNumber>;
-
-    pauserRegistry(overrides?: CallOverrides): Promise<string>;
-
-    payForRange(
-      rangePayments: IPaymentCoordinator.RangePaymentStruct[],
-      overrides?: CallOverrides
-    ): Promise<void>;
 
     registerOperatorToAVS(
       operator: string,
-      operatorSignature: ISignatureUtils.SignatureWithSaltAndExpiryStruct,
+      operatorSignature: ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    registeredOperators(
-      arg0: BigNumberish,
+    removeAdmin(admin: string, overrides?: CallOverrides): Promise<void>;
+
+    removeAppointee(
+      appointee: string,
+      target: string,
+      selector: BytesLike,
       overrides?: CallOverrides
-    ): Promise<[string, string] & { addr: string; url: string }>;
+    ): Promise<void>;
+
+    removeOperatorFromWhitelist(
+      operator: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    removePendingAdmin(
+      pendingAdmin: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
 
     renounceOwnership(overrides?: CallOverrides): Promise<void>;
 
-    setPauserRegistry(
-      newPauserRegistry: string,
+    rewardsInitiator(overrides?: CallOverrides): Promise<string>;
+
+    setAppointee(
+      appointee: string,
+      target: string,
+      selector: BytesLike,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    setup(initialAdmin: string, overrides?: CallOverrides): Promise<void>;
+    setClaimerFor(claimer: string, overrides?: CallOverrides): Promise<void>;
 
-    stakeRegistry(overrides?: CallOverrides): Promise<string>;
-
-    taskCompleted(
-      completedTask: IReclaimServiceManager.CompletedTaskStruct,
-      referenceTaskIndex: BigNumberish,
+    setRewardsInitiator(
+      newRewardsInitiator: string,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    taskCreationMetadata(
-      overrides?: CallOverrides
-    ): Promise<
-      [number, number, number] & {
-        maxTaskLifetimeS: number;
-        minSignaturesPerTask: number;
-        maxTaskCreationDelayS: number;
-      }
-    >;
+    slashingRegistryCoordinator(overrides?: CallOverrides): Promise<string>;
+
+    taskManager(overrides?: CallOverrides): Promise<string>;
 
     transferOwnership(
       newOwner: string,
       overrides?: CallOverrides
     ): Promise<void>;
 
-    unpause(
-      newPausedStatus: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
     updateAVSMetadataURI(
       _metadataURI: string,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    updateOperatorMetadata(
-      metadata: IReclaimServiceManager.OperatorMetadataStruct,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    updateTaskCreationMetadata(
-      newMetadata: IReclaimServiceManager.TaskCreationMetadataStruct,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    whitelistAddressAsOperator(
-      operator: string,
-      isWhitelisted: boolean,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -1085,15 +808,6 @@ export interface ReclaimServiceManager extends BaseContract {
     "Initialized(uint8)"(version?: null): InitializedEventFilter;
     Initialized(version?: null): InitializedEventFilter;
 
-    "NewTaskCreated(uint32,((string,bytes32,bytes32,uint32,address),uint32,uint32,uint8,(address,string)[],uint256))"(
-      taskIndex?: BigNumberish | null,
-      task?: null
-    ): NewTaskCreatedEventFilter;
-    NewTaskCreated(
-      taskIndex?: BigNumberish | null,
-      task?: null
-    ): NewTaskCreatedEventFilter;
-
     "OwnershipTransferred(address,address)"(
       previousOwner?: string | null,
       newOwner?: string | null
@@ -1103,59 +817,36 @@ export interface ReclaimServiceManager extends BaseContract {
       newOwner?: string | null
     ): OwnershipTransferredEventFilter;
 
-    "Paused(address,uint256)"(
-      account?: string | null,
-      newPausedStatus?: null
-    ): PausedEventFilter;
-    Paused(account?: string | null, newPausedStatus?: null): PausedEventFilter;
-
-    "PauserRegistrySet(address,address)"(
-      pauserRegistry?: null,
-      newPauserRegistry?: null
-    ): PauserRegistrySetEventFilter;
-    PauserRegistrySet(
-      pauserRegistry?: null,
-      newPauserRegistry?: null
-    ): PauserRegistrySetEventFilter;
-
-    "TaskCompleted(uint32,(((string,bytes32,bytes32,uint32,address),uint32,uint32,uint8,(address,string)[],uint256),bytes[]))"(
-      taskIndex?: BigNumberish | null,
-      task?: null
-    ): TaskCompletedEventFilter;
-    TaskCompleted(
-      taskIndex?: BigNumberish | null,
-      task?: null
-    ): TaskCompletedEventFilter;
-
-    "Unpaused(address,uint256)"(
-      account?: string | null,
-      newPausedStatus?: null
-    ): UnpausedEventFilter;
-    Unpaused(
-      account?: string | null,
-      newPausedStatus?: null
-    ): UnpausedEventFilter;
+    "RewardsInitiatorUpdated(address,address)"(
+      prevRewardsInitiator?: null,
+      newRewardsInitiator?: null
+    ): RewardsInitiatorUpdatedEventFilter;
+    RewardsInitiatorUpdated(
+      prevRewardsInitiator?: null,
+      newRewardsInitiator?: null
+    ): RewardsInitiatorUpdatedEventFilter;
   };
 
   estimateGas: {
-    admins(arg0: BigNumberish, overrides?: CallOverrides): Promise<BigNumber>;
+    addOperatorToWhitelist(
+      operator: string,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
 
-    allTaskHashes(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
+    addPendingAdmin(
+      admin: string,
+      overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     avsDirectory(overrides?: CallOverrides): Promise<BigNumber>;
 
-    checkSignerAddress(
-      request: IReclaimServiceManager.ClaimRequestStruct,
-      requestSignature: BytesLike,
-      overrides?: CallOverrides
+    createAVSRewardsSubmission(
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
+      overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
-    createNewTask(
-      request: IReclaimServiceManager.ClaimRequestStruct,
-      requestSignature: BytesLike,
+    createOperatorDirectedAVSRewardsSubmission(
+      operatorDirectedRewardsSubmissions: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[],
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
@@ -1164,123 +855,94 @@ export interface ReclaimServiceManager extends BaseContract {
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
-    encodeClaimRequest(
-      request: IReclaimServiceManager.ClaimRequestStruct,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    getMetadataForOperator(
+    deregisterOperatorFromOperatorSets(
       operator: string,
-      overrides?: CallOverrides
+      operatorSetIds: BigNumberish[],
+      overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     getOperatorRestakedStrategies(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
     getRestakeableStrategies(overrides?: CallOverrides): Promise<BigNumber>;
 
-    isAdmin(_admin: string, overrides?: CallOverrides): Promise<BigNumber>;
+    initialize(
+      initialOwner: string,
+      rewardsInitiator: string,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
 
     isOperatorWhitelisted(
       operator: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
-    latestTaskNum(overrides?: CallOverrides): Promise<BigNumber>;
-
-    operatorHasMinimumWeight(
-      operator: string,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
     owner(overrides?: CallOverrides): Promise<BigNumber>;
-
-    pause(
-      newPausedStatus: BigNumberish,
-      overrides?: Overrides & { from?: string }
-    ): Promise<BigNumber>;
-
-    pauseAll(overrides?: Overrides & { from?: string }): Promise<BigNumber>;
-
-    "paused(uint8)"(
-      index: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    "paused()"(overrides?: CallOverrides): Promise<BigNumber>;
-
-    pauserRegistry(overrides?: CallOverrides): Promise<BigNumber>;
-
-    payForRange(
-      rangePayments: IPaymentCoordinator.RangePaymentStruct[],
-      overrides?: Overrides & { from?: string }
-    ): Promise<BigNumber>;
 
     registerOperatorToAVS(
       operator: string,
-      operatorSignature: ISignatureUtils.SignatureWithSaltAndExpiryStruct,
+      operatorSignature: ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
-    registeredOperators(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
+    removeAdmin(
+      admin: string,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    removeAppointee(
+      appointee: string,
+      target: string,
+      selector: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    removeOperatorFromWhitelist(
+      operator: string,
+      overrides?: Overrides & { from?: string }
+    ): Promise<BigNumber>;
+
+    removePendingAdmin(
+      pendingAdmin: string,
+      overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
     renounceOwnership(
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
-    setPauserRegistry(
-      newPauserRegistry: string,
+    rewardsInitiator(overrides?: CallOverrides): Promise<BigNumber>;
+
+    setAppointee(
+      appointee: string,
+      target: string,
+      selector: BytesLike,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
-    setup(
-      initialAdmin: string,
+    setClaimerFor(
+      claimer: string,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
-    stakeRegistry(overrides?: CallOverrides): Promise<BigNumber>;
-
-    taskCompleted(
-      completedTask: IReclaimServiceManager.CompletedTaskStruct,
-      referenceTaskIndex: BigNumberish,
+    setRewardsInitiator(
+      newRewardsInitiator: string,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
-    taskCreationMetadata(overrides?: CallOverrides): Promise<BigNumber>;
+    slashingRegistryCoordinator(overrides?: CallOverrides): Promise<BigNumber>;
+
+    taskManager(overrides?: CallOverrides): Promise<BigNumber>;
 
     transferOwnership(
       newOwner: string,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
-    unpause(
-      newPausedStatus: BigNumberish,
-      overrides?: Overrides & { from?: string }
-    ): Promise<BigNumber>;
-
     updateAVSMetadataURI(
       _metadataURI: string,
-      overrides?: Overrides & { from?: string }
-    ): Promise<BigNumber>;
-
-    updateOperatorMetadata(
-      metadata: IReclaimServiceManager.OperatorMetadataStruct,
-      overrides?: Overrides & { from?: string }
-    ): Promise<BigNumber>;
-
-    updateTaskCreationMetadata(
-      newMetadata: IReclaimServiceManager.TaskCreationMetadataStruct,
-      overrides?: Overrides & { from?: string }
-    ): Promise<BigNumber>;
-
-    whitelistAddressAsOperator(
-      operator: string,
-      isWhitelisted: boolean,
       overrides?: Overrides & { from?: string }
     ): Promise<BigNumber>;
 
@@ -1291,27 +953,25 @@ export interface ReclaimServiceManager extends BaseContract {
   };
 
   populateTransaction: {
-    admins(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
+    addOperatorToWhitelist(
+      operator: string,
+      overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
-    allTaskHashes(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
+    addPendingAdmin(
+      admin: string,
+      overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     avsDirectory(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
-    checkSignerAddress(
-      request: IReclaimServiceManager.ClaimRequestStruct,
-      requestSignature: BytesLike,
-      overrides?: CallOverrides
+    createAVSRewardsSubmission(
+      rewardsSubmissions: IRewardsCoordinatorTypes.RewardsSubmissionStruct[],
+      overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
-    createNewTask(
-      request: IReclaimServiceManager.ClaimRequestStruct,
-      requestSignature: BytesLike,
+    createOperatorDirectedAVSRewardsSubmission(
+      operatorDirectedRewardsSubmissions: IRewardsCoordinatorTypes.OperatorDirectedRewardsSubmissionStruct[],
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
@@ -1320,18 +980,14 @@ export interface ReclaimServiceManager extends BaseContract {
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
-    encodeClaimRequest(
-      request: IReclaimServiceManager.ClaimRequestStruct,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    getMetadataForOperator(
+    deregisterOperatorFromOperatorSets(
       operator: string,
-      overrides?: CallOverrides
+      operatorSetIds: BigNumberish[],
+      overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     getOperatorRestakedStrategies(
-      _operator: string,
+      operator: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -1339,9 +995,10 @@ export interface ReclaimServiceManager extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    isAdmin(
-      _admin: string,
-      overrides?: CallOverrides
+    initialize(
+      initialOwner: string,
+      rewardsInitiator: string,
+      overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     isOperatorWhitelisted(
@@ -1349,103 +1006,72 @@ export interface ReclaimServiceManager extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    latestTaskNum(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    operatorHasMinimumWeight(
-      operator: string,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
     owner(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    pause(
-      newPausedStatus: BigNumberish,
-      overrides?: Overrides & { from?: string }
-    ): Promise<PopulatedTransaction>;
-
-    pauseAll(
-      overrides?: Overrides & { from?: string }
-    ): Promise<PopulatedTransaction>;
-
-    "paused(uint8)"(
-      index: BigNumberish,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    "paused()"(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    pauserRegistry(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    payForRange(
-      rangePayments: IPaymentCoordinator.RangePaymentStruct[],
-      overrides?: Overrides & { from?: string }
-    ): Promise<PopulatedTransaction>;
 
     registerOperatorToAVS(
       operator: string,
-      operatorSignature: ISignatureUtils.SignatureWithSaltAndExpiryStruct,
+      operatorSignature: ISignatureUtilsMixinTypes.SignatureWithSaltAndExpiryStruct,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
-    registeredOperators(
-      arg0: BigNumberish,
-      overrides?: CallOverrides
+    removeAdmin(
+      admin: string,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    removeAppointee(
+      appointee: string,
+      target: string,
+      selector: BytesLike,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    removeOperatorFromWhitelist(
+      operator: string,
+      overrides?: Overrides & { from?: string }
+    ): Promise<PopulatedTransaction>;
+
+    removePendingAdmin(
+      pendingAdmin: string,
+      overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
     renounceOwnership(
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
-    setPauserRegistry(
-      newPauserRegistry: string,
+    rewardsInitiator(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    setAppointee(
+      appointee: string,
+      target: string,
+      selector: BytesLike,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
-    setup(
-      initialAdmin: string,
+    setClaimerFor(
+      claimer: string,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
-    stakeRegistry(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    taskCompleted(
-      completedTask: IReclaimServiceManager.CompletedTaskStruct,
-      referenceTaskIndex: BigNumberish,
+    setRewardsInitiator(
+      newRewardsInitiator: string,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
-    taskCreationMetadata(
+    slashingRegistryCoordinator(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
+
+    taskManager(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     transferOwnership(
       newOwner: string,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 
-    unpause(
-      newPausedStatus: BigNumberish,
-      overrides?: Overrides & { from?: string }
-    ): Promise<PopulatedTransaction>;
-
     updateAVSMetadataURI(
       _metadataURI: string,
-      overrides?: Overrides & { from?: string }
-    ): Promise<PopulatedTransaction>;
-
-    updateOperatorMetadata(
-      metadata: IReclaimServiceManager.OperatorMetadataStruct,
-      overrides?: Overrides & { from?: string }
-    ): Promise<PopulatedTransaction>;
-
-    updateTaskCreationMetadata(
-      newMetadata: IReclaimServiceManager.TaskCreationMetadataStruct,
-      overrides?: Overrides & { from?: string }
-    ): Promise<PopulatedTransaction>;
-
-    whitelistAddressAsOperator(
-      operator: string,
-      isWhitelisted: boolean,
       overrides?: Overrides & { from?: string }
     ): Promise<PopulatedTransaction>;
 

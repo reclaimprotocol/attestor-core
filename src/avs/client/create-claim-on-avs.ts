@@ -19,6 +19,7 @@ export async function createClaimOnAvs<N extends ProviderName>({
 	createClaimOnAttestor = _createClaimOnAttestor,
 	chainId = SELECTED_CHAIN_ID,
 	payer,
+	fee,
 	...opts
 }: CreateClaimOnAvsOpts<N>) {
 	const {
@@ -109,6 +110,11 @@ export async function createClaimOnAvs<N extends ProviderName>({
 	return { ...rslt, claimData: responses[0].claim! }
 
 	async function requestClaimCreation() {
+		if(!fee) {
+			const { minFee } = await contract.taskCreationMetadata()
+			fee = minFee
+		}
+
 		const request: IReclaimServiceManager.ClaimRequestStruct = {
 			provider: name,
 			// blank for now -- till we figure out the right
@@ -122,7 +128,8 @@ export async function createClaimOnAvs<N extends ProviderName>({
 					: '',
 			}),
 			owner: wallet!.address,
-			requestedAt: unixTimestampSeconds()
+			requestedAt: unixTimestampSeconds(),
+			fee: fee
 		}
 
 		if(!payer) {
@@ -165,7 +172,7 @@ export async function createClaimOnAvs<N extends ProviderName>({
 			const tx = await contract.taskCompleted(data, arg.taskIndex)
 			const rslt = await tx.wait()
 			// check task created event was emitted
-			const ev = rslt.events?.[0]
+			const ev = rslt.events?.find((ev) => ev.event === 'TaskCompleted')
 			return {
 				object: ev?.args as unknown as TaskCompletedEventObject,
 				txHash: rslt.transactionHash

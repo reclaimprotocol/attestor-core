@@ -414,8 +414,7 @@ export function ethersStructToPlainObject<T>(struct: T): T {
 		return struct
 	}
 
-	const namedKeys = Object.keys(struct)
-		.filter(key => isNaN(Number(key)))
+	const namedKeys = Object.keys(struct).filter(key => isNaN(Number(key)))
 	// seems to be an actual array
 	if(!namedKeys.length) {
 		return struct.map(ethersStructToPlainObject) as any

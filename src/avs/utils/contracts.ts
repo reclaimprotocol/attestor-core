@@ -1,12 +1,9 @@
 import { ethers } from 'ethers'
-import { avsDirectoryABI } from 'src/avs/abis/avsDirectoryABI'
-import { delegationABI } from 'src/avs/abis/delegationABI'
-import { registryABI } from 'src/avs/abis/registryABI'
 import { CHAIN_CONFIGS, PRIVATE_KEY, SELECTED_CHAIN_ID } from 'src/avs/config'
-import { ReclaimServiceManager__factory } from 'src/avs/contracts'
+import { AllocationManager__factory, AVSDirectory__factory, DelegationManager__factory, ECDSAStakeRegistry__factory, ERC20Mock__factory, ReclaimServiceManager__factory, ReclaimSlashingRegistryCoordinator__factory, RewardsCoordinator__factory } from 'src/avs/contracts'
 import { ChainConfig } from 'src/avs/types'
 
-type Contracts = ReturnType<typeof initialiseContracts>
+export type Contracts = ReturnType<typeof initialiseContracts>
 
 const configs: { [key: string]: Contracts } = {}
 
@@ -30,6 +27,8 @@ export function initialiseContracts(
 		avsDirectoryAddress,
 		contractAddress,
 		delegationManagerAddress,
+		rewardsCoordinatorAddress,
+		slashingCoordinatorAddress,
 	}: ChainConfig,
 	privateKey: string | undefined = PRIVATE_KEY
 ) {
@@ -37,29 +36,65 @@ export function initialiseContracts(
 	const wallet = privateKey
 		? new ethers.Wallet(privateKey, provider)
 		: undefined
+	// eslint-disable-next-line camelcase
+	const contract = ReclaimServiceManager__factory.connect(
+		contractAddress,
+		wallet || provider
+	)
+
+	console.log('wallet ', wallet?.address)
 
 	return {
 		provider,
 		wallet,
-		delegationManager: new ethers.Contract(
+		// eslint-disable-next-line camelcase
+		delegationManager: DelegationManager__factory.connect(
 			delegationManagerAddress,
-			delegationABI,
+			wallet || provider
+		),
+		contract,
+		// eslint-disable-next-line camelcase
+		registryContract: ECDSAStakeRegistry__factory.connect(
+			stakeRegistryAddress,
 			wallet || provider
 		),
 		// eslint-disable-next-line camelcase
-		contract: ReclaimServiceManager__factory.connect(
-			contractAddress,
-			wallet || provider
-		),
-		registryContract: new ethers.Contract(
-			stakeRegistryAddress,
-			registryABI,
-			wallet || provider
-		),
-		avsDirectory: new ethers.Contract(
+		avsDirectory: AVSDirectory__factory.connect(
 			avsDirectoryAddress,
-			avsDirectoryABI,
 			wallet || provider
 		),
+		// eslint-disable-next-line camelcase
+		rewardsCoordinator: RewardsCoordinator__factory.connect(
+			rewardsCoordinatorAddress,
+			wallet || provider
+		),
+		// eslint-disable-next-line camelcase
+		slashingCoordinator: ReclaimSlashingRegistryCoordinator__factory.connect(
+			slashingCoordinatorAddress,
+			wallet || provider
+		),
+		// eslint-disable-next-line camelcase
+		allocationManager: AllocationManager__factory.connect(
+			slashingCoordinatorAddress,
+			wallet || provider
+		),
+		// tokens
+		tokens: {
+			async getDefault() {
+				const tokenAddr = await contract.getToken()
+				// eslint-disable-next-line camelcase
+				return ERC20Mock__factory
+					.connect(tokenAddr, wallet || provider)
+			}
+		}
 	}
 }
+
+// export function makeAdminCallOnReclaimContract(
+// 	fn: keyof ReclaimServiceManagerInterface['functions'],
+// 	args: any[],
+// 	chainId = SELECTED_CHAIN_ID!
+// ) {
+// 	const { contract, proxyAdmin } = getContracts(chainId)
+// 	proxyAdmin.callStatic.
+// }

@@ -34,11 +34,23 @@ export async function createNewClaimRequestOnChain({
 		owner: ownerAddress
 	}
 	const signature = await getSignature()
+
+	// ensure the contract has enough allowance to transfer the token
+	const tokenContract = await contracts.tokens.getDefault()
+	const allowance = await tokenContract
+		.allowance(payer.address, contract.address)
+	if(allowance.lt(fullRequest.fee)) {
+		const tx = await tokenContract
+			.connect(payer)
+			.approve(contract.address, fullRequest.fee)
+		await tx.wait()
+	}
+
 	const task = await contract.createNewTask(fullRequest, signature || '0x00')
 	const rslt = await task.wait()
 	const events = rslt.events
 	// check task created event was emitted
-	const ev = events?.[0]
+	const ev = events?.find(e => e.event === 'NewTaskCreated')
 	const arg = ev?.args as unknown as NewTaskCreatedEventObject
 
 	return { task: arg, tx: rslt }
