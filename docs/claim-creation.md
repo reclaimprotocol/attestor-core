@@ -199,7 +199,7 @@ There you have it! The complete flow for creating a claim on a attestor.
 
 ## TOPRF
 
-We support threshholded [OPRF](https://en.wikipedia.org/wiki/Oblivious_pseudorandom_function) to obscure sensitive data in a proof in a consistent way.
+We support thresholded [OPRF](https://en.wikipedia.org/wiki/Oblivious_pseudorandom_function) to obscure sensitive data in a proof in a consistent way.
 
 Let's take an example of where this may be used. Say you want your users to prove their DOB to you via some govt. ID, and simultaneously want to ensure no two users submit the same ID proof to you. To de-duplicate the data, you'll need to see their ID number, which they may not want to reveal to you.
 
@@ -209,7 +209,7 @@ This is where TOPRF comes in -- it allows you to verify the uniqueness of the ID
 
 A simple hash such as SHA256 could work, though in certain cases, it may not be secure as hackers or malicious actors can use a rainbow table to reverse the hash.
 
-OPRF gets around that by requiring a server (the attestor) to generate the hash, rate-limiting any attempts to build a rainbow table. Moreover, with TOPRF (threshholded OPRF), no single server can generate the hash -- it requires multiple servers to come together to generate the hash, further securing the data.
+OPRF gets around that by requiring a server (the attestor) to generate the hash, rate-limiting any attempts to build a rainbow table. Moreover, with TOPRF (thresholded OPRF), no single server can generate the hash -- it requires multiple servers to come together to generate the hash, further securing the data.
 
 ### Can the attestor see the private data I am hashing? 
 
