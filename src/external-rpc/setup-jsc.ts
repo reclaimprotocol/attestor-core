@@ -4,7 +4,7 @@ import '#src/external-rpc/jsc-polyfills/index.ts'
 import { setCryptoImplementation } from '@reclaimprotocol/tls'
 import { pureJsCrypto } from '@reclaimprotocol/tls/purejs-crypto'
 
-import { makeLogger } from '#src/utils/index.ts'
+import { makeLogger } from '#src/utils/logger.ts'
 
 declare global {
 	/**

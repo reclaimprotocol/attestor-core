@@ -2,6 +2,9 @@ import * as esbuild from 'esbuild'
 
 // are we building for the CLI (used for testing)?
 const isCliBuild = process.argv.includes('--cli')
+if(isCliBuild) {
+	console.log('Building for CLI...')
+}
 
 const rslt = await esbuild.build({
 	bundle: true,
