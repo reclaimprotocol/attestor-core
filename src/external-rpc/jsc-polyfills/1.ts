@@ -1,5 +1,6 @@
 import { TextDecoder, TextEncoder } from '@kayahr/text-encoding'
-import { crypto } from '@reclaimprotocol/tls'
+import { crypto, uint8ArrayToBinaryStr } from '@reclaimprotocol/tls'
+import { fromByteArray, toByteArray } from 'base64-js'
 import { EventTarget } from 'event-target-shim'
 
 import type { ExternalRPCIncomingMsg, ExternalRPCOutgoingMsg } from '#src/external-rpc/types.ts'
@@ -64,8 +65,29 @@ if(typeof globalThis.EventTarget === 'undefined') {
 	globalThis.EventTarget = EventTarget
 }
 
+if(typeof globalThis.atob === 'undefined') {
+	globalThis.atob = a => uint8ArrayToBinaryStr(toByteArray(a))
+}
+
+if(typeof globalThis.btoa === 'undefined') {
+	function binaryStringToUint8Array(binaryString: string) {
+		const uint8Array = new Uint8Array(binaryString.length)
+		for(let i = 0; i < binaryString.length; i++) {
+			uint8Array[i] = binaryString.charCodeAt(i)
+		}
+
+		return uint8Array
+	}
+
+	globalThis.btoa = b => fromByteArray(binaryStringToUint8Array(b))
+}
+
 if(typeof globalThis.clearTimeout === 'undefined') {
 	const ogSettimeout = globalThis.setTimeout
+	if(!ogSettimeout) {
+		throw new Error('setTimeout is not defined, no polyfill yet')
+	}
+
 	// @ts-expect-error
 	globalThis.setTimeout = (fn, delayMs, ...args) => {
 		let aborted = false

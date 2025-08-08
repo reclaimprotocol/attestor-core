@@ -151,7 +151,8 @@ export function extractJSONValueIndexes(json: string, jsonPath: string): { start
 		throw new Error('jsonPath not found')
 	}
 
-	const tree = parseScript('(' + json + ')', { range: true }) //wrap in parentheses for esprima to parse
+	//wrap in parentheses for esprima to parse
+	const tree = parseScript('(' + json + ')', { range: true })
 	if(tree.body[0] instanceof ExpressionStatement
 		&& (tree.body[0].expression instanceof ObjectExpression || tree.body[0].expression instanceof ArrayExpression)) {
 
