@@ -62,7 +62,6 @@ export function rpcRequest<T extends keyof ExternalRPCAppClient>(
 	// @ts-expect-error
 	sendMessageToApp({
 		id,
-		module: 'attestor-core',
 		type: opts.type,
 		request: opts.request,
 	})

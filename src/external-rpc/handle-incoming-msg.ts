@@ -15,11 +15,6 @@ import type { OPRFOperators, ProviderParams, ProviderSecretParams, ZKOperators }
 import { B64_JSON_REVIVER } from '#src/utils/b64-json.ts'
 import { AttestorError, getIdentifierFromClaimInfo, logger, makeLogger, uint8ArrayToStr } from '#src/utils/index.ts'
 
-const VALID_MODULES = [
-	'attestor-core',
-	'witness-sdk'
-]
-
 export async function handleIncomingMessage(data: string | ExternalRPCIncomingMsg) {
 	let id = ''
 	try {
@@ -55,7 +50,6 @@ export async function handleIncomingMessage(data: string | ExternalRPCIncomingMs
 		const res = {
 			...data,
 			id,
-			module: 'attestor-core',
 			isResponse: true
 		} as ExternalRPCOutgoingMsg
 		return sendMessageToApp(res)
@@ -65,9 +59,9 @@ export async function handleIncomingMessage(data: string | ExternalRPCIncomingMs
 async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 	ExternalRPCResponse<ExternalRPCClient, keyof ExternalRPCClient> | undefined
 > {
-	const { module, id: reqId } = req
+	const { id: reqId, type: reqType } = req
 	// ignore any messages not for us
-	if(!VALID_MODULES.includes(module)) {
+	if(!reqId || !reqType) {
 		return
 	}
 
@@ -106,13 +100,9 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 				sendMessageToApp({
 					type: 'createClaimStep',
 					step: {
-						name: req.module.includes('witness')
-						// backwards compatibility
-							? 'witness-progress'
-							: 'attestor-progress',
+						name: 'attestor-progress',
 						step,
 					},
-					module: req.module,
 					id: generateRpcRequestId(),
 				})
 			},
@@ -142,7 +132,6 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 				sendMessageToApp({
 					type: 'createClaimOnAvsStep',
 					step,
-					module: req.module,
 					id: req.id,
 				})
 			},
@@ -169,7 +158,6 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 				sendMessageToApp({
 					type: 'createClaimOnMechainStep',
 					step,
-					module: req.module,
 					id: req.id,
 				})
 			},
@@ -215,7 +203,6 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 						type: 'log',
 						level,
 						message,
-						module: req.module,
 						id: req.id,
 					})
 				)
@@ -294,8 +281,7 @@ async function updateProviderParams(
 					: undefined
 			},
 			response: { ...res, body: uint8ArrayToStr(res.body) },
-		},
-		module: 'attestor-core'
+		}
 	})
 	return waitForRes
 }

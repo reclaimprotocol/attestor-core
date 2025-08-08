@@ -60,7 +60,6 @@ describe('JSC Test', () => {
 		const result = await bridge.rpc({
 			type: 'createClaim',
 			id: generateRpcRequestId(),
-			module: 'attestor-core',
 			request: {
 				name: 'http',
 				params: {
@@ -128,7 +127,6 @@ async function runJscBridge(
 					type: 'error',
 					isResponse: true,
 					id: cmd.id,
-					module: 'attestor-core',
 					data: {
 						message: err.message,
 						stack: err.stack,
@@ -169,7 +167,6 @@ async function runJscBridge(
 			resolve({
 				type: 'error',
 				id,
-				module: 'attestor-core',
 				isResponse: true,
 				data: {
 					message: 'Bridge closed before response',
@@ -201,7 +198,6 @@ async function runJscBridge(
 				await writeCmd({
 					type: 'disconnectWs',
 					id: generateRpcRequestId(),
-					module: 'attestor-core',
 					request: { id }
 				})
 				delete wsMap[id]
@@ -214,7 +210,6 @@ async function runJscBridge(
 				await writeCmd({
 					type: 'sendWsMessage',
 					id: generateRpcRequestId(),
-					module: 'attestor-core',
 					request: { id, data }
 				})
 			}

@@ -19,7 +19,6 @@ import type {
 import type { HttpRequest, HttpResponse } from '#src/utils/index.ts'
 
 type IdentifiedMessage = {
-	module: 'attestor-core'
 	id: string
 }
 
