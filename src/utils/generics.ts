@@ -238,7 +238,10 @@ export async function extractArrayBufferFromWsData(
 	}
 
 	// uint8array/Buffer
-	if(typeof data === 'object' && data && 'buffer' in data) {
+	if(
+		data instanceof Uint8Array
+		|| (typeof data === 'object' && data && 'buffer' in data)
+	) {
 		return data as Uint8Array
 	}
 
@@ -246,7 +249,7 @@ export async function extractArrayBufferFromWsData(
 		return strToUint8Array(data)
 	}
 
-	if(data instanceof Blob) {
+	if(typeof Blob !== 'undefined' && data instanceof Blob) {
 		return new Uint8Array(await data.arrayBuffer())
 	}
 
