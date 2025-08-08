@@ -34,4 +34,4 @@ export function setupFlutterJsRpc(baseUrl: string, channel = 'attestor-core') {
 	globalThis[channel] = rpcChannel
 }
 
-export * from '#src/index.ts'
+export * from '#src/external-rpc/index.ts'
