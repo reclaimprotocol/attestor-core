@@ -6,7 +6,7 @@ import { createClaimOnAvs } from '#src/avs/client/create-claim-on-avs.ts'
 import { createClaimOnAttestor } from '#src/client/index.ts'
 import { benchmark } from '#src/external-rpc/benchmark.ts'
 import type { CreateClaimResponse, ExternalRPCClient, ExternalRPCErrorResponse, ExternalRPCIncomingMsg, ExternalRPCOutgoingMsg, ExternalRPCResponse, RPCCreateClaimOptions } from '#src/external-rpc/types.ts'
-import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromBaseUrl, RPC_MSG_BRIDGE, sendMessage, waitForResponse } from '#src/external-rpc/utils.ts'
+import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromBaseUrl, RPC_MSG_BRIDGE, sendMessageToApp, waitForResponse } from '#src/external-rpc/utils.ts'
 import { ALL_ENC_ALGORITHMS, makeExternalRpcOprfOperator, makeExternalRpcZkOperator } from '#src/external-rpc/zk.ts'
 import { createClaimOnMechain } from '#src/mechain/client/create-claim-on-mechain.ts'
 import type { ClaimTunnelResponse } from '#src/proto/api.ts'
@@ -58,7 +58,7 @@ export async function handleIncomingMessage(data: string | ExternalRPCIncomingMs
 			module: 'attestor-core',
 			isResponse: true
 		} as ExternalRPCOutgoingMsg
-		return sendMessage(res)
+		return sendMessageToApp(res)
 	}
 }
 
@@ -103,7 +103,7 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 			},
 			logger,
 			onStep(step) {
-				sendMessage({
+				sendMessageToApp({
 					type: 'createClaimStep',
 					step: {
 						name: req.module.includes('witness')
@@ -139,7 +139,7 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 			),
 			logger,
 			onStep(step) {
-				sendMessage({
+				sendMessageToApp({
 					type: 'createClaimOnAvsStep',
 					step,
 					module: req.module,
@@ -166,7 +166,7 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 			client: {	url: getWsApiUrlFromBaseUrl() },
 			logger,
 			onStep(step) {
-				sendMessage({
+				sendMessageToApp({
 					type: 'createClaimOnMechainStep',
 					step,
 					module: req.module,
@@ -211,7 +211,7 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 			req.request.logLevel,
 			req.request.sendLogsToApp
 				? (level, message) => (
-					sendMessage({
+					sendMessageToApp({
 						type: 'log',
 						level,
 						message,
@@ -283,7 +283,7 @@ async function updateProviderParams(
 	)
 	const id = generateRpcRequestId()
 	const waitForRes = waitForResponse('updateProviderParams', id)
-	sendMessage({
+	sendMessageToApp({
 		type: 'updateProviderParams',
 		id,
 		request: {

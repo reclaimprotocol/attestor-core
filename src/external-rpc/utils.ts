@@ -60,7 +60,7 @@ export function rpcRequest<T extends keyof ExternalRPCAppClient>(
 	const waitForRes = waitForResponse(opts.type, id)
 
 	// @ts-expect-error
-	sendMessage({
+	sendMessageToApp({
 		id,
 		module: 'attestor-core',
 		type: opts.type,
@@ -108,7 +108,11 @@ export function waitForResponse<T extends keyof ExternalRPCAppClient>(
 	})
 }
 
-export function sendMessage(data: ExternalRPCOutgoingMsg) {
+/**
+ * Sends a message back to the host app
+ * @param data
+ */
+export function sendMessageToApp(data: ExternalRPCOutgoingMsg) {
 	const str = JSON.stringify(data, B64_JSON_REPLACER)
 	if(!RPC_CHANNEL_NAME) {
 		throw new Error('global RPC_CHANNEL_NAME is not set')
