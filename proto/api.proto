@@ -253,6 +253,58 @@ message ClaimRequestData {
 	string context = 5;
 }
 
+message ClaimTeeBundleRequest {
+	/**
+	 * TEE verification bundle containing attestations and signed data
+	 */
+	bytes verificationBundle = 1;
+	/**
+	 * Data describing the claim you want to prove
+	 */
+	ClaimRequestData data = 2;
+	/**
+	 * User signature on the request
+	 */
+	Signatures signatures = 3;
+
+	message Signatures {
+		/**
+		 * Signature of ClaimTeeBundleRequest
+		 * with empty "signatures" field
+		 */
+		bytes requestSignature = 1;
+	}
+}
+
+message ClaimTeeBundleResponse {
+	/**
+	 * The original request that was made
+	 */
+	ClaimTeeBundleRequest request = 1;
+	oneof result {
+		ProviderClaimData claim = 2;
+		ErrorData error = 3;
+	}
+	Signatures signatures = 4;
+
+	message Signatures {
+		/**
+		 * Address of the attestor that has signed the claim
+		 */
+		string attestorAddress = 1;
+		/**
+		 * Signature of `stringifyProviderClaimData(claim)`,
+		 * if the claim was successful
+		 */
+		bytes claimSignature = 2;
+		/**
+		 * Signature of the complete ClaimTeeBundleResponse
+		 * structure with empty "signatures" field
+		 */
+		bytes resultSignature = 3;
+	}
+}
+
 message ClaimTunnelRequest {
 	/**
 	 * parameters supplied to establish the tunnel
@@ -510,6 +562,12 @@ message RPCMessage {
 		 */
 		CreateTaskOnMechainRequest createTaskOnMechainRequest = 20;
 		CreateTaskOnMechainResponse createTaskOnMechainResponse = 21;
+
+		/**
+		 * Claim a TEE verification bundle instead of traditional TLS transcript
+		 */
+		ClaimTeeBundleRequest claimTeeBundleRequest = 22;
+		ClaimTeeBundleResponse claimTeeBundleResponse = 23;
 	}
 }
 
