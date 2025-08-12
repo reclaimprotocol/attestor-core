@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package teeproto;
+
+// Message definitions for TEE+MPC protocol verification bundles
+// Based on /home/scratch/reclaim-tee/proto/ definitions
+
+// Common structures
+message RequestRedactionRange {
+  int32 start = 1;
+  int32 length = 2;
+  // Values: "sensitive" or "sensitive_proof"
+  string type = 3;
+  bytes redaction_bytes = 4; // Optional
+}
+
+message ResponseRedactionRange {
+  int32 start = 1; 
+  int32 length = 2;
+}
+
+message SignedRedactedDecryptionStream {
+  bytes redacted_stream = 1;
+  uint64 seq_num = 2;
+}
+
+// Handshake secrets disclosed for verification/display
+message HandshakeSecrets {
+  bytes handshake_key = 1;
+  bytes handshake_iv = 2;
+  uint32 cipher_suite = 3; // uint16 fits here
+  string algorithm = 4;
+}
+
+// Commitment opening for proof stream
+message Opening {
+  bytes proof_stream = 1; // Str_SP
+  bytes proof_key = 2;    // K_SP
+}
+
+// Deterministically serialized payloads to be signed by TEEs
+message KOutputPayload {
+  // For single request-response mode
+  bytes redacted_request = 1; // R_red
+  repeated RequestRedactionRange request_redaction_ranges = 2;
+  repeated SignedRedactedDecryptionStream redacted_streams = 3; // from TEE_K
+  repeated bytes packets = 4; // TLS handshake packets observed by TEE_K
+  repeated ResponseRedactionRange response_redaction_ranges = 5;
+}
+
+message TOutputPayload {
+  repeated bytes packets = 1; // TLS packets observed by TEE_T
+}
+
+// Attestation report with structured data
+message AttestationReport {
+  string type = 1; // "nitro" or "gcp"
+  bytes report = 2; // raw provider-specific attestation bytes
+}
+
+// Signature wrapper used everywhere
+enum BodyType {
+  BODY_TYPE_UNSPECIFIED = 0;
+  BODY_TYPE_K_OUTPUT = 1;
+  BODY_TYPE_T_OUTPUT = 2;
+}
+
+message SignedMessage {
+  BodyType body_type = 1;
+  bytes body = 2; // serialized deterministic KOutputPayload or TOutputPayload
+  bytes public_key = 3; // DER-encoded public key (standalone mode only)
+  bytes signature = 4; // signature over body bytes
+  AttestationReport attestation_report = 5; // full attestation (enclave mode only)
+}
+
+// Single artefact produced by client for offline verification
+message VerificationBundlePB {
+  HandshakeSecrets handshake_keys = 1; // optional
+
+  // Signed transcripts
+  SignedMessage teek_signed = 2; // BODY_TYPE_K_OUTPUT
+  SignedMessage teet_signed = 3; // BODY_TYPE_T_OUTPUT
+
+  // Commitment opening for proof ranges
+  Opening opening = 4; // optional
+
+  // Optional attestation documents
+  bytes attestation_tee_k = 10;
+  bytes attestation_tee_t = 11;
+}
