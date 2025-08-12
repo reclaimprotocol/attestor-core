@@ -75,7 +75,7 @@ describe('New Bundle with Attestation Docs', () => {
 	})
 
 	it('should test transcript reconstruction with correct proof stream logic', async() => {
-		console.log('\n🔄 Testing Transcript Reconstruction with Fixed Logic')
+		console.log('\n Testing Transcript Reconstruction with Fixed Logic')
 
 		const bundle = VerificationBundlePB.decode(newBundleBytes)
 		const kOutputPayload = KOutputPayload.decode(bundle.teekSigned!.body)
@@ -96,7 +96,7 @@ describe('New Bundle with Attestation Docs', () => {
 		try {
 			const transcriptData = await reconstructTlsTranscript(mockTeeBundleData as any, mockLogger as any)
 
-			console.log('✅ Transcript reconstruction successful!')
+			console.log(' Transcript reconstruction successful!')
 			console.log('- Handshake packets:', transcriptData.handshakePackets.length)
 			console.log('- Revealed request size:', transcriptData.revealedRequest.length, 'bytes')
 			console.log('- Reconstructed response size:', transcriptData.reconstructedResponse.length, 'bytes')
@@ -110,7 +110,7 @@ describe('New Bundle with Attestation Docs', () => {
 			console.log('- Preview:', JSON.stringify(requestText.substring(0, 200)))
 
 			// Look for HTTP details
-			const httpMatch = requestText.match(/^(GET|POST|PUT|DELETE|PATCH)\s+([^\s]+)\s+HTTP\/[\d.]+/m)
+			const httpMatch = requestText.match(/^(GET|POST|PUT|DELETE|PATCH)\s+(\S+)\s+HTTP\/[\d.]+/m)
 			const hostMatch = requestText.match(/Host:\s*([^\r\n]+)/i)
 			if(httpMatch) {
 				console.log('- HTTP Method:', httpMatch[1])
@@ -146,7 +146,7 @@ describe('New Bundle with Attestation Docs', () => {
 
 			const syntheticRequest = createSyntheticClaimRequest(transcriptData, claimData, mockTeeBundleData as any)
 
-			console.log('\n✅ Synthetic request created successfully!')
+			console.log('\nSynthetic request created successfully!')
 			console.log('- Transcript messages:', syntheticRequest.transcript.length)
 			console.log('- Host extracted:', syntheticRequest.request?.host)
 
@@ -154,7 +154,7 @@ describe('New Bundle with Attestation Docs', () => {
 			expect(syntheticRequest).toBeDefined()
 
 		} catch(error) {
-			console.error('❌ Reconstruction failed:', (error as Error).message)
+			console.error('Reconstruction failed:', (error as Error).message)
 			throw error
 		}
 	})

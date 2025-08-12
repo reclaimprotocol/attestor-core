@@ -9,8 +9,6 @@ import { Crypto } from '@peculiar/webcrypto'
 import { X509Certificate, X509ChainBuilder } from '@peculiar/x509'
 import { decode } from 'cbor-x'
 import { sign } from 'cose-js'
-
-import { Logger } from 'src/types'
 import { AttestationDocument, NitroValidationResult, PublicKeyExtractionResult, TeeType } from 'src/types/tee'
 
 // AWS Nitro root certificate (from nitrite)
@@ -31,7 +29,7 @@ IwLz3/Y=
 
 // Expected PCR values (replace with actual values)
 const EXPECTED_PCRS = {
-	0: Buffer.from('000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000','hex'),
+	0: Buffer.from('000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000', 'hex'),
 }
 
 // Secure buffer comparison to prevent timing attacks
@@ -39,32 +37,33 @@ function secureBufferCompare(a: Buffer, b: Buffer): boolean {
 	if(a.length !== b.length) {
 		return false
 	}
-	
+
 	let result = 0
-	for(let i = 0; i < a.length; i++) {
-		result |= a[i] ^ b[i]
+	for(const [i, element] of a.entries()) {
+		result |= element ^ b[i]
 	}
+
 	return result === 0
 }
 
 // Enhanced certificate chain validation
 async function validateCertificateChain(
-	targetCert: X509Certificate, 
-	intermediateCerts: X509Certificate[], 
+	targetCert: X509Certificate,
+	intermediateCerts: X509Certificate[],
 	rootCert: X509Certificate,
 	crypto: Crypto
-): Promise<{ isValid: boolean; errors: string[]; chain: X509Certificate[] }> {
+): Promise<{ isValid: boolean, errors: string[], chain: X509Certificate[] }> {
 	const errors: string[] = []
-	
+
 	try {
 		// Validate root certificate is self-signed and trusted
 		const rootSubject = rootCert.subject
 		const rootIssuer = rootCert.issuer
-		
+
 		if(rootSubject !== rootIssuer) {
 			errors.push('Root certificate is not self-signed')
 		}
-		
+
 		// Verify root certificate signature (self-verification)
 		try {
 			const isRootValid = await rootCert.verify(undefined, crypto)
@@ -74,12 +73,12 @@ async function validateCertificateChain(
 		} catch(error) {
 			errors.push(`Root certificate verification failed: ${(error as Error).message}`)
 		}
-		
+
 		// Build the certificate chain
-		const chainBuilder = new X509ChainBuilder({ 
+		const chainBuilder = new X509ChainBuilder({
 			certificates: [rootCert, ...intermediateCerts]
 		})
-		
+
 		let chain: X509Certificate[]
 		try {
 			chain = await chainBuilder.build(targetCert, crypto)
@@ -87,25 +86,26 @@ async function validateCertificateChain(
 			errors.push(`Certificate chain building failed: ${(error as Error).message}`)
 			return { isValid: false, errors, chain: [] }
 		}
-		
+
 		if(!chain || chain.length === 0) {
 			errors.push('No valid certificate chain could be built')
 			return { isValid: false, errors, chain: [] }
 		}
-		
+
 		// Validate each certificate in the chain
 		const now = new Date()
 		for(let i = 0; i < chain.length; i++) {
 			const cert = chain[i]
-			
+
 			// Check expiration dates
 			if(now < cert.notBefore) {
 				errors.push(`Certificate ${i} (${cert.subject}) is not yet valid`)
 			}
+
 			if(now > cert.notAfter) {
 				errors.push(`Certificate ${i} (${cert.subject}) has expired`)
 			}
-			
+
 			// Verify each certificate's signature (except root which is self-signed)
 			if(i < chain.length - 1) {
 				try {
@@ -119,11 +119,11 @@ async function validateCertificateChain(
 				}
 			}
 		}
-		
-		return { 
-			isValid: errors.length === 0, 
-			errors, 
-			chain 
+
+		return {
+			isValid: errors.length === 0,
+			errors,
+			chain
 		}
 	} catch(error) {
 		errors.push(`Certificate chain validation error: ${(error as Error).message}`)
@@ -137,7 +137,7 @@ async function validateCertificateChain(
 function extractPublicKeyFromUserData(userDataBuffer: Buffer): PublicKeyExtractionResult | null {
 	try {
 		const userDataString = userDataBuffer.toString('utf-8')
-		
+
 		// Parse new format: "tee_k_public_key:0xETH_ADDRESS" or "tee_t_public_key:0xETH_ADDRESS"
 		const teeKMatch = userDataString.match(/^tee_k_public_key:(0x[0-9a-fA-F]{40})$/)
 		const teeTMatch = userDataString.match(/^tee_t_public_key:(0x[0-9a-fA-F]{40})$/)
@@ -162,11 +162,11 @@ function extractPublicKeyFromUserData(userDataBuffer: Buffer): PublicKeyExtracti
 		try {
 			const spki = AsnParser.parse(userDataBuffer, SubjectPublicKeyInfo)
 			const ecPoint = Buffer.from(spki.subjectPublicKey)
-			
+
 			if(ecPoint.length === 97 && ecPoint[0] === 0x04) {
 				// Determine TEE type based on some heuristic or default
 				const teeType: TeeType = 'tee_k' // Default assumption
-				
+
 				return {
 					publicKey: new Uint8Array(userDataBuffer),
 					teeType
@@ -187,8 +187,7 @@ function extractPublicKeyFromUserData(userDataBuffer: Buffer): PublicKeyExtracti
  * Working validation function copied from nitroattestor
  */
 export async function validateNitroAttestationAndExtractKey(
-	attestationBytes: Uint8Array,
-	logger?: Logger
+	attestationBytes: Uint8Array
 ): Promise<NitroValidationResult> {
 	const errors: string[] = []
 	const warnings: string[] = []
@@ -212,7 +211,7 @@ export async function validateNitroAttestationAndExtractKey(
 			return { isValid: false, errors, warnings }
 		}
 
-		const [protectedHeader, unprotectedHeader, payload, signature] = decoded
+		const [, , payload] = decoded
 
 		// Validate payload exists and is not empty
 		if(!payload || payload.length === 0) {
@@ -233,18 +232,23 @@ export async function validateNitroAttestationAndExtractKey(
 		if(typeof doc.module_id !== 'string' || doc.module_id.length === 0) {
 			errors.push('Missing or invalid module_id')
 		}
+
 		if(typeof doc.digest !== 'string' || doc.digest.length === 0) {
 			errors.push('Missing or invalid digest')
 		}
+
 		if(typeof doc.timestamp !== 'bigint') {
 			errors.push('Missing or invalid timestamp')
 		}
+
 		if(!doc.pcrs || typeof doc.pcrs !== 'object') {
 			errors.push('Missing or invalid pcrs')
 		}
+
 		if(!Buffer.isBuffer(doc.certificate) || doc.certificate.length === 0) {
 			errors.push('Missing or invalid certificate')
 		}
+
 		if(!Array.isArray(doc.cabundle) || doc.cabundle.length === 0) {
 			errors.push('Missing or invalid cabundle')
 		}
@@ -258,12 +262,12 @@ export async function validateNitroAttestationAndExtractKey(
 		for(const [index, expected] of Object.entries(EXPECTED_PCRS)) {
 			const pcrIndex = parseInt(index)
 			const actualPcr = doc.pcrs[pcrIndex]
-			
+
 			if(!Buffer.isBuffer(actualPcr)) {
 				errors.push(`PCR${index} is not a Buffer`)
 				continue
 			}
-			
+
 			if(!secureBufferCompare(expected, actualPcr)) {
 				errors.push(`PCR${index} mismatch`)
 			}
@@ -366,9 +370,9 @@ export async function validateNitroAttestationAndExtractKey(
 			}
 		}
 
-		return { 
-			isValid: errors.length === 0, 
-			errors, 
+		return {
+			isValid: errors.length === 0,
+			errors,
 			warnings,
 			extractedPublicKey,
 			userDataType,
