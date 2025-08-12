@@ -32,15 +32,14 @@ describe('TEE Signature Verification', () => {
 
 		const bundle = VerificationBundlePB.decode(bundleBytes)
 
-			// Test TEE_K attestation
-	if(bundle.teekSigned?.attestationReport?.report) {
-		console.log('\nTesting TEE_K attestation extraction...')
-		console.log('- Attestation report size:', bundle.teekSigned.attestationReport.report.length, 'bytes')
+		// Test TEE_K attestation
+		if(bundle.teekSigned?.attestationReport?.report) {
+			console.log('\nTesting TEE_K attestation extraction...')
+			console.log('- Attestation report size:', bundle.teekSigned.attestationReport.report.length, 'bytes')
 
-		const result = await validateNitroAttestationAndExtractKey(
-			bundle.teekSigned.attestationReport.report,
-			mockLogger as any
-		)
+			const result = await validateNitroAttestationAndExtractKey(
+				bundle.teekSigned.attestationReport.report
+			)
 
 			console.log('TEE_K validation result:')
 			console.log('- Is valid:', result.isValid)
@@ -49,28 +48,27 @@ describe('TEE Signature Verification', () => {
 			console.log('- ETH address:', result.ethAddress)
 			console.log('- Public key length:', result.extractedPublicKey?.length, 'bytes')
 
-					// Should extract ETH address successfully
-		expect(result.userDataType).toBe('tee_k')
-		expect(result.ethAddress).toMatch(/^0x[0-9a-fA-F]{40}$/)
-		expect(result.extractedPublicKey).toBeDefined()
-		expect(result.extractedPublicKey!.length).toBe(20) // ETH address is 20 bytes
-	} else {
-		console.log('\n❌ TEE_K attestation not found!')
-		console.log('- teekSigned exists:', !!bundle.teekSigned)
-		console.log('- attestationReport exists:', !!bundle.teekSigned?.attestationReport)
-		console.log('- report exists:', !!bundle.teekSigned?.attestationReport?.report)
-		if(bundle.teekSigned?.attestationReport?.report) {
-			console.log('- report length:', bundle.teekSigned.attestationReport.report.length)
+			// Should extract ETH address successfully
+			expect(result.userDataType).toBe('tee_k')
+			expect(result.ethAddress).toMatch(/^0x[0-9a-fA-F]{40}$/)
+			expect(result.extractedPublicKey).toBeDefined()
+			expect(result.extractedPublicKey!.length).toBe(20) // ETH address is 20 bytes
+		} else {
+			console.log('\n❌ TEE_K attestation not found!')
+			console.log('- teekSigned exists:', !!bundle.teekSigned)
+			console.log('- attestationReport exists:', !!bundle.teekSigned?.attestationReport)
+			console.log('- report exists:', !!bundle.teekSigned?.attestationReport?.report)
+			if(bundle.teekSigned?.attestationReport?.report) {
+				console.log('- report length:', bundle.teekSigned.attestationReport.report.length)
+			}
 		}
-	}
 
 		// Test TEE_T attestation
 		if(bundle.teetSigned?.attestationReport?.report) {
 			console.log('\nTesting TEE_T attestation extraction...')
 
 			const result = await validateNitroAttestationAndExtractKey(
-				bundle.teetSigned.attestationReport.report,
-				mockLogger as any
+				bundle.teetSigned.attestationReport.report
 			)
 
 			console.log('TEE_T validation result:')

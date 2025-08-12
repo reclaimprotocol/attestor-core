@@ -20,6 +20,7 @@ export interface Opening {
 export interface RequestRedactionRange {
 	start: number
 	length: number
+	type: string // "sensitive" or "sensitive_proof"
 }
 
 export interface ResponseRedactionRange {
@@ -100,14 +101,14 @@ export interface NitroValidationResult {
 // ===== TEE BUNDLE PROCESSING STRUCTURES =====
 
 export interface TeeBundleData {
-	teekSigned: SignedMessage // TEE_K SignedMessage
-	teetSigned: SignedMessage // TEE_T SignedMessage
+	teekSigned: import('src/proto/tee-bundle').SignedMessage // TEE_K SignedMessage
+	teetSigned: import('src/proto/tee-bundle').SignedMessage // TEE_T SignedMessage
 	teekPublicKey: Uint8Array // Extracted from attestation
 	teetPublicKey: Uint8Array // Extracted from attestation
-	kOutputPayload: KOutputPayload // Parsed TEE_K payload
-	tOutputPayload: TOutputPayload // Parsed TEE_T payload
-	handshakeKeys?: HandshakeSecrets // Optional handshake secrets
-	opening?: Opening // Optional proof stream
+	kOutputPayload: import('src/proto/tee-bundle').KOutputPayload // Parsed TEE_K payload
+	tOutputPayload: import('src/proto/tee-bundle').TOutputPayload // Parsed TEE_T payload
+	handshakeKeys?: import('src/proto/tee-bundle').HandshakeSecrets // Optional handshake secrets
+	opening?: import('src/proto/tee-bundle').Opening // Optional proof stream
 }
 
 export interface TeeTranscriptData {

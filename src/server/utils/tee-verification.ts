@@ -4,15 +4,10 @@
  */
 
 import { ServiceSignatureType } from 'src/proto/api'
-import { KOutputPayload, TOutputPayload, VerificationBundlePB } from 'src/proto/tee-bundle'
+import { BodyType, KOutputPayload, SignedMessage, TOutputPayload, VerificationBundlePB } from 'src/proto/tee-bundle'
 import { validateNitroAttestationAndExtractKey } from 'src/server/utils/nitro-attestation'
 import { Logger } from 'src/types'
-import {
-	BodyType,
-	PublicKeyExtractionResult,
-	SignedMessage,
-	TeeBundleData,
-	TeeSignatureVerificationResult } from 'src/types/tee'
+import { PublicKeyExtractionResult, TeeBundleData, TeeSignatureVerificationResult } from 'src/types/tee'
 import { AttestorError } from 'src/utils'
 import { SIGNATURES } from 'src/utils/signatures'
 
@@ -38,6 +33,25 @@ export async function verifyTeeBundle(
 
 		// Verify TEE signatures using extracted public keys
 		await verifyTeeSignatures(bundle, teekKeyResult!, teetKeyResult!, logger)
+
+		// SECURITY: Validate opening (proof stream) is present - following Go implementation
+		if(!bundle.opening?.proofStream || !bundle.opening?.proofKey) {
+			throw new AttestorError('ERROR_INVALID_CLAIM', 'Critical security failure: proof stream/key missing - cannot perform proof stream application')
+		}
+
+		if(bundle.opening.proofStream.length === 0 || bundle.opening.proofKey.length === 0) {
+			throw new AttestorError('ERROR_INVALID_CLAIM', 'Critical security failure: empty proof stream/key - compromises verification integrity')
+		}
+
+		logger.info('Opening validation successful', {
+			proofStreamLength: bundle.opening.proofStream.length,
+			proofKeyLength: bundle.opening.proofKey.length
+		})
+
+		// Ensure signed messages are present
+		if(!bundle.teekSigned || !bundle.teetSigned) {
+			throw new AttestorError('ERROR_INVALID_CLAIM', 'Missing TEE signed messages')
+		}
 
 		// Parse TEE payloads
 		const kOutputPayload = parseKOutputPayload(bundle.teekSigned)
@@ -91,12 +105,12 @@ function validateBundleCompleteness(bundle: VerificationBundlePB): void {
 	// Check if we're in standalone mode (development/testing) or attestation mode (production)
 	// Attestations can be in separate fields OR embedded in SignedMessage.attestationReport
 	const hasAttestations = (bundle.attestationTeeK && bundle.attestationTeeK.length > 0) ||
-	                       (bundle.attestationTeeT && bundle.attestationTeeT.length > 0) ||
-	                       (bundle.teekSigned.attestationReport?.report && bundle.teekSigned.attestationReport.report.length > 0) ||
-	                       (bundle.teetSigned.attestationReport?.report && bundle.teetSigned.attestationReport.report.length > 0)
+		(bundle.attestationTeeT && bundle.attestationTeeT.length > 0) ||
+		(bundle.teekSigned.attestationReport?.report && bundle.teekSigned.attestationReport.report.length > 0) ||
+		(bundle.teetSigned.attestationReport?.report && bundle.teetSigned.attestationReport.report.length > 0)
 
 	const hasPublicKeys = (bundle.teekSigned.publicKey && bundle.teekSigned.publicKey.length > 0) ||
-	                     (bundle.teetSigned.publicKey && bundle.teetSigned.publicKey.length > 0)
+		(bundle.teetSigned.publicKey && bundle.teetSigned.publicKey.length > 0)
 
 	if(!hasAttestations && !hasPublicKeys) {
 		throw new Error('SECURITY ERROR: bundle must have either Nitro attestations (production) or embedded public keys (development)')
@@ -134,14 +148,19 @@ function validateBundleCompleteness(bundle: VerificationBundlePB): void {
 async function extractPublicKeys(
 	bundle: VerificationBundlePB,
 	logger: Logger
-): Promise<{ teekPublicKey: Uint8Array, teetPublicKey: Uint8Array, teekKeyResult?: PublicKeyExtractionResult, teetKeyResult?: PublicKeyExtractionResult }> {
+): Promise<{
+	teekPublicKey: Uint8Array
+	teetPublicKey: Uint8Array
+	teekKeyResult?: PublicKeyExtractionResult
+	teetKeyResult?: PublicKeyExtractionResult
+}> {
 	// Check if we have attestations (production mode) or embedded keys (standalone mode)
 	// Priority: separate fields > SignedMessage.attestationReport > embedded keys
 	const hasSeparateAttestations = (bundle.attestationTeeK && bundle.attestationTeeK.length > 0) &&
-	                               (bundle.attestationTeeT && bundle.attestationTeeT.length > 0)
+		(bundle.attestationTeeT && bundle.attestationTeeT.length > 0)
 
-	const hasEmbeddedAttestations = (bundle.teekSigned.attestationReport?.report && bundle.teekSigned.attestationReport.report.length > 0) &&
-	                               (bundle.teetSigned.attestationReport?.report && bundle.teetSigned.attestationReport.report.length > 0)
+	const hasEmbeddedAttestations = (bundle.teekSigned?.attestationReport?.report && bundle.teekSigned.attestationReport.report.length > 0) &&
+		(bundle.teetSigned?.attestationReport?.report && bundle.teetSigned.attestationReport.report.length > 0)
 
 	const hasAttestations = hasSeparateAttestations || hasEmbeddedAttestations
 
@@ -165,11 +184,19 @@ async function extractPublicKeys(
 		} else {
 			// Use embedded attestation reports
 			logger.info('Using embedded attestation reports')
-			teekAttestationBytes = bundle.teekSigned.attestationReport!.report!
-			teetAttestationBytes = bundle.teetSigned.attestationReport!.report!
+			if(!bundle.teekSigned?.attestationReport?.report) {
+				throw new Error('TEE_K embedded attestation report missing')
+			}
+
+			if(!bundle.teetSigned?.attestationReport?.report) {
+				throw new Error('TEE_T embedded attestation report missing')
+			}
+
+			teekAttestationBytes = bundle.teekSigned.attestationReport.report
+			teetAttestationBytes = bundle.teetSigned.attestationReport.report
 		}
 
-		const teekResult = await validateNitroAttestationAndExtractKey(teekAttestationBytes, logger)
+		const teekResult = await validateNitroAttestationAndExtractKey(teekAttestationBytes)
 		if(!teekResult.isValid) {
 			throw new Error(`TEE_K attestation validation failed: ${teekResult.errors.join(', ')}`)
 		}
@@ -182,7 +209,7 @@ async function extractPublicKeys(
 			throw new Error(`TEE_K attestation validation failed: wrong TEE type, expected tee_k, got ${teekResult.userDataType}`)
 		}
 
-		const teetResult = await validateNitroAttestationAndExtractKey(teetAttestationBytes, logger)
+		const teetResult = await validateNitroAttestationAndExtractKey(teetAttestationBytes)
 		if(!teetResult.isValid) {
 			throw new Error(`TEE_T attestation validation failed: ${teetResult.errors.join(', ')}`)
 		}
@@ -199,8 +226,16 @@ async function extractPublicKeys(
 		teetPublicKey = teetResult.extractedPublicKey
 
 		// Store the full extraction results for signature verification
-		teekKeyResult = { publicKey: teekResult.extractedPublicKey, teeType: 'tee_k', ethAddress: teekResult.ethAddress }
-		teetKeyResult = { publicKey: teetResult.extractedPublicKey, teeType: 'tee_t', ethAddress: teetResult.ethAddress }
+		teekKeyResult = {
+			publicKey: teekResult.extractedPublicKey,
+			teeType: 'tee_k',
+			ethAddress: teekResult.ethAddress
+		}
+		teetKeyResult = {
+			publicKey: teetResult.extractedPublicKey,
+			teeType: 'tee_t',
+			ethAddress: teetResult.ethAddress
+		}
 
 		logger.info('Nitro attestations validated successfully')
 
@@ -208,11 +243,11 @@ async function extractPublicKeys(
 		// Standalone mode: Use embedded public keys
 		logger.info('Using standalone mode: extracting embedded public keys')
 
-		if(!bundle.teekSigned.publicKey || bundle.teekSigned.publicKey.length === 0) {
+		if(!bundle.teekSigned?.publicKey || bundle.teekSigned.publicKey.length === 0) {
 			throw new Error('TEE_K public key missing in standalone mode')
 		}
 
-		if(!bundle.teetSigned.publicKey || bundle.teetSigned.publicKey.length === 0) {
+		if(!bundle.teetSigned?.publicKey || bundle.teetSigned.publicKey.length === 0) {
 			throw new Error('TEE_T public key missing in standalone mode')
 		}
 
@@ -244,6 +279,10 @@ async function verifyTeeSignatures(
 	logger: Logger
 ): Promise<void> {
 	// Verify TEE_K signature
+	if(!bundle.teekSigned) {
+		throw new Error('TEE_K signed message is missing')
+	}
+
 	const teekResult = await verifyTeeSignature(
 		bundle.teekSigned,
 		teekKeyResult,
@@ -256,6 +295,10 @@ async function verifyTeeSignatures(
 	}
 
 	// Verify TEE_T signature
+	if(!bundle.teetSigned) {
+		throw new Error('TEE_T signed message is missing')
+	}
+
 	const teetResult = await verifyTeeSignature(
 		bundle.teetSigned,
 		teetKeyResult,
@@ -280,6 +323,13 @@ async function verifyTeeSignature(
 	logger: Logger
 ): Promise<TeeSignatureVerificationResult> {
 	const errors: string[] = []
+
+	if(!signedMessage) {
+		return {
+			isValid: false,
+			errors: ['Signed message is null or undefined']
+		}
+	}
 
 	try {
 		let ethAddress: string
@@ -352,7 +402,7 @@ function convertDerPublicKeyToEthAddress(derPublicKey: Uint8Array): string {
 /**
  * Parses TEE_K output payload
  */
-function parseKOutputPayload(signedMessage: SignedMessage | undefined): KOutputPayload {
+function parseKOutputPayload(signedMessage: SignedMessage): KOutputPayload {
 	try {
 		// Use actual protobuf decoding
 		const payload = KOutputPayload.decode(signedMessage.body)
