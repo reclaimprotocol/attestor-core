@@ -9,7 +9,7 @@ import { Crypto } from '@peculiar/webcrypto'
 import { X509Certificate, X509ChainBuilder } from '@peculiar/x509'
 // Dynamic import for cbor-x to avoid CommonJS/ESM issues
 import { sign } from 'cose-js'
-import { AttestationDocument, NitroValidationResult, PublicKeyExtractionResult } from 'src/types/tee'
+import { AddressExtractionResult, AttestationDocument, NitroValidationResult } from 'src/types/tee'
 
 // Helper function to dynamically import cbor-x
 async function getCborDecode() {
@@ -141,7 +141,7 @@ async function validateCertificateChain(
 /**
  * Extract public key from user_data field in attestation document
  */
-function extractPublicKeyFromUserData(userDataBuffer: Buffer): PublicKeyExtractionResult | null {
+function extractPublicKeyFromUserData(userDataBuffer: Buffer): AddressExtractionResult | null {
 	try {
 		const userDataString = userDataBuffer.toString('utf-8')
 
@@ -151,7 +151,6 @@ function extractPublicKeyFromUserData(userDataBuffer: Buffer): PublicKeyExtracti
 
 		if(teeKMatch) {
 			return {
-				publicKey: new Uint8Array(Buffer.from(teeKMatch[1].slice(2), 'hex')), // Remove 0x prefix
 				teeType: 'tee_k',
 				ethAddress: teeKMatch[1] // Store the full ETH address with 0x prefix
 			}
@@ -159,7 +158,6 @@ function extractPublicKeyFromUserData(userDataBuffer: Buffer): PublicKeyExtracti
 
 		if(teeTMatch) {
 			return {
-				publicKey: new Uint8Array(Buffer.from(teeTMatch[1].slice(2), 'hex')), // Remove 0x prefix
 				teeType: 'tee_t',
 				ethAddress: teeTMatch[1] // Store the full ETH address with 0x prefix
 			}
@@ -184,15 +182,15 @@ export async function validateNitroAttestationAndExtractKey(
 		// Set up WebCrypto
 		const crypto = new Crypto()
 
-			// Decode CBOR - use exact same approach as working nitroattestor
-	const decode = await getCborDecode()
-	let decoded: any
-	try {
-		decoded = decode(Buffer.from(attestationBytes))
-	} catch(error) {
-		errors.push(`CBOR decoding failed: ${(error as Error).message}`)
-		return { isValid: false, errors, warnings }
-	}
+		// Decode CBOR - use exact same approach as working nitroattestor
+		const decode = await getCborDecode()
+		let decoded: any
+		try {
+			decoded = decode(Buffer.from(attestationBytes))
+		} catch(error) {
+			errors.push(`CBOR decoding failed: ${(error as Error).message}`)
+			return { isValid: false, errors, warnings }
+		}
 
 		// Extract COSE_Sign1 structure
 		if(!Array.isArray(decoded) || decoded.length < 4) {
@@ -342,14 +340,12 @@ export async function validateNitroAttestationAndExtractKey(
 		}
 
 		// Extract public key from user_data if present
-		let extractedPublicKey: Uint8Array | undefined
 		let userDataType: 'tee_k' | 'tee_t' | undefined
 		let ethAddress: string | undefined
 
 		if(doc.user_data) {
 			const keyInfo = extractPublicKeyFromUserData(doc.user_data)
 			if(keyInfo) {
-				extractedPublicKey = keyInfo.publicKey
 				userDataType = keyInfo.teeType
 				ethAddress = keyInfo.ethAddress
 			}
@@ -359,7 +355,6 @@ export async function validateNitroAttestationAndExtractKey(
 			isValid: errors.length === 0,
 			errors,
 			warnings,
-			extractedPublicKey,
 			userDataType,
 			ethAddress
 		}

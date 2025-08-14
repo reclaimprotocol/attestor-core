@@ -55,7 +55,6 @@ export interface RequestRedactionRange {
   length: number;
   /** Values: "sensitive" or "sensitive_proof" */
   type: string;
-  /** Optional */
   redactionBytes: Uint8Array;
 }
 
@@ -82,13 +81,11 @@ export interface HandshakeSecrets {
 export interface Opening {
   /** Str_SP */
   proofStream: Uint8Array;
-  /** K_SP */
-  proofKey: Uint8Array;
 }
 
 /** Deterministically serialized payloads to be signed by TEEs */
 export interface KOutputPayload {
-  /** For single request-response mode */
+  /** R_red */
   redactedRequest: Uint8Array;
   requestRedactionRanges: RequestRedactionRange[];
   /** from TEE_K */
@@ -115,7 +112,7 @@ export interface SignedMessage {
   bodyType: BodyType;
   /** serialized deterministic KOutputPayload or TOutputPayload */
   body: Uint8Array;
-  /** DER-encoded public key (standalone mode only) */
+  /** ETH address (20 bytes, standalone mode only) */
   publicKey: Uint8Array;
   /** signature over body bytes */
   signature: Uint8Array;
@@ -510,16 +507,13 @@ export const HandshakeSecrets: MessageFns<HandshakeSecrets> = {
 };
 
 function createBaseOpening(): Opening {
-  return { proofStream: new Uint8Array(0), proofKey: new Uint8Array(0) };
+  return { proofStream: new Uint8Array(0) };
 }
 
 export const Opening: MessageFns<Opening> = {
   encode(message: Opening, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.proofStream.length !== 0) {
       writer.uint32(10).bytes(message.proofStream);
-    }
-    if (message.proofKey.length !== 0) {
-      writer.uint32(18).bytes(message.proofKey);
     }
     return writer;
   },
@@ -539,14 +533,6 @@ export const Opening: MessageFns<Opening> = {
           message.proofStream = reader.bytes();
           continue;
         }
-        case 2: {
-          if (tag !== 18) {
-            break;
-          }
-
-          message.proofKey = reader.bytes();
-          continue;
-        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -557,19 +543,13 @@ export const Opening: MessageFns<Opening> = {
   },
 
   fromJSON(object: any): Opening {
-    return {
-      proofStream: isSet(object.proofStream) ? bytesFromBase64(object.proofStream) : new Uint8Array(0),
-      proofKey: isSet(object.proofKey) ? bytesFromBase64(object.proofKey) : new Uint8Array(0),
-    };
+    return { proofStream: isSet(object.proofStream) ? bytesFromBase64(object.proofStream) : new Uint8Array(0) };
   },
 
   toJSON(message: Opening): unknown {
     const obj: any = {};
     if (message.proofStream.length !== 0) {
       obj.proofStream = base64FromBytes(message.proofStream);
-    }
-    if (message.proofKey.length !== 0) {
-      obj.proofKey = base64FromBytes(message.proofKey);
     }
     return obj;
   },
@@ -580,7 +560,6 @@ export const Opening: MessageFns<Opening> = {
   fromPartial(object: DeepPartial<Opening>): Opening {
     const message = createBaseOpening();
     message.proofStream = object.proofStream ?? new Uint8Array(0);
-    message.proofKey = object.proofKey ?? new Uint8Array(0);
     return message;
   },
 };

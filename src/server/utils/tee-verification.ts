@@ -7,8 +7,8 @@ import { ServiceSignatureType } from 'src/proto/api'
 import { BodyType, KOutputPayload, SignedMessage, TOutputPayload, VerificationBundlePB } from 'src/proto/tee-bundle'
 import { validateNitroAttestationAndExtractKey } from 'src/server/utils/nitro-attestation'
 import { Logger } from 'src/types'
-import { PublicKeyExtractionResult, TeeBundleData, TeeSignatureVerificationResult } from 'src/types/tee'
-import { AttestorError } from 'src/utils'
+import { AddressExtractionResult, TeeBundleData, TeeSignatureVerificationResult } from 'src/types/tee'
+import { AttestorError, uint8ArrayToStr } from 'src/utils'
 import { SIGNATURES } from 'src/utils/signatures'
 
 /**
@@ -29,23 +29,22 @@ export async function verifyTeeBundle(
 		validateBundleCompleteness(bundle)
 
 		// Extract public keys (from attestations or embedded keys)
-		const { teekPublicKey, teetPublicKey, teekKeyResult, teetKeyResult } = await extractPublicKeys(bundle, logger)
+		const { teekKeyResult, teetKeyResult } = await extractPublicKeys(bundle, logger)
 
 		// Verify TEE signatures using extracted public keys
 		await verifyTeeSignatures(bundle, teekKeyResult!, teetKeyResult!, logger)
 
 		// SECURITY: Validate opening (proof stream) is present - following Go implementation
-		if(!bundle.opening?.proofStream || !bundle.opening?.proofKey) {
-			throw new AttestorError('ERROR_INVALID_CLAIM', 'Critical security failure: proof stream/key missing - cannot perform proof stream application')
+		if(!bundle.opening?.proofStream) {
+			throw new AttestorError('ERROR_INVALID_CLAIM', 'Critical security failure: proof stream missing - cannot perform proof stream application')
 		}
 
-		if(bundle.opening.proofStream.length === 0 || bundle.opening.proofKey.length === 0) {
-			throw new AttestorError('ERROR_INVALID_CLAIM', 'Critical security failure: empty proof stream/key - compromises verification integrity')
+		if(bundle.opening.proofStream.length === 0) {
+			throw new AttestorError('ERROR_INVALID_CLAIM', 'Critical security failure: empty proof stream - compromises verification integrity')
 		}
 
 		logger.info('Opening validation successful', {
 			proofStreamLength: bundle.opening.proofStream.length,
-			proofKeyLength: bundle.opening.proofKey.length
 		})
 
 		// Ensure signed messages are present
@@ -62,8 +61,6 @@ export async function verifyTeeBundle(
 		return {
 			teekSigned: bundle.teekSigned,
 			teetSigned: bundle.teetSigned,
-			teekPublicKey,
-			teetPublicKey,
 			kOutputPayload,
 			tOutputPayload,
 			handshakeKeys: bundle.handshakeKeys,
@@ -82,8 +79,7 @@ export async function verifyTeeBundle(
 function parseVerificationBundle(bundleBytes: Uint8Array): VerificationBundlePB {
 	try {
 		// Use the actual protobuf decoder for the TEE bundle format
-		const bundle = VerificationBundlePB.decode(bundleBytes)
-		return bundle
+		return VerificationBundlePB.decode(bundleBytes)
 
 	} catch(error) {
 		throw new Error(`Failed to parse verification bundle: ${(error as Error).message}`)
@@ -147,24 +143,20 @@ async function extractPublicKeys(
 	bundle: VerificationBundlePB,
 	logger: Logger
 ): Promise<{
-	teekPublicKey: Uint8Array
-	teetPublicKey: Uint8Array
-	teekKeyResult?: PublicKeyExtractionResult
-	teetKeyResult?: PublicKeyExtractionResult
+	teekKeyResult?: AddressExtractionResult
+	teetKeyResult?: AddressExtractionResult
 }> {
 	// Check if we have attestations (production mode) or embedded keys (standalone mode)
 	// Attestations are now embedded in SignedMessage.attestationReport
 	const hasEmbeddedAttestations = (bundle.teekSigned!.attestationReport?.report && bundle.teekSigned!.attestationReport.report.length > 0) &&
 		(bundle.teetSigned!.attestationReport?.report && bundle.teetSigned!.attestationReport.report.length > 0)
 
-	const hasAttestations = hasEmbeddedAttestations
+	let teekAddress: string | undefined
+	let teetAddress: string | undefined
+	let teekKeyResult: AddressExtractionResult | undefined
+	let teetKeyResult: AddressExtractionResult | undefined
 
-	let teekPublicKey: Uint8Array
-	let teetPublicKey: Uint8Array
-	let teekKeyResult: PublicKeyExtractionResult | undefined
-	let teetKeyResult: PublicKeyExtractionResult | undefined
-
-	if(hasAttestations) {
+	if(hasEmbeddedAttestations) {
 		// Production mode: Extract from Nitro attestations
 		logger.info('Using production mode: extracting keys from Nitro attestations')
 
@@ -186,8 +178,8 @@ async function extractPublicKeys(
 			throw new Error(`TEE_K attestation validation failed: ${teekResult.errors.join(', ')}`)
 		}
 
-		if(!teekResult.extractedPublicKey) {
-			throw new Error('TEE_K attestation validation failed: no public key extracted')
+		if(!teekResult.ethAddress) {
+			throw new Error('TEE_K attestation validation failed: no address')
 		}
 
 		if(teekResult.userDataType !== 'tee_k') {
@@ -199,25 +191,20 @@ async function extractPublicKeys(
 			throw new Error(`TEE_T attestation validation failed: ${teetResult.errors.join(', ')}`)
 		}
 
-		if(!teetResult.extractedPublicKey) {
-			throw new Error('TEE_T attestation validation failed: no public key extracted')
+		if(!teetResult.ethAddress) {
+			throw new Error('TEE_T attestation validation failed: no address')
 		}
 
 		if(teetResult.userDataType !== 'tee_t') {
 			throw new Error(`TEE_T attestation validation failed: wrong TEE type, expected tee_t, got ${teetResult.userDataType}`)
 		}
 
-		teekPublicKey = teekResult.extractedPublicKey
-		teetPublicKey = teetResult.extractedPublicKey
-
 		// Store the full extraction results for signature verification
 		teekKeyResult = {
-			publicKey: teekResult.extractedPublicKey,
 			teeType: 'tee_k',
 			ethAddress: teekResult.ethAddress
 		}
 		teetKeyResult = {
-			publicKey: teetResult.extractedPublicKey,
 			teeType: 'tee_t',
 			ethAddress: teetResult.ethAddress
 		}
@@ -236,19 +223,16 @@ async function extractPublicKeys(
 			throw new Error('TEE_T public key missing in standalone mode')
 		}
 
-		teekPublicKey = bundle.teekSigned.publicKey
-		teetPublicKey = bundle.teetSigned.publicKey
+		teekAddress = uint8ArrayToStr(bundle.teekSigned.publicKey)
+		teetAddress = uint8ArrayToStr(bundle.teetSigned.publicKey)
 
-		// In standalone mode, we don't have ETH addresses, just DER keys
-		teekKeyResult = { publicKey: teekPublicKey, teeType: 'tee_k' }
-		teetKeyResult = { publicKey: teetPublicKey, teeType: 'tee_t' }
+		teekKeyResult = { ethAddress: teekAddress, teeType: 'tee_k' }
+		teetKeyResult = { ethAddress: teetAddress, teeType: 'tee_t' }
 
 		logger.info('Embedded public keys extracted successfully')
 	}
 
 	return {
-		teekPublicKey,
-		teetPublicKey,
 		teekKeyResult,
 		teetKeyResult
 	}
@@ -259,8 +243,8 @@ async function extractPublicKeys(
  */
 async function verifyTeeSignatures(
 	bundle: VerificationBundlePB,
-	teekKeyResult: PublicKeyExtractionResult,
-	teetKeyResult: PublicKeyExtractionResult,
+	teekKeyResult: AddressExtractionResult,
+	teetKeyResult: AddressExtractionResult,
 	logger: Logger
 ): Promise<void> {
 	// Verify TEE_K signature
@@ -303,7 +287,7 @@ async function verifyTeeSignatures(
  */
 async function verifyTeeSignature(
 	signedMessage: SignedMessage,
-	extractedKey: PublicKeyExtractionResult,
+	extractedKey: AddressExtractionResult,
 	teeType: string,
 	logger: Logger
 ): Promise<TeeSignatureVerificationResult> {
@@ -320,13 +304,13 @@ async function verifyTeeSignature(
 		let ethAddress: string
 
 		if(extractedKey.ethAddress) {
-			// New format: Use ETH address directly
 			ethAddress = extractedKey.ethAddress
 			logger.debug(`${teeType} using ETH address from attestation: ${ethAddress}`)
 		} else {
-			// Old format: Convert DER public key to ETH address
-			ethAddress = convertDerPublicKeyToEthAddress(extractedKey.publicKey)
-			logger.debug(`${teeType} converted DER key to ETH address: ${ethAddress}`)
+			return {
+				isValid: false,
+				errors: ['eth address is null'],
+			}
 		}
 
 		// Use the ETH signature verification from the existing system
@@ -348,39 +332,15 @@ async function verifyTeeSignature(
 		return {
 			isValid: errors.length === 0,
 			errors,
-			publicKey: extractedKey.publicKey
+			address: extractedKey.ethAddress
 		}
 
 	} catch(error) {
 		errors.push(`${teeType} signature verification error: ${(error as Error).message}`)
 		return {
 			isValid: false,
-			errors,
-			publicKey: extractedKey.publicKey
+			errors
 		}
-	}
-}
-
-/**
- * Converts DER-encoded ECDSA public key to Ethereum address
- * Used for backwards compatibility with old DER format
- */
-function convertDerPublicKeyToEthAddress(derPublicKey: Uint8Array): string {
-	// This is for backwards compatibility only
-	// In production, ETH addresses should come directly from attestations
-
-	try {
-		// Basic validation - DER keys should be much longer than ETH addresses
-		if(derPublicKey.length < 60) {
-			throw new Error('DER key too short - might already be an ETH address')
-		}
-
-		// For now, return a placeholder since DER->ETH conversion requires crypto libraries
-		// In practice, the new format with direct ETH addresses should be used
-		throw new Error('DER to ETH address conversion not implemented - use new ETH address format')
-
-	} catch(error) {
-		throw new Error(`Failed to convert DER key to ETH address: ${(error as Error).message}`)
 	}
 }
 
