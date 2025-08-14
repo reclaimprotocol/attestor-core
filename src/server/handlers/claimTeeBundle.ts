@@ -4,7 +4,7 @@
  */
 
 import { MAX_CLAIM_TIMESTAMP_DIFF_S } from 'src/config'
-import { ClaimTeeBundleRequest, ClaimTeeBundleResponse, ProviderClaimInfo } from 'src/proto/api'
+import { ClaimTeeBundleResponse, ProviderClaimInfo } from 'src/proto/api'
 import { getApm } from 'src/server/utils/apm'
 import { assertValidProviderTranscript } from 'src/server/utils/assert-valid-claim-request'
 import { getAttestorAddress, signAsAttestor } from 'src/server/utils/generics'
@@ -13,7 +13,6 @@ import { verifyTeeBundle } from 'src/server/utils/tee-verification'
 import { Logger, ProviderCtx, RPCHandler, Transcript } from 'src/types'
 import { TeeTranscriptData } from 'src/types/tee'
 import { AttestorError, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from 'src/utils'
-import { SIGNATURES } from 'src/utils/signatures'
 
 export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	teeBundleRequest,
@@ -36,11 +35,6 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 				`Timestamp provided ${timestampS} is too far off. Current time is ${now}`
 			)
 		}
-
-		// 2. Verify user signature on the request
-		logger.info('TEE Bundle - About to verify user signature')
-		await verifyUserSignature(teeBundleRequest, client.metadata, logger)
-		logger.info('TEE Bundle - User signature verified successfully')
 
 		// 3. Verify TEE bundle (attestations + signatures)
 		logger.info('Starting TEE bundle verification')
@@ -113,55 +107,6 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 
 	logger.info('TEE bundle claim processing completed')
 	return res
-}
-
-/**
- * Verifies the user signature on the TEE bundle request
- */
-async function verifyUserSignature(
-	request: Parameters<typeof claimTeeBundle>[0],
-	metadata: any,
-	logger: any
-): Promise<void> {
-	const {
-		data,
-		signatures: { requestSignature } = {}
-	} = request
-
-	if(!data) {
-		throw new AttestorError(
-			'ERROR_INVALID_CLAIM',
-			'No info provided on TEE bundle claim request'
-		)
-	}
-
-	if(!requestSignature?.length) {
-		throw new AttestorError(
-			'ERROR_INVALID_CLAIM',
-			'No signature provided on TEE bundle claim request'
-		)
-	}
-
-	// Verify request signature (same logic as claimTunnel)
-	const serialisedReq = ClaimTeeBundleRequest
-		.encode({ ...request, signatures: undefined })
-		.finish()
-
-	const { verify: verifySig } = SIGNATURES[metadata.signatureType]
-	const verified = await verifySig(
-		serialisedReq,
-		requestSignature,
-		data.owner
-	)
-
-	if(!verified) {
-		throw new AttestorError(
-			'ERROR_INVALID_CLAIM',
-			'Invalid signature on TEE bundle claim request'
-		)
-	}
-
-	logger.debug('TEE Bundle user signature verification successful')
 }
 
 /**

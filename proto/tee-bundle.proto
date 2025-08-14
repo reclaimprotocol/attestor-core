@@ -3,7 +3,6 @@ syntax = "proto3";
 package teeproto;
 
 // Message definitions for TEE+MPC protocol verification bundles
-// Based on /home/scratch/reclaim-tee/proto/ definitions
 
 // Common structures
 message RequestRedactionRange {
@@ -11,7 +10,7 @@ message RequestRedactionRange {
   int32 length = 2;
   // Values: "sensitive" or "sensitive_proof"
   string type = 3;
-  bytes redaction_bytes = 4; // Optional
+  bytes redaction_bytes = 4;
 }
 
 message ResponseRedactionRange {
@@ -35,12 +34,10 @@ message HandshakeSecrets {
 // Commitment opening for proof stream
 message Opening {
   bytes proof_stream = 1; // Str_SP
-  bytes proof_key = 2;    // K_SP
 }
 
 // Deterministically serialized payloads to be signed by TEEs
 message KOutputPayload {
-  // For single request-response mode
   bytes redacted_request = 1; // R_red
   repeated RequestRedactionRange request_redaction_ranges = 2;
   repeated SignedRedactedDecryptionStream redacted_streams = 3; // from TEE_K
@@ -68,7 +65,7 @@ enum BodyType {
 message SignedMessage {
   BodyType body_type = 1;
   bytes body = 2; // serialized deterministic KOutputPayload or TOutputPayload
-  bytes public_key = 3; // DER-encoded public key (standalone mode only)
+  bytes public_key = 3; // ETH address (20 bytes, standalone mode only)
   bytes signature = 4; // signature over body bytes
   AttestationReport attestation_report = 5; // full attestation (enclave mode only)
 }

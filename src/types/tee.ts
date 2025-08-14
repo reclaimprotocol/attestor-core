@@ -14,7 +14,6 @@ export interface HandshakeSecrets {
 
 export interface Opening {
 	proofStream: Uint8Array // Str_SP
-	proofKey: Uint8Array // K_SP
 }
 
 export interface RequestRedactionRange {
@@ -93,7 +92,6 @@ export interface NitroValidationResult {
 	isValid: boolean
 	errors: string[]
 	warnings: string[]
-	extractedPublicKey?: Uint8Array
 	userDataType?: 'tee_k' | 'tee_t'
 	ethAddress?: string // ETH address extracted from user_data
 }
@@ -103,8 +101,6 @@ export interface NitroValidationResult {
 export interface TeeBundleData {
 	teekSigned: import('src/proto/tee-bundle').SignedMessage // TEE_K SignedMessage
 	teetSigned: import('src/proto/tee-bundle').SignedMessage // TEE_T SignedMessage
-	teekPublicKey: Uint8Array // Extracted from attestation
-	teetPublicKey: Uint8Array // Extracted from attestation
 	kOutputPayload: import('src/proto/tee-bundle').KOutputPayload // Parsed TEE_K payload
 	tOutputPayload: import('src/proto/tee-bundle').TOutputPayload // Parsed TEE_T payload
 	handshakeKeys?: import('src/proto/tee-bundle').HandshakeSecrets // Optional handshake secrets
@@ -145,7 +141,7 @@ export interface TeeValidationError extends Error {
 export interface TeeSignatureVerificationResult {
 	isValid: boolean
 	errors: string[]
-	publicKey?: Uint8Array
+	address?: string
 }
 
 // ===== CONFIGURATION =====
@@ -160,8 +156,7 @@ export interface TeeConfig {
 
 export type TeeType = 'tee_k' | 'tee_t'
 
-export interface PublicKeyExtractionResult {
-	publicKey: Uint8Array
+export interface AddressExtractionResult {
 	teeType: TeeType
-	ethAddress?: string // ETH address with 0x prefix (new format)
+	ethAddress?: string // ETH address with 0x prefix
 }
