@@ -402,7 +402,11 @@ export interface MessageReveal {
     | MessageReveal_MessageRevealDirect
     | undefined;
   /** partially or fully reveal the block via a zk proof */
-  zkReveal?: MessageReveal_MessageRevealZk | undefined;
+  zkReveal?:
+    | MessageReveal_MessageRevealZk
+    | undefined;
+  /** Reveals of TEE services */
+  teeStreamReveal?: MessageReveal_MessageRevealTeeStream | undefined;
 }
 
 export interface MessageReveal_MessageRevealDirect {
@@ -419,6 +423,15 @@ export interface MessageReveal_MessageRevealDirect {
 
 export interface MessageReveal_MessageRevealZk {
   proofs: MessageReveal_ZKProof[];
+}
+
+export interface MessageReveal_MessageRevealTeeStream {
+  /** The revealed (redacted) data from TEE */
+  revealedData: Uint8Array;
+  /** TEE signature over this data */
+  teeSignature: Uint8Array;
+  /** TEE public key for verification */
+  teePublicKey: Uint8Array;
 }
 
 export interface MessageReveal_ZKProof {
@@ -477,21 +490,13 @@ export interface ClaimRequestData {
 }
 
 export interface ClaimTeeBundleRequest {
-  /** TEE verification bundle containing attestations and signed data */
   verificationBundle: Uint8Array;
-  /** Data describing the claim you want to prove */
-  data:
-    | ClaimRequestData
-    | undefined;
-  /** User signature on the request */
+  data: ClaimRequestData | undefined;
   signatures: ClaimTeeBundleRequest_Signatures | undefined;
+  claimTunnelRequest: ClaimTunnelRequest | undefined;
 }
 
 export interface ClaimTeeBundleRequest_Signatures {
-  /**
-   * Signature of ClaimTeeBundleRequest
-   * with empty "signatures" field
-   */
   requestSignature: Uint8Array;
 }
 
@@ -1663,7 +1668,7 @@ export const TunnelDisconnectEvent: MessageFns<TunnelDisconnectEvent> = {
 };
 
 function createBaseMessageReveal(): MessageReveal {
-  return { directReveal: undefined, zkReveal: undefined };
+  return { directReveal: undefined, zkReveal: undefined, teeStreamReveal: undefined };
 }
 
 export const MessageReveal: MessageFns<MessageReveal> = {
@@ -1673,6 +1678,9 @@ export const MessageReveal: MessageFns<MessageReveal> = {
     }
     if (message.zkReveal !== undefined) {
       MessageReveal_MessageRevealZk.encode(message.zkReveal, writer.uint32(18).fork()).join();
+    }
+    if (message.teeStreamReveal !== undefined) {
+      MessageReveal_MessageRevealTeeStream.encode(message.teeStreamReveal, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -1700,6 +1708,14 @@ export const MessageReveal: MessageFns<MessageReveal> = {
           message.zkReveal = MessageReveal_MessageRevealZk.decode(reader, reader.uint32());
           continue;
         }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.teeStreamReveal = MessageReveal_MessageRevealTeeStream.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1715,6 +1731,9 @@ export const MessageReveal: MessageFns<MessageReveal> = {
         ? MessageReveal_MessageRevealDirect.fromJSON(object.directReveal)
         : undefined,
       zkReveal: isSet(object.zkReveal) ? MessageReveal_MessageRevealZk.fromJSON(object.zkReveal) : undefined,
+      teeStreamReveal: isSet(object.teeStreamReveal)
+        ? MessageReveal_MessageRevealTeeStream.fromJSON(object.teeStreamReveal)
+        : undefined,
     };
   },
 
@@ -1725,6 +1744,9 @@ export const MessageReveal: MessageFns<MessageReveal> = {
     }
     if (message.zkReveal !== undefined) {
       obj.zkReveal = MessageReveal_MessageRevealZk.toJSON(message.zkReveal);
+    }
+    if (message.teeStreamReveal !== undefined) {
+      obj.teeStreamReveal = MessageReveal_MessageRevealTeeStream.toJSON(message.teeStreamReveal);
     }
     return obj;
   },
@@ -1739,6 +1761,9 @@ export const MessageReveal: MessageFns<MessageReveal> = {
       : undefined;
     message.zkReveal = (object.zkReveal !== undefined && object.zkReveal !== null)
       ? MessageReveal_MessageRevealZk.fromPartial(object.zkReveal)
+      : undefined;
+    message.teeStreamReveal = (object.teeStreamReveal !== undefined && object.teeStreamReveal !== null)
+      ? MessageReveal_MessageRevealTeeStream.fromPartial(object.teeStreamReveal)
       : undefined;
     return message;
   },
@@ -1894,6 +1919,98 @@ export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageReve
   fromPartial(object: DeepPartial<MessageReveal_MessageRevealZk>): MessageReveal_MessageRevealZk {
     const message = createBaseMessageReveal_MessageRevealZk();
     message.proofs = object.proofs?.map((e) => MessageReveal_ZKProof.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseMessageReveal_MessageRevealTeeStream(): MessageReveal_MessageRevealTeeStream {
+  return { revealedData: new Uint8Array(0), teeSignature: new Uint8Array(0), teePublicKey: new Uint8Array(0) };
+}
+
+export const MessageReveal_MessageRevealTeeStream: MessageFns<MessageReveal_MessageRevealTeeStream> = {
+  encode(message: MessageReveal_MessageRevealTeeStream, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.revealedData.length !== 0) {
+      writer.uint32(10).bytes(message.revealedData);
+    }
+    if (message.teeSignature.length !== 0) {
+      writer.uint32(18).bytes(message.teeSignature);
+    }
+    if (message.teePublicKey.length !== 0) {
+      writer.uint32(26).bytes(message.teePublicKey);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): MessageReveal_MessageRevealTeeStream {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseMessageReveal_MessageRevealTeeStream();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.revealedData = reader.bytes();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.teeSignature = reader.bytes();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.teePublicKey = reader.bytes();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): MessageReveal_MessageRevealTeeStream {
+    return {
+      revealedData: isSet(object.revealedData) ? bytesFromBase64(object.revealedData) : new Uint8Array(0),
+      teeSignature: isSet(object.teeSignature) ? bytesFromBase64(object.teeSignature) : new Uint8Array(0),
+      teePublicKey: isSet(object.teePublicKey) ? bytesFromBase64(object.teePublicKey) : new Uint8Array(0),
+    };
+  },
+
+  toJSON(message: MessageReveal_MessageRevealTeeStream): unknown {
+    const obj: any = {};
+    if (message.revealedData.length !== 0) {
+      obj.revealedData = base64FromBytes(message.revealedData);
+    }
+    if (message.teeSignature.length !== 0) {
+      obj.teeSignature = base64FromBytes(message.teeSignature);
+    }
+    if (message.teePublicKey.length !== 0) {
+      obj.teePublicKey = base64FromBytes(message.teePublicKey);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<MessageReveal_MessageRevealTeeStream>): MessageReveal_MessageRevealTeeStream {
+    return MessageReveal_MessageRevealTeeStream.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<MessageReveal_MessageRevealTeeStream>): MessageReveal_MessageRevealTeeStream {
+    const message = createBaseMessageReveal_MessageRevealTeeStream();
+    message.revealedData = object.revealedData ?? new Uint8Array(0);
+    message.teeSignature = object.teeSignature ?? new Uint8Array(0);
+    message.teePublicKey = object.teePublicKey ?? new Uint8Array(0);
     return message;
   },
 };
@@ -2348,7 +2465,12 @@ export const ClaimRequestData: MessageFns<ClaimRequestData> = {
 };
 
 function createBaseClaimTeeBundleRequest(): ClaimTeeBundleRequest {
-  return { verificationBundle: new Uint8Array(0), data: undefined, signatures: undefined };
+  return {
+    verificationBundle: new Uint8Array(0),
+    data: undefined,
+    signatures: undefined,
+    claimTunnelRequest: undefined,
+  };
 }
 
 export const ClaimTeeBundleRequest: MessageFns<ClaimTeeBundleRequest> = {
@@ -2361,6 +2483,9 @@ export const ClaimTeeBundleRequest: MessageFns<ClaimTeeBundleRequest> = {
     }
     if (message.signatures !== undefined) {
       ClaimTeeBundleRequest_Signatures.encode(message.signatures, writer.uint32(26).fork()).join();
+    }
+    if (message.claimTunnelRequest !== undefined) {
+      ClaimTunnelRequest.encode(message.claimTunnelRequest, writer.uint32(34).fork()).join();
     }
     return writer;
   },
@@ -2396,6 +2521,14 @@ export const ClaimTeeBundleRequest: MessageFns<ClaimTeeBundleRequest> = {
           message.signatures = ClaimTeeBundleRequest_Signatures.decode(reader, reader.uint32());
           continue;
         }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.claimTunnelRequest = ClaimTunnelRequest.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2412,6 +2545,9 @@ export const ClaimTeeBundleRequest: MessageFns<ClaimTeeBundleRequest> = {
         : new Uint8Array(0),
       data: isSet(object.data) ? ClaimRequestData.fromJSON(object.data) : undefined,
       signatures: isSet(object.signatures) ? ClaimTeeBundleRequest_Signatures.fromJSON(object.signatures) : undefined,
+      claimTunnelRequest: isSet(object.claimTunnelRequest)
+        ? ClaimTunnelRequest.fromJSON(object.claimTunnelRequest)
+        : undefined,
     };
   },
 
@@ -2425,6 +2561,9 @@ export const ClaimTeeBundleRequest: MessageFns<ClaimTeeBundleRequest> = {
     }
     if (message.signatures !== undefined) {
       obj.signatures = ClaimTeeBundleRequest_Signatures.toJSON(message.signatures);
+    }
+    if (message.claimTunnelRequest !== undefined) {
+      obj.claimTunnelRequest = ClaimTunnelRequest.toJSON(message.claimTunnelRequest);
     }
     return obj;
   },
@@ -2440,6 +2579,9 @@ export const ClaimTeeBundleRequest: MessageFns<ClaimTeeBundleRequest> = {
       : undefined;
     message.signatures = (object.signatures !== undefined && object.signatures !== null)
       ? ClaimTeeBundleRequest_Signatures.fromPartial(object.signatures)
+      : undefined;
+    message.claimTunnelRequest = (object.claimTunnelRequest !== undefined && object.claimTunnelRequest !== null)
+      ? ClaimTunnelRequest.fromPartial(object.claimTunnelRequest)
       : undefined;
     return message;
   },

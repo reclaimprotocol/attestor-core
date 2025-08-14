@@ -41,8 +41,6 @@ describe('New Bundle with Attestation Docs', () => {
 		console.log('- TEE_T body size:', bundle.teetSigned?.body?.length || 0, 'bytes')
 		console.log('- Has handshake keys:', !!bundle.handshakeKeys)
 		console.log('- Has opening:', !!bundle.opening)
-		console.log('- Separate TEE_K attestation:', bundle.attestationTeeK?.length || 0, 'bytes')
-		console.log('- Separate TEE_T attestation:', bundle.attestationTeeT?.length || 0, 'bytes')
 		console.log('- TEE_K embedded attestation:', bundle.teekSigned?.attestationReport?.report?.length || 0, 'bytes')
 		console.log('- TEE_T embedded attestation:', bundle.teetSigned?.attestationReport?.report?.length || 0, 'bytes')
 

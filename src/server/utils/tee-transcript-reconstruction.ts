@@ -3,16 +3,10 @@
  * Based on logic from /home/scratch/reclaim-tee/proofverifier/proofverifier.go
  */
 
-import {
-	ClaimTunnelRequest,
-	TranscriptMessageSenderType
-} from 'src/proto/api'
-import { HandshakeSecrets, TOutputPayload } from 'src/proto/tee-bundle'
+import { ClaimTunnelRequest, TranscriptMessageSenderType } from 'src/proto/api'
+import { TOutputPayload } from 'src/proto/tee-bundle'
 import { Logger } from 'src/types'
-import {
-	SyntheticTranscriptMessage,
-	TeeBundleData,
-	TeeTranscriptData } from 'src/types/tee'
+import { SyntheticTranscriptMessage, TeeBundleData, TeeTranscriptData } from 'src/types/tee'
 import { AttestorError } from 'src/utils'
 
 /**
@@ -34,7 +28,7 @@ export async function reconstructTlsTranscript(
 		const revealedRequest = reconstructRequest(bundleData, logger)
 
 		// 2. Reconstruct response using redacted streams
-		const reconstructedResponse = reconstructResponse(bundleData, isTLS12AESGCM, logger)
+		const responseData = reconstructResponse(bundleData, isTLS12AESGCM, logger)
 
 		// 3. Extract handshake and application data packets
 		const handshakePackets = bundleData.kOutputPayload.packets
@@ -46,7 +40,7 @@ export async function reconstructTlsTranscript(
 			handshakePackets,
 			applicationDataPackets,
 			revealedRequest,
-			reconstructedResponse,
+			reconstructedResponsePackets: responseData.individualPackets, // New: individual packets
 			cipherSuite,
 			tlsVersion: determineTlsVersion(cipherSuite)
 		}
@@ -139,13 +133,16 @@ function reconstructRequest(bundleData: TeeBundleData, logger: Logger): Uint8Arr
 
 /**
  * Reconstructs response by applying redacted streams to encrypted application data
+ * Returns individual packets to preserve packet boundaries
  */
-function reconstructResponse(bundleData: TeeBundleData, isTLS12AESGCM: boolean, logger: Logger): Uint8Array {
+function reconstructResponse(bundleData: TeeBundleData, isTLS12AESGCM: boolean, logger: Logger): {
+	individualPackets: Uint8Array[]
+} {
 	const { kOutputPayload, tOutputPayload } = bundleData
 
 	if(!kOutputPayload.redactedStreams || kOutputPayload.redactedStreams.length === 0) {
 		logger.warn('No redacted streams available for response reconstruction')
-		return new Uint8Array(0)
+		return { individualPackets: [] }
 	}
 
 	// Extract ciphertexts from TEE_T application data packets
@@ -153,7 +150,7 @@ function reconstructResponse(bundleData: TeeBundleData, isTLS12AESGCM: boolean, 
 
 	// Reconstruct plaintext by walking streams and finding the next ciphertext with matching length
 	// This follows the exact logic from /home/scratch/reclaim-tee/proofverifier/proofverifier.go
-	const reconstructed: Uint8Array[] = []
+	const reconstructedPackets: Uint8Array[] = []
 	let cipherIdx = 0
 
 	if(kOutputPayload.redactedStreams.length > 0) {
@@ -183,27 +180,38 @@ function reconstructResponse(bundleData: TeeBundleData, isTLS12AESGCM: boolean, 
 				plain[i] = cipherByte ^ stream.redactedStream[i]
 			}
 
-			reconstructed.push(plain)
+			reconstructedPackets.push(plain)
 			cipherIdx++
 		}
 	}
 
-	// Combine all reconstructed parts
-	const totalLength = reconstructed.reduce((sum, part) => sum + part.length, 0)
-	const result = new Uint8Array(totalLength)
+	// Combine all reconstructed parts to apply redaction ranges correctly
+	const totalLength = reconstructedPackets.reduce((sum, part) => sum + part.length, 0)
+	const combinedResult = new Uint8Array(totalLength)
 	let offset = 0
 
-	for(const part of reconstructed) {
-		result.set(part, offset)
+	for(const part of reconstructedPackets) {
+		combinedResult.set(part, offset)
 		offset += part.length
 	}
 
-	// Apply response redaction ranges to replace random garbage with asterisks
-	const finalResult = applyResponseRedactionRanges(result, kOutputPayload.responseRedactionRanges)
+	// Apply response redaction ranges to the COMBINED response (this is critical!)
+	const redactedCombined = applyResponseRedactionRanges(combinedResult, kOutputPayload.responseRedactionRanges)
 
-	logger.debug(`Reconstructed response from ${kOutputPayload.redactedStreams.length} streams`)
+	// Now split the redacted combined response back into individual packets
+	const redactedPackets: Uint8Array[] = []
+	let currentOffset = 0
 
-	return finalResult
+	for(const originalPacket of reconstructedPackets) {
+		const packetLength = originalPacket.length
+		const redactedPacket = redactedCombined.slice(currentOffset, currentOffset + packetLength)
+		redactedPackets.push(redactedPacket)
+		currentOffset += packetLength
+	}
+
+	logger.debug(`Reconstructed ${redactedPackets.length} individual response packets from ${kOutputPayload.redactedStreams.length} streams`)
+
+	return { individualPackets: redactedPackets }
 }
 
 /**
@@ -335,7 +343,8 @@ function consolidateRedactionRanges(
 export function createSyntheticClaimRequest(
 	transcriptData: TeeTranscriptData,
 	claimData: any,
-	bundleData: TeeBundleData
+	bundleData: TeeBundleData,
+	originalRequestSignature?: Uint8Array
 ): ClaimTunnelRequest {
 	const messages: SyntheticTranscriptMessage[] = []
 
@@ -352,17 +361,8 @@ export function createSyntheticClaimRequest(
 	messages.push({
 		sender: 'client',
 		message: wrapInTlsRecord(transcriptData.revealedRequest, 0x17),
-		reveal: createDirectReveal(bundleData.handshakeKeys)
+		reveal: createTeeStreamReveal(transcriptData.revealedRequest, bundleData)
 	})
-
-	// Add server response (reconstructed)
-	if(transcriptData.reconstructedResponse.length > 0) {
-		messages.push({
-			sender: 'server',
-			message: wrapInTlsRecord(transcriptData.reconstructedResponse, 0x17),
-			reveal: createDirectReveal(bundleData.handshakeKeys)
-		})
-	}
 
 	// Convert to the format expected by ClaimTunnelRequest
 	const transcript = messages.map(msg => ({
@@ -383,7 +383,7 @@ export function createSyntheticClaimRequest(
 		data: claimData,
 		transcript,
 		signatures: {
-			requestSignature: new Uint8Array() // Will be filled by handler
+			requestSignature: originalRequestSignature || new Uint8Array()
 		},
 		zkEngine: 0, // Not applicable for TEE mode
 		fixedServerIV: new Uint8Array(),
@@ -448,16 +448,12 @@ function wrapInTlsRecord(data: Uint8Array, recordType: number): Uint8Array {
 	return record
 }
 
-function createDirectReveal(handshakeKeys?: HandshakeSecrets): any {
-	if(!handshakeKeys) {
-		return undefined
-	}
-
+function createTeeStreamReveal(data: Uint8Array, bundleData: TeeBundleData): any {
 	return {
-		directReveal: {
-			key: handshakeKeys.handshakeKey,
-			iv: handshakeKeys.handshakeIv,
-			recordNumber: 0
+		teeStreamReveal: {
+			revealedData: data,
+			teeSignature: bundleData.teekSigned?.signature || new Uint8Array(),
+			teePublicKey: bundleData.teekSigned?.publicKey || new Uint8Array()
 		}
 	}
 }

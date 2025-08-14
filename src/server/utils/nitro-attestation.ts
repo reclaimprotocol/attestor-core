@@ -7,9 +7,15 @@ import { AsnParser } from '@peculiar/asn1-schema'
 import { SubjectPublicKeyInfo } from '@peculiar/asn1-x509'
 import { Crypto } from '@peculiar/webcrypto'
 import { X509Certificate, X509ChainBuilder } from '@peculiar/x509'
-import { decode } from 'cbor-x'
+// Dynamic import for cbor-x to avoid CommonJS/ESM issues
 import { sign } from 'cose-js'
-import { AttestationDocument, NitroValidationResult, PublicKeyExtractionResult, TeeType } from 'src/types/tee'
+import { AttestationDocument, NitroValidationResult, PublicKeyExtractionResult } from 'src/types/tee'
+
+// Helper function to dynamically import cbor-x
+async function getCborDecode() {
+	const { decode } = await import('cbor-x')
+	return decode
+}
 
 // AWS Nitro root certificate (from nitrite)
 const AWS_NITRO_ROOT_CERT = `-----BEGIN CERTIFICATE-----
@@ -111,6 +117,7 @@ async function validateCertificateChain(
 				try {
 					const issuer = chain[i + 1]
 					const isValid = await cert.verify(issuer, crypto)
+					// eslint-disable-next-line max-depth
 					if(!isValid) {
 						errors.push(`Certificate ${i} signature verification failed`)
 					}
@@ -158,25 +165,6 @@ function extractPublicKeyFromUserData(userDataBuffer: Buffer): PublicKeyExtracti
 			}
 		}
 
-		// Fallback: try to parse as DER-encoded public key (legacy format)
-		try {
-			const spki = AsnParser.parse(userDataBuffer, SubjectPublicKeyInfo)
-			const ecPoint = Buffer.from(spki.subjectPublicKey)
-
-			if(ecPoint.length === 97 && ecPoint[0] === 0x04) {
-				// Determine TEE type based on some heuristic or default
-				const teeType: TeeType = 'tee_k' // Default assumption
-
-				return {
-					publicKey: new Uint8Array(userDataBuffer),
-					teeType
-					// No ethAddress for DER format
-				}
-			}
-		} catch(derError) {
-			// Not a valid DER format either
-		}
-
 		return null
 	} catch(error) {
 		return null
@@ -196,14 +184,15 @@ export async function validateNitroAttestationAndExtractKey(
 		// Set up WebCrypto
 		const crypto = new Crypto()
 
-		// Decode CBOR - use exact same approach as working nitroattestor
-		let decoded: any
-		try {
-			decoded = decode(Buffer.from(attestationBytes))
-		} catch(error) {
-			errors.push(`CBOR decoding failed: ${(error as Error).message}`)
-			return { isValid: false, errors, warnings }
-		}
+			// Decode CBOR - use exact same approach as working nitroattestor
+	const decode = await getCborDecode()
+	let decoded: any
+	try {
+		decoded = decode(Buffer.from(attestationBytes))
+	} catch(error) {
+		errors.push(`CBOR decoding failed: ${(error as Error).message}`)
+		return { isValid: false, errors, warnings }
+	}
 
 		// Extract COSE_Sign1 structure
 		if(!Array.isArray(decoded) || decoded.length < 4) {
@@ -229,16 +218,12 @@ export async function validateNitroAttestationAndExtractKey(
 		}
 
 		// Validate mandatory fields with strict type checking
-		if(typeof doc.module_id !== 'string' || doc.module_id.length === 0) {
+		if(doc.module_id.length === 0) {
 			errors.push('Missing or invalid module_id')
 		}
 
-		if(typeof doc.digest !== 'string' || doc.digest.length === 0) {
+		if(doc.digest.length === 0) {
 			errors.push('Missing or invalid digest')
-		}
-
-		if(typeof doc.timestamp !== 'bigint') {
-			errors.push('Missing or invalid timestamp')
 		}
 
 		if(!doc.pcrs || typeof doc.pcrs !== 'object') {

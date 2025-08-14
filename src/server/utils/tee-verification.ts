@@ -103,10 +103,8 @@ function validateBundleCompleteness(bundle: VerificationBundlePB): void {
 	}
 
 	// Check if we're in standalone mode (development/testing) or attestation mode (production)
-	// Attestations can be in separate fields OR embedded in SignedMessage.attestationReport
-	const hasAttestations = (bundle.attestationTeeK && bundle.attestationTeeK.length > 0) ||
-		(bundle.attestationTeeT && bundle.attestationTeeT.length > 0) ||
-		(bundle.teekSigned.attestationReport?.report && bundle.teekSigned.attestationReport.report.length > 0) ||
+	// Attestations are now embedded in SignedMessage.attestationReport
+	const hasAttestations = (bundle.teekSigned.attestationReport?.report && bundle.teekSigned.attestationReport.report.length > 0) ||
 		(bundle.teetSigned.attestationReport?.report && bundle.teetSigned.attestationReport.report.length > 0)
 
 	const hasPublicKeys = (bundle.teekSigned.publicKey && bundle.teekSigned.publicKey.length > 0) ||
@@ -155,14 +153,11 @@ async function extractPublicKeys(
 	teetKeyResult?: PublicKeyExtractionResult
 }> {
 	// Check if we have attestations (production mode) or embedded keys (standalone mode)
-	// Priority: separate fields > SignedMessage.attestationReport > embedded keys
-	const hasSeparateAttestations = (bundle.attestationTeeK && bundle.attestationTeeK.length > 0) &&
-		(bundle.attestationTeeT && bundle.attestationTeeT.length > 0)
+	// Attestations are now embedded in SignedMessage.attestationReport
+	const hasEmbeddedAttestations = (bundle.teekSigned!.attestationReport?.report && bundle.teekSigned!.attestationReport.report.length > 0) &&
+		(bundle.teetSigned!.attestationReport?.report && bundle.teetSigned!.attestationReport.report.length > 0)
 
-	const hasEmbeddedAttestations = (bundle.teekSigned?.attestationReport?.report && bundle.teekSigned.attestationReport.report.length > 0) &&
-		(bundle.teetSigned?.attestationReport?.report && bundle.teetSigned.attestationReport.report.length > 0)
-
-	const hasAttestations = hasSeparateAttestations || hasEmbeddedAttestations
+	const hasAttestations = hasEmbeddedAttestations
 
 	let teekPublicKey: Uint8Array
 	let teetPublicKey: Uint8Array
@@ -173,28 +168,18 @@ async function extractPublicKeys(
 		// Production mode: Extract from Nitro attestations
 		logger.info('Using production mode: extracting keys from Nitro attestations')
 
-		let teekAttestationBytes: Uint8Array
-		let teetAttestationBytes: Uint8Array
-
-		if(hasSeparateAttestations) {
-			// Use separate attestation fields
-			logger.info('Using separate attestation fields')
-			teekAttestationBytes = bundle.attestationTeeK!
-			teetAttestationBytes = bundle.attestationTeeT!
-		} else {
-			// Use embedded attestation reports
-			logger.info('Using embedded attestation reports')
-			if(!bundle.teekSigned?.attestationReport?.report) {
-				throw new Error('TEE_K embedded attestation report missing')
-			}
-
-			if(!bundle.teetSigned?.attestationReport?.report) {
-				throw new Error('TEE_T embedded attestation report missing')
-			}
-
-			teekAttestationBytes = bundle.teekSigned.attestationReport.report
-			teetAttestationBytes = bundle.teetSigned.attestationReport.report
+		// Use embedded attestation reports
+		logger.info('Using embedded attestation reports')
+		if(!bundle.teekSigned?.attestationReport?.report) {
+			throw new Error('TEE_K embedded attestation report missing')
 		}
+
+		if(!bundle.teetSigned?.attestationReport?.report) {
+			throw new Error('TEE_T embedded attestation report missing')
+		}
+
+		const teekAttestationBytes = bundle.teekSigned.attestationReport.report
+		const teetAttestationBytes = bundle.teetSigned.attestationReport.report
 
 		const teekResult = await validateNitroAttestationAndExtractKey(teekAttestationBytes)
 		if(!teekResult.isValid) {

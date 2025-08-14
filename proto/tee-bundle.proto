@@ -15,7 +15,7 @@ message RequestRedactionRange {
 }
 
 message ResponseRedactionRange {
-  int32 start = 1; 
+  int32 start = 1;
   int32 length = 2;
 }
 
@@ -83,8 +83,4 @@ message VerificationBundlePB {
 
   // Commitment opening for proof ranges
   Opening opening = 4; // optional
-
-  // Optional attestation documents
-  bytes attestation_tee_k = 10;
-  bytes attestation_tee_t = 11;
 }

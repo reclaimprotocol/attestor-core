@@ -4,13 +4,14 @@
  */
 
 import { MAX_CLAIM_TIMESTAMP_DIFF_S } from 'src/config'
-import { ClaimTeeBundleRequest, ClaimTeeBundleResponse } from 'src/proto/api'
+import { ClaimTeeBundleRequest, ClaimTeeBundleResponse, ProviderClaimInfo } from 'src/proto/api'
 import { getApm } from 'src/server/utils/apm'
-import { assertValidClaimRequest } from 'src/server/utils/assert-valid-claim-request'
+import { assertValidProviderTranscript } from 'src/server/utils/assert-valid-claim-request'
 import { getAttestorAddress, signAsAttestor } from 'src/server/utils/generics'
-import { createSyntheticClaimRequest, reconstructTlsTranscript } from 'src/server/utils/tee-transcript-reconstruction'
+import { reconstructTlsTranscript } from 'src/server/utils/tee-transcript-reconstruction'
 import { verifyTeeBundle } from 'src/server/utils/tee-verification'
-import { RPCHandler } from 'src/types'
+import { Logger, ProviderCtx, RPCHandler, Transcript } from 'src/types'
+import { TeeTranscriptData } from 'src/types/tee'
 import { AttestorError, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from 'src/utils'
 import { SIGNATURES } from 'src/utils/signatures'
 
@@ -37,7 +38,9 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 		}
 
 		// 2. Verify user signature on the request
+		logger.info('TEE Bundle - About to verify user signature')
 		await verifyUserSignature(teeBundleRequest, client.metadata, logger)
+		logger.info('TEE Bundle - User signature verified successfully')
 
 		// 3. Verify TEE bundle (attestations + signatures)
 		logger.info('Starting TEE bundle verification')
@@ -47,29 +50,30 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 		logger.info('Starting TLS transcript reconstruction')
 		const transcriptData = await reconstructTlsTranscript(teeData, logger)
 
-		// 5. Create synthetic ClaimTunnelRequest for existing validation pipeline
-		logger.info('Creating synthetic claim request for validation')
-		const syntheticRequest = createSyntheticClaimRequest(
-			transcriptData,
-			teeBundleRequest.data,
-			teeData
-		)
+		// 5. Create plaintext transcript for provider validation
+		logger.info('Creating plaintext transcript from TEE data')
+		const plaintextTranscript = createPlaintextTranscriptFromTeeData(transcriptData, logger)
 
-		// 6. Use existing validation pipeline (REUSE 100% of existing logic!)
-		logger.info('Running existing claim validation pipeline')
-		const assertTx = getApm()
-			?.startTransaction('assertValidClaimRequest', { childOf: tx })
+		// 6. Direct provider validation (bypass signature validation completely)
+		logger.info('Running direct provider validation on TEE reconstructed data')
+		const validateTx = getApm()
+			?.startTransaction('validateTeeProviderReceipt', { childOf: tx })
 
 		try {
-			const claim = await assertValidClaimRequest(
-				syntheticRequest,
-				client.metadata,
-				logger
+			if(!teeBundleRequest.data) {
+				throw new AttestorError('ERROR_INVALID_CLAIM', 'No claim data provided in TEE bundle request')
+			}
+
+			const validatedClaim = await validateTeeProviderReceipt(
+				plaintextTranscript,
+				teeBundleRequest.data,
+				logger,
+				{ version: client.metadata.clientVersion }
 			)
 
 			res.claim = {
-				...claim,
-				identifier: getIdentifierFromClaimInfo(claim),
+				...validatedClaim,
+				identifier: getIdentifierFromClaimInfo(validatedClaim),
 				// hardcode for compatibility with V1 claims
 				epoch: 1
 			}
@@ -77,10 +81,10 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 			logger.info({ claimId: res.claim.identifier }, 'TEE bundle claim validation successful')
 
 		} catch(err) {
-			assertTx?.setOutcome('failure')
+			validateTx?.setOutcome('failure')
 			throw err
 		} finally {
-			assertTx?.end()
+			validateTx?.end()
 		}
 
 	} catch(err) {
@@ -157,7 +161,86 @@ async function verifyUserSignature(
 		)
 	}
 
-	logger.debug('User signature verification successful')
+	logger.debug('TEE Bundle user signature verification successful')
+}
+
+/**
+ * Creates a plaintext transcript from TEE reconstructed data
+ * This converts the TEE transcript data into the format expected by provider validation
+ * Maintains individual packet boundaries like the original transcript structure
+ */
+function createPlaintextTranscriptFromTeeData(
+	transcriptData: TeeTranscriptData,
+	logger: Logger
+): Transcript<Uint8Array> {
+	const transcript: Array<{ sender: 'client' | 'server', message: Uint8Array }> = []
+
+	// Add reconstructed request (client -> server)
+	if(transcriptData.revealedRequest && transcriptData.revealedRequest.length > 0) {
+		transcript.push({
+			sender: 'client',
+			message: transcriptData.revealedRequest
+		})
+		logger.debug('Added TEE revealed request to plaintext transcript', {
+			length: transcriptData.revealedRequest.length
+		})
+	}
+
+	// Add reconstructed response packets (server -> client)
+	// Use individual packets to preserve packet boundaries
+	if(transcriptData.reconstructedResponsePackets && transcriptData.reconstructedResponsePackets.length > 0) {
+		// Use the new individual response packets
+		for(const packet of transcriptData.reconstructedResponsePackets) {
+			transcript.push({
+				sender: 'server',
+				message: packet
+			})
+		}
+
+		logger.debug('Added TEE individual response packets to plaintext transcript', {
+			packetCount: transcriptData.reconstructedResponsePackets.length,
+			totalLength: transcriptData.reconstructedResponsePackets.reduce((sum, pkt) => sum + pkt.length, 0)
+		})
+	}
+
+	logger.info('Created plaintext transcript from TEE data', {
+		totalMessages: transcript.length,
+		hasRequest: !!transcriptData.revealedRequest?.length,
+		hasResponse: !!transcriptData.reconstructedResponsePackets?.length
+	})
+
+	return transcript
+}
+
+/**
+ * Validates TEE provider receipt directly without signature validation
+ * This is essentially assertValidProviderTranscript but for TEE data
+ */
+async function validateTeeProviderReceipt<T extends ProviderClaimInfo>(
+	plaintextTranscript: Transcript<Uint8Array>,
+	claimInfo: T,
+	logger: Logger,
+	providerCtx: ProviderCtx
+): Promise<T> {
+	logger.info('Starting direct TEE provider validation', {
+		provider: claimInfo.provider,
+		transcriptMessages: plaintextTranscript.length
+	})
+
+	// Use the existing provider validation logic directly
+	const validatedClaim = await assertValidProviderTranscript(
+		plaintextTranscript,
+		claimInfo,
+		logger,
+		providerCtx
+	)
+
+	logger.info('TEE provider validation completed successfully', {
+		provider: validatedClaim.provider,
+		owner: (validatedClaim as any).owner || 'unknown'
+	})
+
+	return validatedClaim
 }
 
 
