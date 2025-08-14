@@ -115,7 +115,7 @@ export interface TeeTranscriptData {
 	handshakePackets: Uint8Array[]
 	applicationDataPackets: Uint8Array[]
 	revealedRequest: Uint8Array
-	reconstructedResponse: Uint8Array
+	reconstructedResponsePackets: Uint8Array[] // Individual response packets
 	cipherSuite?: number
 	tlsVersion?: string
 }

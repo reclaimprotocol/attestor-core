@@ -138,12 +138,7 @@ export interface VerificationBundlePB {
     | SignedMessage
     | undefined;
   /** Commitment opening for proof ranges */
-  opening:
-    | Opening
-    | undefined;
-  /** Optional attestation documents */
-  attestationTeeK: Uint8Array;
-  attestationTeeT: Uint8Array;
+  opening: Opening | undefined;
 }
 
 function createBaseRequestRedactionRange(): RequestRedactionRange {
@@ -999,14 +994,7 @@ export const SignedMessage: MessageFns<SignedMessage> = {
 };
 
 function createBaseVerificationBundlePB(): VerificationBundlePB {
-  return {
-    handshakeKeys: undefined,
-    teekSigned: undefined,
-    teetSigned: undefined,
-    opening: undefined,
-    attestationTeeK: new Uint8Array(0),
-    attestationTeeT: new Uint8Array(0),
-  };
+  return { handshakeKeys: undefined, teekSigned: undefined, teetSigned: undefined, opening: undefined };
 }
 
 export const VerificationBundlePB: MessageFns<VerificationBundlePB> = {
@@ -1022,12 +1010,6 @@ export const VerificationBundlePB: MessageFns<VerificationBundlePB> = {
     }
     if (message.opening !== undefined) {
       Opening.encode(message.opening, writer.uint32(34).fork()).join();
-    }
-    if (message.attestationTeeK.length !== 0) {
-      writer.uint32(82).bytes(message.attestationTeeK);
-    }
-    if (message.attestationTeeT.length !== 0) {
-      writer.uint32(90).bytes(message.attestationTeeT);
     }
     return writer;
   },
@@ -1071,22 +1053,6 @@ export const VerificationBundlePB: MessageFns<VerificationBundlePB> = {
           message.opening = Opening.decode(reader, reader.uint32());
           continue;
         }
-        case 10: {
-          if (tag !== 82) {
-            break;
-          }
-
-          message.attestationTeeK = reader.bytes();
-          continue;
-        }
-        case 11: {
-          if (tag !== 90) {
-            break;
-          }
-
-          message.attestationTeeT = reader.bytes();
-          continue;
-        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1102,8 +1068,6 @@ export const VerificationBundlePB: MessageFns<VerificationBundlePB> = {
       teekSigned: isSet(object.teekSigned) ? SignedMessage.fromJSON(object.teekSigned) : undefined,
       teetSigned: isSet(object.teetSigned) ? SignedMessage.fromJSON(object.teetSigned) : undefined,
       opening: isSet(object.opening) ? Opening.fromJSON(object.opening) : undefined,
-      attestationTeeK: isSet(object.attestationTeeK) ? bytesFromBase64(object.attestationTeeK) : new Uint8Array(0),
-      attestationTeeT: isSet(object.attestationTeeT) ? bytesFromBase64(object.attestationTeeT) : new Uint8Array(0),
     };
   },
 
@@ -1120,12 +1084,6 @@ export const VerificationBundlePB: MessageFns<VerificationBundlePB> = {
     }
     if (message.opening !== undefined) {
       obj.opening = Opening.toJSON(message.opening);
-    }
-    if (message.attestationTeeK.length !== 0) {
-      obj.attestationTeeK = base64FromBytes(message.attestationTeeK);
-    }
-    if (message.attestationTeeT.length !== 0) {
-      obj.attestationTeeT = base64FromBytes(message.attestationTeeT);
     }
     return obj;
   },
@@ -1147,8 +1105,6 @@ export const VerificationBundlePB: MessageFns<VerificationBundlePB> = {
     message.opening = (object.opening !== undefined && object.opening !== null)
       ? Opening.fromPartial(object.opening)
       : undefined;
-    message.attestationTeeK = object.attestationTeeK ?? new Uint8Array(0);
-    message.attestationTeeT = object.attestationTeeT ?? new Uint8Array(0);
     return message;
   },
 };
