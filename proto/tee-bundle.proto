@@ -10,7 +10,6 @@ message RequestRedactionRange {
   int32 length = 2;
   // Values: "sensitive" or "sensitive_proof"
   string type = 3;
-  bytes redaction_bytes = 4;
 }
 
 message ResponseRedactionRange {

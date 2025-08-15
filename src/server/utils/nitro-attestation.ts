@@ -1,6 +1,5 @@
 /**
  * Working Nitro Attestation validation utilities
- * Copied from /home/scratch/nitroattestor/src/index.ts
  */
 
 import { AsnParser } from '@peculiar/asn1-schema'
