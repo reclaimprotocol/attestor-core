@@ -55,7 +55,6 @@ export interface RequestRedactionRange {
   length: number;
   /** Values: "sensitive" or "sensitive_proof" */
   type: string;
-  redactionBytes: Uint8Array;
 }
 
 export interface ResponseRedactionRange {
@@ -139,7 +138,7 @@ export interface VerificationBundlePB {
 }
 
 function createBaseRequestRedactionRange(): RequestRedactionRange {
-  return { start: 0, length: 0, type: "", redactionBytes: new Uint8Array(0) };
+  return { start: 0, length: 0, type: "" };
 }
 
 export const RequestRedactionRange: MessageFns<RequestRedactionRange> = {
@@ -152,9 +151,6 @@ export const RequestRedactionRange: MessageFns<RequestRedactionRange> = {
     }
     if (message.type !== "") {
       writer.uint32(26).string(message.type);
-    }
-    if (message.redactionBytes.length !== 0) {
-      writer.uint32(34).bytes(message.redactionBytes);
     }
     return writer;
   },
@@ -190,14 +186,6 @@ export const RequestRedactionRange: MessageFns<RequestRedactionRange> = {
           message.type = reader.string();
           continue;
         }
-        case 4: {
-          if (tag !== 34) {
-            break;
-          }
-
-          message.redactionBytes = reader.bytes();
-          continue;
-        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -212,7 +200,6 @@ export const RequestRedactionRange: MessageFns<RequestRedactionRange> = {
       start: isSet(object.start) ? globalThis.Number(object.start) : 0,
       length: isSet(object.length) ? globalThis.Number(object.length) : 0,
       type: isSet(object.type) ? globalThis.String(object.type) : "",
-      redactionBytes: isSet(object.redactionBytes) ? bytesFromBase64(object.redactionBytes) : new Uint8Array(0),
     };
   },
 
@@ -227,9 +214,6 @@ export const RequestRedactionRange: MessageFns<RequestRedactionRange> = {
     if (message.type !== "") {
       obj.type = message.type;
     }
-    if (message.redactionBytes.length !== 0) {
-      obj.redactionBytes = base64FromBytes(message.redactionBytes);
-    }
     return obj;
   },
 
@@ -241,7 +225,6 @@ export const RequestRedactionRange: MessageFns<RequestRedactionRange> = {
     message.start = object.start ?? 0;
     message.length = object.length ?? 0;
     message.type = object.type ?? "";
-    message.redactionBytes = object.redactionBytes ?? new Uint8Array(0);
     return message;
   },
 };

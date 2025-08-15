@@ -1,6 +1,5 @@
 /**
  * TLS Transcript Reconstruction from TEE data
- * Based on logic from /home/scratch/reclaim-tee/proofverifier/proofverifier.go
  */
 
 import { ClaimTunnelRequest, TranscriptMessageSenderType } from 'src/proto/api'
@@ -72,7 +71,6 @@ function reconstructRequest(bundleData: TeeBundleData, logger: Logger): Uint8Arr
 	const proofStream = opening.proofStream
 
 	// Apply proof stream ONLY to sensitive_proof ranges (XOR operation)
-	// This follows the exact logic from /home/scratch/reclaim-tee/proofverifier/proofverifier.go
 	let proofStreamOffset = 0
 	let proofRangesFound = 0
 
@@ -111,7 +109,6 @@ function reconstructRequest(bundleData: TeeBundleData, logger: Logger): Uint8Arr
 	logger.debug(`Applied proof stream to ${proofRangesFound} redaction ranges, used ${proofStreamOffset} bytes of proof stream`)
 
 	// Create pretty display: show revealed proof data, but keep other sensitive data as '*'
-	// This follows the exact logic from /home/scratch/reclaim-tee/proofverifier/proofverifier.go
 	const prettyRequest = new Uint8Array(revealedRequest)
 
 	for(const range of kOutputPayload.requestRedactionRanges) {
@@ -149,7 +146,6 @@ function reconstructResponse(bundleData: TeeBundleData, isTLS12AESGCM: boolean, 
 	const ciphertexts = extractCiphertexts(tOutputPayload, isTLS12AESGCM)
 
 	// Reconstruct plaintext by walking streams and finding the next ciphertext with matching length
-	// This follows the exact logic from /home/scratch/reclaim-tee/proofverifier/proofverifier.go
 	const reconstructedPackets: Uint8Array[] = []
 	let cipherIdx = 0
 
@@ -266,7 +262,6 @@ function extractApplicationDataPackets(tOutputPayload: TOutputPayload, _isTLS12A
 
 /**
  * Applies response redaction ranges to replace random garbage with asterisks
- * This follows the exact logic from /home/scratch/reclaim-tee/proofverifier/proofverifier.go
  * Response redaction ranges have NO type field - they all work the same way (binary redaction)
  */
 function applyResponseRedactionRanges(
