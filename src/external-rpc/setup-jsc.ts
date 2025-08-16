@@ -5,6 +5,7 @@ import { setCryptoImplementation } from '@reclaimprotocol/tls'
 import { pureJsCrypto } from '@reclaimprotocol/tls/purejs-crypto'
 
 import { makeLogger } from '#src/utils/logger.ts'
+import { handleIncomingMessage } from '#src/external-rpc/index.ts'
 
 declare global {
 	/**
@@ -33,5 +34,8 @@ export function setupFlutterJsRpc(baseUrl: string, channel = 'attestor-core') {
 
 	globalThis[channel] = rpcChannel
 }
+
+globalThis.setupFlutterJsRpc = setupFlutterJsRpc;
+globalThis.handleIncomingMessage = handleIncomingMessage;
 
 export * from '#src/external-rpc/index.ts'
