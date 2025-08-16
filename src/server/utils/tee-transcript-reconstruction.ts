@@ -54,12 +54,7 @@ export async function reconstructTlsTranscript(
  * Reconstructs the original request by applying proof stream to redacted request
  */
 function reconstructRequest(bundleData: TeeBundleData, logger: Logger): Uint8Array {
-	const { kOutputPayload, opening } = bundleData
-
-	if(!opening?.proofStream) {
-		logger.warn('No proof stream available - using redacted request as-is')
-		return kOutputPayload.redactedRequest
-	}
+	const { kOutputPayload } = bundleData
 
 	if(!kOutputPayload.requestRedactionRanges || kOutputPayload.requestRedactionRanges.length === 0) {
 		logger.warn('No request redaction ranges - using redacted request as-is')
@@ -68,45 +63,6 @@ function reconstructRequest(bundleData: TeeBundleData, logger: Logger): Uint8Arr
 
 	// Create a copy of the redacted request
 	const revealedRequest = new Uint8Array(kOutputPayload.redactedRequest)
-	const proofStream = opening.proofStream
-
-	// Apply proof stream ONLY to sensitive_proof ranges (XOR operation)
-	let proofStreamOffset = 0
-	let proofRangesFound = 0
-
-	for(const range of kOutputPayload.requestRedactionRanges) {
-		// Only reveal ranges marked as proof-relevant (sensitive_proof)
-		if(range.type === 'sensitive_proof') {
-			const start = range.start
-			const length = range.length
-
-			// Validate range bounds
-			if(start + length > revealedRequest.length) {
-				throw new Error(`Proof range [${start}:${start + length}] exceeds request length ${revealedRequest.length}`)
-			}
-
-			// Check if we have enough proof stream data
-			if(proofStreamOffset + length > proofStream.length) {
-				throw new Error(`Insufficient proof stream data for range ${proofRangesFound} (need ${length} bytes, have ${proofStream.length - proofStreamOffset})`)
-			}
-
-			// Apply XOR to reveal original sensitive_proof data
-			for(let i = 0; i < length; i++) {
-				revealedRequest[start + i] ^= proofStream[proofStreamOffset + i]
-			}
-
-			logger.debug(`Revealed proof range [${start}:${start + length}] type=${range.type} (${length} bytes)`)
-
-			proofStreamOffset += length
-			proofRangesFound++
-		}
-	}
-
-	if(proofRangesFound === 0) {
-		logger.warn('No proof ranges found to reveal')
-	}
-
-	logger.debug(`Applied proof stream to ${proofRangesFound} redaction ranges, used ${proofStreamOffset} bytes of proof stream`)
 
 	// Create pretty display: show revealed proof data, but keep other sensitive data as '*'
 	const prettyRequest = new Uint8Array(revealedRequest)
@@ -122,8 +78,6 @@ function reconstructRequest(bundleData: TeeBundleData, logger: Logger): Uint8Arr
 			}
 		}
 	}
-
-	logger.debug(`Successfully revealed ${proofRangesFound} proof ranges while keeping sensitive data hidden`)
 
 	return prettyRequest
 }

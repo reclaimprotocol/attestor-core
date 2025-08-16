@@ -34,19 +34,6 @@ export async function verifyTeeBundle(
 		// Verify TEE signatures using extracted public keys
 		await verifyTeeSignatures(bundle, teekKeyResult!, teetKeyResult!, logger)
 
-		// SECURITY: Validate opening (proof stream) is present - following Go implementation
-		if(!bundle.opening?.proofStream) {
-			throw new AttestorError('ERROR_INVALID_CLAIM', 'Critical security failure: proof stream missing - cannot perform proof stream application')
-		}
-
-		if(bundle.opening.proofStream.length === 0) {
-			throw new AttestorError('ERROR_INVALID_CLAIM', 'Critical security failure: empty proof stream - compromises verification integrity')
-		}
-
-		logger.info('Opening validation successful', {
-			proofStreamLength: bundle.opening.proofStream.length,
-		})
-
 		// Ensure signed messages are present
 		if(!bundle.teekSigned || !bundle.teetSigned) {
 			throw new AttestorError('ERROR_INVALID_CLAIM', 'Missing TEE signed messages')
