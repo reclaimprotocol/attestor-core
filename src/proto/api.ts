@@ -558,7 +558,6 @@ export interface ClaimTeeBundleRequest {
   verificationBundle: Uint8Array;
   data: ClaimRequestData | undefined;
   signatures: ClaimTeeBundleRequest_Signatures | undefined;
-  claimTunnelRequest: ClaimTunnelRequest | undefined;
 }
 
 export interface ClaimTeeBundleRequest_Signatures {
@@ -2606,12 +2605,7 @@ export const ClaimRequestData: MessageFns<ClaimRequestData> = {
 };
 
 function createBaseClaimTeeBundleRequest(): ClaimTeeBundleRequest {
-  return {
-    verificationBundle: new Uint8Array(0),
-    data: undefined,
-    signatures: undefined,
-    claimTunnelRequest: undefined,
-  };
+  return { verificationBundle: new Uint8Array(0), data: undefined, signatures: undefined };
 }
 
 export const ClaimTeeBundleRequest: MessageFns<ClaimTeeBundleRequest> = {
@@ -2624,9 +2618,6 @@ export const ClaimTeeBundleRequest: MessageFns<ClaimTeeBundleRequest> = {
     }
     if (message.signatures !== undefined) {
       ClaimTeeBundleRequest_Signatures.encode(message.signatures, writer.uint32(26).fork()).join();
-    }
-    if (message.claimTunnelRequest !== undefined) {
-      ClaimTunnelRequest.encode(message.claimTunnelRequest, writer.uint32(34).fork()).join();
     }
     return writer;
   },
@@ -2662,14 +2653,6 @@ export const ClaimTeeBundleRequest: MessageFns<ClaimTeeBundleRequest> = {
           message.signatures = ClaimTeeBundleRequest_Signatures.decode(reader, reader.uint32());
           continue;
         }
-        case 4: {
-          if (tag !== 34) {
-            break;
-          }
-
-          message.claimTunnelRequest = ClaimTunnelRequest.decode(reader, reader.uint32());
-          continue;
-        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2686,9 +2669,6 @@ export const ClaimTeeBundleRequest: MessageFns<ClaimTeeBundleRequest> = {
         : new Uint8Array(0),
       data: isSet(object.data) ? ClaimRequestData.fromJSON(object.data) : undefined,
       signatures: isSet(object.signatures) ? ClaimTeeBundleRequest_Signatures.fromJSON(object.signatures) : undefined,
-      claimTunnelRequest: isSet(object.claimTunnelRequest)
-        ? ClaimTunnelRequest.fromJSON(object.claimTunnelRequest)
-        : undefined,
     };
   },
 
@@ -2702,9 +2682,6 @@ export const ClaimTeeBundleRequest: MessageFns<ClaimTeeBundleRequest> = {
     }
     if (message.signatures !== undefined) {
       obj.signatures = ClaimTeeBundleRequest_Signatures.toJSON(message.signatures);
-    }
-    if (message.claimTunnelRequest !== undefined) {
-      obj.claimTunnelRequest = ClaimTunnelRequest.toJSON(message.claimTunnelRequest);
     }
     return obj;
   },
@@ -2720,9 +2697,6 @@ export const ClaimTeeBundleRequest: MessageFns<ClaimTeeBundleRequest> = {
       : undefined;
     message.signatures = (object.signatures !== undefined && object.signatures !== null)
       ? ClaimTeeBundleRequest_Signatures.fromPartial(object.signatures)
-      : undefined;
-    message.claimTunnelRequest = (object.claimTunnelRequest !== undefined && object.claimTunnelRequest !== null)
-      ? ClaimTunnelRequest.fromPartial(object.claimTunnelRequest)
       : undefined;
     return message;
   },

@@ -35,17 +35,20 @@ message Opening {
   bytes proof_stream = 1; // Str_SP
 }
 
-// Deterministically serialized payloads to be signed by TEEs
 message KOutputPayload {
+
   bytes redacted_request = 1; // R_red
   repeated RequestRedactionRange request_redaction_ranges = 2;
   repeated SignedRedactedDecryptionStream redacted_streams = 3; // from TEE_K
   repeated bytes packets = 4; // TLS handshake packets observed by TEE_K
   repeated ResponseRedactionRange response_redaction_ranges = 5;
+  uint64 timestamp_ms = 6; // Unix timestamp in milliseconds when payload was created (SIGNED)
 }
 
 message TOutputPayload {
   repeated bytes packets = 1; // TLS packets observed by TEE_T
+  repeated bytes request_proof_streams = 2; // R_SP streams signed by TEE_T for cryptographic verification
+  uint64 timestamp_ms = 3; // Unix timestamp in milliseconds when payload was created (SIGNED)
 }
 
 // Attestation report with structured data
@@ -70,13 +73,11 @@ message SignedMessage {
 }
 
 // Single artefact produced by client for offline verification
-message VerificationBundlePB {
+message VerificationBundle {
   HandshakeSecrets handshake_keys = 1; // optional
 
   // Signed transcripts
   SignedMessage teek_signed = 2; // BODY_TYPE_K_OUTPUT
   SignedMessage teet_signed = 3; // BODY_TYPE_T_OUTPUT
 
-  // Commitment opening for proof ranges
-  Opening opening = 4; // optional
 }

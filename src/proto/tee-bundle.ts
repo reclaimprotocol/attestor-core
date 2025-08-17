@@ -82,7 +82,6 @@ export interface Opening {
   proofStream: Uint8Array;
 }
 
-/** Deterministically serialized payloads to be signed by TEEs */
 export interface KOutputPayload {
   /** R_red */
   redactedRequest: Uint8Array;
@@ -92,11 +91,17 @@ export interface KOutputPayload {
   /** TLS handshake packets observed by TEE_K */
   packets: Uint8Array[];
   responseRedactionRanges: ResponseRedactionRange[];
+  /** Unix timestamp in milliseconds when payload was created (SIGNED) */
+  timestampMs: number;
 }
 
 export interface TOutputPayload {
   /** TLS packets observed by TEE_T */
   packets: Uint8Array[];
+  /** R_SP streams signed by TEE_T for cryptographic verification */
+  requestProofStreams: Uint8Array[];
+  /** Unix timestamp in milliseconds when payload was created (SIGNED) */
+  timestampMs: number;
 }
 
 /** Attestation report with structured data */
@@ -120,7 +125,7 @@ export interface SignedMessage {
 }
 
 /** Single artefact produced by client for offline verification */
-export interface VerificationBundlePB {
+export interface VerificationBundle {
   /** optional */
   handshakeKeys:
     | HandshakeSecrets
@@ -130,11 +135,7 @@ export interface VerificationBundlePB {
     | SignedMessage
     | undefined;
   /** BODY_TYPE_T_OUTPUT */
-  teetSigned:
-    | SignedMessage
-    | undefined;
-  /** Commitment opening for proof ranges */
-  opening: Opening | undefined;
+  teetSigned: SignedMessage | undefined;
 }
 
 function createBaseRequestRedactionRange(): RequestRedactionRange {
@@ -554,6 +555,7 @@ function createBaseKOutputPayload(): KOutputPayload {
     redactedStreams: [],
     packets: [],
     responseRedactionRanges: [],
+    timestampMs: 0,
   };
 }
 
@@ -573,6 +575,9 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
     }
     for (const v of message.responseRedactionRanges) {
       ResponseRedactionRange.encode(v!, writer.uint32(42).fork()).join();
+    }
+    if (message.timestampMs !== 0) {
+      writer.uint32(48).uint64(message.timestampMs);
     }
     return writer;
   },
@@ -624,6 +629,14 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
           message.responseRedactionRanges.push(ResponseRedactionRange.decode(reader, reader.uint32()));
           continue;
         }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.timestampMs = longToNumber(reader.uint64());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -646,6 +659,7 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
       responseRedactionRanges: globalThis.Array.isArray(object?.responseRedactionRanges)
         ? object.responseRedactionRanges.map((e: any) => ResponseRedactionRange.fromJSON(e))
         : [],
+      timestampMs: isSet(object.timestampMs) ? globalThis.Number(object.timestampMs) : 0,
     };
   },
 
@@ -666,6 +680,9 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
     if (message.responseRedactionRanges?.length) {
       obj.responseRedactionRanges = message.responseRedactionRanges.map((e) => ResponseRedactionRange.toJSON(e));
     }
+    if (message.timestampMs !== 0) {
+      obj.timestampMs = Math.round(message.timestampMs);
+    }
     return obj;
   },
 
@@ -681,18 +698,25 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
     message.packets = object.packets?.map((e) => e) || [];
     message.responseRedactionRanges =
       object.responseRedactionRanges?.map((e) => ResponseRedactionRange.fromPartial(e)) || [];
+    message.timestampMs = object.timestampMs ?? 0;
     return message;
   },
 };
 
 function createBaseTOutputPayload(): TOutputPayload {
-  return { packets: [] };
+  return { packets: [], requestProofStreams: [], timestampMs: 0 };
 }
 
 export const TOutputPayload: MessageFns<TOutputPayload> = {
   encode(message: TOutputPayload, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     for (const v of message.packets) {
       writer.uint32(10).bytes(v!);
+    }
+    for (const v of message.requestProofStreams) {
+      writer.uint32(18).bytes(v!);
+    }
+    if (message.timestampMs !== 0) {
+      writer.uint32(24).uint64(message.timestampMs);
     }
     return writer;
   },
@@ -712,6 +736,22 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
           message.packets.push(reader.bytes());
           continue;
         }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.requestProofStreams.push(reader.bytes());
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.timestampMs = longToNumber(reader.uint64());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -724,6 +764,10 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
   fromJSON(object: any): TOutputPayload {
     return {
       packets: globalThis.Array.isArray(object?.packets) ? object.packets.map((e: any) => bytesFromBase64(e)) : [],
+      requestProofStreams: globalThis.Array.isArray(object?.requestProofStreams)
+        ? object.requestProofStreams.map((e: any) => bytesFromBase64(e))
+        : [],
+      timestampMs: isSet(object.timestampMs) ? globalThis.Number(object.timestampMs) : 0,
     };
   },
 
@@ -731,6 +775,12 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
     const obj: any = {};
     if (message.packets?.length) {
       obj.packets = message.packets.map((e) => base64FromBytes(e));
+    }
+    if (message.requestProofStreams?.length) {
+      obj.requestProofStreams = message.requestProofStreams.map((e) => base64FromBytes(e));
+    }
+    if (message.timestampMs !== 0) {
+      obj.timestampMs = Math.round(message.timestampMs);
     }
     return obj;
   },
@@ -741,6 +791,8 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
   fromPartial(object: DeepPartial<TOutputPayload>): TOutputPayload {
     const message = createBaseTOutputPayload();
     message.packets = object.packets?.map((e) => e) || [];
+    message.requestProofStreams = object.requestProofStreams?.map((e) => e) || [];
+    message.timestampMs = object.timestampMs ?? 0;
     return message;
   },
 };
@@ -955,12 +1007,12 @@ export const SignedMessage: MessageFns<SignedMessage> = {
   },
 };
 
-function createBaseVerificationBundlePB(): VerificationBundlePB {
-  return { handshakeKeys: undefined, teekSigned: undefined, teetSigned: undefined, opening: undefined };
+function createBaseVerificationBundle(): VerificationBundle {
+  return { handshakeKeys: undefined, teekSigned: undefined, teetSigned: undefined };
 }
 
-export const VerificationBundlePB: MessageFns<VerificationBundlePB> = {
-  encode(message: VerificationBundlePB, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+export const VerificationBundle: MessageFns<VerificationBundle> = {
+  encode(message: VerificationBundle, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     if (message.handshakeKeys !== undefined) {
       HandshakeSecrets.encode(message.handshakeKeys, writer.uint32(10).fork()).join();
     }
@@ -970,16 +1022,13 @@ export const VerificationBundlePB: MessageFns<VerificationBundlePB> = {
     if (message.teetSigned !== undefined) {
       SignedMessage.encode(message.teetSigned, writer.uint32(26).fork()).join();
     }
-    if (message.opening !== undefined) {
-      Opening.encode(message.opening, writer.uint32(34).fork()).join();
-    }
     return writer;
   },
 
-  decode(input: BinaryReader | Uint8Array, length?: number): VerificationBundlePB {
+  decode(input: BinaryReader | Uint8Array, length?: number): VerificationBundle {
     const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
     let end = length === undefined ? reader.len : reader.pos + length;
-    const message = createBaseVerificationBundlePB();
+    const message = createBaseVerificationBundle();
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
@@ -1007,14 +1056,6 @@ export const VerificationBundlePB: MessageFns<VerificationBundlePB> = {
           message.teetSigned = SignedMessage.decode(reader, reader.uint32());
           continue;
         }
-        case 4: {
-          if (tag !== 34) {
-            break;
-          }
-
-          message.opening = Opening.decode(reader, reader.uint32());
-          continue;
-        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1024,16 +1065,15 @@ export const VerificationBundlePB: MessageFns<VerificationBundlePB> = {
     return message;
   },
 
-  fromJSON(object: any): VerificationBundlePB {
+  fromJSON(object: any): VerificationBundle {
     return {
       handshakeKeys: isSet(object.handshakeKeys) ? HandshakeSecrets.fromJSON(object.handshakeKeys) : undefined,
       teekSigned: isSet(object.teekSigned) ? SignedMessage.fromJSON(object.teekSigned) : undefined,
       teetSigned: isSet(object.teetSigned) ? SignedMessage.fromJSON(object.teetSigned) : undefined,
-      opening: isSet(object.opening) ? Opening.fromJSON(object.opening) : undefined,
     };
   },
 
-  toJSON(message: VerificationBundlePB): unknown {
+  toJSON(message: VerificationBundle): unknown {
     const obj: any = {};
     if (message.handshakeKeys !== undefined) {
       obj.handshakeKeys = HandshakeSecrets.toJSON(message.handshakeKeys);
@@ -1044,17 +1084,14 @@ export const VerificationBundlePB: MessageFns<VerificationBundlePB> = {
     if (message.teetSigned !== undefined) {
       obj.teetSigned = SignedMessage.toJSON(message.teetSigned);
     }
-    if (message.opening !== undefined) {
-      obj.opening = Opening.toJSON(message.opening);
-    }
     return obj;
   },
 
-  create(base?: DeepPartial<VerificationBundlePB>): VerificationBundlePB {
-    return VerificationBundlePB.fromPartial(base ?? {});
+  create(base?: DeepPartial<VerificationBundle>): VerificationBundle {
+    return VerificationBundle.fromPartial(base ?? {});
   },
-  fromPartial(object: DeepPartial<VerificationBundlePB>): VerificationBundlePB {
-    const message = createBaseVerificationBundlePB();
+  fromPartial(object: DeepPartial<VerificationBundle>): VerificationBundle {
+    const message = createBaseVerificationBundle();
     message.handshakeKeys = (object.handshakeKeys !== undefined && object.handshakeKeys !== null)
       ? HandshakeSecrets.fromPartial(object.handshakeKeys)
       : undefined;
@@ -1063,9 +1100,6 @@ export const VerificationBundlePB: MessageFns<VerificationBundlePB> = {
       : undefined;
     message.teetSigned = (object.teetSigned !== undefined && object.teetSigned !== null)
       ? SignedMessage.fromPartial(object.teetSigned)
-      : undefined;
-    message.opening = (object.opening !== undefined && object.opening !== null)
-      ? Opening.fromPartial(object.opening)
       : undefined;
     return message;
   },
