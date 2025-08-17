@@ -20,35 +20,29 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 ) => {
 	const {
 		verificationBundle,
-		data: { timestampS } = {}
+		data
 	} = teeBundleRequest
 
 	// Initialize response
 	const res = ClaimTeeBundleResponse.create({ request: teeBundleRequest })
 
 	try {
-		// 1. Validate timestamp
-		const now = unixTimestampSeconds()
-		if(Math.floor(timestampS! - now) > MAX_CLAIM_TIMESTAMP_DIFF_S) {
-			throw new AttestorError(
-				'ERROR_INVALID_CLAIM',
-				`Timestamp provided ${timestampS} is too far off. Current time is ${now}`
-			)
-		}
-
-		// 3. Verify TEE bundle (attestations + signatures)
+		// 1. Verify TEE bundle (attestations + signatures) - this includes timestamp validation
 		logger.info('Starting TEE bundle verification')
 		const teeData = await verifyTeeBundle(verificationBundle, logger)
 
-		// 4. Reconstruct TLS transcript from TEE data
+		// 2. Extract timestampS from TEE_K bundle for claim signing
+		const timestampS = Math.floor(teeData.kOutputPayload.timestampMs / 1000)
+
+		// 3. Reconstruct TLS transcript from TEE data
 		logger.info('Starting TLS transcript reconstruction')
 		const transcriptData = await reconstructTlsTranscript(teeData, logger)
 
-		// 5. Create plaintext transcript for provider validation
+		// 4. Create plaintext transcript for provider validation
 		logger.info('Creating plaintext transcript from TEE data')
 		const plaintextTranscript = createPlaintextTranscriptFromTeeData(transcriptData, logger)
 
-		// 6. Direct provider validation (bypass signature validation completely)
+		// 5. Direct provider validation (bypass signature validation completely)
 		logger.info('Running direct provider validation on TEE reconstructed data')
 		const validateTx = getApm()
 			?.startTransaction('validateTeeProviderReceipt', { childOf: tx })
@@ -68,6 +62,8 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 			res.claim = {
 				...validatedClaim,
 				identifier: getIdentifierFromClaimInfo(validatedClaim),
+				// Use timestampS from TEE_K bundle for claim signing
+				timestampS,
 				// hardcode for compatibility with V1 claims
 				epoch: 1
 			}

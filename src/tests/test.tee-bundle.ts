@@ -6,7 +6,7 @@ import { describe, expect, it } from '@jest/globals'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { ClaimRequestData } from 'src/proto/api'
-import { KOutputPayload, TOutputPayload, VerificationBundlePB } from 'src/proto/tee-bundle'
+import { KOutputPayload, TOutputPayload, VerificationBundle } from 'src/proto/tee-bundle'
 import { createSyntheticClaimRequest, reconstructTlsTranscript } from 'src/server/utils/tee-transcript-reconstruction'
 
 // Mock logger for testing
@@ -17,12 +17,12 @@ const mockLogger = {
 	error: jest.fn()
 }
 
-describe('New Bundle with Attestation Docs', () => {
+describe('New Bundle with Standalone Mode', () => {
 	let newBundleBytes: Uint8Array
 
 	beforeAll(() => {
-		// Load the new verification bundle with attestation docs
-		const bundlePath = join(__dirname, 'verification_bundle_session_1.pb')
+		// Load the new verification bundle (standalone mode with public keys)
+		const bundlePath = join(__dirname, 'verification_bundle.pb')
 		try {
 			newBundleBytes = new Uint8Array(readFileSync(bundlePath))
 		} catch(error) {
@@ -34,15 +34,30 @@ describe('New Bundle with Attestation Docs', () => {
 	it('should examine the new bundle structure', () => {
 		console.log('\n=== New Bundle Analysis ===')
 
-		const bundle = VerificationBundlePB.decode(newBundleBytes)
+		const bundle = VerificationBundle.decode(newBundleBytes)
 
 		console.log('Bundle Components:')
 		console.log('- TEE_K body size:', bundle.teekSigned?.body?.length || 0, 'bytes')
 		console.log('- TEE_T body size:', bundle.teetSigned?.body?.length || 0, 'bytes')
 		console.log('- Has handshake keys:', !!bundle.handshakeKeys)
-		console.log('- Has opening:', !!bundle.opening)
-		console.log('- TEE_K embedded attestation:', bundle.teekSigned?.attestationReport?.report?.length || 0, 'bytes')
-		console.log('- TEE_T embedded attestation:', bundle.teetSigned?.attestationReport?.report?.length || 0, 'bytes')
+
+		// Check bundle mode
+		const hasAttestations = (bundle.teekSigned?.attestationReport?.report && bundle.teekSigned.attestationReport.report.length > 0) ||
+			(bundle.teetSigned?.attestationReport?.report && bundle.teetSigned.attestationReport.report.length > 0)
+		const hasPublicKeys = (bundle.teekSigned?.publicKey && bundle.teekSigned.publicKey.length > 0) ||
+			(bundle.teetSigned?.publicKey && bundle.teetSigned.publicKey.length > 0)
+
+		console.log('- Bundle mode:', hasAttestations ? 'Production (with attestations)' : hasPublicKeys ? 'Standalone (with public keys)' : 'Unknown')
+
+		if(hasAttestations) {
+			console.log('- TEE_K embedded attestation:', bundle.teekSigned?.attestationReport?.report?.length || 0, 'bytes')
+			console.log('- TEE_T embedded attestation:', bundle.teetSigned?.attestationReport?.report?.length || 0, 'bytes')
+		}
+
+		if(hasPublicKeys) {
+			console.log('- TEE_K embedded public key:', bundle.teekSigned?.publicKey?.length || 0, 'bytes')
+			console.log('- TEE_T embedded public key:', bundle.teetSigned?.publicKey?.length || 0, 'bytes')
+		}
 
 		// Analyze the K payload to understand redaction ranges
 		if(bundle.teekSigned?.body) {
@@ -54,6 +69,7 @@ describe('New Bundle with Attestation Docs', () => {
 			console.log('- Handshake packets:', kPayload.packets.length)
 			console.log('- Redacted streams:', kPayload.redactedStreams.length)
 			console.log('- Response redaction ranges:', kPayload.responseRedactionRanges.length)
+			console.log('- K Timestamp:', kPayload.timestampMs ? new Date(kPayload.timestampMs).toISOString() : 'not set')
 
 			// Analyze redaction range types
 			console.log('\nRedaction Range Types:')
@@ -61,12 +77,15 @@ describe('New Bundle with Attestation Docs', () => {
 				console.log(`  Range ${i + 1}: start=${range.start}, length=${range.length}, type="${range.type}"`)
 			}
 
-			// Show proof stream info
-			if(bundle.opening) {
-				console.log('\nProof Stream:')
-				console.log('- Proof stream length:', bundle.opening.proofStream.length, 'bytes')
-				console.log('- Proof key length:', bundle.opening.proofKey?.length || 0, 'bytes')
-			}
+		}
+
+		// Analyze the T payload
+		if(bundle.teetSigned?.body) {
+			const tPayload = TOutputPayload.decode(bundle.teetSigned.body)
+			console.log('\nT Payload Analysis:')
+			console.log('- Application data packets:', tPayload.packets.length)
+			console.log('- Request proof streams:', tPayload.requestProofStreams?.length || 0)
+			console.log('- T Timestamp:', tPayload.timestampMs ? new Date(tPayload.timestampMs).toISOString() : 'not set')
 		}
 
 		console.log('\n=== End Analysis ===')
@@ -75,9 +94,19 @@ describe('New Bundle with Attestation Docs', () => {
 	it('should test transcript reconstruction with correct proof stream logic', async() => {
 		console.log('\n Testing Transcript Reconstruction with Fixed Logic')
 
-		const bundle = VerificationBundlePB.decode(newBundleBytes)
+		const bundle = VerificationBundle.decode(newBundleBytes)
 		const kOutputPayload = KOutputPayload.decode(bundle.teekSigned!.body)
 		const tOutputPayload = TOutputPayload.decode(bundle.teetSigned!.body)
+
+		// Add timestamps to payloads if they don't exist (for older test bundles)
+		const now = Date.now()
+		if(!kOutputPayload.timestampMs) {
+			kOutputPayload.timestampMs = now
+		}
+
+		if(!tOutputPayload.timestampMs) {
+			tOutputPayload.timestampMs = now
+		}
 
 		// Create mock bundle data
 		const mockTeeBundleData = {
@@ -88,7 +117,6 @@ describe('New Bundle with Attestation Docs', () => {
 			kOutputPayload,
 			tOutputPayload,
 			handshakeKeys: bundle.handshakeKeys,
-			opening: bundle.opening
 		}
 
 		try {
@@ -97,7 +125,7 @@ describe('New Bundle with Attestation Docs', () => {
 			console.log(' Transcript reconstruction successful!')
 			console.log('- Handshake packets:', transcriptData.handshakePackets.length)
 			console.log('- Revealed request size:', transcriptData.revealedRequest.length, 'bytes')
-			console.log('- Reconstructed response size:', transcriptData.reconstructedResponse.length, 'bytes')
+			console.log('- Reconstructed response packets:', transcriptData.reconstructedResponsePackets.length, 'number')
 			console.log('- TLS version:', transcriptData.tlsVersion)
 			console.log('- Cipher suite:', transcriptData.cipherSuite)
 
@@ -119,8 +147,15 @@ describe('New Bundle with Attestation Docs', () => {
 				console.log('- Host:', hostMatch[1].trim())
 			}
 
-			// Analyze response
-			const responseText = new TextDecoder('utf-8', { fatal: false }).decode(transcriptData.reconstructedResponse)
+			// Analyze response (combine all packets)
+			const combinedResponse = new Uint8Array(transcriptData.reconstructedResponsePackets.reduce((sum, pkt) => sum + pkt.length, 0))
+			let offset = 0
+			for(const packet of transcriptData.reconstructedResponsePackets) {
+				combinedResponse.set(packet, offset)
+				offset += packet.length
+			}
+
+			const responseText = new TextDecoder('utf-8', { fatal: false }).decode(combinedResponse)
 			console.log('\nReconstructed Response Analysis:')
 			console.log('- Text length:', responseText.length, 'characters')
 			console.log('- Preview:', JSON.stringify(responseText.substring(0, 200)))
