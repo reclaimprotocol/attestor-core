@@ -43,6 +43,9 @@ export async function verifyTeeBundle(
 		const kOutputPayload = parseKOutputPayload(bundle.teekSigned)
 		const tOutputPayload = parseTOutputPayload(bundle.teetSigned)
 
+		// Validate timestamps
+		validateTimestamps(kOutputPayload, tOutputPayload, logger)
+
 		logger.info('TEE bundle verification successful')
 
 		return {
@@ -372,4 +375,59 @@ function parseTOutputPayload(signedMessage: SignedMessage): TOutputPayload {
 	} catch(error) {
 		throw new Error(`Failed to parse TEE_T payload: ${(error as Error).message}`)
 	}
+}
+
+/**
+ * Validates that both K and T timestamps are within acceptable range
+ * @param kPayload - K output payload with timestamp 
+ * @param tPayload - T output payload with timestamp
+ * @param logger - Logger instance
+ */
+function validateTimestamps(
+	kPayload: KOutputPayload,
+	tPayload: TOutputPayload, 
+	logger: Logger
+): void {
+	const now = Date.now() // Current time in milliseconds
+	const kTimestamp = kPayload.timestampMs
+	const tTimestamp = tPayload.timestampMs
+	
+	// Convert to seconds for logging consistency with existing code
+	const kTimestampS = Math.floor(kTimestamp / 1000)
+	const tTimestampS = Math.floor(tTimestamp / 1000) 
+	const nowS = Math.floor(now / 1000)
+	
+	logger.info('Validating TEE timestamps', {
+		kTimestampMs: kTimestamp,
+		tTimestampMs: tTimestamp,
+		kTimestampS,
+		tTimestampS,
+		nowS
+	})
+
+	// 1. Check that both timestamps are not earlier than 10 minutes in the past
+	const maxAgeMs = 10 * 60 * 1000 // 10 minutes in milliseconds
+	const oldestAllowed = now - maxAgeMs
+
+	if (kTimestamp < oldestAllowed) {
+		throw new Error(`TEE_K timestamp ${kTimestamp} is too old. Must be within 10 minutes of current time ${now}`)
+	}
+	
+	if (tTimestamp < oldestAllowed) {
+		throw new Error(`TEE_T timestamp ${tTimestamp} is too old. Must be within 10 minutes of current time ${now}`)
+	}
+
+	// 2. Check that both timestamps are within 5 seconds of each other
+	const timestampDiffMs = Math.abs(kTimestamp - tTimestamp)
+	const maxDiffMs = 5 * 1000 // 5 seconds in milliseconds
+	
+	if (timestampDiffMs > maxDiffMs) {
+		throw new Error(`TEE timestamps differ by ${timestampDiffMs}ms, which exceeds maximum allowed difference of ${maxDiffMs}ms`)
+	}
+	
+	logger.info('TEE timestamp validation successful', {
+		timestampDiffMs,
+		ageKMs: now - kTimestamp,
+		ageTMs: now - tTimestamp
+	})
 }
