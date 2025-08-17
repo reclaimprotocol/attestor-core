@@ -260,7 +260,6 @@ message ClaimTeeBundleRequest {
   bytes verificationBundle = 1;
   ClaimRequestData data = 2;
   Signatures signatures = 3;
-  ClaimTunnelRequest claimTunnelRequest = 4;
 
   message Signatures {
     bytes requestSignature = 1;

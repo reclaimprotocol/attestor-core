@@ -4,7 +4,7 @@
  */
 
 import { ServiceSignatureType } from 'src/proto/api'
-import { BodyType, KOutputPayload, SignedMessage, TOutputPayload, VerificationBundlePB } from 'src/proto/tee-bundle'
+import { BodyType, KOutputPayload, SignedMessage, TOutputPayload, VerificationBundle } from 'src/proto/tee-bundle'
 import { validateNitroAttestationAndExtractKey } from 'src/server/utils/nitro-attestation'
 import { Logger } from 'src/types'
 import { AddressExtractionResult, TeeBundleData, TeeSignatureVerificationResult } from 'src/types/tee'
@@ -51,7 +51,6 @@ export async function verifyTeeBundle(
 			kOutputPayload,
 			tOutputPayload,
 			handshakeKeys: bundle.handshakeKeys,
-			opening: bundle.opening
 		}
 
 	} catch(error) {
@@ -63,10 +62,10 @@ export async function verifyTeeBundle(
 /**
  * Parses the raw verification bundle bytes into structured data
  */
-function parseVerificationBundle(bundleBytes: Uint8Array): VerificationBundlePB {
+function parseVerificationBundle(bundleBytes: Uint8Array): VerificationBundle {
 	try {
 		// Use the actual protobuf decoder for the TEE bundle format
-		return VerificationBundlePB.decode(bundleBytes)
+		return VerificationBundle.decode(bundleBytes)
 
 	} catch(error) {
 		throw new Error(`Failed to parse verification bundle: ${(error as Error).message}`)
@@ -76,7 +75,7 @@ function parseVerificationBundle(bundleBytes: Uint8Array): VerificationBundlePB 
 /**
  * Validates that all required bundle components are present
  */
-function validateBundleCompleteness(bundle: VerificationBundlePB): void {
+function validateBundleCompleteness(bundle: VerificationBundle): void {
 	if(!bundle.teekSigned) {
 		throw new Error('SECURITY ERROR: missing TEE_K signed message - verification bundle incomplete')
 	}
@@ -127,7 +126,7 @@ function validateBundleCompleteness(bundle: VerificationBundlePB): void {
  * Extracts public keys from either Nitro attestations or embedded keys (standalone mode)
  */
 async function extractPublicKeys(
-	bundle: VerificationBundlePB,
+	bundle: VerificationBundle,
 	logger: Logger
 ): Promise<{
 	teekKeyResult?: AddressExtractionResult
@@ -229,7 +228,7 @@ async function extractPublicKeys(
  * Verifies TEE signatures using extracted key results
  */
 async function verifyTeeSignatures(
-	bundle: VerificationBundlePB,
+	bundle: VerificationBundle,
 	teekKeyResult: AddressExtractionResult,
 	teetKeyResult: AddressExtractionResult,
 	logger: Logger
