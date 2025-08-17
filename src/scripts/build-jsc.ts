@@ -2,7 +2,7 @@ import * as esbuild from 'esbuild'
 
 // are we building for the CLI (used for testing)?
 const isCliBuild = process.argv.includes('--cli')
-if (isCliBuild) {
+if(isCliBuild) {
 	console.log('Building for CLI...')
 }
 
@@ -47,7 +47,7 @@ const rslt = await esbuild.build({
 	],
 })
 
-if (process.argv.includes('--analyze')) {
+if(process.argv.includes('--analyze')) {
 	// Analyze the metafile
 	const analysis = await esbuild.analyzeMetafile(rslt.metafile)
 	console.log(analysis)
