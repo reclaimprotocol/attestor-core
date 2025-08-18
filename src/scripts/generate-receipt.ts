@@ -1,3 +1,5 @@
+import { setCryptoImplementation } from '@reclaimprotocol/tls'
+import { webcryptoCrypto } from '@reclaimprotocol/tls/webcrypto'
 import { readFile } from 'fs/promises'
 import type { WebSocketServer } from 'ws'
 import '#src/server/utils/config-env.ts'
@@ -19,6 +21,8 @@ import { getCliArgument } from '#src/scripts/utils.ts'
 import { createServer, decryptTranscript } from '#src/server/index.ts'
 import { assertValidateProviderParams } from '#src/server/utils/validation.ts'
 import { getEnvVariable } from '#src/utils/env.ts'
+
+setCryptoImplementation(webcryptoCrypto)
 
 type ProviderReceiptGenerationParams<P extends ProviderName> = {
     name: P
@@ -89,6 +93,7 @@ export async function main<T extends ProviderName>(
 	)
 	const transcriptStr = getTranscriptString(decTranscript)
 	console.log('receipt:\n', transcriptStr)
+	console.log('claim:\n', claim)
 
 	const client = getAttestorClientFromPool(attestorHostPort)
 	await client.terminateConnection()
