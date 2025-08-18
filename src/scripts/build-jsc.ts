@@ -12,15 +12,16 @@ const rslt = await esbuild.build({
 		isCliBuild
 			? {
 				entryPoints: ['src/scripts/jsc-cli-rpc.ts'],
-				outfile: 'out/jsc-cli-rpc.mjs'
+				outfile: 'out/jsc-cli-rpc.mjs',
+				format: 'esm',
 			}
 			: {
 				minify: true,
 				entryPoints: ['src/external-rpc/setup-jsc.ts'],
-				outfile: 'browser/resources/attestor-jsc.min.mjs'
+				outfile: 'browser/resources/attestor-jsc.min.mjs',
+				format: 'iife'
 			}
 	),
-	format: 'esm',
 	tsconfig: 'tsconfig.build.json',
 	legalComments: 'none',
 	metafile: true, // Enable metafile generation

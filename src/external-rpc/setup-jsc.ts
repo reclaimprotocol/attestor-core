@@ -4,6 +4,7 @@ import '#src/external-rpc/jsc-polyfills/index.ts'
 import { setCryptoImplementation } from '@reclaimprotocol/tls'
 import { pureJsCrypto } from '@reclaimprotocol/tls/purejs-crypto'
 
+import * as AttestorRPCImport from '#src/external-rpc/index.ts'
 import { makeLogger } from '#src/utils/logger.ts'
 
 declare global {
@@ -12,6 +13,10 @@ declare global {
 	 * https://pub.dev/packages/flutter_js/example
 	 */
 	function sendMessage(channelName: string, message: any): void | Promise<void>
+
+	var AttestorRPC: typeof AttestorRPCImport & {
+		setupFlutterJsRpc(baseUrl: string, channel?: string): void
+	}
 }
 
 setCryptoImplementation(pureJsCrypto)
@@ -34,4 +39,4 @@ export function setupFlutterJsRpc(baseUrl: string, channel = 'attestor-core') {
 	globalThis[channel] = rpcChannel
 }
 
-export * from '#src/external-rpc/index.ts'
+globalThis.AttestorRPC = { ...AttestorRPCImport, setupFlutterJsRpc }
