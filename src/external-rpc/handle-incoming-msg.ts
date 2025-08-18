@@ -103,7 +103,7 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 						name: 'attestor-progress',
 						step,
 					},
-					id: generateRpcRequestId(),
+					id: req.id,
 				})
 			},
 			updateProviderParams : req.request.updateProviderParams
