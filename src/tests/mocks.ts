@@ -1,26 +1,25 @@
-import type { preparePacketsForReveal } from 'src/utils/prepare-packets'
+import { setCryptoImplementation } from '@reclaimprotocol/tls'
+import { webcryptoCrypto } from '@reclaimprotocol/tls/webcrypto'
+import { mock } from 'node:test'
+import '#src/server/utils/config-env.ts'
+
+import { preparePacketsForReveal } from '#src/utils/prepare-packets.ts'
+
+setCryptoImplementation(webcryptoCrypto)
 
 /**
  * Spies on the preparePacketsForReveal function
  */
-export const SPY_PREPARER = jest.fn<
-	ReturnType<typeof preparePacketsForReveal>,
-	Parameters<typeof preparePacketsForReveal>
->()
+export const SPY_PREPARER = mock.fn(preparePacketsForReveal)
 
-jest.mock('../utils/prepare-packets', () => {
-	const actual = jest.requireActual('../utils/prepare-packets')
-	SPY_PREPARER.mockImplementation(actual.preparePacketsForReveal)
-	return {
-		__esModule: true,
-		...actual,
+mock.module('#src/utils/prepare-packets.ts', {
+	namedExports: {
 		preparePacketsForReveal: SPY_PREPARER
 	}
 })
 
-jest.mock('../server/utils/apm', () => {
-	return {
-		__esModule: true,
-		getApm: jest.fn()
+mock.module('#src/server/utils/apm.ts', {
+	namedExports: {
+		getApm: mock.fn()
 	}
 })

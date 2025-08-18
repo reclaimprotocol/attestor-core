@@ -1,10 +1,10 @@
-import { strToUint8Array } from '@reclaimprotocol/tls'
 import canonicalize from 'canonicalize'
 import { utils } from 'ethers'
-import { DEFAULT_METADATA } from 'src/config'
-import { ClaimTunnelResponse } from 'src/proto/api'
-import { ClaimID, ClaimInfo, CompleteClaimData, ProviderParams } from 'src/types'
-import { SIGNATURES } from 'src/utils/signatures'
+
+import { DEFAULT_METADATA } from '#src/config/index.ts'
+import { ClaimTunnelResponse } from '#src/proto/api.ts'
+import type { ClaimID, ClaimInfo, CompleteClaimData, ProviderParams } from '#src/types/index.ts'
+import { SIGNATURES, strToUint8Array } from '#src/utils/index.ts'
 
 /**
  * Creates the standard string to sign for a claim.
@@ -56,14 +56,10 @@ export async function assertValidClaimSignatures(
 
 	const { verify } = SIGNATURES[metadata.signatureType]
 	if(signatures?.resultSignature) {
-		const resBytes = ClaimTunnelResponse.encode(
-			ClaimTunnelResponse.create(res)
-		).finish()
-		const verified = await verify(
-			resBytes,
-			resultSignature,
-			attestorAddress
-		)
+		const resBytes = ClaimTunnelResponse
+			.encode(ClaimTunnelResponse.create(res)).finish()
+		const verified
+			= await verify(resBytes, resultSignature, attestorAddress)
 		if(!verified) {
 			throw new Error('Invalid result signature')
 		}
@@ -100,14 +96,11 @@ export function getIdentifierFromClaimInfo(info: ClaimInfo): ClaimID {
 		} catch(e) {
 			throw new Error('unable to parse non-empty context. Must be JSON')
 		}
-
 	}
 
 	const str = `${info.provider}\n${info.parameters}\n${info.context || ''}`
 	//console.log('Identifier: ' + btoa(str))
-	return utils.keccak256(
-		strToUint8Array(str)
-	).toLowerCase()
+	return utils.keccak256(strToUint8Array(str)).toLowerCase()
 }
 
 /**
@@ -119,7 +112,8 @@ export function canonicalStringify(params: { [key: string]: any } | undefined) {
 		return ''
 	}
 
-	return canonicalize(params) || ''
+	// have to cast as ESM isn't correctly typing this
+	return (canonicalize as unknown as ((p: unknown) => string))(params) || ''
 }
 
 export function hashProviderParams(params: ProviderParams<'http'>): string {
