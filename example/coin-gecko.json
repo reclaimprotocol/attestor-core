@@ -1,25 +1,45 @@
 {
     "name": "http",
-    "description": [
-        "Example to fetch the current price of ETH in USD",
-        "from the CoinGecko API",
-        "The current price will be extracted & stored in",
-        "context.extractedParams.price"
-    ],
     "params": {
+        "url": "https://api.coingecko.com/api/v3/simple/price?ids=cardano,solana&vs_currencies=usd",
         "method": "GET",
-        "url": "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd",
+        "body": "",
+        "headers": {
+            "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Safari/604.1",
+            "Sec-Fetch-Mode": "same-origin",
+            "Sec-Fetch-Site": "same-origin"
+        },
         "responseMatches": [
             {
+                "invert": false,
                 "type": "regex",
-                "value": "\\{\"ethereum\":\\{\"usd\":(?<price>[\\d\\.]+)\\}\\}"
+                "value": "cardano\":{\"usd\":(?<cardanoPrice>\\d*\\.*\\d*)}"
+            },
+            {
+                "invert": false,
+                "type": "regex",
+                "value": "solana\":{\"usd\":(?<solanaPrice>\\d*\\.*\\d*)}"
             }
         ],
-        "responseRedactions": []
+        "responseRedactions": [
+            {
+                "jsonPath": "$.cardano",
+                "regex": "cardano\":{\"usd\":(.*?)}",
+                "xPath": ""
+            },
+            {
+                "jsonPath": "$.solana",
+                "regex": "solana\":{\"usd\":(.*?)}",
+                "xPath": ""
+            }
+        ],
+        "additionalClientOptions": {}
     },
     "secretParams": {
         "headers": {
-            "accept": "application/json, text/plain, */*"
-        }
+            "Referer": "https://www.coingecko.com/en/nft"
+        },
+        "cookieStr": "",
+        "paramValues": {}
     }
 }
