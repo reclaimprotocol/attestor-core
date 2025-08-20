@@ -3,14 +3,15 @@
  * Handles ClaimTeeBundleRequest by verifying TEE attestations and reconstructing TLS transcript
  */
 
-import { ClaimTeeBundleResponse, ProviderClaimInfo } from 'src/proto/api'
+import { ClaimTeeBundleRequest, ClaimTeeBundleResponse, ProviderClaimInfo } from 'src/proto/api'
+import { CertificateInfo } from 'src/proto/tee-bundle'
 import { getApm } from 'src/server/utils/apm'
 import { assertValidProviderTranscript } from 'src/server/utils/assert-valid-claim-request'
 import { getAttestorAddress, niceParseJsonObject, signAsAttestor } from 'src/server/utils/generics'
 import { reconstructTlsTranscript } from 'src/server/utils/tee-transcript-reconstruction'
 import { verifyTeeBundle } from 'src/server/utils/tee-verification'
+import { TeeTranscriptData } from 'src/server/utils/tee-transcript-reconstruction'
 import { Logger, ProviderCtx, RPCHandler, Transcript } from 'src/types'
-import { TeeTranscriptData } from 'src/types/tee'
 import { AttestorError, createSignDataForClaim, getIdentifierFromClaimInfo } from 'src/utils'
 
 export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
@@ -169,7 +170,7 @@ async function validateTeeProviderReceipt<T extends ProviderClaimInfo>(
 	claimInfo: T,
 	logger: Logger,
 	providerCtx: ProviderCtx,
-	certificateInfo?: import('src/types/tee').CertificateInfo
+	certificateInfo?: CertificateInfo
 ): Promise<T> {
 	logger.info('Starting direct TEE provider validation', {
 		provider: claimInfo.provider,
@@ -204,7 +205,7 @@ async function validateTeeProviderReceipt<T extends ProviderClaimInfo>(
  */
 function validateTlsCertificate(
 	claimInfo: ProviderClaimInfo,
-	certificateInfo: import('src/types/tee').CertificateInfo,
+	certificateInfo: CertificateInfo,
 	logger: Logger
 ): void {
 	// Extract hostname from the claim (this varies by provider)

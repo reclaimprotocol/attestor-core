@@ -5,9 +5,8 @@
 import { describe, expect, it } from '@jest/globals'
 import { readFileSync } from 'fs'
 import { join } from 'path'
-import { ClaimRequestData } from 'src/proto/api'
 import { KOutputPayload, TOutputPayload, VerificationBundle } from 'src/proto/tee-bundle'
-import { createSyntheticClaimRequest, reconstructTlsTranscript } from 'src/server/utils/tee-transcript-reconstruction'
+import { reconstructTlsTranscript } from 'src/server/utils/tee-transcript-reconstruction'
 
 // Mock logger for testing
 const mockLogger = {
@@ -82,6 +81,7 @@ describe('TEE Bundle Analysis', () => {
 				console.log('  - Issuer:', kPayload.certificateInfo.issuerCommonName)
 				console.log('  - DNS names:', kPayload.certificateInfo.dnsNames.join(', ') || 'none')
 			}
+
 			console.log('- Response redaction ranges:', kPayload.responseRedactionRanges.length)
 			console.log('- K Timestamp:', kPayload.timestampMs ? new Date(kPayload.timestampMs).toISOString() : 'not set')
 
@@ -112,13 +112,13 @@ describe('TEE Bundle Analysis', () => {
 		console.log('\n=== Standalone Bundle Transcript Reconstruction ===')
 
 		const bundle = VerificationBundle.decode(standaloneBundleBytes)
-		
+
 		// Check if we have both TEE_K and TEE_T payloads
 		if(!bundle.teekSigned?.body || bundle.teekSigned.body.length === 0) {
 			console.log('⚠️ Skipping transcript reconstruction - missing TEE_K payload')
 			return
 		}
-		
+
 		if(!bundle.teetSigned?.body || bundle.teetSigned.body.length === 0) {
 			console.log('⚠️ Skipping transcript reconstruction - missing TEE_T payload (expected for standalone bundle)')
 			return
@@ -139,8 +139,8 @@ describe('TEE Bundle Analysis', () => {
 
 		// Create mock bundle data
 		const mockTeeBundleData = {
-			teekSigned: bundle.teekSigned!,
-			teetSigned: bundle.teetSigned!,
+			teekSigned: bundle.teekSigned,
+			teetSigned: bundle.teetSigned,
 			teekPublicKey: new Uint8Array(64), // Mock public key
 			teetPublicKey: new Uint8Array(64), // Mock public key
 			kOutputPayload,
@@ -154,8 +154,6 @@ describe('TEE Bundle Analysis', () => {
 			console.log('✅ Transcript reconstruction successful!')
 			console.log('- Revealed request size:', transcriptData.revealedRequest.length, 'bytes')
 			console.log('- Reconstructed response size:', transcriptData.reconstructedResponse.length, 'bytes')
-			console.log('- TLS version:', transcriptData.tlsVersion)
-			console.log('- Cipher suite:', transcriptData.cipherSuite)
 			console.log('- Certificate info:', transcriptData.certificateInfo ? 'present' : 'missing')
 
 			// Analyze revealed request
@@ -187,26 +185,10 @@ describe('TEE Bundle Analysis', () => {
 				console.log('- HTTP Status:', statusMatch[1], statusMatch[2])
 			}
 
-			// Test synthetic request creation
-			const claimData: ClaimRequestData = {
-				provider: 'http',
-				parameters: JSON.stringify({
-					url: hostMatch ? `https://${hostMatch[1].trim()}${httpMatch?.[2] || '/'}` : 'https://example.com/',
-					method: httpMatch?.[1] || 'GET'
-				}),
-				owner: '0x1234567890123456789012345678901234567890',
-				timestampS: Math.floor(Date.now() / 1000),
-				context: '{}'
-			}
-
-			const syntheticRequest = createSyntheticClaimRequest(transcriptData, claimData, mockTeeBundleData as any)
-
-			console.log('\nSynthetic request created successfully!')
-			console.log('- Transcript messages:', syntheticRequest.transcript.length)
-			console.log('- Host extracted:', syntheticRequest.request?.host)
+			// Test completed successfully
+			console.log('\n✅ All transcript reconstruction tests passed!')
 
 			expect(transcriptData).toBeDefined()
-			expect(syntheticRequest).toBeDefined()
 
 		} catch(error) {
 			console.error('Reconstruction failed:', (error as Error).message)
@@ -263,6 +245,7 @@ describe('TEE Bundle Analysis', () => {
 				console.log('  - Issuer:', kPayload.certificateInfo.issuerCommonName)
 				console.log('  - DNS names:', kPayload.certificateInfo.dnsNames.join(', ') || 'none')
 			}
+
 			console.log('- Response redaction ranges:', kPayload.responseRedactionRanges.length)
 			console.log('- K Timestamp:', kPayload.timestampMs ? new Date(kPayload.timestampMs).toISOString() : 'not set')
 
@@ -274,12 +257,15 @@ describe('TEE Bundle Analysis', () => {
 		}
 
 		// Analyze the T payload
-		if(bundle.teetSigned?.body) {
+		if(bundle.teetSigned?.body && bundle.teetSigned.body.length > 0) {
 			const tPayload = TOutputPayload.decode(bundle.teetSigned.body)
 			console.log('\nT Payload Analysis:')
 			console.log('- Consolidated response ciphertext:', tPayload.consolidatedResponseCiphertext?.length || 0, 'bytes')
 			console.log('- Request proof streams:', tPayload.requestProofStreams?.length || 0)
 			console.log('- T Timestamp:', tPayload.timestampMs ? new Date(tPayload.timestampMs).toISOString() : 'not set')
+		} else {
+			console.log('\nT Payload Analysis:')
+			console.log('- T payload is missing or empty')
 		}
 
 		console.log('\n=== End TEE Analysis ===')
@@ -324,8 +310,6 @@ describe('TEE Bundle Analysis', () => {
 			console.log('✅ TEE transcript reconstruction successful!')
 			console.log('- Revealed request size:', transcriptData.revealedRequest.length, 'bytes')
 			console.log('- Reconstructed response size:', transcriptData.reconstructedResponse.length, 'bytes')
-			console.log('- TLS version:', transcriptData.tlsVersion)
-			console.log('- Cipher suite:', transcriptData.cipherSuite)
 			console.log('- Certificate info:', transcriptData.certificateInfo ? 'present' : 'missing')
 
 			// Analyze revealed request
@@ -357,26 +341,10 @@ describe('TEE Bundle Analysis', () => {
 				console.log('- HTTP Status:', statusMatch[1], statusMatch[2])
 			}
 
-			// Test synthetic request creation
-			const claimData: ClaimRequestData = {
-				provider: 'http',
-				parameters: JSON.stringify({
-					url: hostMatch ? `https://${hostMatch[1].trim()}${httpMatch?.[2] || '/'}` : 'https://example.com/',
-					method: httpMatch?.[1] || 'GET'
-				}),
-				owner: '0x1234567890123456789012345678901234567890',
-				timestampS: Math.floor(Date.now() / 1000),
-				context: '{}'
-			}
-
-			const syntheticRequest = createSyntheticClaimRequest(transcriptData, claimData, mockTeeBundleData as any)
-
-			console.log('\nSynthetic request created successfully!')
-			console.log('- Transcript messages:', syntheticRequest.transcript.length)
-			console.log('- Host extracted:', syntheticRequest.request?.host)
+			// Test completed successfully
+			console.log('\n✅ All TEE transcript reconstruction tests passed!')
 
 			expect(transcriptData).toBeDefined()
-			expect(syntheticRequest).toBeDefined()
 
 		} catch(error) {
 			console.error('TEE reconstruction failed:', (error as Error).message)

@@ -8,7 +8,32 @@ import { Crypto } from '@peculiar/webcrypto'
 import { X509Certificate, X509ChainBuilder } from '@peculiar/x509'
 // Dynamic import for cbor-x to avoid CommonJS/ESM issues
 import { sign } from 'cose-js'
-import { AddressExtractionResult, AttestationDocument, NitroValidationResult } from 'src/types/tee'
+
+// Nitro-specific types
+export interface AttestationDocument {
+	module_id: string
+	digest: string
+	timestamp: bigint
+	pcrs: { [key: number]: Buffer }
+	certificate: Buffer
+	cabundle: Buffer[]
+	public_key?: Buffer
+	user_data?: Buffer
+	nonce?: Buffer
+}
+
+export interface NitroValidationResult {
+	isValid: boolean
+	errors: string[]
+	warnings: string[]
+	userDataType?: 'tee_k' | 'tee_t'
+	ethAddress?: string
+}
+
+export interface AddressExtractionResult {
+	teeType: 'tee_k' | 'tee_t'
+	ethAddress?: string
+}
 
 // Helper function to dynamically import cbor-x
 async function getCborDecode() {
