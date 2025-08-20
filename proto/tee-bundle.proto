@@ -22,6 +22,15 @@ message SignedRedactedDecryptionStream {
   uint64 seq_num = 2;
 }
 
+// Certificate information extracted during TLS handshake
+message CertificateInfo {
+  string common_name = 1;
+  string issuer_common_name = 2;
+  uint64 not_before_unix = 3;
+  uint64 not_after_unix = 4;
+  repeated string dns_names = 5;
+}
+
 // Handshake secrets disclosed for verification/display
 message HandshakeSecrets {
   bytes handshake_key = 1;
@@ -36,19 +45,20 @@ message Opening {
 }
 
 message KOutputPayload {
-
   bytes redacted_request = 1; // R_red
   repeated RequestRedactionRange request_redaction_ranges = 2;
-  repeated SignedRedactedDecryptionStream redacted_streams = 3; // from TEE_K
-  repeated bytes packets = 4; // TLS handshake packets observed by TEE_K
+
+  bytes consolidated_response_keystream = 3;  // NEW: Single response decryption keystream
+  CertificateInfo certificate_info = 4;      // NEW: Structured cert data instead of handshake packets
+
   repeated ResponseRedactionRange response_redaction_ranges = 5;
   uint64 timestamp_ms = 6; // Unix timestamp in milliseconds when payload was created (SIGNED)
 }
 
 message TOutputPayload {
-  repeated bytes packets = 1; // TLS packets observed by TEE_T
-  repeated bytes request_proof_streams = 2; // R_SP streams signed by TEE_T for cryptographic verification
-  uint64 timestamp_ms = 3; // Unix timestamp in milliseconds when payload was created (SIGNED)
+  bytes consolidated_response_ciphertext = 1;  // NEW: Single consolidated ciphertext instead of individual packets
+  repeated bytes request_proof_streams = 2;    // R_SP streams signed by TEE_T for cryptographic verification
+  uint64 timestamp_ms = 3;                     // Unix timestamp in milliseconds when payload was created (SIGNED)
 }
 
 // Attestation report with structured data
@@ -67,17 +77,17 @@ enum BodyType {
 message SignedMessage {
   BodyType body_type = 1;
   bytes body = 2; // serialized deterministic KOutputPayload or TOutputPayload
-  bytes public_key = 3; // ETH address (20 bytes, standalone mode only)
+  bytes eth_address = 3; // ETH address (20 bytes, standalone mode only)
   bytes signature = 4; // signature over body bytes
   AttestationReport attestation_report = 5; // full attestation (enclave mode only)
 }
 
 // Single artefact produced by client for offline verification
 message VerificationBundle {
-  HandshakeSecrets handshake_keys = 1; // optional
-
+  // SECURITY: certificate_info must come from signed teek_signed.body.certificate_info, not unsigned field
+  
   // Signed transcripts
-  SignedMessage teek_signed = 2; // BODY_TYPE_K_OUTPUT
-  SignedMessage teet_signed = 3; // BODY_TYPE_T_OUTPUT
+  SignedMessage teek_signed = 1; // BODY_TYPE_K_OUTPUT (contains signed certificate_info)
+  SignedMessage teet_signed = 2; // BODY_TYPE_T_OUTPUT
 
 }

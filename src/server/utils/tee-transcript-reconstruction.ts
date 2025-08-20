@@ -3,10 +3,9 @@
  */
 
 import { ClaimTunnelRequest, TranscriptMessageSenderType } from 'src/proto/api'
-import { TOutputPayload } from 'src/proto/tee-bundle'
 import { Logger } from 'src/types'
 import { SyntheticTranscriptMessage, TeeBundleData, TeeTranscriptData } from 'src/types/tee'
-import { AttestorError } from 'src/utils'
+import { AttestorError, REDACTION_CHAR_CODE } from 'src/utils'
 
 /**
  * Reconstructs TLS transcript from TEE bundle data
@@ -19,29 +18,30 @@ export async function reconstructTlsTranscript(
 	logger: Logger
 ): Promise<TeeTranscriptData> {
 	try {
-		// Extract cipher suite from handshake keys if available
-		const cipherSuite = bundleData.handshakeKeys?.cipherSuite
-		const isTLS12AESGCM = cipherSuite ? isTLS12AESGCMCipherSuite(cipherSuite) : false
+		// Extract cipher suite from certificate info if available
+		const cipherSuite = undefined // cipher suite info now in bundleData.kOutputPayload.certificateInfo (if needed)
 
 		// 1. Reconstruct request using proof stream
 		const revealedRequest = reconstructRequest(bundleData, logger)
 
-		// 2. Reconstruct response using redacted streams
-		const responseData = reconstructResponse(bundleData, isTLS12AESGCM, logger)
+		// 2. Reconstruct response using consolidated keystream and ciphertext
+		const reconstructedResponse = reconstructConsolidatedResponse(bundleData, logger)
 
-		// 3. Extract handshake and application data packets
-		const handshakePackets = bundleData.kOutputPayload.packets
-		const applicationDataPackets = extractApplicationDataPackets(bundleData.tOutputPayload, isTLS12AESGCM)
+		// 3. Extract certificate info from TEE_K payload
+		const certificateInfo = bundleData.kOutputPayload.certificateInfo
 
-		logger.info('TLS transcript reconstruction completed successfully')
+		logger.info('TLS transcript reconstruction completed successfully', {
+			requestSize: revealedRequest.length,
+			responseSize: reconstructedResponse.length,
+			hasCertificateInfo: !!certificateInfo
+		})
 
 		return {
-			handshakePackets,
-			applicationDataPackets,
 			revealedRequest,
-			reconstructedResponsePackets: responseData.individualPackets, // New: individual packets
+			reconstructedResponse,
 			cipherSuite,
-			tlsVersion: determineTlsVersion(cipherSuite)
+			tlsVersion: determineTlsVersion(cipherSuite),
+			certificateInfo
 		}
 
 	} catch(error) {
@@ -83,136 +83,55 @@ function reconstructRequest(bundleData: TeeBundleData, logger: Logger): Uint8Arr
 }
 
 /**
- * Reconstructs response by applying redacted streams to encrypted application data
- * Returns individual packets to preserve packet boundaries
+ * NEW: Reconstructs response using consolidated keystream and ciphertext
+ * This is much simpler than the old packet-by-packet approach
  */
-function reconstructResponse(bundleData: TeeBundleData, isTLS12AESGCM: boolean, logger: Logger): {
-	individualPackets: Uint8Array[]
-} {
+function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger: Logger): Uint8Array {
 	const { kOutputPayload, tOutputPayload } = bundleData
 
-	if(!kOutputPayload.redactedStreams || kOutputPayload.redactedStreams.length === 0) {
-		logger.warn('No redacted streams available for response reconstruction')
-		return { individualPackets: [] }
+	// Get consolidated data from both TEEs
+	const consolidatedKeystream = kOutputPayload.consolidatedResponseKeystream
+	const consolidatedCiphertext = tOutputPayload.consolidatedResponseCiphertext
+
+	if(!consolidatedKeystream || consolidatedKeystream.length === 0) {
+		throw new AttestorError('ERROR_INVALID_CLAIM', 'No consolidated response keystream available')
 	}
 
-	// Extract ciphertexts from TEE_T application data packets
-	const ciphertexts = extractCiphertexts(tOutputPayload, isTLS12AESGCM)
-
-	// Reconstruct plaintext by walking streams and finding the next ciphertext with matching length
-	const reconstructedPackets: Uint8Array[] = []
-	let cipherIdx = 0
-
-	if(kOutputPayload.redactedStreams.length > 0) {
-		for(const stream of kOutputPayload.redactedStreams) {
-			// Skip empty streams (happens in some protocol versions)
-			if(stream.redactedStream.length === 0) {
-				logger.debug(`Skipping empty redacted stream for seq ${stream.seqNum}`)
-				continue
-			}
-
-			// Advance cipherIdx until length matches
-			while(cipherIdx < ciphertexts.length && ciphertexts[cipherIdx].length !== stream.redactedStream.length) {
-				cipherIdx++
-			}
-
-			if(cipherIdx >= ciphertexts.length) {
-				logger.warn(`No ciphertext of length ${stream.redactedStream.length} found for stream seq ${stream.seqNum}`)
-				logger.warn(`Available cipher lengths: ${ciphertexts.slice(cipherIdx, cipherIdx + 5).map(c => c.length).join(', ')}`)
-				continue // Skip this stream instead of failing
-			}
-
-			const cipher = ciphertexts[cipherIdx]
-			const plain = new Uint8Array(cipher.length)
-
-			// XOR ciphertext with redacted stream to get plaintext
-			for(const [i, cipherByte] of cipher.entries()) {
-				plain[i] = cipherByte ^ stream.redactedStream[i]
-			}
-
-			reconstructedPackets.push(plain)
-			cipherIdx++
-		}
+	if(!consolidatedCiphertext || consolidatedCiphertext.length === 0) {
+		throw new AttestorError('ERROR_INVALID_CLAIM', 'No consolidated response ciphertext available')
 	}
 
-	// Combine all reconstructed parts to apply redaction ranges correctly
-	const totalLength = reconstructedPackets.reduce((sum, part) => sum + part.length, 0)
-	const combinedResult = new Uint8Array(totalLength)
-	let offset = 0
-
-	for(const part of reconstructedPackets) {
-		combinedResult.set(part, offset)
-		offset += part.length
+	// Verify lengths match
+	if(consolidatedKeystream.length !== consolidatedCiphertext.length) {
+		logger.warn('Keystream and ciphertext length mismatch', {
+			keystreamLength: consolidatedKeystream.length,
+			ciphertextLength: consolidatedCiphertext.length
+		})
 	}
 
-	// Apply response redaction ranges to the COMBINED response (this is critical!)
-	const redactedCombined = applyResponseRedactionRanges(combinedResult, kOutputPayload.responseRedactionRanges)
+	// XOR to get plaintext (keystream XOR ciphertext = plaintext)
+	const minLength = Math.min(consolidatedKeystream.length, consolidatedCiphertext.length)
+	const reconstructedResponse = new Uint8Array(minLength)
 
-	// Now split the redacted combined response back into individual packets
-	const redactedPackets: Uint8Array[] = []
-	let currentOffset = 0
-
-	for(const originalPacket of reconstructedPackets) {
-		const packetLength = originalPacket.length
-		const redactedPacket = redactedCombined.slice(currentOffset, currentOffset + packetLength)
-		redactedPackets.push(redactedPacket)
-		currentOffset += packetLength
+	for(let i = 0; i < minLength; i++) {
+		reconstructedResponse[i] = consolidatedKeystream[i] ^ consolidatedCiphertext[i]
 	}
 
-	logger.debug(`Reconstructed ${redactedPackets.length} individual response packets from ${kOutputPayload.redactedStreams.length} streams`)
-
-	return { individualPackets: redactedPackets }
-}
-
-/**
- * Extracts application data ciphertexts from TEE_T packets
- */
-function extractCiphertexts(tOutputPayload: TOutputPayload, isTLS12AESGCM: boolean): Uint8Array[] {
-	const ciphertexts: Uint8Array[] = []
-
-	for(const pkt of tOutputPayload.packets) {
-		if(pkt.length < 5 + 16) { // Minimum TLS record size
-			continue
-		}
-
-		// Skip non-ApplicationData packets, but allow Alert packets (0x15) for completeness
-		if(pkt[0] !== 0x17 && pkt[0] !== 0x15) {
-			continue
-		}
-
-		let ctLen: number
-		let startOffset: number
-
-		if(isTLS12AESGCM) {
-			// TLS 1.2 AES-GCM: Header(5) + ExplicitIV(8) + EncryptedData + Tag(16)
-			ctLen = pkt.length - 5 - 8 - 16 // Skip explicit IV and tag
-			startOffset = 5 + 8 // Skip header and explicit IV
+	// Apply response redaction ranges to the reconstructed response
+	const redactedResponse = applyResponseRedactionRanges(reconstructedResponse, kOutputPayload.responseRedactionRanges)
+	let lastAsteriskIndex = -1
+	for(const element of redactedResponse) {
+		if(element === REDACTION_CHAR_CODE) {
+			lastAsteriskIndex++
 		} else {
-			// TLS 1.3: Header(5) + EncryptedData + Tag(16)
-			ctLen = pkt.length - 5 - 16 // Skip header and tag
-			startOffset = 5 // Skip header only
+			break
 		}
-
-		if(ctLen <= 0) {
-			continue
-		}
-
-		ciphertexts.push(pkt.slice(startOffset, startOffset + ctLen))
 	}
 
-	return ciphertexts
+	return redactedResponse.slice(lastAsteriskIndex + 1)
 }
 
-/**
- * Extracts application data packets from TEE_T output
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function extractApplicationDataPackets(tOutputPayload: TOutputPayload, _isTLS12AESGCM: boolean): Uint8Array[] {
-	return tOutputPayload.packets.filter(pkt => {
-		// Only include ApplicationData packets (0x17)
-		return pkt.length >= 5 && pkt[0] === 0x17
-	})
-}
+// Removed legacy packet-based extraction functions since we now use consolidated streams
 
 /**
  * Applies response redaction ranges to replace random garbage with asterisks
@@ -297,14 +216,9 @@ export function createSyntheticClaimRequest(
 ): ClaimTunnelRequest {
 	const messages: SyntheticTranscriptMessage[] = []
 
-	// Add handshake packets
-	for(const packet of transcriptData.handshakePackets) {
-		messages.push({
-			sender: determinePacketSender(packet),
-			message: packet
-			// No reveal needed for handshake packets
-		})
-	}
+	// Note: Handshake packets are no longer provided separately in the new schema.
+	// Certificate information is now structured in certificateInfo field.
+	// For synthetic claims, we focus on the application data.
 
 	// Add client request (revealed)
 	messages.push({
@@ -374,16 +288,7 @@ function determineTlsVersion(cipherSuite?: number): string {
 	return 'TLS1_2'
 }
 
-function determinePacketSender(packet: Uint8Array): 'client' | 'server' {
-	// Simple heuristic based on TLS record type
-	// ClientHello = 0x01, ServerHello = 0x02
-	if(packet.length >= 6) {
-		const handshakeType = packet[5]
-		return handshakeType === 0x01 ? 'client' : 'server'
-	}
-
-	return 'server' // Default assumption
-}
+// Removed determinePacketSender function since handshake packets are no longer processed individually
 
 function wrapInTlsRecord(data: Uint8Array, recordType: number): Uint8Array {
 	// Create TLS record: Type(1) + Version(2) + Length(2) + Data
@@ -402,14 +307,14 @@ function createTeeStreamReveal(data: Uint8Array, bundleData: TeeBundleData): any
 		teeStreamReveal: {
 			revealedData: data,
 			teeSignature: bundleData.teekSigned?.signature || new Uint8Array(),
-			teePublicKey: bundleData.teekSigned?.publicKey || new Uint8Array()
+			teePublicKey: bundleData.teekSigned?.ethAddress || new Uint8Array()
 		}
 	}
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function extractHostFromBundle(_bundleData: TeeBundleData): string {
-	// Try to extract hostname from SNI in handshake packets
-	// This is a simplified implementation - in practice you'd parse TLS handshake
+	// Extract hostname from certificate info or SNI data
+	// This is a simplified implementation - in practice you'd use the certificateInfo
 	return 'example.com' // Placeholder
 }

@@ -53,7 +53,7 @@ export async function verifyTeeBundle(
 			teetSigned: bundle.teetSigned,
 			kOutputPayload,
 			tOutputPayload,
-			handshakeKeys: bundle.handshakeKeys,
+			handshakeKeys: undefined, // handshakeKeys no longer in bundle - cert info now in kOutputPayload.certificateInfo
 		}
 
 	} catch(error) {
@@ -92,8 +92,8 @@ function validateBundleCompleteness(bundle: VerificationBundle): void {
 	const hasAttestations = (bundle.teekSigned.attestationReport?.report && bundle.teekSigned.attestationReport.report.length > 0) ||
 		(bundle.teetSigned.attestationReport?.report && bundle.teetSigned.attestationReport.report.length > 0)
 
-	const hasPublicKeys = (bundle.teekSigned.publicKey && bundle.teekSigned.publicKey.length > 0) ||
-		(bundle.teetSigned.publicKey && bundle.teetSigned.publicKey.length > 0)
+	const hasPublicKeys = (bundle.teekSigned.ethAddress && bundle.teekSigned.ethAddress.length > 0) ||
+		(bundle.teetSigned.ethAddress && bundle.teetSigned.ethAddress.length > 0)
 
 	if(!hasAttestations && !hasPublicKeys) {
 		throw new Error('SECURITY ERROR: bundle must have either Nitro attestations (production) or embedded public keys (development)')
@@ -204,16 +204,16 @@ async function extractPublicKeys(
 		// Standalone mode: Use embedded public keys
 		logger.info('Using standalone mode: extracting embedded public keys')
 
-		if(!bundle.teekSigned?.publicKey || bundle.teekSigned.publicKey.length === 0) {
-			throw new Error('TEE_K public key missing in standalone mode')
+		if(!bundle.teekSigned?.ethAddress || bundle.teekSigned.ethAddress.length === 0) {
+			throw new Error('TEE_K eth address missing in standalone mode')
 		}
 
-		if(!bundle.teetSigned?.publicKey || bundle.teetSigned.publicKey.length === 0) {
-			throw new Error('TEE_T public key missing in standalone mode')
+		if(!bundle.teetSigned?.ethAddress || bundle.teetSigned.ethAddress.length === 0) {
+			throw new Error('TEE_T eth address missing in standalone mode')
 		}
 
-		teekAddress = uint8ArrayToStr(bundle.teekSigned.publicKey)
-		teetAddress = uint8ArrayToStr(bundle.teetSigned.publicKey)
+		teekAddress = uint8ArrayToStr(bundle.teekSigned.ethAddress)
+		teetAddress = uint8ArrayToStr(bundle.teetSigned.ethAddress)
 
 		teekKeyResult = { ethAddress: teekAddress, teeType: 'tee_k' }
 		teetKeyResult = { ethAddress: teetAddress, teeType: 'tee_t' }
@@ -346,8 +346,14 @@ function parseKOutputPayload(signedMessage: SignedMessage): KOutputPayload {
 			throw new Error('Missing redacted request in TEE_K payload')
 		}
 
-		if(!payload.packets || payload.packets.length === 0) {
-			throw new Error('Missing handshake packets in TEE_K payload')
+		if(!payload.consolidatedResponseKeystream || payload.consolidatedResponseKeystream.length === 0) {
+			throw new Error('Missing consolidated response keystream in TEE_K payload')
+		} else {
+			console.log('Keystream len ' + payload.consolidatedResponseKeystream.length)
+		}
+
+		if(!payload.certificateInfo) {
+			throw new Error('Missing certificate info in TEE_K payload')
 		}
 
 		return payload
@@ -366,9 +372,15 @@ function parseTOutputPayload(signedMessage: SignedMessage): TOutputPayload {
 		const payload = TOutputPayload.decode(signedMessage.body)
 
 		// Validate required fields
-		if(!payload.packets || payload.packets.length === 0) {
-			throw new Error('Missing application data packets in TEE_T payload')
+		if(!payload.consolidatedResponseCiphertext || payload.consolidatedResponseCiphertext.length === 0) {
+			throw new Error('Missing consolidated response ciphertext in TEE_T payload')
+		} else {
+			console.log('Ciphertext.length ' + payload.consolidatedResponseCiphertext.length)
 		}
+
+		// if(!payload.requestProofStreams || payload.requestProofStreams.length === 0) {
+		// 	throw new Error('Missing request proof streams in TEE_T payload')
+		// }
 
 		return payload
 
@@ -379,24 +391,24 @@ function parseTOutputPayload(signedMessage: SignedMessage): TOutputPayload {
 
 /**
  * Validates that both K and T timestamps are within acceptable range
- * @param kPayload - K output payload with timestamp 
+ * @param kPayload - K output payload with timestamp
  * @param tPayload - T output payload with timestamp
  * @param logger - Logger instance
  */
 function validateTimestamps(
 	kPayload: KOutputPayload,
-	tPayload: TOutputPayload, 
+	tPayload: TOutputPayload,
 	logger: Logger
 ): void {
 	const now = Date.now() // Current time in milliseconds
 	const kTimestamp = kPayload.timestampMs
 	const tTimestamp = tPayload.timestampMs
-	
+
 	// Convert to seconds for logging consistency with existing code
 	const kTimestampS = Math.floor(kTimestamp / 1000)
-	const tTimestampS = Math.floor(tTimestamp / 1000) 
+	const tTimestampS = Math.floor(tTimestamp / 1000)
 	const nowS = Math.floor(now / 1000)
-	
+
 	logger.info('Validating TEE timestamps', {
 		kTimestampMs: kTimestamp,
 		tTimestampMs: tTimestamp,
@@ -409,22 +421,22 @@ function validateTimestamps(
 	const maxAgeMs = 10 * 60 * 1000 // 10 minutes in milliseconds
 	const oldestAllowed = now - maxAgeMs
 
-	if (kTimestamp < oldestAllowed) {
+	if(kTimestamp < oldestAllowed) {
 		throw new Error(`TEE_K timestamp ${kTimestamp} is too old. Must be within 10 minutes of current time ${now}`)
 	}
-	
-	if (tTimestamp < oldestAllowed) {
+
+	if(tTimestamp < oldestAllowed) {
 		throw new Error(`TEE_T timestamp ${tTimestamp} is too old. Must be within 10 minutes of current time ${now}`)
 	}
 
 	// 2. Check that both timestamps are within 5 seconds of each other
 	const timestampDiffMs = Math.abs(kTimestamp - tTimestamp)
 	const maxDiffMs = 5 * 1000 // 5 seconds in milliseconds
-	
-	if (timestampDiffMs > maxDiffMs) {
+
+	if(timestampDiffMs > maxDiffMs) {
 		throw new Error(`TEE timestamps differ by ${timestampDiffMs}ms, which exceeds maximum allowed difference of ${maxDiffMs}ms`)
 	}
-	
+
 	logger.info('TEE timestamp validation successful', {
 		timestampDiffMs,
 		ageKMs: now - kTimestamp,

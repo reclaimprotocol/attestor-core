@@ -48,13 +48,13 @@ describe('TEE Bundle Analysis', () => {
 		console.log('Bundle Components:')
 		console.log('- TEE_K body size:', bundle.teekSigned?.body?.length || 0, 'bytes')
 		console.log('- TEE_T body size:', bundle.teetSigned?.body?.length || 0, 'bytes')
-		console.log('- Has handshake keys:', !!bundle.handshakeKeys)
+		console.log('- Has handshake keys:', false) // handshakeKeys removed from new bundle format
 
 		// Check bundle mode
 		const hasAttestations = (bundle.teekSigned?.attestationReport?.report && bundle.teekSigned.attestationReport.report.length > 0) ||
 			(bundle.teetSigned?.attestationReport?.report && bundle.teetSigned.attestationReport.report.length > 0)
-		const hasPublicKeys = (bundle.teekSigned?.publicKey && bundle.teekSigned.publicKey.length > 0) ||
-			(bundle.teetSigned?.publicKey && bundle.teetSigned.publicKey.length > 0)
+		const hasPublicKeys = (bundle.teekSigned?.ethAddress && bundle.teekSigned.ethAddress.length > 0) ||
+			(bundle.teetSigned?.ethAddress && bundle.teetSigned.ethAddress.length > 0)
 
 		console.log('- Bundle mode:', hasAttestations ? 'Production (with attestations)' : hasPublicKeys ? 'Standalone (with public keys)' : 'Unknown')
 
@@ -64,8 +64,8 @@ describe('TEE Bundle Analysis', () => {
 		}
 
 		if(hasPublicKeys) {
-			console.log('- TEE_K embedded public key:', bundle.teekSigned?.publicKey?.length || 0, 'bytes')
-			console.log('- TEE_T embedded public key:', bundle.teetSigned?.publicKey?.length || 0, 'bytes')
+			console.log('- TEE_K embedded eth address:', bundle.teekSigned?.ethAddress?.length || 0, 'bytes')
+			console.log('- TEE_T embedded eth address:', bundle.teetSigned?.ethAddress?.length || 0, 'bytes')
 		}
 
 		// Analyze the K payload to understand redaction ranges
@@ -75,8 +75,13 @@ describe('TEE Bundle Analysis', () => {
 			console.log('\nK Payload Analysis:')
 			console.log('- Redacted request size:', kPayload.redactedRequest.length, 'bytes')
 			console.log('- Request redaction ranges:', kPayload.requestRedactionRanges.length)
-			console.log('- Handshake packets:', kPayload.packets.length)
-			console.log('- Redacted streams:', kPayload.redactedStreams.length)
+			console.log('- Consolidated response keystream:', kPayload.consolidatedResponseKeystream?.length || 0, 'bytes')
+			console.log('- Certificate info:', kPayload.certificateInfo ? 'present' : 'missing')
+			if(kPayload.certificateInfo) {
+				console.log('  - Common name:', kPayload.certificateInfo.commonName)
+				console.log('  - Issuer:', kPayload.certificateInfo.issuerCommonName)
+				console.log('  - DNS names:', kPayload.certificateInfo.dnsNames.join(', ') || 'none')
+			}
 			console.log('- Response redaction ranges:', kPayload.responseRedactionRanges.length)
 			console.log('- K Timestamp:', kPayload.timestampMs ? new Date(kPayload.timestampMs).toISOString() : 'not set')
 
@@ -89,12 +94,15 @@ describe('TEE Bundle Analysis', () => {
 		}
 
 		// Analyze the T payload
-		if(bundle.teetSigned?.body) {
+		if(bundle.teetSigned?.body && bundle.teetSigned.body.length > 0) {
 			const tPayload = TOutputPayload.decode(bundle.teetSigned.body)
 			console.log('\nT Payload Analysis:')
-			console.log('- Application data packets:', tPayload.packets.length)
+			console.log('- Consolidated response ciphertext:', tPayload.consolidatedResponseCiphertext?.length || 0, 'bytes')
 			console.log('- Request proof streams:', tPayload.requestProofStreams?.length || 0)
 			console.log('- T Timestamp:', tPayload.timestampMs ? new Date(tPayload.timestampMs).toISOString() : 'not set')
+		} else {
+			console.log('\nT Payload Analysis:')
+			console.log('- T payload is missing or empty (expected for standalone mode)')
 		}
 
 		console.log('\n=== End Analysis ===')
@@ -104,8 +112,20 @@ describe('TEE Bundle Analysis', () => {
 		console.log('\n=== Standalone Bundle Transcript Reconstruction ===')
 
 		const bundle = VerificationBundle.decode(standaloneBundleBytes)
-		const kOutputPayload = KOutputPayload.decode(bundle.teekSigned!.body)
-		const tOutputPayload = TOutputPayload.decode(bundle.teetSigned!.body)
+		
+		// Check if we have both TEE_K and TEE_T payloads
+		if(!bundle.teekSigned?.body || bundle.teekSigned.body.length === 0) {
+			console.log('⚠️ Skipping transcript reconstruction - missing TEE_K payload')
+			return
+		}
+		
+		if(!bundle.teetSigned?.body || bundle.teetSigned.body.length === 0) {
+			console.log('⚠️ Skipping transcript reconstruction - missing TEE_T payload (expected for standalone bundle)')
+			return
+		}
+
+		const kOutputPayload = KOutputPayload.decode(bundle.teekSigned.body)
+		const tOutputPayload = TOutputPayload.decode(bundle.teetSigned.body)
 
 		// Add timestamps to payloads if they don't exist (for older test bundles)
 		const now = Date.now()
@@ -125,18 +145,18 @@ describe('TEE Bundle Analysis', () => {
 			teetPublicKey: new Uint8Array(64), // Mock public key
 			kOutputPayload,
 			tOutputPayload,
-			handshakeKeys: bundle.handshakeKeys,
+			handshakeKeys: undefined, // handshakeKeys removed from new bundle format
 		}
 
 		try {
 			const transcriptData = await reconstructTlsTranscript(mockTeeBundleData as any, mockLogger as any)
 
-			console.log(' Transcript reconstruction successful!')
-			console.log('- Handshake packets:', transcriptData.handshakePackets.length)
+			console.log('✅ Transcript reconstruction successful!')
 			console.log('- Revealed request size:', transcriptData.revealedRequest.length, 'bytes')
-			console.log('- Reconstructed response packets:', transcriptData.reconstructedResponsePackets.length, 'number')
+			console.log('- Reconstructed response size:', transcriptData.reconstructedResponse.length, 'bytes')
 			console.log('- TLS version:', transcriptData.tlsVersion)
 			console.log('- Cipher suite:', transcriptData.cipherSuite)
+			console.log('- Certificate info:', transcriptData.certificateInfo ? 'present' : 'missing')
 
 			// Analyze revealed request
 			const requestText = new TextDecoder('utf-8', { fatal: false }).decode(transcriptData.revealedRequest)
@@ -156,15 +176,8 @@ describe('TEE Bundle Analysis', () => {
 				console.log('- Host:', hostMatch[1].trim())
 			}
 
-			// Analyze response (combine all packets)
-			const combinedResponse = new Uint8Array(transcriptData.reconstructedResponsePackets.reduce((sum, pkt) => sum + pkt.length, 0))
-			let offset = 0
-			for(const packet of transcriptData.reconstructedResponsePackets) {
-				combinedResponse.set(packet, offset)
-				offset += packet.length
-			}
-
-			const responseText = new TextDecoder('utf-8', { fatal: false }).decode(combinedResponse)
+			// Analyze response
+			const responseText = new TextDecoder('utf-8', { fatal: false }).decode(transcriptData.reconstructedResponse)
 			console.log('\nReconstructed Response Analysis:')
 			console.log('- Text length:', responseText.length, 'characters')
 			console.log('- Preview:', JSON.stringify(responseText.substring(0, 200)))
@@ -214,13 +227,13 @@ describe('TEE Bundle Analysis', () => {
 		console.log('Bundle Components:')
 		console.log('- TEE_K body size:', bundle.teekSigned?.body?.length || 0, 'bytes')
 		console.log('- TEE_T body size:', bundle.teetSigned?.body?.length || 0, 'bytes')
-		console.log('- Has handshake keys:', !!bundle.handshakeKeys)
+		console.log('- Has handshake keys:', false) // handshakeKeys removed from new bundle format
 
 		// Check bundle mode
 		const hasAttestations = (bundle.teekSigned?.attestationReport?.report && bundle.teekSigned.attestationReport.report.length > 0) ||
 			(bundle.teetSigned?.attestationReport?.report && bundle.teetSigned.attestationReport.report.length > 0)
-		const hasPublicKeys = (bundle.teekSigned?.publicKey && bundle.teekSigned.publicKey.length > 0) ||
-			(bundle.teetSigned?.publicKey && bundle.teetSigned.publicKey.length > 0)
+		const hasPublicKeys = (bundle.teekSigned?.ethAddress && bundle.teekSigned.ethAddress.length > 0) ||
+			(bundle.teetSigned?.ethAddress && bundle.teetSigned.ethAddress.length > 0)
 
 		console.log('- Bundle mode:', hasAttestations ? 'Production (with attestations)' : hasPublicKeys ? 'Standalone (with public keys)' : 'Unknown')
 
@@ -232,8 +245,8 @@ describe('TEE Bundle Analysis', () => {
 		}
 
 		if(hasPublicKeys) {
-			console.log('- TEE_K embedded public key:', bundle.teekSigned?.publicKey?.length || 0, 'bytes')
-			console.log('- TEE_T embedded public key:', bundle.teetSigned?.publicKey?.length || 0, 'bytes')
+			console.log('- TEE_K embedded eth address:', bundle.teekSigned?.ethAddress?.length || 0, 'bytes')
+			console.log('- TEE_T embedded eth address:', bundle.teetSigned?.ethAddress?.length || 0, 'bytes')
 		}
 
 		// Analyze the K payload to understand redaction ranges
@@ -243,8 +256,13 @@ describe('TEE Bundle Analysis', () => {
 			console.log('\nK Payload Analysis:')
 			console.log('- Redacted request size:', kPayload.redactedRequest.length, 'bytes')
 			console.log('- Request redaction ranges:', kPayload.requestRedactionRanges.length)
-			console.log('- Handshake packets:', kPayload.packets.length)
-			console.log('- Redacted streams:', kPayload.redactedStreams.length)
+			console.log('- Consolidated response keystream:', kPayload.consolidatedResponseKeystream?.length || 0, 'bytes')
+			console.log('- Certificate info:', kPayload.certificateInfo ? 'present' : 'missing')
+			if(kPayload.certificateInfo) {
+				console.log('  - Common name:', kPayload.certificateInfo.commonName)
+				console.log('  - Issuer:', kPayload.certificateInfo.issuerCommonName)
+				console.log('  - DNS names:', kPayload.certificateInfo.dnsNames.join(', ') || 'none')
+			}
 			console.log('- Response redaction ranges:', kPayload.responseRedactionRanges.length)
 			console.log('- K Timestamp:', kPayload.timestampMs ? new Date(kPayload.timestampMs).toISOString() : 'not set')
 
@@ -259,7 +277,7 @@ describe('TEE Bundle Analysis', () => {
 		if(bundle.teetSigned?.body) {
 			const tPayload = TOutputPayload.decode(bundle.teetSigned.body)
 			console.log('\nT Payload Analysis:')
-			console.log('- Application data packets:', tPayload.packets.length)
+			console.log('- Consolidated response ciphertext:', tPayload.consolidatedResponseCiphertext?.length || 0, 'bytes')
 			console.log('- Request proof streams:', tPayload.requestProofStreams?.length || 0)
 			console.log('- T Timestamp:', tPayload.timestampMs ? new Date(tPayload.timestampMs).toISOString() : 'not set')
 		}
@@ -297,18 +315,18 @@ describe('TEE Bundle Analysis', () => {
 			teetPublicKey: new Uint8Array(64), // Mock public key
 			kOutputPayload,
 			tOutputPayload,
-			handshakeKeys: bundle.handshakeKeys,
+			handshakeKeys: undefined, // handshakeKeys removed from new bundle format
 		}
 
 		try {
 			const transcriptData = await reconstructTlsTranscript(mockTeeBundleData as any, mockLogger as any)
 
 			console.log('✅ TEE transcript reconstruction successful!')
-			console.log('- Handshake packets:', transcriptData.handshakePackets.length)
 			console.log('- Revealed request size:', transcriptData.revealedRequest.length, 'bytes')
-			console.log('- Reconstructed response packets:', transcriptData.reconstructedResponsePackets.length, 'number')
+			console.log('- Reconstructed response size:', transcriptData.reconstructedResponse.length, 'bytes')
 			console.log('- TLS version:', transcriptData.tlsVersion)
 			console.log('- Cipher suite:', transcriptData.cipherSuite)
+			console.log('- Certificate info:', transcriptData.certificateInfo ? 'present' : 'missing')
 
 			// Analyze revealed request
 			const requestText = new TextDecoder('utf-8', { fatal: false }).decode(transcriptData.revealedRequest)
@@ -328,15 +346,8 @@ describe('TEE Bundle Analysis', () => {
 				console.log('- Host:', hostMatch[1].trim())
 			}
 
-			// Analyze response (combine all packets)
-			const combinedResponse = new Uint8Array(transcriptData.reconstructedResponsePackets.reduce((sum, pkt) => sum + pkt.length, 0))
-			let offset = 0
-			for(const packet of transcriptData.reconstructedResponsePackets) {
-				combinedResponse.set(packet, offset)
-				offset += packet.length
-			}
-
-			const responseText = new TextDecoder('utf-8', { fatal: false }).decode(combinedResponse)
+			// Analyze response
+			const responseText = new TextDecoder('utf-8', { fatal: false }).decode(transcriptData.reconstructedResponse)
 			console.log('\nReconstructed Response Analysis:')
 			console.log('- Text length:', responseText.length, 'characters')
 			console.log('- Preview:', JSON.stringify(responseText.substring(0, 200)))

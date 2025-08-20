@@ -67,6 +67,15 @@ export interface SignedRedactedDecryptionStream {
   seqNum: number;
 }
 
+/** Certificate information extracted during TLS handshake */
+export interface CertificateInfo {
+  commonName: string;
+  issuerCommonName: string;
+  notBeforeUnix: number;
+  notAfterUnix: number;
+  dnsNames: string[];
+}
+
 /** Handshake secrets disclosed for verification/display */
 export interface HandshakeSecrets {
   handshakeKey: Uint8Array;
@@ -86,18 +95,18 @@ export interface KOutputPayload {
   /** R_red */
   redactedRequest: Uint8Array;
   requestRedactionRanges: RequestRedactionRange[];
-  /** from TEE_K */
-  redactedStreams: SignedRedactedDecryptionStream[];
-  /** TLS handshake packets observed by TEE_K */
-  packets: Uint8Array[];
+  /** NEW: Single response decryption keystream */
+  consolidatedResponseKeystream: Uint8Array;
+  /** NEW: Structured cert data instead of handshake packets */
+  certificateInfo: CertificateInfo | undefined;
   responseRedactionRanges: ResponseRedactionRange[];
   /** Unix timestamp in milliseconds when payload was created (SIGNED) */
   timestampMs: number;
 }
 
 export interface TOutputPayload {
-  /** TLS packets observed by TEE_T */
-  packets: Uint8Array[];
+  /** NEW: Single consolidated ciphertext instead of individual packets */
+  consolidatedResponseCiphertext: Uint8Array;
   /** R_SP streams signed by TEE_T for cryptographic verification */
   requestProofStreams: Uint8Array[];
   /** Unix timestamp in milliseconds when payload was created (SIGNED) */
@@ -117,7 +126,7 @@ export interface SignedMessage {
   /** serialized deterministic KOutputPayload or TOutputPayload */
   body: Uint8Array;
   /** ETH address (20 bytes, standalone mode only) */
-  publicKey: Uint8Array;
+  ethAddress: Uint8Array;
   /** signature over body bytes */
   signature: Uint8Array;
   /** full attestation (enclave mode only) */
@@ -126,10 +135,6 @@ export interface SignedMessage {
 
 /** Single artefact produced by client for offline verification */
 export interface VerificationBundle {
-  /** optional */
-  handshakeKeys:
-    | HandshakeSecrets
-    | undefined;
   /** Signed transcripts */
   teekSigned:
     | SignedMessage
@@ -382,6 +387,130 @@ export const SignedRedactedDecryptionStream: MessageFns<SignedRedactedDecryption
   },
 };
 
+function createBaseCertificateInfo(): CertificateInfo {
+  return { commonName: "", issuerCommonName: "", notBeforeUnix: 0, notAfterUnix: 0, dnsNames: [] };
+}
+
+export const CertificateInfo: MessageFns<CertificateInfo> = {
+  encode(message: CertificateInfo, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.commonName !== "") {
+      writer.uint32(10).string(message.commonName);
+    }
+    if (message.issuerCommonName !== "") {
+      writer.uint32(18).string(message.issuerCommonName);
+    }
+    if (message.notBeforeUnix !== 0) {
+      writer.uint32(24).uint64(message.notBeforeUnix);
+    }
+    if (message.notAfterUnix !== 0) {
+      writer.uint32(32).uint64(message.notAfterUnix);
+    }
+    for (const v of message.dnsNames) {
+      writer.uint32(42).string(v!);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): CertificateInfo {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseCertificateInfo();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.commonName = reader.string();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.issuerCommonName = reader.string();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.notBeforeUnix = longToNumber(reader.uint64());
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.notAfterUnix = longToNumber(reader.uint64());
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.dnsNames.push(reader.string());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): CertificateInfo {
+    return {
+      commonName: isSet(object.commonName) ? globalThis.String(object.commonName) : "",
+      issuerCommonName: isSet(object.issuerCommonName) ? globalThis.String(object.issuerCommonName) : "",
+      notBeforeUnix: isSet(object.notBeforeUnix) ? globalThis.Number(object.notBeforeUnix) : 0,
+      notAfterUnix: isSet(object.notAfterUnix) ? globalThis.Number(object.notAfterUnix) : 0,
+      dnsNames: globalThis.Array.isArray(object?.dnsNames) ? object.dnsNames.map((e: any) => globalThis.String(e)) : [],
+    };
+  },
+
+  toJSON(message: CertificateInfo): unknown {
+    const obj: any = {};
+    if (message.commonName !== "") {
+      obj.commonName = message.commonName;
+    }
+    if (message.issuerCommonName !== "") {
+      obj.issuerCommonName = message.issuerCommonName;
+    }
+    if (message.notBeforeUnix !== 0) {
+      obj.notBeforeUnix = Math.round(message.notBeforeUnix);
+    }
+    if (message.notAfterUnix !== 0) {
+      obj.notAfterUnix = Math.round(message.notAfterUnix);
+    }
+    if (message.dnsNames?.length) {
+      obj.dnsNames = message.dnsNames;
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<CertificateInfo>): CertificateInfo {
+    return CertificateInfo.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<CertificateInfo>): CertificateInfo {
+    const message = createBaseCertificateInfo();
+    message.commonName = object.commonName ?? "";
+    message.issuerCommonName = object.issuerCommonName ?? "";
+    message.notBeforeUnix = object.notBeforeUnix ?? 0;
+    message.notAfterUnix = object.notAfterUnix ?? 0;
+    message.dnsNames = object.dnsNames?.map((e) => e) || [];
+    return message;
+  },
+};
+
 function createBaseHandshakeSecrets(): HandshakeSecrets {
   return { handshakeKey: new Uint8Array(0), handshakeIv: new Uint8Array(0), cipherSuite: 0, algorithm: "" };
 }
@@ -552,8 +681,8 @@ function createBaseKOutputPayload(): KOutputPayload {
   return {
     redactedRequest: new Uint8Array(0),
     requestRedactionRanges: [],
-    redactedStreams: [],
-    packets: [],
+    consolidatedResponseKeystream: new Uint8Array(0),
+    certificateInfo: undefined,
     responseRedactionRanges: [],
     timestampMs: 0,
   };
@@ -567,11 +696,11 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
     for (const v of message.requestRedactionRanges) {
       RequestRedactionRange.encode(v!, writer.uint32(18).fork()).join();
     }
-    for (const v of message.redactedStreams) {
-      SignedRedactedDecryptionStream.encode(v!, writer.uint32(26).fork()).join();
+    if (message.consolidatedResponseKeystream.length !== 0) {
+      writer.uint32(26).bytes(message.consolidatedResponseKeystream);
     }
-    for (const v of message.packets) {
-      writer.uint32(34).bytes(v!);
+    if (message.certificateInfo !== undefined) {
+      CertificateInfo.encode(message.certificateInfo, writer.uint32(34).fork()).join();
     }
     for (const v of message.responseRedactionRanges) {
       ResponseRedactionRange.encode(v!, writer.uint32(42).fork()).join();
@@ -610,7 +739,7 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
             break;
           }
 
-          message.redactedStreams.push(SignedRedactedDecryptionStream.decode(reader, reader.uint32()));
+          message.consolidatedResponseKeystream = reader.bytes();
           continue;
         }
         case 4: {
@@ -618,7 +747,7 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
             break;
           }
 
-          message.packets.push(reader.bytes());
+          message.certificateInfo = CertificateInfo.decode(reader, reader.uint32());
           continue;
         }
         case 5: {
@@ -652,10 +781,10 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
       requestRedactionRanges: globalThis.Array.isArray(object?.requestRedactionRanges)
         ? object.requestRedactionRanges.map((e: any) => RequestRedactionRange.fromJSON(e))
         : [],
-      redactedStreams: globalThis.Array.isArray(object?.redactedStreams)
-        ? object.redactedStreams.map((e: any) => SignedRedactedDecryptionStream.fromJSON(e))
-        : [],
-      packets: globalThis.Array.isArray(object?.packets) ? object.packets.map((e: any) => bytesFromBase64(e)) : [],
+      consolidatedResponseKeystream: isSet(object.consolidatedResponseKeystream)
+        ? bytesFromBase64(object.consolidatedResponseKeystream)
+        : new Uint8Array(0),
+      certificateInfo: isSet(object.certificateInfo) ? CertificateInfo.fromJSON(object.certificateInfo) : undefined,
       responseRedactionRanges: globalThis.Array.isArray(object?.responseRedactionRanges)
         ? object.responseRedactionRanges.map((e: any) => ResponseRedactionRange.fromJSON(e))
         : [],
@@ -671,11 +800,11 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
     if (message.requestRedactionRanges?.length) {
       obj.requestRedactionRanges = message.requestRedactionRanges.map((e) => RequestRedactionRange.toJSON(e));
     }
-    if (message.redactedStreams?.length) {
-      obj.redactedStreams = message.redactedStreams.map((e) => SignedRedactedDecryptionStream.toJSON(e));
+    if (message.consolidatedResponseKeystream.length !== 0) {
+      obj.consolidatedResponseKeystream = base64FromBytes(message.consolidatedResponseKeystream);
     }
-    if (message.packets?.length) {
-      obj.packets = message.packets.map((e) => base64FromBytes(e));
+    if (message.certificateInfo !== undefined) {
+      obj.certificateInfo = CertificateInfo.toJSON(message.certificateInfo);
     }
     if (message.responseRedactionRanges?.length) {
       obj.responseRedactionRanges = message.responseRedactionRanges.map((e) => ResponseRedactionRange.toJSON(e));
@@ -694,8 +823,10 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
     message.redactedRequest = object.redactedRequest ?? new Uint8Array(0);
     message.requestRedactionRanges = object.requestRedactionRanges?.map((e) => RequestRedactionRange.fromPartial(e)) ||
       [];
-    message.redactedStreams = object.redactedStreams?.map((e) => SignedRedactedDecryptionStream.fromPartial(e)) || [];
-    message.packets = object.packets?.map((e) => e) || [];
+    message.consolidatedResponseKeystream = object.consolidatedResponseKeystream ?? new Uint8Array(0);
+    message.certificateInfo = (object.certificateInfo !== undefined && object.certificateInfo !== null)
+      ? CertificateInfo.fromPartial(object.certificateInfo)
+      : undefined;
     message.responseRedactionRanges =
       object.responseRedactionRanges?.map((e) => ResponseRedactionRange.fromPartial(e)) || [];
     message.timestampMs = object.timestampMs ?? 0;
@@ -704,13 +835,13 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
 };
 
 function createBaseTOutputPayload(): TOutputPayload {
-  return { packets: [], requestProofStreams: [], timestampMs: 0 };
+  return { consolidatedResponseCiphertext: new Uint8Array(0), requestProofStreams: [], timestampMs: 0 };
 }
 
 export const TOutputPayload: MessageFns<TOutputPayload> = {
   encode(message: TOutputPayload, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    for (const v of message.packets) {
-      writer.uint32(10).bytes(v!);
+    if (message.consolidatedResponseCiphertext.length !== 0) {
+      writer.uint32(10).bytes(message.consolidatedResponseCiphertext);
     }
     for (const v of message.requestProofStreams) {
       writer.uint32(18).bytes(v!);
@@ -733,7 +864,7 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
             break;
           }
 
-          message.packets.push(reader.bytes());
+          message.consolidatedResponseCiphertext = reader.bytes();
           continue;
         }
         case 2: {
@@ -763,7 +894,9 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
 
   fromJSON(object: any): TOutputPayload {
     return {
-      packets: globalThis.Array.isArray(object?.packets) ? object.packets.map((e: any) => bytesFromBase64(e)) : [],
+      consolidatedResponseCiphertext: isSet(object.consolidatedResponseCiphertext)
+        ? bytesFromBase64(object.consolidatedResponseCiphertext)
+        : new Uint8Array(0),
       requestProofStreams: globalThis.Array.isArray(object?.requestProofStreams)
         ? object.requestProofStreams.map((e: any) => bytesFromBase64(e))
         : [],
@@ -773,8 +906,8 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
 
   toJSON(message: TOutputPayload): unknown {
     const obj: any = {};
-    if (message.packets?.length) {
-      obj.packets = message.packets.map((e) => base64FromBytes(e));
+    if (message.consolidatedResponseCiphertext.length !== 0) {
+      obj.consolidatedResponseCiphertext = base64FromBytes(message.consolidatedResponseCiphertext);
     }
     if (message.requestProofStreams?.length) {
       obj.requestProofStreams = message.requestProofStreams.map((e) => base64FromBytes(e));
@@ -790,7 +923,7 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
   },
   fromPartial(object: DeepPartial<TOutputPayload>): TOutputPayload {
     const message = createBaseTOutputPayload();
-    message.packets = object.packets?.map((e) => e) || [];
+    message.consolidatedResponseCiphertext = object.consolidatedResponseCiphertext ?? new Uint8Array(0);
     message.requestProofStreams = object.requestProofStreams?.map((e) => e) || [];
     message.timestampMs = object.timestampMs ?? 0;
     return message;
@@ -877,7 +1010,7 @@ function createBaseSignedMessage(): SignedMessage {
   return {
     bodyType: 0,
     body: new Uint8Array(0),
-    publicKey: new Uint8Array(0),
+    ethAddress: new Uint8Array(0),
     signature: new Uint8Array(0),
     attestationReport: undefined,
   };
@@ -891,8 +1024,8 @@ export const SignedMessage: MessageFns<SignedMessage> = {
     if (message.body.length !== 0) {
       writer.uint32(18).bytes(message.body);
     }
-    if (message.publicKey.length !== 0) {
-      writer.uint32(26).bytes(message.publicKey);
+    if (message.ethAddress.length !== 0) {
+      writer.uint32(26).bytes(message.ethAddress);
     }
     if (message.signature.length !== 0) {
       writer.uint32(34).bytes(message.signature);
@@ -931,7 +1064,7 @@ export const SignedMessage: MessageFns<SignedMessage> = {
             break;
           }
 
-          message.publicKey = reader.bytes();
+          message.ethAddress = reader.bytes();
           continue;
         }
         case 4: {
@@ -963,7 +1096,7 @@ export const SignedMessage: MessageFns<SignedMessage> = {
     return {
       bodyType: isSet(object.bodyType) ? bodyTypeFromJSON(object.bodyType) : 0,
       body: isSet(object.body) ? bytesFromBase64(object.body) : new Uint8Array(0),
-      publicKey: isSet(object.publicKey) ? bytesFromBase64(object.publicKey) : new Uint8Array(0),
+      ethAddress: isSet(object.ethAddress) ? bytesFromBase64(object.ethAddress) : new Uint8Array(0),
       signature: isSet(object.signature) ? bytesFromBase64(object.signature) : new Uint8Array(0),
       attestationReport: isSet(object.attestationReport)
         ? AttestationReport.fromJSON(object.attestationReport)
@@ -979,8 +1112,8 @@ export const SignedMessage: MessageFns<SignedMessage> = {
     if (message.body.length !== 0) {
       obj.body = base64FromBytes(message.body);
     }
-    if (message.publicKey.length !== 0) {
-      obj.publicKey = base64FromBytes(message.publicKey);
+    if (message.ethAddress.length !== 0) {
+      obj.ethAddress = base64FromBytes(message.ethAddress);
     }
     if (message.signature.length !== 0) {
       obj.signature = base64FromBytes(message.signature);
@@ -998,7 +1131,7 @@ export const SignedMessage: MessageFns<SignedMessage> = {
     const message = createBaseSignedMessage();
     message.bodyType = object.bodyType ?? 0;
     message.body = object.body ?? new Uint8Array(0);
-    message.publicKey = object.publicKey ?? new Uint8Array(0);
+    message.ethAddress = object.ethAddress ?? new Uint8Array(0);
     message.signature = object.signature ?? new Uint8Array(0);
     message.attestationReport = (object.attestationReport !== undefined && object.attestationReport !== null)
       ? AttestationReport.fromPartial(object.attestationReport)
@@ -1008,19 +1141,16 @@ export const SignedMessage: MessageFns<SignedMessage> = {
 };
 
 function createBaseVerificationBundle(): VerificationBundle {
-  return { handshakeKeys: undefined, teekSigned: undefined, teetSigned: undefined };
+  return { teekSigned: undefined, teetSigned: undefined };
 }
 
 export const VerificationBundle: MessageFns<VerificationBundle> = {
   encode(message: VerificationBundle, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.handshakeKeys !== undefined) {
-      HandshakeSecrets.encode(message.handshakeKeys, writer.uint32(10).fork()).join();
-    }
     if (message.teekSigned !== undefined) {
-      SignedMessage.encode(message.teekSigned, writer.uint32(18).fork()).join();
+      SignedMessage.encode(message.teekSigned, writer.uint32(10).fork()).join();
     }
     if (message.teetSigned !== undefined) {
-      SignedMessage.encode(message.teetSigned, writer.uint32(26).fork()).join();
+      SignedMessage.encode(message.teetSigned, writer.uint32(18).fork()).join();
     }
     return writer;
   },
@@ -1037,19 +1167,11 @@ export const VerificationBundle: MessageFns<VerificationBundle> = {
             break;
           }
 
-          message.handshakeKeys = HandshakeSecrets.decode(reader, reader.uint32());
+          message.teekSigned = SignedMessage.decode(reader, reader.uint32());
           continue;
         }
         case 2: {
           if (tag !== 18) {
-            break;
-          }
-
-          message.teekSigned = SignedMessage.decode(reader, reader.uint32());
-          continue;
-        }
-        case 3: {
-          if (tag !== 26) {
             break;
           }
 
@@ -1067,7 +1189,6 @@ export const VerificationBundle: MessageFns<VerificationBundle> = {
 
   fromJSON(object: any): VerificationBundle {
     return {
-      handshakeKeys: isSet(object.handshakeKeys) ? HandshakeSecrets.fromJSON(object.handshakeKeys) : undefined,
       teekSigned: isSet(object.teekSigned) ? SignedMessage.fromJSON(object.teekSigned) : undefined,
       teetSigned: isSet(object.teetSigned) ? SignedMessage.fromJSON(object.teetSigned) : undefined,
     };
@@ -1075,9 +1196,6 @@ export const VerificationBundle: MessageFns<VerificationBundle> = {
 
   toJSON(message: VerificationBundle): unknown {
     const obj: any = {};
-    if (message.handshakeKeys !== undefined) {
-      obj.handshakeKeys = HandshakeSecrets.toJSON(message.handshakeKeys);
-    }
     if (message.teekSigned !== undefined) {
       obj.teekSigned = SignedMessage.toJSON(message.teekSigned);
     }
@@ -1092,9 +1210,6 @@ export const VerificationBundle: MessageFns<VerificationBundle> = {
   },
   fromPartial(object: DeepPartial<VerificationBundle>): VerificationBundle {
     const message = createBaseVerificationBundle();
-    message.handshakeKeys = (object.handshakeKeys !== undefined && object.handshakeKeys !== null)
-      ? HandshakeSecrets.fromPartial(object.handshakeKeys)
-      : undefined;
     message.teekSigned = (object.teekSigned !== undefined && object.teekSigned !== null)
       ? SignedMessage.fromPartial(object.teekSigned)
       : undefined;
