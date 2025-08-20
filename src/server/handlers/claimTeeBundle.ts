@@ -3,16 +3,15 @@
  * Handles ClaimTeeBundleRequest by verifying TEE attestations and reconstructing TLS transcript
  */
 
-import { MAX_CLAIM_TIMESTAMP_DIFF_S } from 'src/config'
 import { ClaimTeeBundleResponse, ProviderClaimInfo } from 'src/proto/api'
 import { getApm } from 'src/server/utils/apm'
 import { assertValidProviderTranscript } from 'src/server/utils/assert-valid-claim-request'
-import { getAttestorAddress, signAsAttestor } from 'src/server/utils/generics'
+import { getAttestorAddress, niceParseJsonObject, signAsAttestor } from 'src/server/utils/generics'
 import { reconstructTlsTranscript } from 'src/server/utils/tee-transcript-reconstruction'
 import { verifyTeeBundle } from 'src/server/utils/tee-verification'
 import { Logger, ProviderCtx, RPCHandler, Transcript } from 'src/types'
 import { TeeTranscriptData } from 'src/types/tee'
-import { AttestorError, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from 'src/utils'
+import { AttestorError, createSignDataForClaim, getIdentifierFromClaimInfo } from 'src/utils'
 
 export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	teeBundleRequest,
@@ -56,7 +55,8 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 				plaintextTranscript,
 				teeBundleRequest.data,
 				logger,
-				{ version: client.metadata.clientVersion }
+				{ version: client.metadata.clientVersion },
+				transcriptData.certificateInfo
 			)
 
 			res.claim = {
@@ -108,7 +108,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 /**
  * Creates a plaintext transcript from TEE reconstructed data
  * This converts the TEE transcript data into the format expected by provider validation
- * Maintains individual packet boundaries like the original transcript structure
+ * NEW: Uses consolidated response instead of individual packets for simplicity
  */
 function createPlaintextTranscriptFromTeeData(
 	transcriptData: TeeTranscriptData,
@@ -127,27 +127,33 @@ function createPlaintextTranscriptFromTeeData(
 		})
 	}
 
-	// Add reconstructed response packets (server -> client)
-	// Use individual packets to preserve packet boundaries
-	if(transcriptData.reconstructedResponsePackets && transcriptData.reconstructedResponsePackets.length > 0) {
-		// Use the new individual response packets
-		for(const packet of transcriptData.reconstructedResponsePackets) {
-			transcript.push({
-				sender: 'server',
-				message: packet
-			})
-		}
+	// Add consolidated reconstructed response (server -> client)
+	if(transcriptData.reconstructedResponse && transcriptData.reconstructedResponse.length > 0) {
+		transcript.push({
+			sender: 'server',
+			message: transcriptData.reconstructedResponse
+		})
+		logger.debug('Added TEE consolidated response to plaintext transcript', {
+			length: transcriptData.reconstructedResponse.length
+		})
+	}
 
-		logger.debug('Added TEE individual response packets to plaintext transcript', {
-			packetCount: transcriptData.reconstructedResponsePackets.length,
-			totalLength: transcriptData.reconstructedResponsePackets.reduce((sum, pkt) => sum + pkt.length, 0)
+	// Log certificate validation info if available
+	if(transcriptData.certificateInfo) {
+		logger.info('Certificate information available for validation', {
+			commonName: transcriptData.certificateInfo.commonName,
+			issuerCommonName: transcriptData.certificateInfo.issuerCommonName,
+			dnsNames: transcriptData.certificateInfo.dnsNames,
+			notBefore: new Date(transcriptData.certificateInfo.notBeforeUnix * 1000).toISOString(),
+			notAfter: new Date(transcriptData.certificateInfo.notAfterUnix * 1000).toISOString()
 		})
 	}
 
 	logger.info('Created plaintext transcript from TEE data', {
 		totalMessages: transcript.length,
 		hasRequest: !!transcriptData.revealedRequest?.length,
-		hasResponse: !!transcriptData.reconstructedResponsePackets?.length
+		hasResponse: !!transcriptData.reconstructedResponse?.length,
+		hasCertificateInfo: !!transcriptData.certificateInfo
 	})
 
 	return transcript
@@ -156,17 +162,25 @@ function createPlaintextTranscriptFromTeeData(
 /**
  * Validates TEE provider receipt directly without signature validation
  * This is essentially assertValidProviderTranscript but for TEE data
+ * NEW: Includes certificate validation for domain authentication
  */
 async function validateTeeProviderReceipt<T extends ProviderClaimInfo>(
 	plaintextTranscript: Transcript<Uint8Array>,
 	claimInfo: T,
 	logger: Logger,
-	providerCtx: ProviderCtx
+	providerCtx: ProviderCtx,
+	certificateInfo?: import('src/types/tee').CertificateInfo
 ): Promise<T> {
 	logger.info('Starting direct TEE provider validation', {
 		provider: claimInfo.provider,
-		transcriptMessages: plaintextTranscript.length
+		transcriptMessages: plaintextTranscript.length,
+		hasCertificateInfo: !!certificateInfo
 	})
+
+	// NEW: Validate certificate if available
+	if(certificateInfo) {
+		validateTlsCertificate(claimInfo, certificateInfo, logger)
+	}
 
 	// Use the existing provider validation logic directly
 	const validatedClaim = await assertValidProviderTranscript(
@@ -182,6 +196,68 @@ async function validateTeeProviderReceipt<T extends ProviderClaimInfo>(
 	})
 
 	return validatedClaim
+}
+
+/**
+ * NEW: Validates that the TLS certificate is valid for the domain being claimed
+ * This prevents domain substitution attacks in TEE+MPC scenarios
+ */
+function validateTlsCertificate(
+	claimInfo: ProviderClaimInfo,
+	certificateInfo: import('src/types/tee').CertificateInfo,
+	logger: Logger
+): void {
+	// Extract hostname from the claim (this varies by provider)
+	let claimedHostname: string | undefined
+
+	const params = niceParseJsonObject(claimInfo.parameters, 'params')
+
+	// Different providers store hostname in different places
+	if('url' in params && typeof params.url === 'string') {
+		claimedHostname = new URL(params.url).hostname
+	}
+
+	if(!claimedHostname) {
+		logger.warn('Could not extract hostname from claim for certificate validation', {
+			provider: claimInfo.provider
+		})
+		throw new AttestorError(
+			'ERROR_INVALID_CLAIM',
+			`Certificate validation failed: hostname not found`
+		)
+	}
+
+	logger.info('Validating TLS certificate for claimed hostname', {
+		claimedHostname,
+		certificateCommonName: certificateInfo.commonName,
+		certificateDnsNames: certificateInfo.dnsNames
+	})
+
+	// Check if claimed hostname matches certificate
+	const isValidForHostname =
+		certificateInfo.commonName === claimedHostname ||
+		certificateInfo.dnsNames.includes(claimedHostname)
+
+	if(!isValidForHostname) {
+		throw new AttestorError(
+			'ERROR_INVALID_CLAIM',
+			`Certificate validation failed: hostname '${claimedHostname}' not valid for certificate (CN: ${certificateInfo.commonName}, SANs: ${certificateInfo.dnsNames.join(', ')})`
+		)
+	}
+
+	// Check certificate validity period
+	const now = Date.now() / 1000 // Current time in Unix seconds
+	if(now < certificateInfo.notBeforeUnix || now > certificateInfo.notAfterUnix) {
+		throw new AttestorError(
+			'ERROR_INVALID_CLAIM',
+			`Certificate validation failed: certificate not valid at current time (valid from ${new Date(certificateInfo.notBeforeUnix * 1000).toISOString()} to ${new Date(certificateInfo.notAfterUnix * 1000).toISOString()})`
+		)
+	}
+
+	logger.info('TLS certificate validation passed', {
+		claimedHostname,
+		validatedAgainst: isValidForHostname ? (certificateInfo.commonName === claimedHostname ? 'CommonName' : 'SAN') : 'none'
+	})
 }
 
 

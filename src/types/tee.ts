@@ -32,16 +32,28 @@ export interface SignedRedactedDecryptionStream {
 	redactedStream: Uint8Array
 }
 
+export interface CertificateInfo {
+	commonName: string
+	issuerCommonName: string
+	notBeforeUnix: number
+	notAfterUnix: number
+	dnsNames: string[]
+}
+
 export interface KOutputPayload {
 	redactedRequest: Uint8Array
 	requestRedactionRanges: RequestRedactionRange[]
-	redactedStreams: SignedRedactedDecryptionStream[]
-	packets: Uint8Array[] // TLS handshake packets observed by TEE_K
+	// REMOVED: redactedStreams and packets - replaced with consolidated data
+	consolidatedResponseKeystream: Uint8Array  // NEW: Single response decryption keystream
+	certificateInfo?: CertificateInfo           // NEW: Structured cert data instead of handshake packets
 	responseRedactionRanges: ResponseRedactionRange[]
+	timestampMs: number
 }
 
 export interface TOutputPayload {
-	packets: Uint8Array[] // TLS packets observed by TEE_T
+	consolidatedResponseCiphertext: Uint8Array  // NEW: Single consolidated ciphertext
+	requestProofStreams: Uint8Array[]           // R_SP streams signed by TEE_T
+	timestampMs: number
 }
 
 export interface AttestationReport {
@@ -108,12 +120,12 @@ export interface TeeBundleData {
 }
 
 export interface TeeTranscriptData {
-	handshakePackets: Uint8Array[]
-	applicationDataPackets: Uint8Array[]
+	// SIMPLIFIED: No more individual packet handling
 	revealedRequest: Uint8Array
-	reconstructedResponsePackets: Uint8Array[] // Individual response packets
+	reconstructedResponse: Uint8Array  // Single consolidated response instead of packets
 	cipherSuite?: number
 	tlsVersion?: string
+	certificateInfo?: CertificateInfo  // NEW: Certificate validation data
 }
 
 // ===== SYNTHETIC CLAIM REQUEST STRUCTURES =====
