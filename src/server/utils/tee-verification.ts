@@ -5,11 +5,25 @@
 
 import { ServiceSignatureType } from 'src/proto/api'
 import { BodyType, KOutputPayload, SignedMessage, TOutputPayload, VerificationBundle } from 'src/proto/tee-bundle'
-import { validateNitroAttestationAndExtractKey } from 'src/server/utils/nitro-attestation'
+import { validateNitroAttestationAndExtractKey, AddressExtractionResult } from 'src/server/utils/nitro-attestation'
 import { Logger } from 'src/types'
-import { AddressExtractionResult, TeeBundleData, TeeSignatureVerificationResult } from 'src/types/tee'
 import { AttestorError, uint8ArrayToStr } from 'src/utils'
 import { SIGNATURES } from 'src/utils/signatures'
+
+// Types specific to TEE verification
+export interface TeeBundleData {
+	teekSigned: SignedMessage
+	teetSigned: SignedMessage
+	kOutputPayload: KOutputPayload
+	tOutputPayload: TOutputPayload
+	handshakeKeys?: any // Optional handshake secrets (deprecated)
+}
+
+export interface TeeSignatureVerificationResult {
+	isValid: boolean
+	errors: string[]
+	address?: string
+}
 
 /**
  * Verifies a complete TEE verification bundle

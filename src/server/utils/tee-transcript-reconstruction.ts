@@ -2,10 +2,17 @@
  * TLS Transcript Reconstruction from TEE data
  */
 
-import { ClaimTunnelRequest, TranscriptMessageSenderType } from 'src/proto/api'
+import { CertificateInfo } from 'src/proto/tee-bundle'
 import { Logger } from 'src/types'
-import { SyntheticTranscriptMessage, TeeBundleData, TeeTranscriptData } from 'src/types/tee'
 import { AttestorError, REDACTION_CHAR_CODE } from 'src/utils'
+import { TeeBundleData } from './tee-verification'
+
+// Types specific to transcript reconstruction
+export interface TeeTranscriptData {
+	revealedRequest: Uint8Array
+	reconstructedResponse: Uint8Array
+	certificateInfo?: CertificateInfo
+}
 
 /**
  * Reconstructs TLS transcript from TEE bundle data
@@ -18,8 +25,6 @@ export async function reconstructTlsTranscript(
 	logger: Logger
 ): Promise<TeeTranscriptData> {
 	try {
-		// Extract cipher suite from certificate info if available
-		const cipherSuite = undefined // cipher suite info now in bundleData.kOutputPayload.certificateInfo (if needed)
 
 		// 1. Reconstruct request using proof stream
 		const revealedRequest = reconstructRequest(bundleData, logger)
@@ -39,8 +44,6 @@ export async function reconstructTlsTranscript(
 		return {
 			revealedRequest,
 			reconstructedResponse,
-			cipherSuite,
-			tlsVersion: determineTlsVersion(cipherSuite),
 			certificateInfo
 		}
 
@@ -74,7 +77,7 @@ function reconstructRequest(bundleData: TeeBundleData, logger: Logger): Uint8Arr
 			const length = range.length
 
 			for(let i = 0; i < length && start + i < prettyRequest.length; i++) {
-				prettyRequest[start + i] = 0x2A // ASCII asterisk '*'
+				prettyRequest[start + i] = REDACTION_CHAR_CODE
 			}
 		}
 	}
@@ -162,7 +165,7 @@ function applyResponseRedactionRanges(
 
 		// Replace random garbage with asterisks
 		for(let i = rangeStart; i < rangeEnd; i++) {
-			result[i] = 0x2A // ASCII asterisk '*'
+			result[i] = REDACTION_CHAR_CODE
 		}
 	}
 
@@ -203,118 +206,4 @@ function consolidateRedactionRanges(
 
 	consolidated.push(current)
 	return consolidated
-}
-
-/**
- * Creates synthetic ClaimTunnelRequest from reconstructed transcript
- */
-export function createSyntheticClaimRequest(
-	transcriptData: TeeTranscriptData,
-	claimData: any,
-	bundleData: TeeBundleData,
-	originalRequestSignature?: Uint8Array
-): ClaimTunnelRequest {
-	const messages: SyntheticTranscriptMessage[] = []
-
-	// Note: Handshake packets are no longer provided separately in the new schema.
-	// Certificate information is now structured in certificateInfo field.
-	// For synthetic claims, we focus on the application data.
-
-	// Add client request (revealed)
-	messages.push({
-		sender: 'client',
-		message: wrapInTlsRecord(transcriptData.revealedRequest, 0x17),
-		reveal: createTeeStreamReveal(transcriptData.revealedRequest, bundleData)
-	})
-
-	// Convert to the format expected by ClaimTunnelRequest
-	const transcript = messages.map(msg => ({
-		sender: msg.sender === 'client'
-			? TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
-			: TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER,
-		message: msg.message,
-		reveal: msg.reveal
-	}))
-
-	return {
-		request: {
-			id: 0, // Synthetic tunnel ID
-			host: extractHostFromBundle(bundleData),
-			port: 443, // Default HTTPS port
-			geoLocation: ''
-		},
-		data: claimData,
-		transcript,
-		signatures: {
-			requestSignature: originalRequestSignature || new Uint8Array()
-		},
-		zkEngine: 0, // Not applicable for TEE mode
-		fixedServerIV: new Uint8Array(),
-		fixedClientIV: new Uint8Array()
-	}
-}
-
-/**
- * Helper functions
- */
-
-function isTLS12AESGCMCipherSuite(cipherSuite: number): boolean {
-	// Common TLS 1.2 AES-GCM cipher suites
-	const tls12AesGcmSuites = [
-		0x009C, // TLS_RSA_WITH_AES_128_GCM_SHA256
-		0x009D, // TLS_RSA_WITH_AES_256_GCM_SHA384
-		0x009E, // TLS_DHE_RSA_WITH_AES_128_GCM_SHA256
-		0x009F, // TLS_DHE_RSA_WITH_AES_256_GCM_SHA384
-		0xC02F, // TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
-		0xC030, // TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
-		0xC02B, // TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
-		0xC02C // TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
-	]
-
-	return tls12AesGcmSuites.includes(cipherSuite)
-}
-
-function determineTlsVersion(cipherSuite?: number): string {
-	if(!cipherSuite) {
-		return 'unknown'
-	}
-
-	// TLS 1.3 cipher suites
-	if(cipherSuite >= 0x1301 && cipherSuite <= 0x1305) {
-		return 'TLS1_3'
-	}
-
-	// Assume TLS 1.2 for other suites
-	return 'TLS1_2'
-}
-
-// Removed determinePacketSender function since handshake packets are no longer processed individually
-
-function wrapInTlsRecord(data: Uint8Array, recordType: number): Uint8Array {
-	// Create TLS record: Type(1) + Version(2) + Length(2) + Data
-	const record = new Uint8Array(5 + data.length)
-	record[0] = recordType // Record type
-	record[1] = 0x03 // TLS version major
-	record[2] = 0x03 // TLS version minor (TLS 1.2)
-	record[3] = (data.length >> 8) & 0xFF // Length high byte
-	record[4] = data.length & 0xFF // Length low byte
-	record.set(data, 5)
-	return record
-}
-
-function createTeeStreamReveal(data: Uint8Array, bundleData: TeeBundleData): any {
-	return {
-		teeStreamReveal: {
-			revealedData: data,
-			teeSignature: bundleData.teekSigned?.signature || new Uint8Array(),
-			teePublicKey: bundleData.teekSigned?.ethAddress || new Uint8Array()
-		}
-	}
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function extractHostFromBundle(_bundleData: TeeBundleData): string {
-	// Extract hostname from certificate info or SNI data
-	// This is a simplified implementation - in practice you'd use the certificateInfo
-	return 'example.com' // Placeholder
 }
