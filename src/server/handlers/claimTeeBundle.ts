@@ -3,14 +3,13 @@
  * Handles ClaimTeeBundleRequest by verifying TEE attestations and reconstructing TLS transcript
  */
 
-import { ClaimTeeBundleRequest, ClaimTeeBundleResponse, ProviderClaimInfo } from 'src/proto/api'
+import { ClaimTeeBundleResponse, ProviderClaimInfo } from 'src/proto/api'
 import { CertificateInfo } from 'src/proto/tee-bundle'
 import { getApm } from 'src/server/utils/apm'
 import { assertValidProviderTranscript } from 'src/server/utils/assert-valid-claim-request'
 import { getAttestorAddress, niceParseJsonObject, signAsAttestor } from 'src/server/utils/generics'
-import { reconstructTlsTranscript } from 'src/server/utils/tee-transcript-reconstruction'
+import { reconstructTlsTranscript, TeeTranscriptData } from 'src/server/utils/tee-transcript-reconstruction'
 import { verifyTeeBundle } from 'src/server/utils/tee-verification'
-import { TeeTranscriptData } from 'src/server/utils/tee-transcript-reconstruction'
 import { Logger, ProviderCtx, RPCHandler, Transcript } from 'src/types'
 import { AttestorError, createSignDataForClaim, getIdentifierFromClaimInfo } from 'src/utils'
 
@@ -48,13 +47,13 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 			?.startTransaction('validateTeeProviderReceipt', { childOf: tx })
 
 		try {
-			if(!teeBundleRequest.data) {
+			if(!data) {
 				throw new AttestorError('ERROR_INVALID_CLAIM', 'No claim data provided in TEE bundle request')
 			}
 
 			const validatedClaim = await validateTeeProviderReceipt(
 				plaintextTranscript,
-				teeBundleRequest.data,
+				data,
 				logger,
 				{ version: client.metadata.clientVersion },
 				transcriptData.certificateInfo
@@ -69,7 +68,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 				epoch: 1
 			}
 
-			logger.info({ claimId: res.claim.identifier }, 'TEE bundle claim validation successful')
+			logger.info({ claim: res.claim }, 'TEE bundle claim validation successful')
 
 		} catch(err) {
 			validateTx?.setOutcome('failure')
@@ -224,7 +223,7 @@ function validateTlsCertificate(
 		})
 		throw new AttestorError(
 			'ERROR_INVALID_CLAIM',
-			`Certificate validation failed: hostname not found`
+			'Certificate validation failed: hostname not found'
 		)
 	}
 
