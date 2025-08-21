@@ -5,7 +5,7 @@
 
 import { ServiceSignatureType } from 'src/proto/api'
 import { BodyType, KOutputPayload, SignedMessage, TOutputPayload, VerificationBundle } from 'src/proto/tee-bundle'
-import { validateNitroAttestationAndExtractKey, AddressExtractionResult } from 'src/server/utils/nitro-attestation'
+import { AddressExtractionResult, validateNitroAttestationAndExtractKey } from 'src/server/utils/nitro-attestation'
 import { Logger } from 'src/types'
 import { AttestorError, uint8ArrayToStr } from 'src/utils'
 import { SIGNATURES } from 'src/utils/signatures'
@@ -362,8 +362,6 @@ function parseKOutputPayload(signedMessage: SignedMessage): KOutputPayload {
 
 		if(!payload.consolidatedResponseKeystream || payload.consolidatedResponseKeystream.length === 0) {
 			throw new Error('Missing consolidated response keystream in TEE_K payload')
-		} else {
-			console.log('Keystream len ' + payload.consolidatedResponseKeystream.length)
 		}
 
 		if(!payload.certificateInfo) {
@@ -388,13 +386,8 @@ function parseTOutputPayload(signedMessage: SignedMessage): TOutputPayload {
 		// Validate required fields
 		if(!payload.consolidatedResponseCiphertext || payload.consolidatedResponseCiphertext.length === 0) {
 			throw new Error('Missing consolidated response ciphertext in TEE_T payload')
-		} else {
-			console.log('Ciphertext.length ' + payload.consolidatedResponseCiphertext.length)
 		}
 
-		// if(!payload.requestProofStreams || payload.requestProofStreams.length === 0) {
-		// 	throw new Error('Missing request proof streams in TEE_T payload')
-		// }
 
 		return payload
 

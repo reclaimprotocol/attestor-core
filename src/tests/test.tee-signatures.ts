@@ -35,179 +35,175 @@ describe('TEE Signature Verification', () => {
 		}
 	})
 
-	it('should handle standalone mode bundles with embedded public keys', async() => {
-		console.log('\n=== Standalone Mode Bundle Test ===')
-
+	it('should validate standalone mode bundles with embedded public keys', async() => {
 		const bundle = VerificationBundle.decode(standaloneBundleBytes)
 
-		// Test standalone mode bundle with embedded public keys
-		console.log('\nChecking bundle mode...')
+		// Validate bundle structure
+		expect(bundle).toBeDefined()
+		expect(bundle.teekSigned).toBeDefined()
+		expect(bundle.teetSigned).toBeDefined()
+
+		// Check bundle mode
 		const hasAttestations = (bundle.teekSigned?.attestationReport?.report && bundle.teekSigned.attestationReport.report.length > 0) ||
 			(bundle.teetSigned?.attestationReport?.report && bundle.teetSigned.attestationReport.report.length > 0)
 
 		const hasEthAddresses = (bundle.teekSigned?.ethAddress && bundle.teekSigned.ethAddress.length > 0) ||
 			(bundle.teetSigned?.ethAddress && bundle.teetSigned.ethAddress.length > 0)
 
-		console.log('- Has attestations:', hasAttestations)
-		console.log('- Has embedded eth addresses:', hasEthAddresses)
+		// For standalone mode, should have ETH addresses but not attestations
+		expect(hasEthAddresses).toBe(true)
+		expect(hasAttestations).toBeFalsy()
 
-		if(hasEthAddresses) {
-			console.log('\n✓ Standalone mode bundle detected (development/testing)')
+		// Validate TEE_K ETH address
+		if(bundle.teekSigned?.ethAddress) {
+			expect(bundle.teekSigned.ethAddress.length).toBeGreaterThan(0)
+			// ETH address can be either 20 bytes (raw ETH address) or 42 bytes (hex-encoded "0x..." string)
+			expect([20, 42]).toContain(bundle.teekSigned.ethAddress.length)
 
-			if(bundle.teekSigned?.ethAddress) {
-				console.log('- TEE_K eth address size:', bundle.teekSigned.ethAddress.length, 'bytes')
-				const keyHex = Array.from(bundle.teekSigned.ethAddress).map(b => b.toString(16).padStart(2, '0')).join('')
-				console.log('- TEE_K eth address (hex):', keyHex)
-				// ETH address can be either 20 bytes (raw ETH address) or 42 bytes (hex-encoded "0x..." string)
-				expect([20, 42]).toContain(bundle.teekSigned.ethAddress.length)
-				if(bundle.teekSigned.ethAddress.length === 42) {
-					// Should be hex-encoded ETH address
-					const addressStr = new TextDecoder().decode(bundle.teekSigned.ethAddress)
-					console.log('- TEE_K ETH address:', addressStr)
-					expect(addressStr).toMatch(/^0x[0-9a-fA-F]{40}$/)
-				}
+			if(bundle.teekSigned.ethAddress.length === 42) {
+				// Should be hex-encoded ETH address
+				const addressStr = new TextDecoder().decode(bundle.teekSigned.ethAddress)
+				expect(addressStr).toMatch(/^0x[0-9a-fA-F]{40}$/)
 			}
-
-			if(bundle.teetSigned?.ethAddress) {
-				console.log('- TEE_T eth address size:', bundle.teetSigned.ethAddress.length, 'bytes')
-				const keyHex = Array.from(bundle.teetSigned.ethAddress).map(b => b.toString(16).padStart(2, '0')).join('')
-				console.log('- TEE_T eth address (hex):', keyHex)
-				// ETH address can be either 20 bytes (raw ETH address) or 42 bytes (hex-encoded "0x..." string)
-				expect([20, 42]).toContain(bundle.teetSigned.ethAddress.length)
-				if(bundle.teetSigned.ethAddress.length === 42) {
-					// Should be hex-encoded ETH address
-					const addressStr = new TextDecoder().decode(bundle.teetSigned.ethAddress)
-					console.log('- TEE_T ETH address:', addressStr)
-					expect(addressStr).toMatch(/^0x[0-9a-fA-F]{40}$/)
-				}
-			}
-		} else if(hasAttestations) {
-			console.log('\n❌ Production mode bundle detected but this test expects standalone mode')
-			throw new Error('This test is designed for standalone mode bundles with embedded eth addresses')
-		} else {
-			console.log('\n❌ Invalid bundle: no attestations or eth addresses found')
-			throw new Error('Bundle must have either attestations or embedded eth addresses')
 		}
 
-		console.log('\n=== End Extraction Test ===')
+		// Validate TEE_T ETH address
+		if(bundle.teetSigned?.ethAddress) {
+			expect(bundle.teetSigned.ethAddress.length).toBeGreaterThan(0)
+			// ETH address can be either 20 bytes (raw ETH address) or 42 bytes (hex-encoded "0x..." string)
+			expect([20, 42]).toContain(bundle.teetSigned.ethAddress.length)
+
+			if(bundle.teetSigned.ethAddress.length === 42) {
+				// Should be hex-encoded ETH address
+				const addressStr = new TextDecoder().decode(bundle.teetSigned.ethAddress)
+				expect(addressStr).toMatch(/^0x[0-9a-fA-F]{40}$/)
+			}
+		}
 	})
 
 	it('should verify TEE bundle signatures using embedded public keys', async() => {
-		console.log('\n=== Standalone Bundle Signature Verification Test ===')
-
 		// Mock Date.now() to return a time close to the bundle timestamps for validation
 		const originalDateNow = Date.now
-		const mockTime = 1755708005277 + (2 * 60 * 1000) // 2 minutes after TEE_K timestamp
+		const mockTime = 1755774883738 + (2 * 60 * 1000) // 2 minutes after TEE_K timestamp
 		Date.now = jest.fn(() => mockTime)
 
 		try {
 			// This should work with embedded public keys (standalone mode)
 			const result = await verifyTeeBundle(standaloneBundleBytes, mockLogger as any)
 
-			// Basic validation
+			// Validate verification results
 			expect(result).toBeDefined()
 			expect(result.teekSigned).toBeDefined()
 			expect(result.teetSigned).toBeDefined()
 			expect(result.kOutputPayload).toBeDefined()
 			expect(result.tOutputPayload).toBeDefined()
 
-			console.log('\n✅ TEE bundle verification successful!')
-			console.log('- TEE_K payload verified')
-			console.log('- TEE_T payload verified')
-			console.log('- Signatures valid')
-			console.log('- Timestamps valid')
+			// Validate that signatures are present and valid (non-empty)
+			expect(result.teekSigned.signature).toBeDefined()
+			expect(result.teekSigned.signature.length).toBeGreaterThan(0)
+			expect(result.teetSigned.signature).toBeDefined()
+			expect(result.teetSigned.signature.length).toBeGreaterThan(0)
 
-		} catch(error) {
-			console.error('❌ TEE bundle verification failed:', (error as Error).message)
-			throw error
+			// Validate payload contents
+			expect(result.kOutputPayload.redactedRequest).toBeDefined()
+			expect(result.kOutputPayload.redactedRequest.length).toBeGreaterThan(0)
+			expect(result.kOutputPayload.timestampMs).toBeGreaterThan(0)
+
+			expect(result.tOutputPayload.timestampMs).toBeGreaterThan(0)
+
 		} finally {
 			// Restore original Date.now()
 			Date.now = originalDateNow
 		}
-
-		console.log('\n=== End Signature Test ===')
 	})
 
-	it('should show the current signature verification behavior', () => {
-		console.log('\n=== Standalone Bundle Signature Analysis ===')
-
+	it('should validate signature structure and metadata', () => {
 		const bundle = VerificationBundle.decode(standaloneBundleBytes)
 
+		// Validate TEE_K signed data
 		if(bundle.teekSigned) {
-			console.log('\nTEE_K signed data analysis:')
-			console.log('- Body size:', bundle.teekSigned.body.length, 'bytes')
-			console.log('- Signature size:', bundle.teekSigned.signature.length, 'bytes')
-			console.log('- Signature (hex):', Array.from(bundle.teekSigned.signature).map(b => b.toString(16).padStart(2, '0')).join(''))
-			console.log('- Body type:', bundle.teekSigned.bodyType)
-			// Show first 32 bytes of body for debugging
-			const bodyPreview = Array.from(bundle.teekSigned.body.slice(0, 32)).map(b => b.toString(16).padStart(2, '0')).join(' ')
-			console.log('- Body preview (first 32 bytes):', bodyPreview)
+			expect(bundle.teekSigned.body).toBeDefined()
+			expect(bundle.teekSigned.body.length).toBeGreaterThan(0)
+			expect(bundle.teekSigned.signature).toBeDefined()
+			expect(bundle.teekSigned.signature.length).toBeGreaterThan(0)
+			expect(bundle.teekSigned.bodyType).toBeDefined()
+			expect(typeof bundle.teekSigned.bodyType).toBe('number')
+			expect(bundle.teekSigned.bodyType).toBeGreaterThanOrEqual(0)
+
+			// Validate signature format (should be 64 bytes for ECDSA)
+			expect(bundle.teekSigned.signature.length).toBeGreaterThanOrEqual(64)
 		}
 
+		// Validate TEE_T signed data
 		if(bundle.teetSigned) {
-			console.log('\nTEE_T signed data analysis:')
-			console.log('- Body size:', bundle.teetSigned.body.length, 'bytes')
-			console.log('- Signature size:', bundle.teetSigned.signature.length, 'bytes')
-			console.log('- Signature (hex):', Array.from(bundle.teetSigned.signature).map(b => b.toString(16).padStart(2, '0')).join(''))
-			console.log('- Body type:', bundle.teetSigned.bodyType)
-			// Show first 32 bytes of body for debugging
-			const bodyPreview = Array.from(bundle.teetSigned.body.slice(0, 32)).map(b => b.toString(16).padStart(2, '0')).join(' ')
-			console.log('- Body preview (first 32 bytes):', bodyPreview)
-		}
+			expect(bundle.teetSigned.body).toBeDefined()
+			expect(bundle.teetSigned.body.length).toBeGreaterThan(0)
+			expect(bundle.teetSigned.signature).toBeDefined()
+			expect(bundle.teetSigned.signature.length).toBeGreaterThan(0)
+			expect(bundle.teetSigned.bodyType).toBeDefined()
+			expect(typeof bundle.teetSigned.bodyType).toBe('number')
+			expect(bundle.teetSigned.bodyType).toBeGreaterThanOrEqual(0)
 
-		console.log('\n=== End Analysis ===')
+			// Validate signature format (should be 64 bytes for ECDSA)
+			expect(bundle.teetSigned.signature.length).toBeGreaterThanOrEqual(64)
+		}
 	})
 
-	it('should handle TEE attestation bundles', async() => {
+	it('should validate TEE attestation bundles structure', async() => {
 		if(!teeBundleBytes) {
-			console.log('\n⚠️ Skipping TEE attestation bundle test - bundle not available')
+			// Skip if bundle not available
 			return
 		}
 
-		console.log('\n=== TEE Attestation Bundle Test ===')
-
 		const bundle = VerificationBundle.decode(teeBundleBytes)
 
-		// Test TEE attestation bundle
-		console.log('\nChecking bundle mode...')
+		// Validate bundle structure
+		expect(bundle).toBeDefined()
+		expect(bundle.teekSigned).toBeDefined()
+		expect(bundle.teetSigned).toBeDefined()
+
+		// Check bundle mode
 		const hasAttestations = (bundle.teekSigned?.attestationReport?.report && bundle.teekSigned.attestationReport.report.length > 0) ||
 			(bundle.teetSigned?.attestationReport?.report && bundle.teetSigned.attestationReport.report.length > 0)
 
 		const hasEthAddresses = (bundle.teekSigned?.ethAddress && bundle.teekSigned.ethAddress.length > 0) ||
 			(bundle.teetSigned?.ethAddress && bundle.teetSigned.ethAddress.length > 0)
 
-		console.log('- Has attestations:', hasAttestations)
-		console.log('- Has embedded eth addresses:', hasEthAddresses)
+		// Bundle must have either attestations or ETH addresses
+		expect(hasAttestations || hasEthAddresses).toBe(true)
 
 		if(hasAttestations) {
-			console.log('\n✓ Production mode bundle detected (with TEE attestations)')
-
+			// Validate attestation structure
 			if(bundle.teekSigned?.attestationReport) {
-				console.log('- TEE_K attestation type:', bundle.teekSigned.attestationReport.type)
-				console.log('- TEE_K attestation size:', bundle.teekSigned.attestationReport.report.length, 'bytes')
+				expect(bundle.teekSigned.attestationReport.type).toBeDefined()
+				expect(typeof bundle.teekSigned.attestationReport.type).toBe('string')
+				expect(bundle.teekSigned.attestationReport.type.length).toBeGreaterThan(0)
+				expect(bundle.teekSigned.attestationReport.report).toBeDefined()
+				expect(bundle.teekSigned.attestationReport.report.length).toBeGreaterThan(0)
 			}
 
 			if(bundle.teetSigned?.attestationReport) {
-				console.log('- TEE_T attestation type:', bundle.teetSigned.attestationReport.type)
-				console.log('- TEE_T attestation size:', bundle.teetSigned.attestationReport.report.length, 'bytes')
+				expect(bundle.teetSigned.attestationReport.type).toBeDefined()
+				expect(typeof bundle.teetSigned.attestationReport.type).toBe('string')
+				expect(bundle.teetSigned.attestationReport.type.length).toBeGreaterThan(0)
+				expect(bundle.teetSigned.attestationReport.report).toBeDefined()
+				expect(bundle.teetSigned.attestationReport.report.length).toBeGreaterThan(0)
 			}
-		} else if(hasEthAddresses) {
-			console.log('\n✅ Standalone mode bundle detected (this is fine for testing)')
-		} else {
-			console.log('\n❌ Invalid bundle: no attestations or eth addresses found')
-			throw new Error('Bundle must have either attestations or embedded eth addresses')
 		}
 
-		console.log('\n=== End TEE Attestation Test ===')
+		if(hasEthAddresses) {
+			// Validate ETH address structure
+			if(bundle.teekSigned?.ethAddress) {
+				expect(bundle.teekSigned.ethAddress.length).toBeGreaterThan(0)
+			}
+
+			if(bundle.teetSigned?.ethAddress) {
+				expect(bundle.teetSigned.ethAddress.length).toBeGreaterThan(0)
+			}
+		}
 	})
 
-	it('should verify TEE bundle with attestations', async() => {
-		if(!teeBundleBytes) {
-			console.log('\n⚠️ Skipping TEE attestation bundle verification - bundle not available')
-			return
-		}
-
-		console.log('\n=== TEE Attestation Bundle Verification Test ===')
+	it('should verify TEE bundle with attestations or handle expected test failures', async() => {
 
 		// Mock Date.now() to return a time close to the bundle timestamps for validation
 		const originalDateNow = Date.now
@@ -218,29 +214,27 @@ describe('TEE Signature Verification', () => {
 			// This should work with TEE attestations (production mode)
 			const result = await verifyTeeBundle(teeBundleBytes, mockLogger as any)
 
-			// Basic validation
+			// Validate verification results if successful
 			expect(result).toBeDefined()
 			expect(result.teekSigned).toBeDefined()
 			expect(result.teetSigned).toBeDefined()
 			expect(result.kOutputPayload).toBeDefined()
 			expect(result.tOutputPayload).toBeDefined()
 
-			console.log('\n✅ TEE attestation bundle verification successful!')
-			console.log('- TEE_K attestation verified')
-			console.log('- TEE_T attestation verified')
-			console.log('- Signatures valid')
-			console.log('- Timestamps valid')
+			// Validate payload structure
+			expect(result.kOutputPayload.redactedRequest).toBeDefined()
+			expect(result.kOutputPayload.redactedRequest.length).toBeGreaterThan(0)
+			expect(result.kOutputPayload.timestampMs).toBeGreaterThan(0)
+			expect(result.tOutputPayload.timestampMs).toBeGreaterThan(0)
 
 		} catch(error) {
-			console.error('❌ TEE attestation bundle verification failed:', (error as Error).message)
-
 			// Check if it's expected errors with test data
 			if((error as Error).message.includes('attestation')) {
-				console.log('This is an attestation validation error - may be expected if test bundle has demo/test attestations')
-				console.log('Error details:', (error as Error).message)
-				// For attestation errors with test data, we'll just log but not fail
-				console.log('✅ Treating attestation error as expected for test bundle')
-				return
+				// For attestation errors with test data, this is expected behavior
+				// The test bundle likely has demo/test attestations that won't pass real validation
+				expect(error).toBeInstanceOf(Error)
+				expect((error as Error).message).toContain('attestation')
+				return // This is expected for test bundles
 			}
 
 			// For other errors, re-throw
@@ -249,7 +243,5 @@ describe('TEE Signature Verification', () => {
 			// Restore original Date.now()
 			Date.now = originalDateNow
 		}
-
-		console.log('\n=== End TEE Verification Test ===')
 	})
 })

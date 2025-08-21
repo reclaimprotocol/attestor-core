@@ -39,15 +39,14 @@ describe('TEE Bundle Analysis', () => {
 		}
 	})
 
-	it('should examine the standalone bundle structure', () => {
-		console.log('\n=== Standalone Bundle Analysis ===')
-
+	it('should validate standalone bundle structure', () => {
 		const bundle = VerificationBundle.decode(standaloneBundleBytes)
 
-		console.log('Bundle Components:')
-		console.log('- TEE_K body size:', bundle.teekSigned?.body?.length || 0, 'bytes')
-		console.log('- TEE_T body size:', bundle.teetSigned?.body?.length || 0, 'bytes')
-		console.log('- Has handshake keys:', false) // handshakeKeys removed from new bundle format
+		// Validate bundle components
+		expect(bundle).toBeDefined()
+		expect(bundle.teekSigned).toBeDefined()
+		expect(bundle.teekSigned?.body).toBeDefined()
+		expect(bundle.teekSigned?.body?.length).toBeGreaterThan(0)
 
 		// Check bundle mode
 		const hasAttestations = (bundle.teekSigned?.attestationReport?.report && bundle.teekSigned.attestationReport.report.length > 0) ||
@@ -55,72 +54,70 @@ describe('TEE Bundle Analysis', () => {
 		const hasPublicKeys = (bundle.teekSigned?.ethAddress && bundle.teekSigned.ethAddress.length > 0) ||
 			(bundle.teetSigned?.ethAddress && bundle.teetSigned.ethAddress.length > 0)
 
-		console.log('- Bundle mode:', hasAttestations ? 'Production (with attestations)' : hasPublicKeys ? 'Standalone (with public keys)' : 'Unknown')
+		// For standalone bundle, should have public keys but not attestations
+		expect(hasPublicKeys).toBe(true)
+		expect(hasAttestations).toBeFalsy()
 
-		if(hasAttestations) {
-			console.log('- TEE_K embedded attestation:', bundle.teekSigned?.attestationReport?.report?.length || 0, 'bytes')
-			console.log('- TEE_T embedded attestation:', bundle.teetSigned?.attestationReport?.report?.length || 0, 'bytes')
-		}
+		// Validate ETH addresses are present
+		expect(bundle.teekSigned?.ethAddress).toBeDefined()
+		expect(bundle.teekSigned?.ethAddress?.length).toBeGreaterThan(0)
 
-		if(hasPublicKeys) {
-			console.log('- TEE_K embedded eth address:', bundle.teekSigned?.ethAddress?.length || 0, 'bytes')
-			console.log('- TEE_T embedded eth address:', bundle.teetSigned?.ethAddress?.length || 0, 'bytes')
-		}
-
-		// Analyze the K payload to understand redaction ranges
+		// Analyze the K payload
 		if(bundle.teekSigned?.body) {
 			const kPayload = KOutputPayload.decode(bundle.teekSigned.body)
 
-			console.log('\nK Payload Analysis:')
-			console.log('- Redacted request size:', kPayload.redactedRequest.length, 'bytes')
-			console.log('- Request redaction ranges:', kPayload.requestRedactionRanges.length)
-			console.log('- Consolidated response keystream:', kPayload.consolidatedResponseKeystream?.length || 0, 'bytes')
-			console.log('- Certificate info:', kPayload.certificateInfo ? 'present' : 'missing')
+			// Validate K payload structure
+			expect(kPayload.redactedRequest).toBeDefined()
+			expect(kPayload.redactedRequest.length).toBeGreaterThan(0)
+			expect(kPayload.requestRedactionRanges).toBeDefined()
+			expect(Array.isArray(kPayload.requestRedactionRanges)).toBe(true)
+			expect(kPayload.consolidatedResponseKeystream).toBeDefined()
+			expect(kPayload.consolidatedResponseKeystream?.length).toBeGreaterThan(0)
+			expect(kPayload.certificateInfo).toBeDefined()
+			expect(kPayload.timestampMs).toBeDefined()
+			expect(kPayload.timestampMs).toBeGreaterThan(0)
+
+			// Validate certificate info structure
 			if(kPayload.certificateInfo) {
-				console.log('  - Common name:', kPayload.certificateInfo.commonName)
-				console.log('  - Issuer:', kPayload.certificateInfo.issuerCommonName)
-				console.log('  - DNS names:', kPayload.certificateInfo.dnsNames.join(', ') || 'none')
+				expect(kPayload.certificateInfo.commonName).toBeDefined()
+				expect(typeof kPayload.certificateInfo.commonName).toBe('string')
+				expect(kPayload.certificateInfo.issuerCommonName).toBeDefined()
+				expect(typeof kPayload.certificateInfo.issuerCommonName).toBe('string')
+				expect(Array.isArray(kPayload.certificateInfo.dnsNames)).toBe(true)
 			}
 
-			console.log('- Response redaction ranges:', kPayload.responseRedactionRanges.length)
-			console.log('- K Timestamp:', kPayload.timestampMs ? new Date(kPayload.timestampMs).toISOString() : 'not set')
-
-			// Analyze redaction range types
-			console.log('\nRedaction Range Types:')
-			for(const [i, range] of kPayload.requestRedactionRanges.entries()) {
-				console.log(`  Range ${i + 1}: start=${range.start}, length=${range.length}, type="${range.type}"`)
+			// Validate redaction ranges structure
+			for(const range of kPayload.requestRedactionRanges) {
+				expect(range.start).toBeGreaterThanOrEqual(0)
+				expect(range.length).toBeGreaterThan(0)
+				expect(typeof range.type).toBe('string')
+				expect(range.type.length).toBeGreaterThan(0)
 			}
-
 		}
 
-		// Analyze the T payload
+		// Analyze the T payload (may be missing for standalone mode)
 		if(bundle.teetSigned?.body && bundle.teetSigned.body.length > 0) {
 			const tPayload = TOutputPayload.decode(bundle.teetSigned.body)
-			console.log('\nT Payload Analysis:')
-			console.log('- Consolidated response ciphertext:', tPayload.consolidatedResponseCiphertext?.length || 0, 'bytes')
-			console.log('- Request proof streams:', tPayload.requestProofStreams?.length || 0)
-			console.log('- T Timestamp:', tPayload.timestampMs ? new Date(tPayload.timestampMs).toISOString() : 'not set')
-		} else {
-			console.log('\nT Payload Analysis:')
-			console.log('- T payload is missing or empty (expected for standalone mode)')
-		}
 
-		console.log('\n=== End Analysis ===')
+			// Validate T payload structure
+			expect(tPayload.consolidatedResponseCiphertext).toBeDefined()
+			expect(tPayload.consolidatedResponseCiphertext?.length).toBeGreaterThan(0)
+			expect(tPayload.timestampMs).toBeDefined()
+			expect(tPayload.timestampMs).toBeGreaterThan(0)
+		}
 	})
 
-	it('should test transcript reconstruction with standalone bundle', async() => {
-		console.log('\n=== Standalone Bundle Transcript Reconstruction ===')
-
+	it('should reconstruct TLS transcript from standalone bundle', async() => {
 		const bundle = VerificationBundle.decode(standaloneBundleBytes)
 
 		// Check if we have both TEE_K and TEE_T payloads
 		if(!bundle.teekSigned?.body || bundle.teekSigned.body.length === 0) {
-			console.log('⚠️ Skipping transcript reconstruction - missing TEE_K payload')
+			// Skip if missing K payload
 			return
 		}
 
 		if(!bundle.teetSigned?.body || bundle.teetSigned.body.length === 0) {
-			console.log('⚠️ Skipping transcript reconstruction - missing TEE_T payload (expected for standalone bundle)')
+			// Skip if missing T payload (expected for standalone bundle)
 			return
 		}
 
@@ -148,68 +145,65 @@ describe('TEE Bundle Analysis', () => {
 			handshakeKeys: undefined, // handshakeKeys removed from new bundle format
 		}
 
-		try {
-			const transcriptData = await reconstructTlsTranscript(mockTeeBundleData as any, mockLogger as any)
+		const transcriptData = await reconstructTlsTranscript(mockTeeBundleData as any, mockLogger as any)
 
-			console.log('✅ Transcript reconstruction successful!')
-			console.log('- Revealed request size:', transcriptData.revealedRequest.length, 'bytes')
-			console.log('- Reconstructed response size:', transcriptData.reconstructedResponse.length, 'bytes')
-			console.log('- Certificate info:', transcriptData.certificateInfo ? 'present' : 'missing')
+		// Validate transcript reconstruction results
+		expect(transcriptData).toBeDefined()
+		expect(transcriptData.revealedRequest).toBeDefined()
+		expect(transcriptData.reconstructedResponse).toBeDefined()
+		expect(transcriptData.revealedRequest.length).toBeGreaterThan(0)
+		expect(transcriptData.reconstructedResponse.length).toBeGreaterThan(0)
+		expect(transcriptData.certificateInfo).toBeDefined()
 
-			// Analyze revealed request
-			const requestText = new TextDecoder('utf-8', { fatal: false }).decode(transcriptData.revealedRequest)
-			console.log('\nRevealed Request Analysis:')
-			console.log('- Text length:', requestText.length, 'characters')
-			console.log('- Preview:', JSON.stringify(requestText.substring(0, 200)))
+		// Validate revealed request is valid HTTP
+		const requestText = new TextDecoder('utf-8', { fatal: false }).decode(transcriptData.revealedRequest)
+		expect(requestText.length).toBeGreaterThan(0)
 
-			// Look for HTTP details
-			const httpMatch = requestText.match(/^(GET|POST|PUT|DELETE|PATCH)\s+(\S+)\s+HTTP\/[\d.]+/m)
-			const hostMatch = requestText.match(/Host:\s*([^\r\n]+)/i)
-			if(httpMatch) {
-				console.log('- HTTP Method:', httpMatch[1])
-				console.log('- Path:', httpMatch[2])
-			}
+		// Look for HTTP details and validate structure
+		const httpMatch = requestText.match(/^(GET|POST|PUT|DELETE|PATCH)\s+(\S+)\s+HTTP\/[\d.]+/m)
+		const hostMatch = requestText.match(/Host:\s*([^\r\n]+)/i)
 
-			if(hostMatch) {
-				console.log('- Host:', hostMatch[1].trim())
-			}
+		if(httpMatch) {
+			expect(httpMatch[1]).toMatch(/^(GET|POST|PUT|DELETE|PATCH)$/)
+			expect(httpMatch[2]).toMatch(/^\//)
+		}
 
-			// Analyze response
-			const responseText = new TextDecoder('utf-8', { fatal: false }).decode(transcriptData.reconstructedResponse)
-			console.log('\nReconstructed Response Analysis:')
-			console.log('- Text length:', responseText.length, 'characters')
-			console.log('- Preview:', JSON.stringify(responseText.substring(0, 200)))
+		if(hostMatch) {
+			expect(hostMatch[1].trim().length).toBeGreaterThan(0)
+		}
 
-			const statusMatch = responseText.match(/^HTTP\/[\d.]+\s+(\d+)\s+([^\r\n]+)/m)
-			if(statusMatch) {
-				console.log('- HTTP Status:', statusMatch[1], statusMatch[2])
-			}
+		// Validate response is valid HTTP
+		const responseText = new TextDecoder('utf-8', { fatal: false }).decode(transcriptData.reconstructedResponse)
+		expect(responseText.length).toBeGreaterThan(0)
 
-			// Test completed successfully
-			console.log('\n✅ All transcript reconstruction tests passed!')
+		const statusMatch = responseText.match(/^HTTP\/[\d.]+\s+(\d+)\s+([^\r\n]+)/m)
+		if(statusMatch) {
+			const statusCode = parseInt(statusMatch[1])
+			expect(statusCode).toBeGreaterThanOrEqual(100)
+			expect(statusCode).toBeLessThan(600)
+			expect(statusMatch[2].trim().length).toBeGreaterThan(0)
+		}
 
-			expect(transcriptData).toBeDefined()
-
-		} catch(error) {
-			console.error('Reconstruction failed:', (error as Error).message)
-			throw error
+		// Validate certificate info structure
+		if(transcriptData.certificateInfo) {
+			expect(transcriptData.certificateInfo.commonName).toBeDefined()
+			expect(typeof transcriptData.certificateInfo.commonName).toBe('string')
 		}
 	})
 
-	it('should examine the TEE attestation bundle structure', () => {
+	it('should validate TEE attestation bundle structure', () => {
 		if(!teeBundleBytes) {
-			console.log('\n⚠️ Skipping TEE attestation bundle analysis - bundle not available')
+			// Skip if bundle not available
 			return
 		}
 
-		console.log('\n=== TEE Attestation Bundle Analysis ===')
-
 		const bundle = VerificationBundle.decode(teeBundleBytes)
 
-		console.log('Bundle Components:')
-		console.log('- TEE_K body size:', bundle.teekSigned?.body?.length || 0, 'bytes')
-		console.log('- TEE_T body size:', bundle.teetSigned?.body?.length || 0, 'bytes')
-		console.log('- Has handshake keys:', false) // handshakeKeys removed from new bundle format
+		// Validate bundle components
+		expect(bundle).toBeDefined()
+		expect(bundle.teekSigned).toBeDefined()
+		expect(bundle.teekSigned?.body).toBeDefined()
+		expect(bundle.teekSigned?.body?.length).toBeGreaterThan(0)
 
 		// Check bundle mode
 		const hasAttestations = (bundle.teekSigned?.attestationReport?.report && bundle.teekSigned.attestationReport.report.length > 0) ||
@@ -217,67 +211,87 @@ describe('TEE Bundle Analysis', () => {
 		const hasPublicKeys = (bundle.teekSigned?.ethAddress && bundle.teekSigned.ethAddress.length > 0) ||
 			(bundle.teetSigned?.ethAddress && bundle.teetSigned.ethAddress.length > 0)
 
-		console.log('- Bundle mode:', hasAttestations ? 'Production (with attestations)' : hasPublicKeys ? 'Standalone (with public keys)' : 'Unknown')
+		// For TEE bundle, should have either attestations or public keys (or both)
+		expect(hasAttestations || hasPublicKeys).toBe(true)
 
 		if(hasAttestations) {
-			console.log('- TEE_K embedded attestation:', bundle.teekSigned?.attestationReport?.report?.length || 0, 'bytes')
-			console.log('- TEE_T embedded attestation:', bundle.teetSigned?.attestationReport?.report?.length || 0, 'bytes')
-			console.log('- TEE_K attestation type:', bundle.teekSigned?.attestationReport?.type || 'not specified')
-			console.log('- TEE_T attestation type:', bundle.teetSigned?.attestationReport?.type || 'not specified')
+			// Validate attestation structure
+			if(bundle.teekSigned?.attestationReport) {
+				expect(bundle.teekSigned.attestationReport.report).toBeDefined()
+				expect(bundle.teekSigned.attestationReport.report.length).toBeGreaterThan(0)
+				expect(bundle.teekSigned.attestationReport.type).toBeDefined()
+				expect(typeof bundle.teekSigned.attestationReport.type).toBe('string')
+			}
+
+			if(bundle.teetSigned?.attestationReport) {
+				expect(bundle.teetSigned.attestationReport.report).toBeDefined()
+				expect(bundle.teetSigned.attestationReport.report.length).toBeGreaterThan(0)
+				expect(bundle.teetSigned.attestationReport.type).toBeDefined()
+				expect(typeof bundle.teetSigned.attestationReport.type).toBe('string')
+			}
 		}
 
 		if(hasPublicKeys) {
-			console.log('- TEE_K embedded eth address:', bundle.teekSigned?.ethAddress?.length || 0, 'bytes')
-			console.log('- TEE_T embedded eth address:', bundle.teetSigned?.ethAddress?.length || 0, 'bytes')
+			// Validate public key structure
+			if(bundle.teekSigned?.ethAddress) {
+				expect(bundle.teekSigned.ethAddress.length).toBeGreaterThan(0)
+			}
+
+			if(bundle.teetSigned?.ethAddress) {
+				expect(bundle.teetSigned.ethAddress.length).toBeGreaterThan(0)
+			}
 		}
 
-		// Analyze the K payload to understand redaction ranges
+		// Validate K payload
 		if(bundle.teekSigned?.body) {
 			const kPayload = KOutputPayload.decode(bundle.teekSigned.body)
 
-			console.log('\nK Payload Analysis:')
-			console.log('- Redacted request size:', kPayload.redactedRequest.length, 'bytes')
-			console.log('- Request redaction ranges:', kPayload.requestRedactionRanges.length)
-			console.log('- Consolidated response keystream:', kPayload.consolidatedResponseKeystream?.length || 0, 'bytes')
-			console.log('- Certificate info:', kPayload.certificateInfo ? 'present' : 'missing')
+			// Validate K payload structure
+			expect(kPayload.redactedRequest).toBeDefined()
+			expect(kPayload.redactedRequest.length).toBeGreaterThan(0)
+			expect(kPayload.requestRedactionRanges).toBeDefined()
+			expect(Array.isArray(kPayload.requestRedactionRanges)).toBe(true)
+			expect(kPayload.consolidatedResponseKeystream).toBeDefined()
+			expect(kPayload.consolidatedResponseKeystream?.length).toBeGreaterThan(0)
+			expect(kPayload.certificateInfo).toBeDefined()
+			expect(kPayload.timestampMs).toBeDefined()
+			expect(kPayload.timestampMs).toBeGreaterThan(0)
+
+			// Validate certificate info
 			if(kPayload.certificateInfo) {
-				console.log('  - Common name:', kPayload.certificateInfo.commonName)
-				console.log('  - Issuer:', kPayload.certificateInfo.issuerCommonName)
-				console.log('  - DNS names:', kPayload.certificateInfo.dnsNames.join(', ') || 'none')
+				expect(kPayload.certificateInfo.commonName).toBeDefined()
+				expect(typeof kPayload.certificateInfo.commonName).toBe('string')
+				expect(kPayload.certificateInfo.issuerCommonName).toBeDefined()
+				expect(typeof kPayload.certificateInfo.issuerCommonName).toBe('string')
+				expect(Array.isArray(kPayload.certificateInfo.dnsNames)).toBe(true)
 			}
 
-			console.log('- Response redaction ranges:', kPayload.responseRedactionRanges.length)
-			console.log('- K Timestamp:', kPayload.timestampMs ? new Date(kPayload.timestampMs).toISOString() : 'not set')
-
-			// Analyze redaction range types
-			console.log('\nRedaction Range Types:')
-			for(const [i, range] of kPayload.requestRedactionRanges.entries()) {
-				console.log(`  Range ${i + 1}: start=${range.start}, length=${range.length}, type="${range.type}"`)
+			// Validate redaction ranges
+			for(const range of kPayload.requestRedactionRanges) {
+				expect(range.start).toBeGreaterThanOrEqual(0)
+				expect(range.length).toBeGreaterThan(0)
+				expect(typeof range.type).toBe('string')
+				expect(range.type.length).toBeGreaterThan(0)
 			}
 		}
 
-		// Analyze the T payload
+		// Validate T payload
 		if(bundle.teetSigned?.body && bundle.teetSigned.body.length > 0) {
 			const tPayload = TOutputPayload.decode(bundle.teetSigned.body)
-			console.log('\nT Payload Analysis:')
-			console.log('- Consolidated response ciphertext:', tPayload.consolidatedResponseCiphertext?.length || 0, 'bytes')
-			console.log('- Request proof streams:', tPayload.requestProofStreams?.length || 0)
-			console.log('- T Timestamp:', tPayload.timestampMs ? new Date(tPayload.timestampMs).toISOString() : 'not set')
-		} else {
-			console.log('\nT Payload Analysis:')
-			console.log('- T payload is missing or empty')
-		}
 
-		console.log('\n=== End TEE Analysis ===')
+			// Validate T payload structure
+			expect(tPayload.consolidatedResponseCiphertext).toBeDefined()
+			expect(tPayload.consolidatedResponseCiphertext?.length).toBeGreaterThan(0)
+			expect(tPayload.timestampMs).toBeDefined()
+			expect(tPayload.timestampMs).toBeGreaterThan(0)
+		}
 	})
 
-	it('should test transcript reconstruction with TEE attestation bundle', async() => {
+	it('should reconstruct TLS transcript from TEE attestation bundle', async() => {
 		if(!teeBundleBytes) {
-			console.log('\n⚠️ Skipping TEE bundle transcript reconstruction - bundle not available')
+			// Skip if bundle not available
 			return
 		}
-
-		console.log('\n=== TEE Attestation Bundle Transcript Reconstruction ===')
 
 		const bundle = VerificationBundle.decode(teeBundleBytes)
 		const kOutputPayload = KOutputPayload.decode(bundle.teekSigned!.body)
@@ -304,51 +318,13 @@ describe('TEE Bundle Analysis', () => {
 			handshakeKeys: undefined, // handshakeKeys removed from new bundle format
 		}
 
-		try {
-			const transcriptData = await reconstructTlsTranscript(mockTeeBundleData as any, mockLogger as any)
+		const transcriptData = await reconstructTlsTranscript(mockTeeBundleData as any, mockLogger as any)
 
-			console.log('✅ TEE transcript reconstruction successful!')
-			console.log('- Revealed request size:', transcriptData.revealedRequest.length, 'bytes')
-			console.log('- Reconstructed response size:', transcriptData.reconstructedResponse.length, 'bytes')
-			console.log('- Certificate info:', transcriptData.certificateInfo ? 'present' : 'missing')
-
-			// Analyze revealed request
-			const requestText = new TextDecoder('utf-8', { fatal: false }).decode(transcriptData.revealedRequest)
-			console.log('\nRevealed Request Analysis:')
-			console.log('- Text length:', requestText.length, 'characters')
-			console.log('- Preview:', JSON.stringify(requestText.substring(0, 200)))
-
-			// Look for HTTP details
-			const httpMatch = requestText.match(/^(GET|POST|PUT|DELETE|PATCH)\s+(\S+)\s+HTTP\/[\d.]+/m)
-			const hostMatch = requestText.match(/Host:\s*([^\r\n]+)/i)
-			if(httpMatch) {
-				console.log('- HTTP Method:', httpMatch[1])
-				console.log('- Path:', httpMatch[2])
-			}
-
-			if(hostMatch) {
-				console.log('- Host:', hostMatch[1].trim())
-			}
-
-			// Analyze response
-			const responseText = new TextDecoder('utf-8', { fatal: false }).decode(transcriptData.reconstructedResponse)
-			console.log('\nReconstructed Response Analysis:')
-			console.log('- Text length:', responseText.length, 'characters')
-			console.log('- Preview:', JSON.stringify(responseText.substring(0, 200)))
-
-			const statusMatch = responseText.match(/^HTTP\/[\d.]+\s+(\d+)\s+([^\r\n]+)/m)
-			if(statusMatch) {
-				console.log('- HTTP Status:', statusMatch[1], statusMatch[2])
-			}
-
-			// Test completed successfully
-			console.log('\n✅ All TEE transcript reconstruction tests passed!')
-
-			expect(transcriptData).toBeDefined()
-
-		} catch(error) {
-			console.error('TEE reconstruction failed:', (error as Error).message)
-			throw error
-		}
+		// Validate transcript reconstruction results
+		expect(transcriptData).toBeDefined()
+		expect(transcriptData.revealedRequest).toBeDefined()
+		expect(transcriptData.reconstructedResponse).toBeDefined()
+		expect(transcriptData.revealedRequest.length).toBeGreaterThan(0)
+		expect(transcriptData.reconstructedResponse.length).toBeGreaterThan(0)
 	})
 })
