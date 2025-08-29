@@ -1,6 +1,8 @@
 import { utils, Wallet } from 'ethers'
-import { computeAddress, computePublicKey } from 'ethers/lib/utils'
-import { ServiceSignatureProvider } from 'src/types'
+
+import type { ServiceSignatureProvider } from '#src/types/index.ts'
+
+const { computeAddress, computePublicKey } = utils
 
 export const ETH_SIGNATURE_PROVIDER: ServiceSignatureProvider = {
 	getPublicKey(privateKey) {

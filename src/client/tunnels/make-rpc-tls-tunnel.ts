@@ -1,9 +1,11 @@
-import { concatenateUint8Arrays, makeTLSClient, TLSConnectionOptions } from '@reclaimprotocol/tls'
-import { makeRpcTcpTunnel } from 'src/client/tunnels/make-rpc-tcp-tunnel'
-import { DEFAULT_HTTPS_PORT } from 'src/config'
-import { CreateTunnelRequest, RPCMessage } from 'src/proto/api'
-import { CompleteTLSPacket, IAttestorClient, Logger, MakeTunnelFn, Transcript, Tunnel } from 'src/types'
-import { generateRpcMessageId, generateTunnelId } from 'src/utils'
+import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
+import { concatenateUint8Arrays, makeTLSClient } from '@reclaimprotocol/tls'
+
+import { makeRpcTcpTunnel } from '#src/client/tunnels/make-rpc-tcp-tunnel.ts'
+import { DEFAULT_HTTPS_PORT } from '#src/config/index.ts'
+import type { CreateTunnelRequest, RPCMessage } from '#src/proto/api.ts'
+import type { CompleteTLSPacket, IAttestorClient, Logger, MakeTunnelFn, Transcript, Tunnel } from '#src/types/index.ts'
+import { generateRpcMessageId, generateTunnelId } from '#src/utils/index.ts'
 
 type ExtraTLSOptions = {
 	request: Partial<CreateTunnelRequest>
@@ -71,7 +73,7 @@ export const makeRpcTlsTunnel: MakeTunnelFn<ExtraTLSOptions, TLSTunnelProperties
 				// round trip to the server as we send the packet
 				// in the same message as the tunnel creation.
 				const createTunnelReqId = generateRpcMessageId()
-				client = await connect([
+				client = connect([
 					{
 						id: createTunnelReqId,
 						createTunnelRequest: {
@@ -83,6 +85,7 @@ export const makeRpcTlsTunnel: MakeTunnelFn<ExtraTLSOptions, TLSTunnelProperties
 					},
 					{ tunnelMessage: { tunnelId, message } }
 				])
+
 				try {
 					await makeTunnel()
 					// wait for tunnel to be successfully created
@@ -157,7 +160,7 @@ export const makeRpcTlsTunnel: MakeTunnelFn<ExtraTLSOptions, TLSTunnelProperties
 				tls.handleReceivedBytes(data)
 			},
 			onClose(err) {
-				void tls.end(err)
+				tls.end(err)
 			},
 		})
 

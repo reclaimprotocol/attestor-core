@@ -3,7 +3,8 @@
  */
 import { readFileSync } from 'fs'
 import { createServer } from 'https'
-import { logger } from 'src/utils'
+
+import { logger } from '#src/utils/index.ts'
 
 /**
  * Mock https server to test claim creation.
@@ -46,9 +47,39 @@ export function createMockServer(port: number) {
 			return
 		}
 
-		const emailAddress = auth.slice('Bearer '.length) + '@mock.com'
-		endWithJson(200, { emailAddress })
+		const userId = auth.slice('Bearer '.length)
+		const emailAddress = userId + '@mock.com'
+		const resp = { emailAddress }
+		const parsedUrl = new URL(req.url, 'http://localhost')
 
+		const split = parsedUrl.searchParams.get('splitDataAcrossPackets')
+		if(split === 'true') {
+			// simulate spread across multiple packets by adding delays
+			// in sending the response
+			const str = JSON.stringify({ emailAddress })
+			const splitStart = str.indexOf(userId) + 4
+			if(splitStart <= 0 || splitStart >= str.length - 1) {
+				endWithError(500, 'could not split response')
+				return
+			}
+
+			res.writeHead(200, {
+				'Content-Type': 'application/json',
+				'Content-Length': str.length.toString(),
+			})
+			res.write(str.slice(0, splitStart))
+
+			setTimeout(() => {
+				res.write(str.slice(splitStart))
+				res.end()
+			}, 500)
+
+			logger.info({ emailAddress }, 'sent split response')
+
+			return
+		}
+
+		endWithJson(200, resp)
 		logger.info({ emailAddress }, 'ended with success')
 
 		function endWithError(status: number, message: string) {
