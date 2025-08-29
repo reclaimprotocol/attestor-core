@@ -6,6 +6,7 @@ import { beforeEach, describe, it } from 'node:test'
 
 import type { AttestorClient } from '#src/client/index.ts'
 import { createClaimOnAttestor, getAttestorClientFromPool } from '#src/client/index.ts'
+import { ClaimTunnelRequest } from '#src/proto/api.ts'
 import { providers } from '#src/providers/index.ts'
 import { decryptTranscript } from '#src/server/index.ts'
 import { describeWithServer } from '#src/tests/describe-with-server.ts'
@@ -112,7 +113,6 @@ describeWithServer('Claim Creation', opts => {
 	}
 
 	it('should not create a claim with invalid response', async() => {
-
 		await assert.rejects(
 			() => createClaimOnAttestor({
 				name: 'http',
@@ -141,14 +141,14 @@ describeWithServer('Claim Creation', opts => {
 		)
 	})
 
-	describe('OPRF via %s', () => {
+	describe('OPRF', () => {
 
+		// OPRF is only available on gnark right now
 		const zkEngine = 'gnark'
 
 		for(const cipherSuite of OPRF_CIPHER_SUITES) {
 
 			it('should create a claim with an OPRF redaction (%s)', async() => {
-			// OPRF is only available on gnark & chacha20 right now
 				providers.http.additionalClientOptions = {
 					...providers.http.additionalClientOptions,
 					cipherSuites: [cipherSuite]
@@ -212,6 +212,64 @@ describeWithServer('Claim Creation', opts => {
 				)
 			})
 		}
+
+		it('should create claim with OPRF spread across multiple packets', async() => {
+			const user = 'abcd_test_user'
+			const result = await createClaimOnAttestor({
+				name: 'http',
+				params: {
+					url: claimUrl + '?splitDataAcrossPackets=true',
+					method: 'GET',
+					responseRedactions: [
+						{ regex: 'emailAddress\":\"(?<test>[a-z_]+)@', hash: 'oprf' }
+					],
+					responseMatches: [{ type: 'contains', value: '' }]
+				},
+				secretParams: {
+					authorisationHeader: `Bearer ${user}`
+				},
+				ownerPrivateKey: opts.privateKeyHex,
+				client,
+				zkEngine,
+			})
+
+			assert.ok(!result.error)
+			// decrypt the transcript and check we didn't accidentally
+			// leak our secrets in the application data
+			const transcript = result.request?.transcript
+			assert.ok(transcript)
+
+			// ensure that the transcript never contained the raw user data
+			const serialisedReq = ClaimTunnelRequest.encode(result.request!).finish()
+			const serialisedReqStr = uint8ArrayToStr(serialisedReq)
+			assert.ok(!serialisedReqStr.includes(user))
+			assert.ok(!serialisedReqStr.includes('abcd'))
+			assert.ok(!serialisedReqStr.includes('test_user'))
+
+			const applMsgs = extractApplicationDataFromTranscript(
+				await decryptTranscript(
+					transcript, logger, zkEngine,
+					result.request?.fixedServerIV!,
+					result.request?.fixedClientIV!
+				)
+			)
+
+			const serverPackets = applMsgs
+				.filter(m => m.sender === 'server')
+				.map(m => uint8ArrayToStr(m.message))
+				.join('')
+
+			const toprf = getFirstTOprfBlock(result.request!)!
+			assert.ok(toprf)
+
+			// only the user's hash should be revealed
+			assert.doesNotMatch(serverPackets, new RegExp(user))
+
+			assert.match(
+				serverPackets,
+				new RegExp(binaryHashToStr(toprf.nullifier, toprf.dataLocation!.length))
+			)
+		})
 
 		it('should produce the same hash for the same input', async() => {
 

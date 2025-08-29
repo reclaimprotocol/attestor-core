@@ -83,7 +83,6 @@ describeWithServer('HTTP Provider', opts => {
 		const ctx = JSON.parse(resp.claim!.context)
 		const domainStr = ctx.extractedParameters.domain
 
-
 		const toprf = getFirstTOprfBlock(resp.request!)!
 		assert.ok(toprf)
 		const toprfStr = binaryHashToStr(

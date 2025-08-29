@@ -33,6 +33,7 @@ export type ZKRevealInfo = {
 	type: 'zk'
 	redactedPlaintext: Uint8Array
 	toprfs?: TOPRFProofParams[]
+	overshotToprfFromPrevBlock?: { length: number }
 }
 
 export type MessageRevealInfo = { type: 'complete' } | ZKRevealInfo

@@ -501,11 +501,14 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 
 			revealedPackets.push(...packets.filter(p => p.sender === 'server'))
 		} else {
-			for(const { block, redactedPlaintext, toprfs } of serverPacketsToReveal) {
+			for(const {
+				block, redactedPlaintext, overshotToprfFromPrevBlock, toprfs
+			} of serverPacketsToReveal) {
 				setRevealOfMessage(block.message, {
 					type: 'zk',
 					redactedPlaintext,
-					toprfs
+					toprfs,
+					overshotToprfFromPrevBlock
 				})
 				revealedPackets.push(
 					{ sender: 'server', message: redactedPlaintext }

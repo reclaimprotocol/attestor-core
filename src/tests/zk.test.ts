@@ -280,7 +280,10 @@ describe('OPRF Slicing Tests', () => {
 					cipherSuite,
 					zkEngine: zkEngine,
 					recordNumber: 1234,
-					iv: fixedIv
+					iv: fixedIv,
+					getNextPacket() {
+						throw new Error('should not be called in this test')
+					}
 				},
 			)
 
@@ -419,7 +422,10 @@ for(const { cipherSuite, zkEngine } of ZK_TEST_MATRIX) {
 				await proofGenerator.addPacketToProve(
 					packet,
 					{ type: 'zk', redactedPlaintext },
-					p => proofs = p
+					p => proofs = p,
+					() => {
+						throw new Error('should not be called in this test')
+					}
 				)
 				await proofGenerator.generateProofs()
 
@@ -431,7 +437,10 @@ for(const { cipherSuite, zkEngine } of ZK_TEST_MATRIX) {
 						cipherSuite,
 						zkEngine: zkEngine,
 						recordNumber: 1234,
-						iv: fixedIv
+						iv: fixedIv,
+						getNextPacket() {
+							throw new Error('should not be called in this test')
+						}
 					},
 				)
 

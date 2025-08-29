@@ -85,7 +85,10 @@ export async function benchmark() {
 					type: 'zk',
 					redactedPlaintext:plaintextArr,
 				},
-				() => {}
+				() => {},
+				() => {
+					throw new Error('should not be called in benchmark')
+				}
 			)
 			await proofGenerator.generateProofs()
 

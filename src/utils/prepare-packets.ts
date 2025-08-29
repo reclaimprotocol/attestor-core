@@ -32,7 +32,7 @@ export async function preparePacketsForReveal(
 
 	let zkPacketsDone = 0
 
-	await Promise.all(tlsTranscript.map(async({ message, sender }) => {
+	await Promise.all(tlsTranscript.map(async({ message, sender }, i) => {
 		const msg: TranscriptMessage = {
 			sender: sender === 'client'
 				? TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
@@ -69,7 +69,13 @@ export async function preparePacketsForReveal(
 			await proofGenerator.addPacketToProve(
 				message,
 				reveal,
-				proofs => (msg.reveal = { zkReveal: { proofs } })
+				proofs => (msg.reveal = { zkReveal: { proofs } }),
+				() => {
+					const next = tlsTranscript
+						.slice(i + 1)
+						.find(t => t.sender === sender)
+					return next?.message
+				}
 			)
 			break
 		default:

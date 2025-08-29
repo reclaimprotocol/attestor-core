@@ -85,8 +85,7 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 			}
 
 			const signatureData = await getSignatureDataTls13(
-				handshakeRawMessages.slice(0, -1),
-                    cipherSuite!
+				handshakeRawMessages.slice(0, -1), cipherSuite!
 			)
 			await verifyCertificateSignature({
 				...signature,
@@ -178,7 +177,6 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 				return await readPacket()
 			}
 
-
 			if(message[0] === PACKET_TYPE['WRAPPED_RECORD'] ||
 				(serverChangeCipherSpecMsgIdx > 0 && sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER) ||
 				(clientChangeCipherSpecMsgIdx > 0 && sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT)) { // encrypted
@@ -204,7 +202,6 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 
 			handshakeData = concatenateUint8Arrays([handshakeData, newHandshakeData])
 		}
-
 
 		const type = handshakeData[0]
 		const content = readWithLength(handshakeData.slice(1), RECORD_LENGTH_BYTES)

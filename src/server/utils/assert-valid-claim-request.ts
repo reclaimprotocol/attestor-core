@@ -77,11 +77,7 @@ export async function assertValidClaimRequest(
 		.encode({ ...request, signatures: undefined })
 		.finish()
 	const { verify: verifySig } = SIGNATURES[metadata.signatureType]
-	const verified = await verifySig(
-		serialisedReq,
-		requestSignature,
-		data.owner
-	)
+	const verified = await verifySig(serialisedReq, requestSignature, data.owner)
 	if(!verified) {
 		throw new AttestorError(
 			'ERROR_INVALID_CLAIM',
@@ -102,7 +98,6 @@ export async function assertValidClaimRequest(
 			`Expected server name ${reqHost}, got ${receipt.hostname}`
 		)
 	}
-
 
 	// get all application data messages
 	const applData = extractApplicationDataFromTranscript(receipt)
@@ -217,13 +212,17 @@ export async function decryptTranscript(
 	clientIV: Uint8Array,
 ): Promise<IDecryptedTranscript> {
 
-	const { tlsVersion, cipherSuite, hostname, nextMsgIndex } = await processHandshake(transcript, logger)
+	const {
+		tlsVersion, cipherSuite, hostname, nextMsgIndex
+	} = await processHandshake(transcript, logger)
 
-	let clientRecordNumber = tlsVersion === 'TLS1_3' ? -1 : 0 // TLS 1.3 has already one record encrypted at this point
+	// TLS 1.3 has already one record encrypted at this point
+	let clientRecordNumber = tlsVersion === 'TLS1_3' ? -1 : 0
 	let serverRecordNumber = clientRecordNumber
 
 	transcript = transcript.slice(nextMsgIndex)
 
+	const overshotMap: { [pkt: number]: { data: Uint8Array } } = {}
 	const decryptedTranscript: IDecryptedTranscriptMessage[] = []
 
 	for(const [i, {
@@ -231,8 +230,21 @@ export async function decryptTranscript(
 		message,
 		reveal: { zkReveal, directReveal } = {}
 	}] of transcript.entries()) {
-		//start with first message after last handshake message
-		await getDecryptedMessage(sender, message, directReveal, zkReveal, i)
+		try {
+			//start with first message after last handshake message
+			await decryptMessage(sender, message, directReveal, zkReveal, i)
+		} catch(error) {
+			const err = new AttestorError(
+				'ERROR_INVALID_CLAIM',
+				`error in handling packet at idx ${i}: ${error}`,
+				{ packetIdx: i, error }
+			)
+			if(error.stack) {
+				err.stack = error.stack
+			}
+
+			throw err
+		}
 	}
 
 	return {
@@ -241,82 +253,83 @@ export async function decryptTranscript(
 		tlsVersion: tlsVersion,
 	}
 
-	async function getDecryptedMessage(
+	async function decryptMessage(
 		sender: TranscriptMessageSenderType,
 		message: Uint8Array,
 		directReveal: MessageRevealDirect | undefined,
 		zkReveal: MessageRevealZk | undefined,
 		i: number
 	) {
-		try {
-			const isServer = sender === TranscriptMessageSenderType
+		const isServer = sender === TranscriptMessageSenderType
+			.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER
+		const recordHeader = message.slice(0, 5)
+		const content = getWithoutHeader(message)
+		if(isServer) {
+			serverRecordNumber++
+		} else {
+			clientRecordNumber++
+		}
+
+		let redacted = true
+		let plaintext: Uint8Array | undefined = undefined
+		let plaintextLength: number
+
+		if(directReveal?.key?.length) {
+			const result = await decryptDirect(
+				directReveal, cipherSuite, recordHeader, tlsVersion, content
+			)
+			plaintext = result.plaintext
+			redacted = false
+			plaintextLength = plaintext.length
+		} else if(zkReveal?.proofs?.length) {
+			const iv = sender === TranscriptMessageSenderType
 				.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER
-			const recordHeader = message.slice(0, 5)
-			const content = getWithoutHeader(message)
-			if(isServer) {
-				serverRecordNumber++
-			} else {
-				clientRecordNumber++
-			}
+				? serverIV
+				: clientIV
+			const recordNumber = isServer
+				? serverRecordNumber
+				: clientRecordNumber
 
-			let redacted = true
-			let plaintext: Uint8Array | undefined = undefined
-			let plaintextLength: number
-
-			if(directReveal?.key?.length) {
-				const result = await decryptDirect(
-					directReveal, cipherSuite, recordHeader,
-					tlsVersion, content
-				)
-				plaintext = result.plaintext
-				redacted = false
-				plaintextLength = plaintext.length
-			} else if(zkReveal?.proofs?.length) {
-				const result = await verifyZkPacket(
-					{
-						ciphertext: content,
-						zkReveal,
-						logger,
-						cipherSuite,
-						zkEngine: zkEngine,
-						iv: sender === TranscriptMessageSenderType
-							.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER
-							? serverIV
-							: clientIV,
-						recordNumber: isServer
-							? serverRecordNumber
-							: clientRecordNumber
-					}
-				)
-				plaintext = result.redactedPlaintext
-				redacted = false
-				plaintextLength = plaintext.length
-			} else {
-				plaintext = content
-				plaintextLength = plaintext.length
-			}
-
-			decryptedTranscript.push({
-				sender: sender === TranscriptMessageSenderType
-					.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
-					? 'client'
-					: 'server',
-				redacted,
-				message: plaintext,
-				recordHeader,
-				plaintextLength,
-			})
-
-		} catch(error) {
-			throw new AttestorError(
-				'ERROR_INVALID_CLAIM',
-				`error in handling packet at idx ${i}: ${error}`,
+			const result = await verifyZkPacket(
 				{
-					packetIdx: i,
-					error: error,
+					ciphertext: content,
+					zkReveal,
+					iv,
+					recordNumber,
+					toprfOvershotNullifier: overshotMap[i]?.data,
+					getNextPacket(overshot) {
+						const nextIdx = transcript
+							.findIndex((t, j) => t.sender === sender && j > i)
+						if(nextIdx < 0) {
+							return
+						}
+
+						overshotMap[nextIdx] = { data: overshot }
+						return getWithoutHeader(transcript[nextIdx].message)
+					},
+					logger,
+					cipherSuite,
+					zkEngine: zkEngine,
 				}
 			)
+			plaintext = result.redactedPlaintext
+			redacted = false
+			plaintextLength = plaintext.length
+		} else {
+			plaintext = content
+			plaintextLength = plaintext.length
 		}
+
+		decryptedTranscript.push({
+			sender: sender === TranscriptMessageSenderType
+				.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
+				? 'client'
+				: 'server',
+			redacted,
+			message: plaintext,
+			recordHeader,
+			plaintextLength,
+		})
 	}
 }
 
