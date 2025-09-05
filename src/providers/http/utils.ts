@@ -1,9 +1,11 @@
 // noinspection ExceptionCaughtLocallyJS
 
 import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
+import type { Element, Node } from 'domhandler'
+import type {
+	Expression } from 'esprima-next'
 import {
 	ArrayExpression,
-	Expression,
 	ExpressionStatement,
 	ObjectExpression,
 	parseScript,
@@ -11,35 +13,22 @@ import {
 	Syntax
 } from 'esprima-next'
 import { JSONPath } from 'jsonpath-plus'
-import { ArraySlice, CompleteTLSPacket, ProviderParams, RedactedOrHashedArraySlice, Transcript } from 'src/types'
-import { getHttpRequestDataFromTranscript, HttpRequest, HttpResponse, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from 'src/utils'
+import { parse } from 'parse5'
+import { adapter as htmlAdapter, } from 'parse5-htmlparser2-tree-adapter'
+import RE2 from 're2'
+import xpath from 'xpath'
+import '#src/providers/http/patch-parse5-tree.ts'
+
+import type { ArraySlice, CompleteTLSPacket, ProviderParams, RedactedOrHashedArraySlice, Transcript } from '#src/types/index.ts'
+import type { HttpRequest, HttpResponse } from '#src/utils/index.ts'
+import { getHttpRequestDataFromTranscript, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from '#src/utils/index.ts'
 
 export type JSONIndex = {
-    start: number
-    end: number
+	start: number
+	end: number
 }
 
 type HTTPProviderParams = ProviderParams<'http'>
-
-let RE2
-try {
-	RE2 = require('re2')
-	if(!Object.keys(RE2).length) {
-		RE2 = undefined
-		throw new Error()
-	}
-} catch{
-	console.log('RE2 not found. Using standard regex')
-}
-
-let jsd
-
-if(typeof window !== 'undefined') {
-	// @ts-ignore
-	jsd = window.jsdom
-} else {
-	jsd = require('jsdom')
-}
 
 /**
  * Returns only first extracted element
@@ -94,52 +83,54 @@ export function extractHTMLElementIndex(
  * Returns indexes of all extracted elements
  * @param html
  * @param xpathExpression
- * @param contentsOnly
+ * @param contentsOnly indices of the start and end of the element's contents only,
+ * 	not the whole tag
  */
 export function extractHTMLElementsIndexes(
 	html: string,
 	xpathExpression: string,
 	contentsOnly: boolean
 ): { start: number, end: number }[] {
+	return extractHTMLElementIndexesParse5(html, xpathExpression, contentsOnly)
+}
 
-	const dom = new jsd.JSDOM(html, {
-		contentType: 'text/html',
-		includeNodeLocations: true
+function extractHTMLElementIndexesParse5(
+	html: string,
+	xpathExpression: string,
+	contentsOnly: boolean
+) {
+	const domLight = parse(
+		html,
+		{ treeAdapter: htmlAdapter, sourceCodeLocationInfo: true }
+	)
+	// lets xpath identify this as a node
+	domLight['name'] = 'root'
+
+	const parsedPath = xpath.parse(xpathExpression)
+	const nodes = parsedPath.select({
+		node: domLight,
+		allowAnyNamespaceForNoPrefix: true,
 	})
-
-	const document = dom.window.document
-	const xpathResult = document.evaluate(xpathExpression, document, null, dom.window.XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)
-	const nodes: Node[] = []
-	if(xpathResult?.resultType === dom.window.XPathResult.ORDERED_NODE_SNAPSHOT_TYPE &&
-		xpathResult?.snapshotLength) {
-		for(let i = 0; i < xpathResult.snapshotLength; ++i) {
-			nodes.push(xpathResult.snapshotItem(i))
-		}
-	}
-
 	if(!nodes.length) {
 		throw new Error(`Failed to find XPath: "${xpathExpression}"`)
 	}
 
+	return nodes.map(node => getNodeRange(node, contentsOnly))
+}
 
-	const res: { start: number, end: number }[] = []
-
-	for(const node of nodes) {
-		const nodeLocation = dom.nodeLocation(node)
-		if(!nodeLocation) {
-			throw new Error(`Failed to find XPath node location: "${xpathExpression}"`)
-		}
-
-		if(contentsOnly) {
-			const start = nodeLocation.startTag ? nodeLocation.startTag.endOffset : nodeLocation.startOffset
-			const end = nodeLocation.endTag ? nodeLocation.endTag.startOffset : nodeLocation.endOffset
-			res.push({ start, end })
-		} else {
-			res.push({ start:nodeLocation.startOffset, end: nodeLocation.endOffset })
-		}
+function getNodeRange(node: Node | Element, contentsOnly: boolean) {
+	if(!contentsOnly) {
+		return { start: node.startIndex!, end: node.endIndex! }
 	}
 
-	return res
+	if(!('firstChild' in node) || !node.firstChild) {
+		throw new Error(`Node "${node['name']}" has no children`)
+	}
+
+	return {
+		start: node.firstChild.startIndex!,
+		end: node.lastChild!.endIndex!
+	}
 }
 
 export function extractJSONValueIndex(json: string, jsonPath: string) {
@@ -152,7 +143,7 @@ export function extractJSONValueIndexes(json: string, jsonPath: string): { start
 		json: JSON.parse(json),
 		wrap: false,
 		resultType: 'pointer',
-		eval:'safe',
+		eval: 'safe',
 		// @ts-ignore
 		ignoreEvalErrors: true
 	})
@@ -160,7 +151,8 @@ export function extractJSONValueIndexes(json: string, jsonPath: string): { start
 		throw new Error('jsonPath not found')
 	}
 
-	const tree = parseScript('(' + json + ')', { range: true }) //wrap in parentheses for esprima to parse
+	//wrap in parentheses for esprima to parse
+	const tree = parseScript('(' + json + ')', { range: true })
 	if(tree.body[0] instanceof ExpressionStatement
 		&& (tree.body[0].expression instanceof ObjectExpression || tree.body[0].expression instanceof ArrayExpression)) {
 
@@ -330,11 +322,7 @@ export function parseHttpResponse(buff: Uint8Array) {
 }
 
 export function makeRegex(str: string) {
-	if(RE2 !== undefined) {
-		return RE2(str, 'sgiu')
-	}
-
-	return new RegExp(str, 'sgi')
+	return RE2(str, 'sgiu')
 }
 
 const TEMPLATE_START_CHARCODE = '{'.charCodeAt(0)

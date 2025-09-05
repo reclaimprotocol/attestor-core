@@ -1,7 +1,9 @@
-import { areUint8ArraysEqual, concatenateUint8Arrays, strToUint8Array, TLSConnectionOptions } from '@reclaimprotocol/tls'
-import { base64 } from 'ethers/lib/utils'
-import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from 'src/config'
-import { AttestorVersion } from 'src/proto/api'
+import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
+import { areUint8ArraysEqual, concatenateUint8Arrays } from '@reclaimprotocol/tls'
+import { utils } from 'ethers'
+
+import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '#src/config/index.ts'
+import { AttestorVersion } from '#src/proto/api.ts'
 import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
@@ -10,15 +12,18 @@ import {
 	makeRegex,
 	matchRedactedStrings,
 	parseHttpResponse,
-} from 'src/providers/http/utils'
-import { ArraySlice, Provider, ProviderCtx, ProviderParams, ProviderSecretParams, RedactedOrHashedArraySlice } from 'src/types'
+} from '#src/providers/http/utils.ts'
+import type { ArraySlice, Provider, ProviderCtx, ProviderParams, ProviderSecretParams, RedactedOrHashedArraySlice } from '#src/types/index.ts'
 import {
 	findIndexInUint8Array,
 	getHttpRequestDataFromTranscript, logger,
 	REDACTION_CHAR_CODE,
+	strToUint8Array,
 	uint8ArrayToBinaryStr,
 	uint8ArrayToStr,
-} from 'src/utils'
+} from '#src/utils/index.ts'
+
+const { base64 } = utils
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
 const dateHeaderRegex = '[dD]ate: ((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (?:[0-3][0-9]) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?:[0-9]{4}) (?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2} GMT)'
@@ -88,10 +93,9 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const { pathname } = url
 		const searchParams = params.url.includes('?') ? params.url.split('?')[1] : ''
 		logger.info({ url: params.url, path: pathname, query: searchParams.toString() })
-		const body =
-            params.body instanceof Uint8Array
-            	? params.body
-            	: strToUint8Array(params.body || '')
+		const body = params.body instanceof Uint8Array
+			? params.body
+			: strToUint8Array(params.body || '')
 		const contentLength = body.length
 		const reqLine = `${params.method} ${pathname}${searchParams?.length ? '?' + searchParams : ''} HTTP/1.1`
 		const secHeadersList = buildHeaders(secHeaders)
@@ -112,10 +116,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		// hide all secret headers
 		const secHeadersStr = secHeadersList.join('\r\n')
-		const tokenStartIndex = findIndexInUint8Array(
-			data,
-			strToUint8Array(secHeadersStr)
-		)
+		const tokenStartIndex
+			= findIndexInUint8Array(data, strToUint8Array(secHeadersStr))
 
 		const redactions = [
 			{
@@ -201,6 +203,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		const body = uint8ArrayToBinaryStr(res.body)
+
 		const redactions: RedactedOrHashedArraySlice[] = []
 		for(const rs of params.responseRedactions || []) {
 			const processor = processRedactionRequest(
@@ -283,7 +286,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const serverBlocks = receipt
 			.filter(s => s.sender === 'server')
 			.map((r) => r.message)
-			.filter(b => !b.every(b => b === REDACTION_CHAR_CODE)) // filter out fully redacted blocks
+			// filter out fully redacted blocks
+			.filter(b => !b.every(b => b === REDACTION_CHAR_CODE))
 		const response = concatArrays(...serverBlocks)
 
 		let res: string
@@ -295,9 +299,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			const statusRegex = makeRegex('^HTTP\\/1.1 (\\d{3})')
 			const matchRes = statusRegex.exec(res)
 			if(matchRes && matchRes.length > 1) {
-				throw new Error(
-					`Provider returned error ${matchRes[1]}"`
-				)
+				throw new Error(`Provider returned error ${matchRes[1]}`)
 			}
 
 			let lineEnd = res.indexOf('*')
@@ -326,7 +328,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		//validate server Date header if present
 		const dateHeader = makeRegex(dateHeaderRegex).exec(res)
-		if(dateHeader?.length > 1) {
+		if(dateHeader && dateHeader.length > 1) {
 			const serverDate = new Date(dateHeader[1])
 			if((Date.now() - serverDate.getTime()) > dateDiff) {
 
@@ -379,7 +381,12 @@ const HTTP_PROVIDER: Provider<'http'> = {
 						throw new Error(`Duplicate parameter ${paramName}`)
 					}
 
-					extractedParams[paramName] = groups[paramName]
+					const value = groups?.[paramName]
+					if(typeof value !== 'string') {
+						continue
+					}
+
+					extractedParams[paramName] = value
 				}
 
 				break
@@ -520,13 +527,15 @@ function *processRedactionRequest(
 	}
 
 	function *processRegexp() {
-		logger.debug({ element: base64.encode(strToUint8Array(element)), body: base64.encode(strToUint8Array(body)) })
+		logger.debug({
+			element: base64.encode(strToUint8Array(element)),
+			body: base64.encode(strToUint8Array(body))
+		})
 		const regexp = makeRegex(rs.regex!)
 		const elem = element || body
 		const match = regexp.exec(elem)
 		// eslint-disable-next-line max-depth
 		if(!match?.[0]) {
-
 			throw new Error(
 				`regexp ${rs.regex} does not match found element '${base64.encode(strToUint8Array(elem))}'`
 			)
@@ -551,7 +560,7 @@ function *processRedactionRequest(
 
 
 		const fullStr = match[0]
-		const grp = Object.values(match.groups)[0] as string
+		const grp = Object.values(match.groups)[0]
 		const grpIdx = fullStr.indexOf(grp)
 
 		// don't hash the entire regex, we'll hash the group values

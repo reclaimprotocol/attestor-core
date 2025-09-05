@@ -1,5 +1,8 @@
-import {
-	CipherSuite, concatenateUint8Arrays,
+import type {
+	CipherSuite,
+	TLSProtocolVersion,
+	X509Certificate } from '@reclaimprotocol/tls'
+import { concatenateUint8Arrays,
 	getSignatureDataTls12,
 	getSignatureDataTls13,
 	PACKET_TYPE,
@@ -8,16 +11,15 @@ import {
 	parseServerCertificateVerify,
 	parseServerHello,
 	processServerKeyShare,
-	SUPPORTED_RECORD_TYPE_MAP,
-	TLSProtocolVersion, uint8ArrayToDataView,
-	verifyCertificateSignature,
-	X509Certificate
+	SUPPORTED_RECORD_TYPE_MAP, uint8ArrayToDataView,
+	verifyCertificateChain,
+	verifyCertificateSignature
 } from '@reclaimprotocol/tls'
-import { verifyCertificateChain } from '@reclaimprotocol/tls/lib/utils/parse-certificate'
-import { ClaimTunnelRequest, TranscriptMessageSenderType } from 'src/proto/api'
-import { Logger } from 'src/types'
-import { decryptDirect } from 'src/utils'
 
+import type { ClaimTunnelRequest } from '#src/proto/api.ts'
+import { TranscriptMessageSenderType } from '#src/proto/api.ts'
+import type { Logger } from '#src/types/index.ts'
+import { decryptDirect } from '#src/utils/index.ts'
 
 const RECORD_LENGTH_BYTES = 3
 
@@ -83,8 +85,7 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 			}
 
 			const signatureData = await getSignatureDataTls13(
-				handshakeRawMessages.slice(0, -1),
-                    cipherSuite!
+				handshakeRawMessages.slice(0, -1), cipherSuite!
 			)
 			await verifyCertificateSignature({
 				...signature,
@@ -176,7 +177,6 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 				return await readPacket()
 			}
 
-
 			if(message[0] === PACKET_TYPE['WRAPPED_RECORD'] ||
 				(serverChangeCipherSpecMsgIdx > 0 && sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER) ||
 				(clientChangeCipherSpecMsgIdx > 0 && sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT)) { // encrypted
@@ -202,7 +202,6 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 
 			handshakeData = concatenateUint8Arrays([handshakeData, newHandshakeData])
 		}
-
 
 		const type = handshakeData[0]
 		const content = readWithLength(handshakeData.slice(1), RECORD_LENGTH_BYTES)

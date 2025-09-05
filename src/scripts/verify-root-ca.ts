@@ -1,8 +1,8 @@
-import { makeTLSClient } from '@reclaimprotocol/tls'
-import { verifyCertificateChain } from '@reclaimprotocol/tls/lib/utils/parse-certificate'
+import { makeTLSClient, verifyCertificateChain } from '@reclaimprotocol/tls'
 import { Socket } from 'net'
-import { DEFAULT_HTTPS_PORT } from 'src/config'
-import { logger } from 'src/utils'
+
+import { DEFAULT_HTTPS_PORT } from '#src/config/index.ts'
+import { logger } from '#src/utils/index.ts'
 
 const hostPort = process.argv[2]
 
