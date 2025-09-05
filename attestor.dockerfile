@@ -9,6 +9,7 @@ COPY ./tsconfig.json /app/
 COPY ./tsconfig.build.json /app/
 RUN mkdir -p /app/src/scripts
 RUN echo '' > /app/src/scripts/prepare.sh
+RUN echo 'console.log("TMP")' > /app/src/index.ts
 
 WORKDIR /app
 
