@@ -82,12 +82,20 @@ message SignedMessage {
   AttestationReport attestation_report = 5; // full attestation (enclave mode only)
 }
 
+// OPRF verification data for a single hashed range
+message OPRFVerificationData {
+  uint32 stream_pos = 1;      // Position in the consolidated TLS stream
+  uint32 stream_length = 2;   // Length of data in the stream
+  bytes public_signals_json = 3; // ZK proof and public parameters
+}
+
 // Single artefact produced by client for offline verification
 message VerificationBundle {
-  // SECURITY: certificate_info must come from signed teek_signed.body.certificate_info, not unsigned field
-  
+
   // Signed transcripts
   SignedMessage teek_signed = 1; // BODY_TYPE_K_OUTPUT (contains signed certificate_info)
   SignedMessage teet_signed = 2; // BODY_TYPE_T_OUTPUT
 
+  // OPRF verification data for hashed ranges
+  repeated OPRFVerificationData oprf_verifications = 3;
 }
