@@ -4,7 +4,6 @@ name: Test
   push:
     branches:
       - main
-      - module
 jobs:
   test:
     runs-on: ubuntu-latest
