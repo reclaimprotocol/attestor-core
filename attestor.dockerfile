@@ -1,4 +1,4 @@
-FROM node:lts
+FROM node:24
 
 # install git
 RUN apt update -y && apt upgrade -y && apt install git -y
