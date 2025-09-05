@@ -133,6 +133,16 @@ export interface SignedMessage {
   attestationReport: AttestationReport | undefined;
 }
 
+/** OPRF verification data for a single hashed range */
+export interface OPRFVerificationData {
+  /** Position in the consolidated TLS stream */
+  streamPos: number;
+  /** Length of data in the stream */
+  streamLength: number;
+  /** ZK proof and public parameters */
+  publicSignalsJson: Uint8Array;
+}
+
 /** Single artefact produced by client for offline verification */
 export interface VerificationBundle {
   /** Signed transcripts */
@@ -140,7 +150,11 @@ export interface VerificationBundle {
     | SignedMessage
     | undefined;
   /** BODY_TYPE_T_OUTPUT */
-  teetSigned: SignedMessage | undefined;
+  teetSigned:
+    | SignedMessage
+    | undefined;
+  /** OPRF verification data for hashed ranges */
+  oprfVerifications: OPRFVerificationData[];
 }
 
 function createBaseRequestRedactionRange(): RequestRedactionRange {
@@ -1140,8 +1154,102 @@ export const SignedMessage: MessageFns<SignedMessage> = {
   },
 };
 
+function createBaseOPRFVerificationData(): OPRFVerificationData {
+  return { streamPos: 0, streamLength: 0, publicSignalsJson: new Uint8Array(0) };
+}
+
+export const OPRFVerificationData: MessageFns<OPRFVerificationData> = {
+  encode(message: OPRFVerificationData, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.streamPos !== 0) {
+      writer.uint32(8).uint32(message.streamPos);
+    }
+    if (message.streamLength !== 0) {
+      writer.uint32(16).uint32(message.streamLength);
+    }
+    if (message.publicSignalsJson.length !== 0) {
+      writer.uint32(26).bytes(message.publicSignalsJson);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): OPRFVerificationData {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseOPRFVerificationData();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.streamPos = reader.uint32();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.streamLength = reader.uint32();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.publicSignalsJson = reader.bytes();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): OPRFVerificationData {
+    return {
+      streamPos: isSet(object.streamPos) ? globalThis.Number(object.streamPos) : 0,
+      streamLength: isSet(object.streamLength) ? globalThis.Number(object.streamLength) : 0,
+      publicSignalsJson: isSet(object.publicSignalsJson)
+        ? bytesFromBase64(object.publicSignalsJson)
+        : new Uint8Array(0),
+    };
+  },
+
+  toJSON(message: OPRFVerificationData): unknown {
+    const obj: any = {};
+    if (message.streamPos !== 0) {
+      obj.streamPos = Math.round(message.streamPos);
+    }
+    if (message.streamLength !== 0) {
+      obj.streamLength = Math.round(message.streamLength);
+    }
+    if (message.publicSignalsJson.length !== 0) {
+      obj.publicSignalsJson = base64FromBytes(message.publicSignalsJson);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<OPRFVerificationData>): OPRFVerificationData {
+    return OPRFVerificationData.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<OPRFVerificationData>): OPRFVerificationData {
+    const message = createBaseOPRFVerificationData();
+    message.streamPos = object.streamPos ?? 0;
+    message.streamLength = object.streamLength ?? 0;
+    message.publicSignalsJson = object.publicSignalsJson ?? new Uint8Array(0);
+    return message;
+  },
+};
+
 function createBaseVerificationBundle(): VerificationBundle {
-  return { teekSigned: undefined, teetSigned: undefined };
+  return { teekSigned: undefined, teetSigned: undefined, oprfVerifications: [] };
 }
 
 export const VerificationBundle: MessageFns<VerificationBundle> = {
@@ -1151,6 +1259,9 @@ export const VerificationBundle: MessageFns<VerificationBundle> = {
     }
     if (message.teetSigned !== undefined) {
       SignedMessage.encode(message.teetSigned, writer.uint32(18).fork()).join();
+    }
+    for (const v of message.oprfVerifications) {
+      OPRFVerificationData.encode(v!, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -1178,6 +1289,14 @@ export const VerificationBundle: MessageFns<VerificationBundle> = {
           message.teetSigned = SignedMessage.decode(reader, reader.uint32());
           continue;
         }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.oprfVerifications.push(OPRFVerificationData.decode(reader, reader.uint32()));
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1191,6 +1310,9 @@ export const VerificationBundle: MessageFns<VerificationBundle> = {
     return {
       teekSigned: isSet(object.teekSigned) ? SignedMessage.fromJSON(object.teekSigned) : undefined,
       teetSigned: isSet(object.teetSigned) ? SignedMessage.fromJSON(object.teetSigned) : undefined,
+      oprfVerifications: globalThis.Array.isArray(object?.oprfVerifications)
+        ? object.oprfVerifications.map((e: any) => OPRFVerificationData.fromJSON(e))
+        : [],
     };
   },
 
@@ -1201,6 +1323,9 @@ export const VerificationBundle: MessageFns<VerificationBundle> = {
     }
     if (message.teetSigned !== undefined) {
       obj.teetSigned = SignedMessage.toJSON(message.teetSigned);
+    }
+    if (message.oprfVerifications?.length) {
+      obj.oprfVerifications = message.oprfVerifications.map((e) => OPRFVerificationData.toJSON(e));
     }
     return obj;
   },
@@ -1216,6 +1341,7 @@ export const VerificationBundle: MessageFns<VerificationBundle> = {
     message.teetSigned = (object.teetSigned !== undefined && object.teetSigned !== null)
       ? SignedMessage.fromPartial(object.teetSigned)
       : undefined;
+    message.oprfVerifications = object.oprfVerifications?.map((e) => OPRFVerificationData.fromPartial(e)) || [];
     return message;
   },
 };
