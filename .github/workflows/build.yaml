@@ -6,6 +6,8 @@ on:
     branches:
       # change to main when merging to main
       - main
+      # remove when merged
+      - module
     types: 
       - completed
 
