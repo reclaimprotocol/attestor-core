@@ -60,6 +60,11 @@ describe('HTTP Provider Utils tests', () => {
 		assert.ok(regexp.test(json.slice(val.start, val.end)))
 	})
 
+	it('should parse xpath', () => {
+		const elem
+			= extractHTMLElements(hackerNewsHtml, './html/head/title', true)
+		assert.deepEqual(elem, ['Top Links | Hacker News'])
+	})
 
 	it('should extract complex JSON path', () => {
 		const json = `{
@@ -1427,6 +1432,684 @@ const html = `
   <!-- End Google Analytics -->
   </body></html>
 `
+
+const hackerNewsHtml = `<html>
+
+<head>
+	<meta name=\"referrer\" content=\"origin\">
+	<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+	<link rel=\"stylesheet\" type=\"text/css\" href=\"news.css?m9Xu50rg35igvNprtZlL\">
+	<link rel=\"icon\" href=\"y18.svg\">
+	<title>Top Links | Hacker News</title>
+</head>
+
+<body>
+	<center>
+		<table id=\"hnmain\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"85%\" bgcolor=\"#f6f6ef\">
+			<tr>
+				<td bgcolor=\"#ff6600\">
+					<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"padding:2px\">
+						<tr>
+							<td style=\"width:18px;padding-right:4px\"><a href=\"https://news.ycombinator.com\"><img src=\"y18.svg\"
+										width=\"18\" height=\"18\" style=\"border:1px white solid; display:block\"></a></td>
+							<td style=\"line-height:12pt; height:10px;\"><span class=\"pagetop\"><b class=\"hnname\"><a
+											href=\"news\">Hacker News</a></b><a href=\"newest\">new</a> | <a href=\"front\">past</a> | <a
+										href=\"newcomments\">comments</a> | <a href=\"ask\">ask</a> | <a href=\"show\">show</a> | <a
+										href=\"jobs\">jobs</a> | <a href=\"submit\" rel=\"nofollow\">submit</a> | <font color=\"#FFFFFF\">
+										best</font></span></td>
+							<td style=\"text-align:right;padding-right:4px;\"><span class=\"pagetop\"><a
+										href=\"login?goto=best\">login</a></span></td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+			<tr style='height:10px' />
+			<tr id=\"bigbox\">
+				<td>
+					<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\">
+						<tr class=\"athing submission\" id=\"45087396\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">1.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45087396' href='vote?id=45087396&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://hugotunius.se/2025/08/31/what-every-argument-about-sideloading-gets-wrong.html\">We
+										should have the ability to run any code we want on hardware we own</a><span class=\"sitebit
+										comhead\"> (<a href=\"from?site=hugotunius.se\"><span
+												class=\"sitestr\">hugotunius.se</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45087396\">2026
+										points</span> by <a href=\"user?id=K0nserv\" class=\"hnuser\">K0nserv</a> <span class=\"age\"
+										title=\"2025-08-31T21:46:26 1756676786\"><a href=\"item?id=45087396\">4 days ago</a></span> <span
+										id=\"unv_45087396\"></span> | <a href=\"item?id=45087396\">1191&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45074248\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">2.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45074248' href='vote?id=45074248&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://github.com/zakirullin/cognitive-load\">Cognitive load is what matters</a><span
+										class=\"sitebit comhead\"> (<a href=\"from?site=github.com/zakirullin\"><span
+												class=\"sitestr\">github.com/zakirullin</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45074248\">1542
+										points</span> by <a href=\"user?id=nromiun\" class=\"hnuser\">nromiun</a> <span class=\"age\"
+										title=\"2025-08-30T12:58:48 1756558728\"><a href=\"item?id=45074248\">5 days ago</a></span> <span
+										id=\"unv_45074248\"></span> | <a href=\"item?id=45074248\">520&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45054260\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">3.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45054260' href='vote?id=45054260&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a href=\"item?id=45054260\">Ask HN: The government of my
+										country blocked VPN access. What should I use?</a></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45054260\">1334
+										points</span> by <a href=\"user?id=rickybule\" class=\"hnuser\">rickybule</a> <span class=\"age\"
+										title=\"2025-08-28T16:43:05 1756399385\"><a href=\"item?id=45054260\">7 days ago</a></span> <span
+										id=\"unv_45054260\"></span> | <a href=\"item?id=45054260\">730&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45068091\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">4.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45068091' href='vote?id=45068091&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://www.seangoedecke.com/the-simplest-thing-that-could-possibly-work/\">Do the simplest
+										thing that could possibly work</a><span class=\"sitebit comhead\"> (<a
+											href=\"from?site=seangoedecke.com\"><span
+												class=\"sitestr\">seangoedecke.com</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45068091\">1098
+										points</span> by <a href=\"user?id=dondraper36\" class=\"hnuser\">dondraper36</a> <span
+										class=\"age\" title=\"2025-08-29T19:05:09 1756494309\"><a href=\"item?id=45068091\">6 days
+											ago</a></span> <span id=\"unv_45068091\"></span> | <a
+										href=\"item?id=45068091\">385&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45099922\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">5.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45099922' href='vote?id=45099922&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a href=\"https://blog.meca.sh/3lxoty3shjc2z\">Next.js is
+										infuriating</a><span class=\"sitebit comhead\"> (<a href=\"from?site=meca.sh\"><span
+												class=\"sitestr\">meca.sh</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45099922\">994
+										points</span> by <a href=\"user?id=Bogdanp\" class=\"hnuser\">Bogdanp</a> <span class=\"age\"
+										title=\"2025-09-02T06:57:41 1756796261\"><a href=\"item?id=45099922\">3 days ago</a></span> <span
+										id=\"unv_45099922\"></span> | <a href=\"item?id=45099922\">571&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45124003\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">6.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45124003' href='vote?id=45124003&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a href=\"https://pudding.cool/2025/06/hello-stranger/\">30
+										minutes with a stranger</a><span class=\"sitebit comhead\"> (<a
+											href=\"from?site=pudding.cool\"><span class=\"sitestr\">pudding.cool</span></a>)</span></span>
+							</td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45124003\">973
+										points</span> by <a href=\"user?id=MaxLeiter\" class=\"hnuser\">MaxLeiter</a> <span class=\"age\"
+										title=\"2025-09-04T05:56:29 1756965389\"><a href=\"item?id=45124003\">1 day ago</a></span> <span
+										id=\"unv_45124003\"></span> | <a href=\"item?id=45124003\">355&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45055205\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">7.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45055205' href='vote?id=45055205&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://www.bowerbyte.com/posts/blocky-planet/\">Making Minecraft Spherical</a><span
+										class=\"sitebit comhead\"> (<a href=\"from?site=bowerbyte.com\"><span
+												class=\"sitestr\">bowerbyte.com</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45055205\">896
+										points</span> by <a href=\"user?id=iamwil\" class=\"hnuser\">iamwil</a> <span class=\"age\"
+										title=\"2025-08-28T18:12:34 1756404754\"><a href=\"item?id=45055205\">3 days ago</a></span> <span
+										id=\"unv_45055205\"></span> | <a href=\"item?id=45055205\">123&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45108548\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">8.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45108548' href='vote?id=45108548&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://www.cnbc.com/2025/09/02/google-antitrust-search-ruling.html\">Google can keep its
+										Chrome browser but will be barred from exclusive contracts</a><span class=\"sitebit comhead\"> (<a
+											href=\"from?site=cnbc.com\"><span class=\"sitestr\">cnbc.com</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45108548\">854
+										points</span> by <a href=\"user?id=colesantiago\" class=\"hnuser\">colesantiago</a> <span
+										class=\"age\" title=\"2025-09-02T20:26:47 1756844807\"><a href=\"item?id=45108548\">2 days
+											ago</a></span> <span id=\"unv_45108548\"></span> | <a
+										href=\"item?id=45108548\">622&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45082731\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">9.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45082731' href='vote?id=45082731&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://history.stackexchange.com/questions/79371/this-telegram-must-be-closely-paraphrased-before-being-communicated-to-anyone\">âThis
+										telegram must be closely paraphrased before being communicated to anyoneâ</a><span class=\"sitebit
+										comhead\"> (<a href=\"from?site=history.stackexchange.com\"><span
+												class=\"sitestr\">history.stackexchange.com</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45082731\">765
+										points</span> by <a href=\"user?id=azeemba\" class=\"hnuser\">azeemba</a> <span class=\"age\"
+										title=\"2025-08-31T12:39:47 1756643987\"><a href=\"item?id=45082731\">4 days ago</a></span> <span
+										id=\"unv_45082731\"></span> | <a href=\"item?id=45082731\">134&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45062683\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">10.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45062683' href='vote?id=45062683&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://www.anthropic.com/news/updates-to-our-consumer-terms\">Updates to Consumer Terms and
+										Privacy Policy</a><span class=\"sitebit comhead\"> (<a href=\"from?site=anthropic.com\"><span
+												class=\"sitestr\">anthropic.com</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45062683\">756
+										points</span> by <a href=\"user?id=porridgeraisin\" class=\"hnuser\">porridgeraisin</a> <span
+										class=\"age\" title=\"2025-08-29T11:29:10 1756466950\"><a href=\"item?id=45062683\">6 days
+											ago</a></span> <span id=\"unv_45062683\"></span> | <a
+										href=\"item?id=45062683\">529&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45126503\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">11.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45126503' href='vote?id=45126503&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://www.henrikkarlsson.xyz/p/attention\">Almost anything you give sustained attention to
+										will begin to loop on itself</a><span class=\"sitebit comhead\"> (<a
+											href=\"from?site=henrikkarlsson.xyz\"><span
+												class=\"sitestr\">henrikkarlsson.xyz</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45126503\">707
+										points</span> by <a href=\"user?id=jger15\" class=\"hnuser\">jger15</a> <span class=\"age\"
+										title=\"2025-09-04T12:29:49 1756988989\"><a href=\"item?id=45126503\">22 hours ago</a></span> <span
+										id=\"unv_45126503\"></span> | <a href=\"item?id=45126503\">195&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45120517\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">12.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45120517' href='vote?id=45120517&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://mikelovesrobots.substack.com/p/wheres-the-shovelware-why-ai-coding\">Where&#x27;s the
+										shovelware? Why AI coding claims don&#x27;t add up</a><span class=\"sitebit comhead\"> (<a
+											href=\"from?site=mikelovesrobots.substack.com\"><span
+												class=\"sitestr\">mikelovesrobots.substack.com</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45120517\">698
+										points</span> by <a href=\"user?id=dbalatero\" class=\"hnuser\">dbalatero</a> <span class=\"age\"
+										title=\"2025-09-03T21:18:29 1756934309\"><a href=\"item?id=45120517\">1 day ago</a></span> <span
+										id=\"unv_45120517\"></span> | <a href=\"item?id=45120517\">453&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45092925\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">13.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45092925' href='vote?id=45092925&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://bsky.app/profile/bennjordan.bsky.social/post/3lxojrbessk2z\">Google AI Overview made
+										up an elaborate story about me</a><span class=\"sitebit comhead\"> (<a
+											href=\"from?site=bsky.app\"><span class=\"sitestr\">bsky.app</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45092925\">689
+										points</span> by <a href=\"user?id=jsheard\" class=\"hnuser\">jsheard</a> <span class=\"age\"
+										title=\"2025-09-01T14:27:17 1756736837\"><a href=\"item?id=45092925\">3 days ago</a></span> <span
+										id=\"unv_45092925\"></span> | <a href=\"item?id=45092925\">278&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45116688\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">14.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45116688' href='vote?id=45116688&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a href=\"https://zed.dev/blog/claude-code-via-acp\">Claude
+										Code: Now in Beta in Zed</a><span class=\"sitebit comhead\"> (<a href=\"from?site=zed.dev\"><span
+												class=\"sitestr\">zed.dev</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45116688\">668
+										points</span> by <a href=\"user?id=meetpateltech\" class=\"hnuser\">meetpateltech</a> <span
+										class=\"age\" title=\"2025-09-03T15:07:20 1756912040\"><a href=\"item?id=45116688\">1 day
+											ago</a></span> <span id=\"unv_45116688\"></span> | <a
+										href=\"item?id=45116688\">403&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45062614\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">15.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45062614' href='vote?id=45062614&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://www.washingtonpost.com/technology/2025/08/29/tesla-autopilot-crashes-evidence-testimony-wrongful-death/\">Tesla
+										said it didn&#x27;t have key data in a fatal crash, then a hacker found it</a><span class=\"sitebit
+										comhead\"> (<a href=\"from?site=washingtonpost.com\"><span
+												class=\"sitestr\">washingtonpost.com</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45062614\">668
+										points</span> by <a href=\"user?id=clcaev\" class=\"hnuser\">clcaev</a> <span class=\"age\"
+										title=\"2025-08-29T11:15:39 1756466139\"><a href=\"item?id=45062614\">6 days ago</a></span> <span
+										id=\"unv_45062614\"></span> | <a href=\"item?id=45062614\">366&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45129085\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">16.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45129085' href='vote?id=45129085&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a href=\"https://tempo.xyz\">Stripe Launches L1 Blockchain:
+										Tempo</a><span class=\"sitebit comhead\"> (<a href=\"from?site=tempo.xyz\"><span
+												class=\"sitestr\">tempo.xyz</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45129085\">667
+										points</span> by <a href=\"user?id=_nvs\" class=\"hnuser\">_nvs</a> <span class=\"age\"
+										title=\"2025-09-04T16:32:24 1757003544\"><a href=\"item?id=45129085\">18 hours ago</a></span> <span
+										id=\"unv_45129085\"></span> | <a href=\"item?id=45129085\">812&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45086020\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">17.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45086020' href='vote?id=45086020&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a href=\"https://yoavg.github.io/eternal/\">Eternal
+										Struggle</a><span class=\"sitebit comhead\"> (<a href=\"from?site=yoavg.github.io\"><span
+												class=\"sitestr\">yoavg.github.io</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45086020\">667
+										points</span> by <a href=\"user?id=yurivish\" class=\"hnuser\">yurivish</a> <span class=\"age\"
+										title=\"2025-08-31T19:04:03 1756667043\"><a href=\"item?id=45086020\">4 days ago</a></span> <span
+										id=\"unv_45086020\"></span> | <a href=\"item?id=45086020\">136&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45083134\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">18.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45083134' href='vote?id=45083134&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://borretti.me/article/notes-on-managing-adhd\">Notes on Managing ADHD</a><span
+										class=\"sitebit comhead\"> (<a href=\"from?site=borretti.me\"><span
+												class=\"sitestr\">borretti.me</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45083134\">600
+										points</span> by <a href=\"user?id=amrrs\" class=\"hnuser\">amrrs</a> <span class=\"age\"
+										title=\"2025-08-31T13:49:01 1756648141\"><a href=\"item?id=45083134\">4 days ago</a></span> <span
+										id=\"unv_45083134\"></span> | <a href=\"item?id=45083134\">321&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45104907\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">19.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45104907' href='vote?id=45104907&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://www.anthropic.com/news/anthropic-raises-series-f-at-usd183b-post-money-valuation\">Anthropic
+										raises $13B Series F</a><span class=\"sitebit comhead\"> (<a href=\"from?site=anthropic.com\"><span
+												class=\"sitestr\">anthropic.com</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45104907\">581
+										points</span> by <a href=\"user?id=meetpateltech\" class=\"hnuser\">meetpateltech</a> <span
+										class=\"age\" title=\"2025-09-02T16:04:15 1756829055\"><a href=\"item?id=45104907\">2 days
+											ago</a></span> <span id=\"unv_45104907\"></span> | <a
+										href=\"item?id=45104907\">630&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45114753\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">20.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45114753' href='vote?id=45114753&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://publichealthpolicyjournal.com/mit-study-finds-artificial-intelligence-use-reprograms-the-brain-leading-to-cognitive-decline/\">MIT
+										Study Finds AI Use Reprograms the Brain, Leading to Cognitive Decline</a><span class=\"sitebit
+										comhead\"> (<a href=\"from?site=publichealthpolicyjournal.com\"><span
+												class=\"sitestr\">publichealthpolicyjournal.com</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45114753\">578
+										points</span> by <a href=\"user?id=cainxinth\" class=\"hnuser\">cainxinth</a> <span class=\"age\"
+										title=\"2025-09-03T12:06:19 1756901179\"><a href=\"item?id=45114753\">1 day ago</a></span> <span
+										id=\"unv_45114753\"></span> | <a href=\"item?id=45114753\">562&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45082750\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">21.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45082750' href='vote?id=45082750&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://www.youtube.com/watch?v=QBEKlIV_70E\">Google: &#x27;Your $1000 phone needs our
+										permission to install apps now&#x27; [video]</a><span class=\"sitebit comhead\"> (<a
+											href=\"from?site=youtube.com\"><span class=\"sitestr\">youtube.com</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45082750\">551
+										points</span> by <a href=\"user?id=robtherobber\" class=\"hnuser\">robtherobber</a> <span
+										class=\"age\" title=\"2025-08-31T12:44:26 1756644266\"><a href=\"item?id=45082750\">4 days
+											ago</a></span> <span id=\"unv_45082750\"></span> | <a
+										href=\"item?id=45082750\">569&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45092490\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">22.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45092490' href='vote?id=45092490&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a href=\"https://herman.bearblog.dev/license/\">Bear is now
+										source-available</a><span class=\"sitebit comhead\"> (<a
+											href=\"from?site=herman.bearblog.dev\"><span
+												class=\"sitestr\">herman.bearblog.dev</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45092490\">538
+										points</span> by <a href=\"user?id=neoromantique\" class=\"hnuser\">neoromantique</a> <span
+										class=\"age\" title=\"2025-09-01T13:17:56 1756732676\"><a href=\"item?id=45092490\">3 days
+											ago</a></span> <span id=\"unv_45092490\"></span> | <a
+										href=\"item?id=45092490\">476&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45106011\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">23.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45106011' href='vote?id=45106011&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://www.thenexus.media/your-phone-already-has-social-credit-we-just-lie-about-it/\">We
+										already live in social credit, we just don&#x27;t call it that</a><span class=\"sitebit comhead\">
+										(<a href=\"from?site=thenexus.media\"><span
+												class=\"sitestr\">thenexus.media</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45106011\">535
+										points</span> by <a href=\"user?id=natalie3p\" class=\"hnuser\">natalie3p</a> <span class=\"age\"
+										title=\"2025-09-02T17:14:51 1756833291\"><a href=\"item?id=45106011\">2 days ago</a></span> <span
+										id=\"unv_45106011\"></span> | <a href=\"item?id=45106011\">659&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45062910\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">24.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45062910' href='vote?id=45062910&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://www.zdnet.com/article/meta-might-be-secretly-scanning-your-phones-camera-roll-how-to-check-and-turn-it-off/\">Some
+										users have noticed settings that let Meta analyze and retain phone photos</a><span class=\"sitebit
+										comhead\"> (<a href=\"from?site=zdnet.com\"><span
+												class=\"sitestr\">zdnet.com</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45062910\">534
+										points</span> by <a href=\"user?id=mdhb\" class=\"hnuser\">mdhb</a> <span class=\"age\"
+										title=\"2025-08-29T12:01:31 1756468891\"><a href=\"item?id=45062910\">6 days ago</a></span> <span
+										id=\"unv_45062910\"></span> | <a href=\"item?id=45062910\">245&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45107962\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">25.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45107962' href='vote?id=45107962&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://www.sanity.io/blog/first-attempt-will-be-95-garbage\">A staff engineer&#x27;s journey
+										with Claude Code</a><span class=\"sitebit comhead\"> (<a href=\"from?site=sanity.io\"><span
+												class=\"sitestr\">sanity.io</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45107962\">532
+										points</span> by <a href=\"user?id=kmelve\" class=\"hnuser\">kmelve</a> <span class=\"age\"
+										title=\"2025-09-02T19:34:24 1756841664\"><a href=\"item?id=45107962\">2 days ago</a></span> <span
+										id=\"unv_45107962\"></span> | <a href=\"item?id=45107962\">393&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45066395\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">26.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45066395' href='vote?id=45066395&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://twitter.com/ID_AA_Carmack/status/1961172409920491849\">John Carmack&#x27;s arguments
+										against building a custom XR OS at Meta</a><span class=\"sitebit comhead\"> (<a
+											href=\"from?site=twitter.com/id_aa_carmack\"><span
+												class=\"sitestr\">twitter.com/id_aa_carmack</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45066395\">526
+										points</span> by <a href=\"user?id=OlympicMarmoto\" class=\"hnuser\">OlympicMarmoto</a> <span
+										class=\"age\" title=\"2025-08-29T16:45:21 1756485921\"><a href=\"item?id=45066395\">6 days
+											ago</a></span> <span id=\"unv_45066395\"></span> | <a
+										href=\"item?id=45066395\">637&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45050415\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">27.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45050415' href='vote?id=45050415&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://martinalderson.com/posts/are-openai-and-anthropic-really-losing-money-on-inference/\">Are
+										OpenAI and Anthropic losing money on inference?</a><span class=\"sitebit comhead\"> (<a
+											href=\"from?site=martinalderson.com\"><span
+												class=\"sitestr\">martinalderson.com</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45050415\">513
+										points</span> by <a href=\"user?id=martinald\" class=\"hnuser\">martinald</a> <span class=\"age\"
+										title=\"2025-08-28T10:15:22 1756376122\"><a href=\"item?id=45050415\">8 days ago</a></span> <span
+										id=\"unv_45050415\"></span> | <a href=\"item?id=45050415\">478&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45063559\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">28.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45063559' href='vote?id=45063559&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a href=\"https://x.ai/news/grok-code-fast-1\">Grok Code
+										Fast 1</a><span class=\"sitebit comhead\"> (<a href=\"from?site=x.ai\"><span
+												class=\"sitestr\">x.ai</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45063559\">510
+										points</span> by <a href=\"user?id=Terretta\" class=\"hnuser\">Terretta</a> <span class=\"age\"
+										title=\"2025-08-29T13:01:45 1756472505\"><a href=\"item?id=45063559\">6 days ago</a></span> <span
+										id=\"unv_45063559\"></span> | <a href=\"item?id=45063559\">482&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45095460\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">29.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45095460' href='vote?id=45095460&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://www.4rknova.com/blog/2025/08/30/foil-sticker\">Implementing a Foil Sticker
+										Effect</a><span class=\"sitebit comhead\"> (<a href=\"from?site=4rknova.com\"><span
+												class=\"sitestr\">4rknova.com</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45095460\">507
+										points</span> by <a href=\"user?id=ibobev\" class=\"hnuser\">ibobev</a> <span class=\"age\"
+										title=\"2025-09-01T18:47:21 1756752441\"><a href=\"item?id=45095460\">3 days ago</a></span> <span
+										id=\"unv_45095460\"></span> | <a href=\"item?id=45095460\">50&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"athing submission\" id=\"45062046\">
+							<td align=\"right\" valign=\"top\" class=\"title\"><span class=\"rank\">30.</span></td>
+							<td valign=\"top\" class=\"votelinks\">
+								<center><a id='up_45062046' href='vote?id=45062046&amp;how=up&amp;goto=best'>
+										<div class='votearrow' title='upvote'></div>
+									</a></center>
+							</td>
+							<td class=\"title\"><span class=\"titleline\"><a
+										href=\"https://simonwillison.net/2025/Aug/29/lossy-encyclopedia/\">An LLM is a lossy
+										encyclopedia</a><span class=\"sitebit comhead\"> (<a href=\"from?site=simonwillison.net\"><span
+												class=\"sitestr\">simonwillison.net</span></a>)</span></span></td>
+						</tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class=\"subtext\"><span class=\"subline\"><span class=\"score\" id=\"score_45062046\">505
+										points</span> by <a href=\"user?id=tosh\" class=\"hnuser\">tosh</a> <span class=\"age\"
+										title=\"2025-08-29T09:40:19 1756460419\"><a href=\"item?id=45062046\">3 days ago</a></span> <span
+										id=\"unv_45062046\"></span> | <a href=\"item?id=45062046\">332&nbsp;comments</a></span></td>
+						</tr>
+						<tr class=\"spacer\" style=\"height:5px\"></tr>
+						<tr class=\"morespace\" style=\"height:10px\"></tr>
+						<tr>
+							<td colspan=\"2\"></td>
+							<td class='title'><a href='best?p=2' class='morelink' rel='next'>More</a></td>
+						</tr>
+					</table>
+				</td>
+			</tr>
+			<tr>
+				<td><img src=\"s.gif\" height=\"10\" width=\"0\">
+					<table width=\"100%\" cellspacing=\"0\" cellpadding=\"1\">
+						<tr>
+							<td bgcolor=\"#ff6600\"></td>
+						</tr>
+					</table><br>\n<center><span class=\"yclinks\"><a href=\"newsguidelines.html\">Guidelines</a> | <a
+								href=\"newsfaq.html\">FAQ</a> | <a href=\"lists\">Lists</a> | <a
+								href=\"https://github.com/HackerNews/API\">API</a> | <a href=\"security.html\">Security</a> | <a
+								href=\"https://www.ycombinator.com/legal/\">Legal</a> | <a
+								href=\"https://www.ycombinator.com/apply/\">Apply to YC</a> | <a
+								href=\"mailto:hn@ycombinator.com\">Contact</a></span><br><br>\n<form method=\"get\"
+							action=\"//hn.algolia.com/\">Search: <input type=\"text\" name=\"q\" size=\"17\" autocorrect=\"off\"
+								spellcheck=\"false\" autocapitalize=\"off\" autocomplete=\"off\"></form>
+					</center>
+				</td>
+			</tr>
+		</table>
+	</center>
+</body>
+<script type=\"text/javascript\" src=\"hn.js?m9Xu50rg35igvNprtZlL\"></script>
+
+</html>`
 
 const chunkedResp = Buffer.from(`SFRUUC8xLjEgMjAwIE9LDQpEYXRlOiBNb24sIDA0IFNlcCAyMDIzIDE1OjQ0OjMzIEdNVA0KQ29u
 dGVudC1UeXBlOiB0ZXh0L2h0bWw7IGNoYXJzZXQ9dXRmLTgNClRyYW5zZmVyLUVuY29kaW5nOiBj

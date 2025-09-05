@@ -103,14 +103,14 @@ function extractHTMLElementIndexesParse5(
 		html,
 		{ treeAdapter: htmlAdapter, sourceCodeLocationInfo: true }
 	)
-	const rootNode = domLight.childNodes
-		.find(c => 'name' in c && c.name === 'html')
-		|| domLight.childNodes[0]
-		|| domLight
+	// lets xpath identify this as a node
+	domLight['name'] = 'root'
 
 	const parsedPath = xpath.parse(xpathExpression)
-	const nodes = parsedPath
-		.select({ node: rootNode, allowAnyNamespaceForNoPrefix: true })
+	const nodes = parsedPath.select({
+		node: domLight,
+		allowAnyNamespaceForNoPrefix: true,
+	})
 	if(!nodes.length) {
 		throw new Error(`Failed to find XPath: "${xpathExpression}"`)
 	}

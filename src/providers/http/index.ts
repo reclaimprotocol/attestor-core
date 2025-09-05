@@ -203,6 +203,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		const body = uint8ArrayToBinaryStr(res.body)
+
 		const redactions: RedactedOrHashedArraySlice[] = []
 		for(const rs of params.responseRedactions || []) {
 			const processor = processRedactionRequest(
@@ -285,7 +286,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const serverBlocks = receipt
 			.filter(s => s.sender === 'server')
 			.map((r) => r.message)
-			.filter(b => !b.every(b => b === REDACTION_CHAR_CODE)) // filter out fully redacted blocks
+			// filter out fully redacted blocks
+			.filter(b => !b.every(b => b === REDACTION_CHAR_CODE))
 		const response = concatArrays(...serverBlocks)
 
 		let res: string
