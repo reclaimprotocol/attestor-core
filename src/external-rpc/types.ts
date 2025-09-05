@@ -261,7 +261,7 @@ export type ExternalRPCOutgoingMsg = (
 		{
 			type: 'createClaimStep'
 			step: {
-				name: 'attestor-progress' | 'witness-progress'
+				name: 'witness-progress'
 				step: ProofGenerationStep
 			}
 		}

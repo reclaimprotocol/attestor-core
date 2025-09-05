@@ -100,10 +100,10 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 				sendMessageToApp({
 					type: 'createClaimStep',
 					step: {
-						name: 'attestor-progress',
+						name: 'witness-progress',
 						step,
 					},
-					id: generateRpcRequestId(),
+					id: req.id,
 				})
 			},
 			updateProviderParams : req.request.updateProviderParams
