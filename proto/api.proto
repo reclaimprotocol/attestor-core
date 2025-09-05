@@ -23,6 +23,7 @@ enum AttestorVersion {
 	ATTESTOR_VERSION_1_1_0 = 2;
 	ATTESTOR_VERSION_2_0_0 = 3;
 	ATTESTOR_VERSION_2_0_1 = 4;
+	ATTESTOR_VERSION_3_0_0 = 5;
 }
 
 enum ErrorCode {
@@ -189,14 +190,10 @@ message MessageReveal {
 
 	message MessageRevealZk {
 		repeated ZKProof proofs = 1;
+		repeated TOPRFProof toprfs = 2;
 	}
 
 	message ZKProof {
-		/**
-		 * JSON encoded snarkJS proof
-		 * @deprecated -- use `proofData` instead
-		 */
-		string proofJson = 1;
 		/** the decrypted ciphertext as output by the ZK proof */
 		bytes decryptedRedactedCiphertext = 2;
 		/** the plaintext that is fully or partially revealed */
@@ -208,12 +205,20 @@ message MessageReveal {
 		uint32 startIdx = 4;
 
 		bytes proofData = 5;
+	}
 
+	message TOPRFProof {
+		/**
+		* start of this specific block
+		* in the redactedPlaintext
+		*/
+		uint32 startIdx = 1;
+		bytes proofData = 2;
 		/**
 		 * If this block's proof contains an OPRF'd piece of data,
 		 * then provide the OPRF data here
 		 */
-		TOPRFPayload toprf = 6;
+		TOPRFPayload payload = 3;
 	}
 }
 

@@ -206,9 +206,10 @@ describeWithServer('Claim Creation', opts => {
 				// only the user's hash should be revealed
 				assert.doesNotMatch(serverPackets, new RegExp(user))
 
+				const { payload: { dataLocation, nullifier } = {} } = toprf
 				assert.match(
 					serverPackets,
-					new RegExp(binaryHashToStr(toprf.nullifier, toprf.dataLocation!.length))
+					new RegExp(binaryHashToStr(nullifier!, dataLocation!.length))
 				)
 			})
 		}
@@ -267,7 +268,11 @@ describeWithServer('Claim Creation', opts => {
 
 			assert.match(
 				serverPackets,
-				new RegExp(binaryHashToStr(toprf.nullifier, toprf.dataLocation!.length))
+				new RegExp(
+					binaryHashToStr(
+						toprf.payload!.nullifier, toprf.payload!.dataLocation!.length
+					)
+				)
 			)
 		})
 
@@ -303,7 +308,7 @@ describeWithServer('Claim Creation', opts => {
 					zkEngine,
 				})
 
-				const toprf = getFirstTOprfBlock(result.request!)
+				const toprf = getFirstTOprfBlock(result.request!)?.payload
 				assert.ok(toprf)
 				hash ||= toprf.nullifier
 

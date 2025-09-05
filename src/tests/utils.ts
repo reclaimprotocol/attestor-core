@@ -76,10 +76,8 @@ export async function waitForMockCall<T extends Function>(
  */
 export function getFirstTOprfBlock({ transcript }: ClaimTunnelRequest) {
 	for(const { reveal } of transcript) {
-		for(const proof of reveal?.zkReveal?.proofs || []) {
-			if(proof.toprf)	{
-				return proof.toprf
-			}
+		for(const proof of reveal?.zkReveal?.toprfs || []) {
+			return proof
 		}
 	}
 }

@@ -421,3 +421,9 @@ export function ethersStructToPlainObject<T>(struct: T): T {
 
 	return obj
 }
+
+export function isTls13Suite(suite: CipherSuite) {
+	return suite === 'TLS_AES_128_GCM_SHA256'
+		|| suite === 'TLS_AES_256_GCM_SHA384'
+		|| suite === 'TLS_CHACHA20_POLY1305_SHA256'
+}

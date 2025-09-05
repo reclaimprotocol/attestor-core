@@ -12,6 +12,7 @@ import { toprf } from '#src/server/handlers/toprf.ts'
 import type { CompleteTLSPacket, MessageRevealInfo, RedactedOrHashedArraySlice, TOPRFProofParams } from '#src/types/index.ts'
 import {
 	getBlocksToReveal,
+	isTls13Suite,
 	logger,
 	makeDefaultOPRFOperator,
 	makeZkProofGenerator,
@@ -228,9 +229,7 @@ describe('OPRF Slicing Tests', () => {
 					recordNumber: 1234,
 					recordHeaderOpts: { type: 'WRAPPED_RECORD' },
 					cipherSuite,
-					version: cipherSuite.includes('ECDHE_')
-						? 'TLS1_2'
-						: 'TLS1_3',
+					version: isTls13Suite(cipherSuite) ? 'TLS1_3' : 'TLS1_2',
 				}
 			)
 
@@ -245,9 +244,8 @@ describe('OPRF Slicing Tests', () => {
 				data: ciphertext
 			}
 
-			const blocksToReveal = await getBlocksToReveal(
-				[packet], () => redactions, performOprf
-			)
+			const blocksToReveal
+				= await getBlocksToReveal([packet], () => redactions, performOprf)
 			assert(blocksToReveal !== 'all')
 			assert.equal(blocksToReveal.length, 1)
 			assert.ok(blocksToReveal[0].toprfs)
@@ -269,16 +267,17 @@ describe('OPRF Slicing Tests', () => {
 				}
 			)
 
-			const proofs = revealedMessages[0].reveal?.zkReveal?.proofs
-			assert.ok(proofs?.length)
+			const zkReveal = revealedMessages[0].reveal?.zkReveal
+			assert.ok(zkReveal?.proofs?.length)
+			assert.ok(zkReveal?.toprfs?.length)
 
 			const x = await verifyZkPacket(
 				{
 					ciphertext,
-					zkReveal: { proofs },
+					zkReveal,
 					logger,
 					cipherSuite,
-					zkEngine: zkEngine,
+					zkEngine,
 					recordNumber: 1234,
 					iv: fixedIv,
 					getNextPacket() {
@@ -287,7 +286,10 @@ describe('OPRF Slicing Tests', () => {
 				},
 			)
 
-			assert.deepEqual(x.redactedPlaintext, blocksToReveal[0].redactedPlaintext)
+			assert.deepEqual(
+				uint8ArrayToStr(x.redactedPlaintext),
+				uint8ArrayToStr(blocksToReveal[0].redactedPlaintext)
+			)
 
 			console.log(`done: ${i + 1}/${vectors.length}`)
 		}
@@ -432,7 +434,7 @@ for(const { cipherSuite, zkEngine } of ZK_TEST_MATRIX) {
 				const x = await verifyZkPacket(
 					{
 						ciphertext,
-						zkReveal: { proofs: proofs! },
+						zkReveal: { proofs: proofs!, toprfs: [] },
 						logger,
 						cipherSuite,
 						zkEngine: zkEngine,

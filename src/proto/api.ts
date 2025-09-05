@@ -112,6 +112,7 @@ export const AttestorVersion = {
   ATTESTOR_VERSION_1_1_0: 2,
   ATTESTOR_VERSION_2_0_0: 3,
   ATTESTOR_VERSION_2_0_1: 4,
+  ATTESTOR_VERSION_3_0_0: 5,
   UNRECOGNIZED: -1,
 } as const;
 
@@ -123,6 +124,7 @@ export namespace AttestorVersion {
   export type ATTESTOR_VERSION_1_1_0 = typeof AttestorVersion.ATTESTOR_VERSION_1_1_0;
   export type ATTESTOR_VERSION_2_0_0 = typeof AttestorVersion.ATTESTOR_VERSION_2_0_0;
   export type ATTESTOR_VERSION_2_0_1 = typeof AttestorVersion.ATTESTOR_VERSION_2_0_1;
+  export type ATTESTOR_VERSION_3_0_0 = typeof AttestorVersion.ATTESTOR_VERSION_3_0_0;
   export type UNRECOGNIZED = typeof AttestorVersion.UNRECOGNIZED;
 }
 
@@ -143,6 +145,9 @@ export function attestorVersionFromJSON(object: any): AttestorVersion {
     case 4:
     case "ATTESTOR_VERSION_2_0_1":
       return AttestorVersion.ATTESTOR_VERSION_2_0_1;
+    case 5:
+    case "ATTESTOR_VERSION_3_0_0":
+      return AttestorVersion.ATTESTOR_VERSION_3_0_0;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -162,6 +167,8 @@ export function attestorVersionToJSON(object: AttestorVersion): string {
       return "ATTESTOR_VERSION_2_0_0";
     case AttestorVersion.ATTESTOR_VERSION_2_0_1:
       return "ATTESTOR_VERSION_2_0_1";
+    case AttestorVersion.ATTESTOR_VERSION_3_0_0:
+      return "ATTESTOR_VERSION_3_0_0";
     case AttestorVersion.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";
@@ -472,14 +479,10 @@ export interface MessageReveal_MessageRevealDirect {
 
 export interface MessageReveal_MessageRevealZk {
   proofs: MessageReveal_ZKProof[];
+  toprfs: MessageReveal_TOPRFProof[];
 }
 
 export interface MessageReveal_ZKProof {
-  /**
-   * JSON encoded snarkJS proof
-   * @deprecated -- use `proofData` instead
-   */
-  proofJson: string;
   /** the decrypted ciphertext as output by the ZK proof */
   decryptedRedactedCiphertext: Uint8Array;
   /** the plaintext that is fully or partially revealed */
@@ -490,11 +493,20 @@ export interface MessageReveal_ZKProof {
    */
   startIdx: number;
   proofData: Uint8Array;
+}
+
+export interface MessageReveal_TOPRFProof {
+  /**
+   * start of this specific block
+   * in the redactedPlaintext
+   */
+  startIdx: number;
+  proofData: Uint8Array;
   /**
    * If this block's proof contains an OPRF'd piece of data,
    * then provide the OPRF data here
    */
-  toprf: TOPRFPayload | undefined;
+  payload: TOPRFPayload | undefined;
 }
 
 export interface TOPRFPayload {
@@ -1843,13 +1855,16 @@ export const MessageReveal_MessageRevealDirect: MessageFns<MessageReveal_Message
 };
 
 function createBaseMessageReveal_MessageRevealZk(): MessageReveal_MessageRevealZk {
-  return { proofs: [] };
+  return { proofs: [], toprfs: [] };
 }
 
 export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageRevealZk> = {
   encode(message: MessageReveal_MessageRevealZk, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
     for (const v of message.proofs) {
       MessageReveal_ZKProof.encode(v!, writer.uint32(10).fork()).join();
+    }
+    for (const v of message.toprfs) {
+      MessageReveal_TOPRFProof.encode(v!, writer.uint32(18).fork()).join();
     }
     return writer;
   },
@@ -1869,6 +1884,14 @@ export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageReve
           message.proofs.push(MessageReveal_ZKProof.decode(reader, reader.uint32()));
           continue;
         }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.toprfs.push(MessageReveal_TOPRFProof.decode(reader, reader.uint32()));
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1883,6 +1906,9 @@ export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageReve
       proofs: globalThis.Array.isArray(object?.proofs)
         ? object.proofs.map((e: any) => MessageReveal_ZKProof.fromJSON(e))
         : [],
+      toprfs: globalThis.Array.isArray(object?.toprfs)
+        ? object.toprfs.map((e: any) => MessageReveal_TOPRFProof.fromJSON(e))
+        : [],
     };
   },
 
@@ -1890,6 +1916,9 @@ export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageReve
     const obj: any = {};
     if (message.proofs?.length) {
       obj.proofs = message.proofs.map((e) => MessageReveal_ZKProof.toJSON(e));
+    }
+    if (message.toprfs?.length) {
+      obj.toprfs = message.toprfs.map((e) => MessageReveal_TOPRFProof.toJSON(e));
     }
     return obj;
   },
@@ -1900,26 +1929,22 @@ export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageReve
   fromPartial(object: DeepPartial<MessageReveal_MessageRevealZk>): MessageReveal_MessageRevealZk {
     const message = createBaseMessageReveal_MessageRevealZk();
     message.proofs = object.proofs?.map((e) => MessageReveal_ZKProof.fromPartial(e)) || [];
+    message.toprfs = object.toprfs?.map((e) => MessageReveal_TOPRFProof.fromPartial(e)) || [];
     return message;
   },
 };
 
 function createBaseMessageReveal_ZKProof(): MessageReveal_ZKProof {
   return {
-    proofJson: "",
     decryptedRedactedCiphertext: new Uint8Array(0),
     redactedPlaintext: new Uint8Array(0),
     startIdx: 0,
     proofData: new Uint8Array(0),
-    toprf: undefined,
   };
 }
 
 export const MessageReveal_ZKProof: MessageFns<MessageReveal_ZKProof> = {
   encode(message: MessageReveal_ZKProof, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
-    if (message.proofJson !== "") {
-      writer.uint32(10).string(message.proofJson);
-    }
     if (message.decryptedRedactedCiphertext.length !== 0) {
       writer.uint32(18).bytes(message.decryptedRedactedCiphertext);
     }
@@ -1932,9 +1957,6 @@ export const MessageReveal_ZKProof: MessageFns<MessageReveal_ZKProof> = {
     if (message.proofData.length !== 0) {
       writer.uint32(42).bytes(message.proofData);
     }
-    if (message.toprf !== undefined) {
-      TOPRFPayload.encode(message.toprf, writer.uint32(50).fork()).join();
-    }
     return writer;
   },
 
@@ -1945,14 +1967,6 @@ export const MessageReveal_ZKProof: MessageFns<MessageReveal_ZKProof> = {
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
-        case 1: {
-          if (tag !== 10) {
-            break;
-          }
-
-          message.proofJson = reader.string();
-          continue;
-        }
         case 2: {
           if (tag !== 18) {
             break;
@@ -1985,14 +1999,6 @@ export const MessageReveal_ZKProof: MessageFns<MessageReveal_ZKProof> = {
           message.proofData = reader.bytes();
           continue;
         }
-        case 6: {
-          if (tag !== 50) {
-            break;
-          }
-
-          message.toprf = TOPRFPayload.decode(reader, reader.uint32());
-          continue;
-        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2004,7 +2010,6 @@ export const MessageReveal_ZKProof: MessageFns<MessageReveal_ZKProof> = {
 
   fromJSON(object: any): MessageReveal_ZKProof {
     return {
-      proofJson: isSet(object.proofJson) ? globalThis.String(object.proofJson) : "",
       decryptedRedactedCiphertext: isSet(object.decryptedRedactedCiphertext)
         ? bytesFromBase64(object.decryptedRedactedCiphertext)
         : new Uint8Array(0),
@@ -2013,15 +2018,11 @@ export const MessageReveal_ZKProof: MessageFns<MessageReveal_ZKProof> = {
         : new Uint8Array(0),
       startIdx: isSet(object.startIdx) ? globalThis.Number(object.startIdx) : 0,
       proofData: isSet(object.proofData) ? bytesFromBase64(object.proofData) : new Uint8Array(0),
-      toprf: isSet(object.toprf) ? TOPRFPayload.fromJSON(object.toprf) : undefined,
     };
   },
 
   toJSON(message: MessageReveal_ZKProof): unknown {
     const obj: any = {};
-    if (message.proofJson !== "") {
-      obj.proofJson = message.proofJson;
-    }
     if (message.decryptedRedactedCiphertext.length !== 0) {
       obj.decryptedRedactedCiphertext = base64FromBytes(message.decryptedRedactedCiphertext);
     }
@@ -2034,9 +2035,6 @@ export const MessageReveal_ZKProof: MessageFns<MessageReveal_ZKProof> = {
     if (message.proofData.length !== 0) {
       obj.proofData = base64FromBytes(message.proofData);
     }
-    if (message.toprf !== undefined) {
-      obj.toprf = TOPRFPayload.toJSON(message.toprf);
-    }
     return obj;
   },
 
@@ -2045,13 +2043,103 @@ export const MessageReveal_ZKProof: MessageFns<MessageReveal_ZKProof> = {
   },
   fromPartial(object: DeepPartial<MessageReveal_ZKProof>): MessageReveal_ZKProof {
     const message = createBaseMessageReveal_ZKProof();
-    message.proofJson = object.proofJson ?? "";
     message.decryptedRedactedCiphertext = object.decryptedRedactedCiphertext ?? new Uint8Array(0);
     message.redactedPlaintext = object.redactedPlaintext ?? new Uint8Array(0);
     message.startIdx = object.startIdx ?? 0;
     message.proofData = object.proofData ?? new Uint8Array(0);
-    message.toprf = (object.toprf !== undefined && object.toprf !== null)
-      ? TOPRFPayload.fromPartial(object.toprf)
+    return message;
+  },
+};
+
+function createBaseMessageReveal_TOPRFProof(): MessageReveal_TOPRFProof {
+  return { startIdx: 0, proofData: new Uint8Array(0), payload: undefined };
+}
+
+export const MessageReveal_TOPRFProof: MessageFns<MessageReveal_TOPRFProof> = {
+  encode(message: MessageReveal_TOPRFProof, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.startIdx !== 0) {
+      writer.uint32(8).uint32(message.startIdx);
+    }
+    if (message.proofData.length !== 0) {
+      writer.uint32(18).bytes(message.proofData);
+    }
+    if (message.payload !== undefined) {
+      TOPRFPayload.encode(message.payload, writer.uint32(26).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): MessageReveal_TOPRFProof {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseMessageReveal_TOPRFProof();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.startIdx = reader.uint32();
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.proofData = reader.bytes();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.payload = TOPRFPayload.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): MessageReveal_TOPRFProof {
+    return {
+      startIdx: isSet(object.startIdx) ? globalThis.Number(object.startIdx) : 0,
+      proofData: isSet(object.proofData) ? bytesFromBase64(object.proofData) : new Uint8Array(0),
+      payload: isSet(object.payload) ? TOPRFPayload.fromJSON(object.payload) : undefined,
+    };
+  },
+
+  toJSON(message: MessageReveal_TOPRFProof): unknown {
+    const obj: any = {};
+    if (message.startIdx !== 0) {
+      obj.startIdx = Math.round(message.startIdx);
+    }
+    if (message.proofData.length !== 0) {
+      obj.proofData = base64FromBytes(message.proofData);
+    }
+    if (message.payload !== undefined) {
+      obj.payload = TOPRFPayload.toJSON(message.payload);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<MessageReveal_TOPRFProof>): MessageReveal_TOPRFProof {
+    return MessageReveal_TOPRFProof.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<MessageReveal_TOPRFProof>): MessageReveal_TOPRFProof {
+    const message = createBaseMessageReveal_TOPRFProof();
+    message.startIdx = object.startIdx ?? 0;
+    message.proofData = object.proofData ?? new Uint8Array(0);
+    message.payload = (object.payload !== undefined && object.payload !== null)
+      ? TOPRFPayload.fromPartial(object.payload)
       : undefined;
     return message;
   },

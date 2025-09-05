@@ -211,7 +211,6 @@ export async function decryptTranscript(
 	serverIV: Uint8Array,
 	clientIV: Uint8Array,
 ): Promise<IDecryptedTranscript> {
-
 	const {
 		tlsVersion, cipherSuite, hostname, nextMsgIndex
 	} = await processHandshake(transcript, logger)

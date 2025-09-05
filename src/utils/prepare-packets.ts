@@ -69,7 +69,7 @@ export async function preparePacketsForReveal(
 			await proofGenerator.addPacketToProve(
 				message,
 				reveal,
-				proofs => (msg.reveal = { zkReveal: { proofs } }),
+				(proofs, toprfs) => (msg.reveal = { zkReveal: { proofs, toprfs } }),
 				() => {
 					const next = tlsTranscript
 						.slice(i + 1)
