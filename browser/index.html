@@ -1,18 +1,15 @@
 <html>
 
 <head>
-	<script src="browser-rpc/js/jsdom.js">
+	<script src="browser-rpc/resources/snarkjs/snarkjs.min.js">
+	</script>
+	<script type="module">
+		import * as ReclaimAttestorCore from './browser-rpc/resources/attestor-browser.min.mjs'
+		window.ReclaimAttestorCore = ReclaimAttestorCore
+		ReclaimAttestorCore.setupWindowRpc()
 	</script>
 	<script>
-		module = {};
-	</script>
-	<script src="browser-rpc/resources/attestor.min.js">
-	</script>
-	<script>
-		module.exports.setupWindowRpc()
-	</script>
-	// hot fix for missing identifier
-	<script>
+		// hot fix for missing assert in browser environment
 		window.addEventListener('load', function (event) {
 			console.assert = (...log) => { }
 		})

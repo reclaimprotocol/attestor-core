@@ -1,10 +1,13 @@
-import { CipherSuite, concatenateUint8Arrays, crypto, TLSPacketContext } from '@reclaimprotocol/tls'
+import type { CipherSuite, TLSPacketContext } from '@reclaimprotocol/tls'
+import { concatenateUint8Arrays, crypto } from '@reclaimprotocol/tls'
+
+import type {
+	ClaimTunnelRequest_TranscriptMessage as TranscriptMessage } from '#src/proto/api.ts'
 import {
-	ClaimTunnelRequest_TranscriptMessage as TranscriptMessage,
 	TranscriptMessageSenderType
-} from 'src/proto/api'
-import { CompleteTLSPacket, Logger, MessageRevealInfo, PrepareZKProofsBaseOpts, Transcript } from 'src/types'
-import { makeZkProofGenerator } from 'src/utils/zk'
+} from '#src/proto/api.ts'
+import type { CompleteTLSPacket, Logger, MessageRevealInfo, PrepareZKProofsBaseOpts, Transcript } from '#src/types/index.ts'
+import { makeZkProofGenerator } from '#src/utils/zk.ts'
 
 export type PreparePacketsForRevealOpts = {
 	cipherSuite: CipherSuite
@@ -29,7 +32,7 @@ export async function preparePacketsForReveal(
 
 	let zkPacketsDone = 0
 
-	await Promise.all(tlsTranscript.map(async({ message, sender }) => {
+	await Promise.all(tlsTranscript.map(async({ message, sender }, i) => {
 		const msg: TranscriptMessage = {
 			sender: sender === 'client'
 				? TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
@@ -66,7 +69,13 @@ export async function preparePacketsForReveal(
 			await proofGenerator.addPacketToProve(
 				message,
 				reveal,
-				proofs => (msg.reveal = { zkReveal: { proofs } })
+				(proofs, toprfs) => (msg.reveal = { zkReveal: { proofs, toprfs } }),
+				() => {
+					const next = tlsTranscript
+						.slice(i + 1)
+						.find(t => t.sender === sender)
+					return next?.message
+				}
 			)
 			break
 		default:

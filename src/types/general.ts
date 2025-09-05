@@ -1,5 +1,6 @@
 import type { Logger as TLSLogger, TLSPacketContext, TLSProtocolVersion } from '@reclaimprotocol/tls'
-import type { TOPRFProofParams } from 'src/types/zk'
+
+import type { TOPRFProofParams } from '#src/types/zk.ts'
 
 /**
  * Represents a slice of any array or string
@@ -32,6 +33,7 @@ export type ZKRevealInfo = {
 	type: 'zk'
 	redactedPlaintext: Uint8Array
 	toprfs?: TOPRFProofParams[]
+	overshotToprfFromPrevBlock?: { length: number }
 }
 
 export type MessageRevealInfo = { type: 'complete' } | ZKRevealInfo

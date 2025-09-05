@@ -1,16 +1,18 @@
+import type {
+	CipherSuite, TLSProtocolVersion } from '@reclaimprotocol/tls'
 import {
 	areUint8ArraysEqual,
-	CipherSuite,
 	CONTENT_TYPE_MAP,
-	crypto, decryptWrappedRecord,
+	crypto,
+	decryptWrappedRecord,
 	PACKET_TYPE,
-	strToUint8Array,
-	SUPPORTED_CIPHER_SUITE_MAP, TLSProtocolVersion,
-	uint8ArrayToDataView
-} from '@reclaimprotocol/tls'
+	SUPPORTED_CIPHER_SUITE_MAP,
+	uint8ArrayToBinaryStr,
+	uint8ArrayToDataView } from '@reclaimprotocol/tls'
 import { REDACTION_CHAR_CODE } from '@reclaimprotocol/zk-symmetric-crypto'
-import { RPCMessage, RPCMessages } from 'src/proto/api'
-import {
+
+import { RPCMessage, RPCMessages } from '#src/proto/api.ts'
+import type {
 	CompleteTLSPacket,
 	IDecryptedTranscript, IDecryptedTranscriptMessage,
 	ProviderField,
@@ -19,13 +21,25 @@ import {
 	RPCEventType,
 	RPCType,
 	Transcript
-} from 'src/types'
+} from '#src/types/index.ts'
 
 const DEFAULT_REDACTION_DATA = new Uint8Array(4)
 	.fill(REDACTION_CHAR_CODE)
 
+export { uint8ArrayToBinaryStr }
+
+/**
+ * Decodes a Uint8Array to a UTF-8 string.
+ */
 export function uint8ArrayToStr(arr: Uint8Array) {
 	return new TextDecoder().decode(arr)
+}
+
+/**
+ * Encodes a UTF-8 string to a Uint8Array.
+ */
+export function strToUint8Array(str: string): Uint8Array {
+	return new TextEncoder().encode(str)
 }
 
 export function getTranscriptString(receipt: IDecryptedTranscript) {
@@ -59,28 +73,6 @@ export function findIndexInUint8Array(
 	}
 
 	return -1
-}
-
-/**
- * convert a Uint8Array to a binary encoded str
- * from: https://github.com/feross/buffer/blob/795bbb5bda1b39f1370ebd784bea6107b087e3a7/index.js#L1063
- * @param buf
- * @returns
- */
-export function uint8ArrayToBinaryStr(buf: Uint8Array) {
-	let ret = ''
-	for(const v of buf) {
-		(
-			ret += String.fromCharCode(v)
-		)
-	}
-
-	return ret
-}
-
-export function gunzipSync(buf: Uint8Array): Uint8Array {
-	const { gunzipSync } = require('zlib')
-	return gunzipSync(buf)
 }
 
 /**
@@ -158,9 +150,7 @@ export function getProviderValue<P, S, T>(params: P, fn: ProviderField<P, S, T>,
 }
 
 export function generateRpcMessageId() {
-	return uint8ArrayToDataView(
-		crypto.randomBytes(8)
-	).getUint32(0)
+	return uint8ArrayToDataView(crypto.randomBytes(4)).getUint32(0)
 }
 
 /**
@@ -248,7 +238,10 @@ export async function extractArrayBufferFromWsData(
 	}
 
 	// uint8array/Buffer
-	if(typeof data === 'object' && data && 'buffer' in data) {
+	if(
+		data instanceof Uint8Array
+		|| (typeof data === 'object' && data && 'buffer' in data)
+	) {
 		return data as Uint8Array
 	}
 
@@ -256,7 +249,7 @@ export async function extractArrayBufferFromWsData(
 		return strToUint8Array(data)
 	}
 
-	if(data instanceof Blob) {
+	if(typeof Blob !== 'undefined' && data instanceof Blob) {
 		return new Uint8Array(await data.arrayBuffer())
 	}
 
@@ -427,4 +420,10 @@ export function ethersStructToPlainObject<T>(struct: T): T {
 	}
 
 	return obj
+}
+
+export function isTls13Suite(suite: CipherSuite) {
+	return suite === 'TLS_AES_128_GCM_SHA256'
+		|| suite === 'TLS_AES_256_GCM_SHA384'
+		|| suite === 'TLS_CHACHA20_POLY1305_SHA256'
 }
