@@ -5,6 +5,7 @@ RUN apt update -y && apt upgrade -y && apt install git -y
 
 COPY ./package.json /app/
 COPY ./package-lock.json /app/
+COPY ./tsconfig.json /app/
 COPY ./tsconfig.build.json /app/
 RUN mkdir -p /app/src/scripts
 RUN echo '' > /app/src/scripts/prepare.sh
