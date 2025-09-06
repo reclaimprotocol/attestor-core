@@ -1,3 +1,4 @@
+import { claimTeeBundle } from '#src/server/handlers/claimTeeBundle.ts'
 import { claimTunnel } from '#src/server/handlers/claimTunnel.ts'
 import { completeClaimOnChain } from '#src/server/handlers/completeClaimOnChain.ts'
 import { createClaimOnChain } from '#src/server/handlers/createClaimOnChain.ts'
@@ -12,6 +13,7 @@ export const HANDLERS: { [T in RPCType]: RPCHandler<T> } = {
 	createTunnel,
 	disconnectTunnel,
 	claimTunnel,
+	claimTeeBundle,
 	init,
 	createClaimOnChain,
 	completeClaimOnChain,

@@ -2,59 +2,59 @@ syntax = "proto3";
 package reclaim_attestor;
 
 enum TranscriptMessageSenderType {
-	TRANSCRIPT_MESSAGE_SENDER_TYPE_UNKNOWN = 0;
-	TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT = 1;
-	TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER = 2;
+  TRANSCRIPT_MESSAGE_SENDER_TYPE_UNKNOWN = 0;
+  TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT = 1;
+  TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER = 2;
 }
 
 enum ServiceSignatureType {
-	SERVICE_SIGNATURE_TYPE_UNKNOWN = 0;
-	/**
-	 * ETH keys & signature
-	 * keys: secp256k1
-	 * signature: ethereum flavor of ECDSA (https://goethereumbook.org/signature-generate/)
-	 */
-	SERVICE_SIGNATURE_TYPE_ETH = 1;
+  SERVICE_SIGNATURE_TYPE_UNKNOWN = 0;
+  /**
+   * ETH keys & signature
+   * keys: secp256k1
+   * signature: ethereum flavor of ECDSA (https://goethereumbook.org/signature-generate/)
+   */
+  SERVICE_SIGNATURE_TYPE_ETH = 1;
 }
 
 enum AttestorVersion {
-	ATTESTOR_VERSION_UNKNOWN = 0;
-	ATTESTOR_VERSION_1_0_0 = 1;
-	ATTESTOR_VERSION_1_1_0 = 2;
-	ATTESTOR_VERSION_2_0_0 = 3;
-	ATTESTOR_VERSION_2_0_1 = 4;
-	ATTESTOR_VERSION_3_0_0 = 5;
+  ATTESTOR_VERSION_UNKNOWN = 0;
+  ATTESTOR_VERSION_1_0_0 = 1;
+  ATTESTOR_VERSION_1_1_0 = 2;
+  ATTESTOR_VERSION_2_0_0 = 3;
+  ATTESTOR_VERSION_2_0_1 = 4;
+  ATTESTOR_VERSION_3_0_0 = 5;
 }
 
 enum ErrorCode {
-	// 0 should be treated as the absence of an error
-	// should be used when gracefully closing the connection
-	ERROR_NO_ERROR = 0;
-	// internal error in the attestor -- all "Error/TypeError"
-	// messages are mapped to this
-	ERROR_INTERNAL = 1;
-	// bad request from the client
-	ERROR_BAD_REQUEST = 2;
-	// the item requested was not found
-	ERROR_NOT_FOUND = 3;
-	// error in the proxy
-	ERROR_PROXY_ERROR = 4;
-	// claim creation failed -- i.e. the transcript
-	// did not result in a valid claim
-	ERROR_INVALID_CLAIM = 5;
-	// any network error
-	ERROR_NETWORK_ERROR = 6;
-	// attestor refused to pay the costs
-	ERROR_PAYMENT_REFUSED = 7;
-	// BGP announcement overlapped, potentially
-	// compromising the claim's authenticity
-	ERROR_BGP_ANNOUNCEMENT_OVERLAP = 8;
-	// authentication failed
-	ERROR_AUTHENTICATION_FAILED = 9;
-	// timed out waiting for the server to respond
-	ERROR_TIMEOUT = 10;
-	// toprf couldn't be computed, as it went out of bounds
-	ERROR_TOPRF_OUT_OF_BOUNDS = 11;
+  // 0 should be treated as the absence of an error
+  // should be used when gracefully closing the connection
+  ERROR_NO_ERROR = 0;
+  // internal error in the attestor -- all "Error/TypeError"
+  // messages are mapped to this
+  ERROR_INTERNAL = 1;
+  // bad request from the client
+  ERROR_BAD_REQUEST = 2;
+  // the item requested was not found
+  ERROR_NOT_FOUND = 3;
+  // error in the proxy
+  ERROR_PROXY_ERROR = 4;
+  // claim creation failed -- i.e. the transcript
+  // did not result in a valid claim
+  ERROR_INVALID_CLAIM = 5;
+  // any network error
+  ERROR_NETWORK_ERROR = 6;
+  // attestor refused to pay the costs
+  ERROR_PAYMENT_REFUSED = 7;
+  // BGP announcement overlapped, potentially
+  // compromising the claim's authenticity
+  ERROR_BGP_ANNOUNCEMENT_OVERLAP = 8;
+  // authentication failed
+  ERROR_AUTHENTICATION_FAILED = 9;
+  // timed out waiting for the server to respond
+  ERROR_TIMEOUT = 10;
+  // toprf couldn't be computed, as it went out of bounds
+  ERROR_TOPRF_OUT_OF_BOUNDS = 11;
 }
 
 enum ZKProofEngine {
@@ -63,456 +63,501 @@ enum ZKProofEngine {
 }
 
 message ClaimContext {
-	/**
-	 * Extracted parameters from the TLS transcript
-	 * by the provider. Any parameters provided by the
-	 * user will be overwritten
-	 */
-	map<string, string> extractedParameters = 1;
-	/**
-	 * Provider hash. TODO: docs
-	 */
-	string providerHash = 2;
+  /**
+   * Extracted parameters from the TLS transcript
+   * by the provider. Any parameters provided by the
+   * user will be overwritten
+   */
+  map<string, string> extractedParameters = 1;
+  /**
+   * Provider hash. TODO: docs
+   */
+  string providerHash = 2;
 }
 
 message ProviderClaimData {
-	/**
-	 * Name of the provider to generate the
-	 * claim using.
-	 * @example "http"
-	 */
-	string provider = 1;
-	/**
-	 * Canonically JSON stringified parameters
-	 * of the claim, as specified by the provider.
-	 * @example '{"url":"https://example.com","method":"GET"}'
-	 */
-	string parameters = 2;
-	/**
-	 * Owner of the claim. Must be the public key/address
-	 * @example "0x1234..."
-	 */
-	string owner = 3;
-	/**
-	 * Unix timestamp in seconds of the claim being made.
-	 * Cannot be more than 10 minutes in the past or future
-	 */
-	uint32 timestampS = 4;
-	/**
-	 * Any additional data you want to store with the claim.
-	 * Also expected to be a canonical JSON string.
-	 */
-	string context = 6;
-	/**
-	 * identifier of the claim;
-	 * Hash of (provider, parameters, context)
-	 */
-	string identifier = 8;
-	/**
-	 * Legacy V1 Beacon epoch number
-	 */
-	uint32 epoch = 9;
+  /**
+   * Name of the provider to generate the
+   * claim using.
+   * @example "http"
+   */
+  string provider = 1;
+  /**
+   * Canonically JSON stringified parameters
+   * of the claim, as specified by the provider.
+   * @example '{"url":"https://example.com","method":"GET"}'
+   */
+  string parameters = 2;
+  /**
+   * Owner of the claim. Must be the public key/address
+   * @example "0x1234..."
+   */
+  string owner = 3;
+  /**
+   * Unix timestamp in seconds of the claim being made.
+   * Cannot be more than 10 minutes in the past or future
+   */
+  uint32 timestampS = 4;
+  /**
+   * Any additional data you want to store with the claim.
+   * Also expected to be a canonical JSON string.
+   */
+  string context = 6;
+  /**
+   * identifier of the claim;
+   * Hash of (provider, parameters, context)
+   */
+  string identifier = 8;
+  /**
+   * Legacy V1 Beacon epoch number
+   */
+  uint32 epoch = 9;
 }
 
 message ProviderClaimInfo {
-	string provider = 1;
-	string parameters = 2;
-	string context = 6;
+  string provider = 1;
+  string parameters = 2;
+  string context = 6;
 }
 
 message ErrorData {
-	ErrorCode code = 1;
-	string message = 2;
-	string data = 3;
+  ErrorCode code = 1;
+  string message = 2;
+  string data = 3;
 }
 
 message CreateTunnelRequest {
-	/**
-	 * Assign a unique ID to the client for this tunnel
-	 * request. This ID will be used to identify the tunnel
-	 * to later send messages or disconnect the tunnel.
-	 */
-	uint32 id = 1;
-	string host = 2;
-	uint32 port = 3;
-	/**
-	 * Geo location from which the request will be made.
-	 * Provide 2 letter ISO country code. Leave empty
-	 * if you don't want to use geo location.
-	 *
-	 * Geo location is implemented using an https proxy
-	 * eg. US, IN, GB, etc.
-	 */
-	string geoLocation = 4;
+  /**
+   * Assign a unique ID to the client for this tunnel
+   * request. This ID will be used to identify the tunnel
+   * to later send messages or disconnect the tunnel.
+   */
+  uint32 id = 1;
+  string host = 2;
+  uint32 port = 3;
+  /**
+   * Geo location from which the request will be made.
+   * Provide 2 letter ISO country code. Leave empty
+   * if you don't want to use geo location.
+   *
+   * Geo location is implemented using an https proxy
+   * eg. US, IN, GB, etc.
+   */
+  string geoLocation = 4;
 }
 
 message DisconnectTunnelRequest {
-	uint32 id = 1;
+  uint32 id = 1;
 }
 
 message Empty {
-	// empty message
+  // empty message
 }
 
 message TunnelMessage {
-	/** ID of the tunnel where this message belongs */
-	uint32 tunnelId = 1;
-	bytes message = 2;
+  /** ID of the tunnel where this message belongs */
+  uint32 tunnelId = 1;
+  bytes message = 2;
 }
 
 message TunnelDisconnectEvent {
-	uint32 tunnelId = 1;
-	ErrorData error = 2;
+  uint32 tunnelId = 1;
+  ErrorData error = 2;
 }
 
 message MessageReveal {
-	oneof reveal {
-		// direct reveal of the block via the key & IV
-		// cipher (aes, chacha) for decryption
-		// selected based on `cipherSuite`
-		// determined by the server hello packet
-		MessageRevealDirect directReveal = 1;
-		// partially or fully reveal the block via a zk proof
-		MessageRevealZk zkReveal = 2;
-	}
+  oneof reveal {
+    // direct reveal of the block via the key & IV
+    // cipher (aes, chacha) for decryption
+    // selected based on `cipherSuite`
+    // determined by the server hello packet
+    MessageRevealDirect directReveal = 1;
+    // partially or fully reveal the block via a zk proof
+    MessageRevealZk zkReveal = 2;
+  }
 
-	message MessageRevealDirect {
-		/** key for the block */
-		bytes key = 1;
-		/** IV for the block */
-		bytes iv = 2;
-		/**
-		* used to generate IV in authenticated
-		* cipher suites
-		*/
-		uint32 recordNumber = 3;
-	}
+  message MessageRevealDirect {
+    /** key for the block */
+    bytes key = 1;
+    /** IV for the block */
+    bytes iv = 2;
+    /**
+    * used to generate IV in authenticated
+    * cipher suites
+    */
+    uint32 recordNumber = 3;
+  }
 
-	message MessageRevealZk {
-		repeated ZKProof proofs = 1;
-		repeated TOPRFProof toprfs = 2;
-	}
+  message MessageRevealZk {
+    repeated ZKProof proofs = 1;
+    repeated TOPRFProof toprfs = 2;
+  }
 
-	message ZKProof {
-		/** the decrypted ciphertext as output by the ZK proof */
-		bytes decryptedRedactedCiphertext = 2;
-		/** the plaintext that is fully or partially revealed */
-		bytes redactedPlaintext = 3;
-		/**
-		* start of this specific block
-		* in the redactedPlaintext
-		*/
-		uint32 startIdx = 4;
+  message ZKProof {
+    /** the decrypted ciphertext as output by the ZK proof */
+    bytes decryptedRedactedCiphertext = 2;
+    /** the plaintext that is fully or partially revealed */
+    bytes redactedPlaintext = 3;
+    /**
+    * start of this specific block
+    * in the redactedPlaintext
+    */
+    uint32 startIdx = 4;
 
-		bytes proofData = 5;
-	}
+    bytes proofData = 5;
+  }
 
-	message TOPRFProof {
-		/**
-		* start of this specific block
-		* in the redactedPlaintext
-		*/
-		uint32 startIdx = 1;
-		bytes proofData = 2;
-		/**
-		 * If this block's proof contains an OPRF'd piece of data,
-		 * then provide the OPRF data here
-		 */
-		TOPRFPayload payload = 3;
-	}
+  message TOPRFProof {
+    /**
+    * start of this specific block
+    * in the redactedPlaintext
+    */
+    uint32 startIdx = 1;
+    bytes proofData = 2;
+    /**
+     * If this block's proof contains an OPRF'd piece of data,
+     * then provide the OPRF data here
+     */
+    TOPRFPayload payload = 3;
+  }
 }
 
 message TOPRFPayload {
-	/** Location of the data in the chunk that was masked */
-	DataSlice dataLocation = 1;
-	/** OPRF hash of the data */
-	bytes nullifier = 2;
+  /** Location of the data in the chunk that was masked */
+  DataSlice dataLocation = 1;
+  /** OPRF hash of the data */
+  bytes nullifier = 2;
 
-	repeated TOPRFResponse responses = 3;
+  repeated TOPRFResponse responses = 3;
 }
 
 message DataSlice {
-	uint32 fromIndex = 1;
-	uint32 length = 2;
+  uint32 fromIndex = 1;
+  uint32 length = 2;
 }
 
 message ClaimRequestData {
-	string provider = 1;
-	string parameters = 2;
-	/**
-	 * Owner of the claim. Must be the public key/address
-	 * of the signatures
-	 */
-	string owner = 3;
-	/**
-	 * Timestamp of the claim being made.
-	 * Cannot be more than 10 minutes in the past
-	 * or in the future
-	 */
-	uint32 timestampS = 4;
-	string context = 5;
+  string provider = 1;
+  string parameters = 2;
+  /**
+   * Owner of the claim. Must be the public key/address
+   * of the signatures
+   */
+  string owner = 3;
+  /**
+   * Timestamp of the claim being made.
+   * Cannot be more than 10 minutes in the past
+   * or in the future
+   */
+  uint32 timestampS = 4;
+  string context = 5;
 }
 
 message ClaimTunnelRequest {
-	/**
-	 * parameters supplied to establish the tunnel
-	 * & connect to the end server
-	 */
-	CreateTunnelRequest request = 1;
-	/**
-	 * data describing the claim you want to prove
-	 */
-	ClaimRequestData data = 2;
-	/**
-	 * messages from the client & server
-	 * in the order they were sent/received
-	 *
-	 * Attach a proof (if any) to each message
-	 * to reveal the contents of the message inside
-	 * 
-	 * The revealed messages should support the proving
-	 * of the claim as defined in the provider's implementation
-	 */
-	repeated TranscriptMessage transcript = 3;
+  /**
+   * parameters supplied to establish the tunnel
+   * & connect to the end server
+   */
+  CreateTunnelRequest request = 1;
+  /**
+   * data describing the claim you want to prove
+   */
+  ClaimRequestData data = 2;
+  /**
+   * messages from the client & server
+   * in the order they were sent/received
+   *
+   * Attach a proof (if any) to each message
+   * to reveal the contents of the message inside
+   *
+   * The revealed messages should support the proving
+   * of the claim as defined in the provider's implementation
+   */
+  repeated TranscriptMessage transcript = 3;
 
-	Signatures signatures = 4;
+  Signatures signatures = 4;
 
   /** type of ZK engine used. SnarkJS or Gnark */
   ZKProofEngine zkEngine = 5;
 
-	/** server and client fixed IVs needed for ZK validation*/
-	bytes fixedServerIV = 6;
-	bytes fixedClientIV = 7;
+  /** server and client fixed IVs needed for ZK validation*/
+  bytes fixedServerIV = 6;
+  bytes fixedClientIV = 7;
 
-	message Signatures {
-		/**
-		* signature of ClaimTunnelRequest
-		* with empty "signatures" field
-		*/
-		bytes requestSignature = 1;
-	}
+  message Signatures {
+    /**
+    * signature of ClaimTunnelRequest
+    * with empty "signatures" field
+    */
+    bytes requestSignature = 1;
+  }
 
-	message TranscriptMessage {
-		/** client or server */
-		TranscriptMessageSenderType sender = 1;
-		/** packet data */
-		bytes message = 2;
-		MessageReveal reveal = 3;
-	}
+  message TranscriptMessage {
+    /** client or server */
+    TranscriptMessageSenderType sender = 1;
+    /** packet data */
+    bytes message = 2;
+    MessageReveal reveal = 3;
+  }
 }
 
 message ClaimTunnelResponse {
-	/**
-	 * The original request that was made to claim the tunnel
-	 */
-	ClaimTunnelRequest request = 1;
-	oneof result {
-		ProviderClaimData claim = 2;
-		ErrorData error = 3;
-	}
-	Signatures signatures = 4;
+  /**
+   * The original request that was made to claim the tunnel
+   */
+  ClaimTunnelRequest request = 1;
+  oneof result {
+    ProviderClaimData claim = 2;
+    ErrorData error = 3;
+  }
+  Signatures signatures = 4;
 
-	message Signatures {
-		/**
-		 * Address of the attestor that has signed the claim
-		 */
-		string attestorAddress = 1;
-		/** 
-		* signature of `stringifyProviderClaimData(claim)`,
-		* if the claim was successful
-		*/
-		bytes claimSignature = 2;
-		/**
-		 * signature of the complete ClaimTunnelResponse
-		 * structure with empty "signatures" field
-		 */
-		bytes resultSignature = 3;
-	}
+  message Signatures {
+    /**
+     * Address of the attestor that has signed the claim
+     */
+    string attestorAddress = 1;
+    /**
+    * signature of `stringifyProviderClaimData(claim)`,
+    * if the claim was successful
+    */
+    bytes claimSignature = 2;
+    /**
+     * signature of the complete ClaimTunnelResponse
+     * structure with empty "signatures" field
+     */
+    bytes resultSignature = 3;
+  }
 }
 
 message RequestClaimOnAvsRequest {
-	/**
-	 * Chain ID of the chain on which the claim is to be made
-	 * @example 17000 (holesky)
-	 */
-	uint32 chainId = 1;
-	/**
-	 * Serialised JSON string of the ClaimRequest struct
-	 */
-	string jsonCreateClaimRequest = 2;
-	/**
-	 * ETH signature of the `ClaimRequest` struct
-	 */
-	bytes requestSignature = 3;
+  /**
+   * Chain ID of the chain on which the claim is to be made
+   * @example 17000 (holesky)
+   */
+  uint32 chainId = 1;
+  /**
+   * Serialised JSON string of the ClaimRequest struct
+   */
+  string jsonCreateClaimRequest = 2;
+  /**
+   * ETH signature of the `ClaimRequest` struct
+   */
+  bytes requestSignature = 3;
 }
 
 message RequestClaimOnAvsResponse {
-	string txHash = 1;
-	uint32 taskIndex = 2;
-	string jsonTask = 3;
+  string txHash = 1;
+  uint32 taskIndex = 2;
+  string jsonTask = 3;
 }
 
 message CompleteClaimOnAvsRequest {
-	/**
-	 * Chain ID of the chain on which the claim is to be made
-	 * @example 17000 (holesky)
-	 */
-	uint32 chainId = 1;
-	uint32 taskIndex = 2;
-	string completedTaskJson = 3;
+  /**
+   * Chain ID of the chain on which the claim is to be made
+   * @example 17000 (holesky)
+   */
+  uint32 chainId = 1;
+  uint32 taskIndex = 2;
+  string completedTaskJson = 3;
 }
 
 message CompleteClaimOnAvsResponse {
-	string txHash = 1;
-	string taskCompletedObjectJson = 2;
+  string txHash = 1;
+  string taskCompletedObjectJson = 2;
 }
 
 message CreateTaskOnMechainRequest {
-	uint32 timestamp = 1;
+  uint32 timestamp = 1;
 }
 
 message CreateTaskOnMechainResponse {
-	uint32 taskId = 1;
-	uint32 requiredAttestors = 2;
-	repeated string hosts = 3;
+  uint32 taskId = 1;
+  uint32 requiredAttestors = 2;
+  repeated string hosts = 3;
 }
 
 message AuthenticatedUserData {
-	/** Unique identifier for the user */
-	string id = 1;
-	uint32 createdAt = 2;
-	/**
-	 * Unix timestamp in seconds when the user's
-	 * authentication will expire.
-	 */
-	uint32 expiresAt = 3;
-	/**
-	 * List of allowed hosts the user is allowed to connect to.
-	 * Will throw a BAD_REQUEST error if the user tries to connect.
-	 * Pass an empty list to allow all hosts.
-	 */
-	repeated string hostWhitelist = 4;
+  /** Unique identifier for the user */
+  string id = 1;
+  uint32 createdAt = 2;
+  /**
+   * Unix timestamp in seconds when the user's
+   * authentication will expire.
+   */
+  uint32 expiresAt = 3;
+  /**
+   * List of allowed hosts the user is allowed to connect to.
+   * Will throw a BAD_REQUEST error if the user tries to connect.
+   * Pass an empty list to allow all hosts.
+   */
+  repeated string hostWhitelist = 4;
 }
 
 message AuthenticationRequest {
-	AuthenticatedUserData data = 1;
-	/** Signature of the `userData` */
-	bytes signature = 2;
+  AuthenticatedUserData data = 1;
+  /** Signature of the `userData` */
+  bytes signature = 2;
 }
 
 message InitRequest {
-	/** Attestor client version */
-	AttestorVersion clientVersion = 2;
-	/** Signature type used & expected by the user */
-	ServiceSignatureType signatureType = 3;
-	/**
-	 * Request the attestor to authenticate the user
-	 * with the given data. If auth fails, will return
-	 * an AUTHENTICATION_FAILED error.
-	 */
-	AuthenticationRequest auth = 4;
+  /** Attestor client version */
+  AttestorVersion clientVersion = 2;
+  /** Signature type used & expected by the user */
+  ServiceSignatureType signatureType = 3;
+  /**
+   * Request the attestor to authenticate the user
+   * with the given data. If auth fails, will return
+   * an AUTHENTICATION_FAILED error.
+   */
+  AuthenticationRequest auth = 4;
 }
 
 message InitResponse {
-	bytes toprfPublicKey = 1;
+  bytes toprfPublicKey = 1;
 }
 
 message TOPRFRequest {
-	bytes maskedData = 1;
-	ZKProofEngine engine = 2;
+  bytes maskedData = 1;
+  ZKProofEngine engine = 2;
 }
 
 message TOPRFResponse {
-	bytes publicKeyShare = 1;
-	// OPRF output
-	bytes evaluated = 2;
-	bytes c = 3;
-	bytes r = 4;
+  bytes publicKeyShare = 1;
+  // OPRF output
+  bytes evaluated = 2;
+  bytes c = 3;
+  bytes r = 4;
+}
+
+message ClaimTeeBundleRequest {
+  bytes verificationBundle = 1;
+  ClaimRequestData data = 2;
+  Signatures signatures = 3;
+
+  message Signatures {
+    bytes requestSignature = 1;
+  }
+}
+
+message ClaimTeeBundleResponse {
+  /**
+   * The original request that was made
+   */
+  ClaimTeeBundleRequest request = 1;
+  oneof result {
+    ProviderClaimData claim = 2;
+    ErrorData error = 3;
+  }
+  Signatures signatures = 4;
+
+  message Signatures {
+    /**
+     * Address of the attestor that has signed the claim
+     */
+    string attestorAddress = 1;
+    /**
+     * Signature of `stringifyProviderClaimData(claim)`,
+     * if the claim was successful
+     */
+    bytes claimSignature = 2;
+    /**
+     * Signature of the complete ClaimTeeBundleResponse
+     * structure with empty "signatures" field
+     */
+    bytes resultSignature = 3;
+  }
 }
 
 message RPCMessage {
-	/**
-	 * Per connection unique RPC message ID. Either party sending a
-	 * duplicate ID will do nothing except confuse the other party.
-	 *
-	 * For response messages, the ID should be the same as the request
-	 * to which it is responding.
-	 */
-	uint64 id = 1;
-	// message must be one of the following
-	oneof message {
-		InitRequest initRequest = 2;
-		/**
-		 * Response to the init request.
-		 * */
-		InitResponse initResponse = 3;
-		/**
-		 * Data representing an error in the WebSocket connection.
-		 * The party sending this message should close the connection
-		 * immediately after sending this message.
-		 */
-		ErrorData connectionTerminationAlert = 4;
-		/**
-		 * Data representing an error in the attestor's
-		 * request to the server. This should be sent in case
-		 * there was an error in processing the request.
-		 */
-		ErrorData requestError = 5;
-		/**
-		 * Create a tunnel to the specified host & port.
-		 */
-		CreateTunnelRequest createTunnelRequest = 6;
-		Empty createTunnelResponse = 7;
-		/**
-		 * Disconnect a tunnel.
-		 */
-		DisconnectTunnelRequest disconnectTunnelRequest = 8;
-		Empty disconnectTunnelResponse = 9;
-		/**
-		 * Message to send through a tunnel. Client can send
-		 * this message to forward data to the server.
-		 */
-		TunnelMessage tunnelMessage = 10;
-		/**
-		 * Event indicating that a tunnel has been disconnected.
-		 * The client should not send any more messages through
-		 * this tunnel.
-		 */
-		TunnelDisconnectEvent tunnelDisconnectEvent = 11;
-		/**
-		 * Using the transcript of a tunnel, make a claim.
-		 * The tunnel must be disconnected before making a claim.
-		 */
-		ClaimTunnelRequest claimTunnelRequest = 12;
-		ClaimTunnelResponse claimTunnelResponse = 13;
-		
-		/**
-		 * Request the attestor to pay for the claim on the chain.
-		 * The Attestor can choose to reject the request.
-		 */
-		RequestClaimOnAvsRequest createClaimOnChainRequest = 14;
-		RequestClaimOnAvsResponse createClaimOnChainResponse = 15;
+  /**
+   * Per connection unique RPC message ID. Either party sending a
+   * duplicate ID will do nothing except confuse the other party.
+   *
+   * For response messages, the ID should be the same as the request
+   * to which it is responding.
+   */
+  uint64 id = 1;
+  // message must be one of the following
+  oneof message {
+    InitRequest initRequest = 2;
+    /**
+     * Response to the init request.
+     * */
+    InitResponse initResponse = 3;
+    /**
+     * Data representing an error in the WebSocket connection.
+     * The party sending this message should close the connection
+     * immediately after sending this message.
+     */
+    ErrorData connectionTerminationAlert = 4;
+    /**
+     * Data representing an error in the attestor's
+     * request to the server. This should be sent in case
+     * there was an error in processing the request.
+     */
+    ErrorData requestError = 5;
+    /**
+     * Create a tunnel to the specified host & port.
+     */
+    CreateTunnelRequest createTunnelRequest = 6;
+    Empty createTunnelResponse = 7;
+    /**
+     * Disconnect a tunnel.
+     */
+    DisconnectTunnelRequest disconnectTunnelRequest = 8;
+    Empty disconnectTunnelResponse = 9;
+    /**
+     * Message to send through a tunnel. Client can send
+     * this message to forward data to the server.
+     */
+    TunnelMessage tunnelMessage = 10;
+    /**
+     * Event indicating that a tunnel has been disconnected.
+     * The client should not send any more messages through
+     * this tunnel.
+     */
+    TunnelDisconnectEvent tunnelDisconnectEvent = 11;
+    /**
+     * Using the transcript of a tunnel, make a claim.
+     * The tunnel must be disconnected before making a claim.
+     */
+    ClaimTunnelRequest claimTunnelRequest = 12;
+    ClaimTunnelResponse claimTunnelResponse = 13;
 
-		/**
-		 * Submit the work done for the claim on the chain.
-		 */
-		CompleteClaimOnAvsRequest completeClaimOnChainRequest = 16;
-		CompleteClaimOnAvsResponse completeClaimOnChainResponse = 17;
+    /**
+     * Request the attestor to pay for the claim on the chain.
+     * The Attestor can choose to reject the request.
+     */
+    RequestClaimOnAvsRequest createClaimOnChainRequest = 14;
+    RequestClaimOnAvsResponse createClaimOnChainResponse = 15;
 
-		/**
-		 * Request to perform thresholded OPRF
-		 */
-		TOPRFRequest toprfRequest = 18;
-		TOPRFResponse toprfResponse = 19;
+    /**
+     * Submit the work done for the claim on the chain.
+     */
+    CompleteClaimOnAvsRequest completeClaimOnChainRequest = 16;
+    CompleteClaimOnAvsResponse completeClaimOnChainResponse = 17;
 
-		/**
-		 * Request the attestor to create a Task on the ReclaimTask contract.
-		 */
-		CreateTaskOnMechainRequest createTaskOnMechainRequest = 20;
-		CreateTaskOnMechainResponse createTaskOnMechainResponse = 21;
-	}
+    /**
+     * Request to perform thresholded OPRF
+     */
+    TOPRFRequest toprfRequest = 18;
+    TOPRFResponse toprfResponse = 19;
+
+    /**
+     * Request the attestor to create a Task on the ReclaimTask contract.
+     */
+    CreateTaskOnMechainRequest createTaskOnMechainRequest = 20;
+    CreateTaskOnMechainResponse createTaskOnMechainResponse = 21;
+
+    /**
+ * Claim a TEE verification bundle instead of traditional TLS transcript
+ */
+    ClaimTeeBundleRequest claimTeeBundleRequest = 22;
+    ClaimTeeBundleResponse claimTeeBundleResponse = 23;
+  }
 }
 
 message RPCMessages {
-	repeated RPCMessage messages = 1;
+  repeated RPCMessage messages = 1;
 }

@@ -3,15 +3,19 @@
  * Handles ClaimTeeBundleRequest by verifying TEE attestations and reconstructing TLS transcript
  */
 
-import { ClaimTeeBundleResponse, ProviderClaimInfo } from 'src/proto/api'
-import { CertificateInfo } from 'src/proto/tee-bundle'
-import { getApm } from 'src/server/utils/apm'
-import { assertValidProviderTranscript } from 'src/server/utils/assert-valid-claim-request'
-import { getAttestorAddress, niceParseJsonObject, signAsAttestor } from 'src/server/utils/generics'
-import { reconstructTlsTranscript, TeeTranscriptData } from 'src/server/utils/tee-transcript-reconstruction'
-import { verifyTeeBundle } from 'src/server/utils/tee-verification'
-import { Logger, ProviderCtx, RPCHandler, Transcript } from 'src/types'
-import { AttestorError, createSignDataForClaim, getIdentifierFromClaimInfo } from 'src/utils'
+import type { ProviderClaimInfo } from '#src/proto/api.ts'
+import { ClaimTeeBundleResponse } from '#src/proto/api.ts'
+import type { CertificateInfo } from '#src/proto/tee-bundle.ts'
+import { getApm } from '#src/server/utils/apm.ts'
+import { assertValidProviderTranscript } from '#src/server/utils/assert-valid-claim-request.ts'
+import { getAttestorAddress, niceParseJsonObject, signAsAttestor } from '#src/server/utils/generics.ts'
+import type { TeeTranscriptData } from '#src/server/utils/tee-transcript-reconstruction.ts'
+import { reconstructTlsTranscript } from '#src/server/utils/tee-transcript-reconstruction.ts'
+import { verifyTeeBundle } from '#src/server/utils/tee-verification.ts'
+import type { Logger } from '#src/types/general.ts'
+import type { ProviderCtx, RPCHandler, Transcript } from '#src/types/index.ts'
+import { AttestorError } from '#src/utils/error.ts'
+import { createSignDataForClaim, getIdentifierFromClaimInfo } from '#src/utils/index.ts'
 
 export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	teeBundleRequest,
@@ -78,8 +82,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 
 	} catch(err) {
 		logger.error({ err }, 'Invalid TEE bundle claim request')
-		const attestorErr = AttestorError.fromError(err)
-		attestorErr.code = 'ERROR_INVALID_CLAIM'
+		const attestorErr = AttestorError.fromError(err, 'ERROR_INVALID_CLAIM')
 		res.error = attestorErr.toProto()
 	}
 
