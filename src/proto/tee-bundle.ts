@@ -10,11 +10,20 @@ import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 export const protobufPackage = "teeproto";
 
 /** Signature wrapper used everywhere */
-export enum BodyType {
-  BODY_TYPE_UNSPECIFIED = 0,
-  BODY_TYPE_K_OUTPUT = 1,
-  BODY_TYPE_T_OUTPUT = 2,
-  UNRECOGNIZED = -1,
+export const BodyType = {
+  BODY_TYPE_UNSPECIFIED: 0,
+  BODY_TYPE_K_OUTPUT: 1,
+  BODY_TYPE_T_OUTPUT: 2,
+  UNRECOGNIZED: -1,
+} as const;
+
+export type BodyType = typeof BodyType[keyof typeof BodyType];
+
+export namespace BodyType {
+  export type BODY_TYPE_UNSPECIFIED = typeof BodyType.BODY_TYPE_UNSPECIFIED;
+  export type BODY_TYPE_K_OUTPUT = typeof BodyType.BODY_TYPE_K_OUTPUT;
+  export type BODY_TYPE_T_OUTPUT = typeof BodyType.BODY_TYPE_T_OUTPUT;
+  export type UNRECOGNIZED = typeof BodyType.UNRECOGNIZED;
 }
 
 export function bodyTypeFromJSON(object: any): BodyType {

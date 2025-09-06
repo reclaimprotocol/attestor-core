@@ -3,12 +3,15 @@
  * Handles validation of TEE verification bundles including attestations and signatures
  */
 
-import { ServiceSignatureType } from 'src/proto/api'
-import { BodyType, KOutputPayload, SignedMessage, TOutputPayload, VerificationBundle } from 'src/proto/tee-bundle'
-import { AddressExtractionResult, validateNitroAttestationAndExtractKey } from 'src/server/utils/nitro-attestation'
-import { Logger } from 'src/types'
-import { AttestorError, uint8ArrayToStr } from 'src/utils'
-import { SIGNATURES } from 'src/utils/signatures'
+import { ServiceSignatureType } from '#src/proto/api.ts'
+import type { SignedMessage } from '#src/proto/tee-bundle.ts'
+import { BodyType, KOutputPayload, TOutputPayload, VerificationBundle } from '#src/proto/tee-bundle.ts'
+import type { AddressExtractionResult } from '#src/server/utils/nitro-attestation.ts'
+import { validateNitroAttestationAndExtractKey } from '#src/server/utils/nitro-attestation.ts'
+import type { Logger } from '#src/types/general.ts'
+import { AttestorError } from '#src/utils/error.ts'
+import { uint8ArrayToStr } from '#src/utils/index.ts'
+import { SIGNATURES } from '#src/utils/signatures/index.ts'
 
 // Types specific to TEE verification
 export interface TeeBundleData {

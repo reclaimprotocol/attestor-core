@@ -2,10 +2,11 @@
  * TLS Transcript Reconstruction from TEE data
  */
 
-import { CertificateInfo } from 'src/proto/tee-bundle'
-import { Logger } from 'src/types'
-import { AttestorError, REDACTION_CHAR_CODE } from 'src/utils'
-import { TeeBundleData } from './tee-verification'
+import type { CertificateInfo } from '#src/proto/tee-bundle.ts'
+import type { TeeBundleData } from '#src/server/utils/tee-verification.ts'
+import type { Logger } from '#src/types/general.ts'
+import { AttestorError } from '#src/utils/error.ts'
+import { REDACTION_CHAR_CODE } from '#src/utils/index.ts'
 
 // Types specific to transcript reconstruction
 export interface TeeTranscriptData {
