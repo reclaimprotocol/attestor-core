@@ -20,6 +20,7 @@ import type { HttpRequest, HttpResponse } from '#src/utils/index.ts'
 
 type IdentifiedMessage = {
 	id: string
+	channel: string | undefined
 }
 
 type CreateClaimRPCBaseOpts = {
@@ -261,7 +262,7 @@ export type ExternalRPCOutgoingMsg = (
 		{
 			type: 'createClaimStep'
 			step: {
-				name: 'attestor-progress' | 'witness-progress'
+				name: 'witness-progress'
 				step: ProofGenerationStep
 			}
 		}
