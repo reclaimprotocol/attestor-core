@@ -20,6 +20,7 @@ import type { HttpRequest, HttpResponse } from '#src/utils/index.ts'
 
 type IdentifiedMessage = {
 	id: string
+	channel: string | undefined
 }
 
 type CreateClaimRPCBaseOpts = {

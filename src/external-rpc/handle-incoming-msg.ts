@@ -11,12 +11,13 @@ import { ALL_ENC_ALGORITHMS, makeExternalRpcOprfOperator, makeExternalRpcZkOpera
 import { createClaimOnMechain } from '#src/mechain/client/create-claim-on-mechain.ts'
 import type { ClaimTunnelResponse } from '#src/proto/api.ts'
 import { extractHTMLElement, extractJSONValueIndex, generateRequstAndResponseFromTranscript } from '#src/providers/http/utils.ts'
-import type { OPRFOperators, ProviderParams, ProviderSecretParams, ZKOperators } from '#src/types/index.ts'
+import type { CompleteTLSPacket, OPRFOperators, ProviderParams, ProviderSecretParams, Transcript, ZKOperators } from '#src/types/index.ts'
 import { B64_JSON_REVIVER } from '#src/utils/b64-json.ts'
 import { AttestorError, getIdentifierFromClaimInfo, logger, makeLogger, uint8ArrayToStr } from '#src/utils/index.ts'
 
 export async function handleIncomingMessage(data: string | ExternalRPCIncomingMsg) {
 	let id = ''
+	let channel: string | undefined
 	try {
 		const req: ExternalRPCIncomingMsg = (
 			typeof data === 'string'
@@ -25,6 +26,7 @@ export async function handleIncomingMessage(data: string | ExternalRPCIncomingMs
 		)
 
 		id = req.id || ''
+		channel = req.channel
 
 		const rslt = await _handleIncomingMessage(req)
 		if(!rslt) {
@@ -50,6 +52,7 @@ export async function handleIncomingMessage(data: string | ExternalRPCIncomingMs
 		const res = {
 			...data,
 			id,
+			channel,
 			isResponse: true
 		} as ExternalRPCOutgoingMsg
 		return sendMessageToApp(res)
@@ -104,10 +107,11 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 						step,
 					},
 					id: req.id,
+					channel: req.channel,
 				})
 			},
 			updateProviderParams : req.request.updateProviderParams
-				? updateProviderParams
+				? (transcript, tlsVersion) => updateProviderParams(transcript, tlsVersion, req.channel)
 				: undefined
 		})
 		const response = mapToCreateClaimResponse(claimTunnelRes)
@@ -133,6 +137,7 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 					type: 'createClaimOnAvsStep',
 					step,
 					id: req.id,
+					channel: req.channel,
 				})
 			},
 		})
@@ -159,6 +164,7 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 					type: 'createClaimOnMechainStep',
 					step,
 					id: req.id,
+					channel: req.channel,
 				})
 			},
 		})
@@ -204,6 +210,7 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 						level,
 						message,
 						id: req.id,
+						channel: req.channel,
 					})
 				)
 				: undefined
@@ -258,8 +265,9 @@ function getOprfOperators(
 }
 
 async function updateProviderParams(
-	transcript,
-	tlsVersion,
+	transcript: Transcript<CompleteTLSPacket>,
+	tlsVersion: string,
+	channel: string | undefined,
 ): Promise<{
 	params: Partial<ProviderParams<'http'>>
 	secretParams: Partial<ProviderSecretParams<'http'>>
@@ -281,7 +289,8 @@ async function updateProviderParams(
 					: undefined
 			},
 			response: { ...res, body: uint8ArrayToStr(res.body) },
-		}
+		},
+		channel: channel,
 	})
 	return waitForRes
 }
