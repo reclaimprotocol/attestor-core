@@ -6,16 +6,18 @@
 import type { ProviderClaimInfo } from '#src/proto/api.ts'
 import { ClaimTeeBundleResponse } from '#src/proto/api.ts'
 import type { CertificateInfo } from '#src/proto/tee-bundle.ts'
+import { VerificationBundle } from '#src/proto/tee-bundle.ts'
 import { getApm } from '#src/server/utils/apm.ts'
 import { assertValidProviderTranscript } from '#src/server/utils/assert-valid-claim-request.ts'
 import { getAttestorAddress, niceParseJsonObject, signAsAttestor } from '#src/server/utils/generics.ts'
+import { replaceOprfRanges, verifyOprfProofs } from '#src/server/utils/tee-oprf-verification.ts'
 import type { TeeTranscriptData } from '#src/server/utils/tee-transcript-reconstruction.ts'
 import { reconstructTlsTranscript } from '#src/server/utils/tee-transcript-reconstruction.ts'
 import { verifyTeeBundle } from '#src/server/utils/tee-verification.ts'
 import type { Logger } from '#src/types/general.ts'
 import type { ProviderCtx, RPCHandler, Transcript } from '#src/types/index.ts'
 import { AttestorError } from '#src/utils/error.ts'
-import { createSignDataForClaim, getIdentifierFromClaimInfo } from '#src/utils/index.ts'
+import { createSignDataForClaim, getIdentifierFromClaimInfo, uint8ArrayToStr } from '#src/utils/index.ts'
 
 export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	teeBundleRequest,
@@ -32,7 +34,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	try {
 		// 1. Verify TEE bundle (attestations + signatures) - this includes timestamp validation
 		logger.info('Starting TEE bundle verification')
-		const teeData = await verifyTeeBundle(verificationBundle, logger)
+		const teeData = await verifyTeeBundle(verificationBundle, logger) as any
 
 		// 2. Extract timestampS from TEE_K bundle for claim signing
 		const timestampS = Math.floor(teeData.kOutputPayload.timestampMs / 1000)
@@ -41,10 +43,37 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 		logger.info('Starting TLS transcript reconstruction')
 		const transcriptData = await reconstructTlsTranscript(teeData, logger)
 
-		// 4. Create plaintext transcript for provider validation
+		// 4. Verify OPRF proofs and get replacement data
+		logger.info('Verifying OPRF proofs')
+		// Parse the verification bundle to get OPRF verifications
+		const bundle = VerificationBundle.decode(verificationBundle)
+		const oprfResults = await verifyOprfProofs(
+			{ ...teeData, oprfVerifications: bundle.oprfVerifications },
+			logger
+		)
+
+		// 5. Create plaintext transcript for provider validation
 		logger.info('Creating plaintext transcript from TEE data')
 		const plaintextTranscript = createPlaintextTranscriptFromTeeData(transcriptData, logger)
-		// 5. Direct provider validation (bypass signature validation completely)
+
+		// 5.5. Replace OPRF ranges in plaintext transcript if needed
+		if(oprfResults.length > 0 && plaintextTranscript.length > 0) {
+			logger.info('Replacing OPRF ranges in plaintext transcript')
+			// Find the server response message in the transcript and replace OPRF ranges
+			for(const message of plaintextTranscript) {
+				if(message.sender === 'server') {
+					message.message = replaceOprfRanges(
+						message.message,
+						oprfResults,
+						logger
+					)
+					console.log(uint8ArrayToStr(message.message))
+				}
+			}
+		}
+
+
+		// 6. Direct provider validation
 		logger.info('Running direct provider validation on TEE reconstructed data')
 		const validateTx = getApm()
 			?.startTransaction('validateTeeProviderReceipt', { childOf: tx })
