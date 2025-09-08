@@ -6,7 +6,11 @@
 import assert from 'assert'
 import { readFileSync } from 'fs'
 import { describe, it } from 'node:test'
-import { join } from 'path'
+import { dirname, join } from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 import { verifyTeeBundle } from '#src/server/utils/tee-verification.ts'
 
@@ -36,8 +40,8 @@ describe('TEE Signature Verification', () => {
 
 	it('should verify TEE bundle signatures using embedded public keys', async() => {
 		// Mock Date.now() to return a time close to the bundle timestamps for validation
-		//const mockTime = 1755774883738 + (2 * 60 * 1000) // 2 minutes after TEE_K timestamp
-
+		const originalDateNow = Date.now
+		Date.now = () => 1757078016814 + (2 * 60 * 1000) // 2 minutes after bundle timestamp
 
 		try {
 			// This should work with embedded public keys (standalone mode)
@@ -46,16 +50,20 @@ describe('TEE Signature Verification', () => {
 			assert.ok(result.teetSigned.body.length > 0)
 
 		} finally {
-
+			Date.now = originalDateNow
 		}
 	})
 
 
 	it('should verify TEE bundle with attestations or handle expected test failures', async() => {
+		if(!teeBundleBytes) {
+			console.log('Skipping TEE attestation test - bundle not found')
+			return
+		}
 
 		// Mock Date.now() to return a time close to the bundle timestamps for validation
-		//const originalDateNow = Date.now
-		//const mockTime = 1755698083175 + (2 * 60 * 1000) // 2 minutes after TEE_K timestamp in the TEE bundle
+		const originalDateNow = Date.now
+		Date.now = () => 1757078016814 + (2 * 60 * 1000) // 2 minutes after bundle timestamp
 
 		try {
 			// This should work with TEE attestations (production mode)
@@ -63,14 +71,11 @@ describe('TEE Signature Verification', () => {
 
 			assert.ok(result.teekSigned.body.length > 0)
 
-
 		} catch(error) {
-
-
 			// For other errors, re-throw
 			throw error
 		} finally {
-
+			Date.now = originalDateNow
 		}
 	})
 })
