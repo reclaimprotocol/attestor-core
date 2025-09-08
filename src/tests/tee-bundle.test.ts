@@ -176,7 +176,7 @@ describe('TEE Bundle Analysis', () => {
 			try {
 				// Parse the public signals
 				const publicSignalsJson = JSON.parse(new TextDecoder().decode(oprfData.publicSignalsJson))
-				const { proof, publicSignals } = publicSignalsJson
+				const { proof, publicSignals, cipher } = publicSignalsJson
 
 				// Debug: Check what fields are present and their values
 				console.log('Available fields in publicSignals:', Object.keys(publicSignals))
@@ -250,7 +250,8 @@ describe('TEE Bundle Analysis', () => {
 				console.log(`OPRF location: pos=${completePublicSignals.toprf.locations[0].pos}, len=${completePublicSignals.toprf.locations[0].len}`)
 
 				// Get OPRF operator for the cipher type
-				const algorithm = publicSignals.cipher?.replace('-toprf', '')
+				console.log(`OPRF cipher: ${cipher}`)
+				const algorithm = cipher?.replace('-toprf', '') || 'chacha20'
 				console.log(`Using algorithm: ${algorithm}`)
 
 				const oprfOperator = makeDefaultOPRFOperator(algorithm, 'gnark', LOGGER)
