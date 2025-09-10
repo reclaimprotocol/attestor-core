@@ -17,7 +17,7 @@ import { verifyTeeBundle } from '#src/server/utils/tee-verification.ts'
 import type { Logger } from '#src/types/general.ts'
 import type { ProviderCtx, RPCHandler, Transcript } from '#src/types/index.ts'
 import { AttestorError } from '#src/utils/error.ts'
-import { createSignDataForClaim, getIdentifierFromClaimInfo, uint8ArrayToStr } from '#src/utils/index.ts'
+import { createSignDataForClaim, getIdentifierFromClaimInfo } from '#src/utils/index.ts'
 
 export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	teeBundleRequest,
@@ -67,7 +67,6 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 						oprfResults,
 						logger
 					)
-					console.log(uint8ArrayToStr(message.message))
 				}
 			}
 		}

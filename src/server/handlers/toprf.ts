@@ -19,6 +19,9 @@ export const toprf: RPCHandler<'toprf'> = async(
 
 	const engineStr = getEngineString(engine)
 	const operator = makeDefaultOPRFOperator('chacha20', engineStr, logger)
+	//init all algorithms
+	makeDefaultOPRFOperator('aes-128-ctr', engineStr, logger)
+	makeDefaultOPRFOperator('aes-256-ctr', engineStr, logger)
 	const res = await operator.evaluateOPRF(PRIVATE_KEY, maskedData)
 
 	return { ...res, publicKeyShare: PUBLIC_KEY }
