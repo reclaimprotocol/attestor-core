@@ -230,6 +230,42 @@ async function validateTeeProviderReceipt<T extends ProviderClaimInfo>(
 }
 
 /**
+ * Checks if a hostname matches a certificate name (with wildcard support)
+ * @param hostname - The hostname to check
+ * @param certName - The certificate name
+ * @returns true if the hostname is valid for this certificate name
+ */
+function isHostnameValidForCertificate(hostname: string, certName: string): boolean {
+	// Exact match
+	if(hostname === certName) {
+		return true
+	}
+
+	// Wildcard match
+	if(certName.startsWith('*.')) {
+		// Extract the domain from wildcard
+		const wildcardDomain = certName.slice(2)
+
+		// Check if hostname ends with the wildcard domain
+		if(hostname.endsWith(wildcardDomain)) {
+			// Ensure we're matching a subdomain, not partial domain
+			const subdomainPart = hostname.slice(0, -(wildcardDomain.length))
+
+			// Valid if:
+			// 1. The subdomain part ends with a dot (proper subdomain boundary)
+			// 2. The subdomain part doesn't contain additional dots (single-level wildcard)
+			if(subdomainPart.endsWith('.')) {
+				const subdomain = subdomainPart.slice(0, -1)
+				// Wildcard only matches single level, not multiple subdomains
+				return !subdomain.includes('.')
+			}
+		}
+	}
+
+	return false
+}
+
+/**
  * NEW: Validates that the TLS certificate is valid for the domain being claimed
  * This prevents domain substitution attacks in TEE+MPC scenarios
  */
@@ -264,10 +300,10 @@ function validateTlsCertificate(
 		certificateDnsNames: certificateInfo.dnsNames
 	})
 
-	// Check if claimed hostname matches certificate
+	// Check if claimed hostname matches certificate (including wildcard support)
 	const isValidForHostname =
-		certificateInfo.commonName === claimedHostname ||
-		certificateInfo.dnsNames.includes(claimedHostname)
+		isHostnameValidForCertificate(claimedHostname, certificateInfo.commonName) ||
+		certificateInfo.dnsNames.some(name => isHostnameValidForCertificate(claimedHostname, name))
 
 	if(!isValidForHostname) {
 		throw new AttestorError(
@@ -287,7 +323,9 @@ function validateTlsCertificate(
 
 	logger.info('TLS certificate validation passed', {
 		claimedHostname,
-		validatedAgainst: isValidForHostname ? (certificateInfo.commonName === claimedHostname ? 'CommonName' : 'SAN') : 'none'
+		validatedAgainst: isHostnameValidForCertificate(claimedHostname, certificateInfo.commonName) ?
+			`CommonName: ${certificateInfo.commonName}` :
+			`SAN: ${certificateInfo.dnsNames.find(name => isHostnameValidForCertificate(claimedHostname, name))}`
 	})
 }
 
