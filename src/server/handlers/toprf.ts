@@ -18,11 +18,12 @@ export const toprf: RPCHandler<'toprf'> = async(
 	const PUBLIC_KEY = ethers.utils.arrayify(PUBLIC_KEY_STR)
 
 	const engineStr = getEngineString(engine)
-	const operator = makeDefaultOPRFOperator('chacha20', engineStr, logger)
 	//init all algorithms
-	makeDefaultOPRFOperator('aes-128-ctr', engineStr, logger)
-	makeDefaultOPRFOperator('aes-256-ctr', engineStr, logger)
-	const res = await operator.evaluateOPRF(PRIVATE_KEY, maskedData)
-
+	const operator1 = makeDefaultOPRFOperator('chacha20', engineStr, logger)
+	const operator2 = makeDefaultOPRFOperator('aes-128-ctr', engineStr, logger)
+	const operator3 = makeDefaultOPRFOperator('aes-256-ctr', engineStr, logger)
+	await operator1.evaluateOPRF(PRIVATE_KEY, maskedData)
+	await operator2.evaluateOPRF(PRIVATE_KEY, maskedData)
+	const res = await operator3.evaluateOPRF(PRIVATE_KEY, maskedData)
 	return { ...res, publicKeyShare: PUBLIC_KEY }
 }
