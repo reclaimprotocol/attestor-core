@@ -20,7 +20,7 @@ import { createSignDataForClaim, getIdentifierFromClaimInfo, uint8ArrayToStr } f
 
 export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	teeBundleRequest,
-	{ tx, logger, client }
+	{ logger, client }
 ) => {
 	const {
 		verificationBundle,
