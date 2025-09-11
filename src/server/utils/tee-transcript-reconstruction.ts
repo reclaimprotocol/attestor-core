@@ -13,17 +13,20 @@ export interface TeeTranscriptData {
 	revealedRequest: Uint8Array
 	reconstructedResponse: Uint8Array
 	certificateInfo?: CertificateInfo
+	responseTrimOffset?: number // Number of leading asterisks trimmed from response
 }
 
 /**
  * Reconstructs TLS transcript from TEE bundle data
  * @param bundleData - Validated TEE bundle data
  * @param logger - Logger instance
+ * @param oprfResults - Optional OPRF results to apply during reconstruction
  * @returns Reconstructed transcript data
  */
 export async function reconstructTlsTranscript(
 	bundleData: TeeBundleData,
-	logger: Logger
+	logger: Logger,
+	oprfResults?: Array<{ position: number, length: number, output: Uint8Array }>
 ): Promise<TeeTranscriptData> {
 	try {
 
@@ -31,7 +34,7 @@ export async function reconstructTlsTranscript(
 		const revealedRequest = reconstructRequest(bundleData, logger)
 
 		// 2. Reconstruct response using consolidated keystream and ciphertext
-		const reconstructedResponse = reconstructConsolidatedResponse(bundleData, logger)
+		const reconstructedResponse = await reconstructConsolidatedResponse(bundleData, logger, oprfResults)
 
 		// 3. Extract certificate info from TEE_K payload
 		const certificateInfo = bundleData.kOutputPayload.certificateInfo
@@ -90,7 +93,11 @@ function reconstructRequest(bundleData: TeeBundleData, logger: Logger): Uint8Arr
  * NEW: Reconstructs response using consolidated keystream and ciphertext
  * This is much simpler than the old packet-by-packet approach
  */
-function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger: Logger): Uint8Array {
+async function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger: Logger, oprfResults?: Array<{
+	position: number
+	length: number
+	output: Uint8Array
+}>): Promise<Uint8Array> {
 	const { kOutputPayload, tOutputPayload } = bundleData
 
 	// Get consolidated data from both TEEs
@@ -121,10 +128,21 @@ function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger: Logg
 		reconstructedResponse[i] = consolidatedKeystream[i] ^ consolidatedCiphertext[i]
 	}
 
+	logger.info(`Reconstructed response: ${reconstructedResponse.length} bytes, ${kOutputPayload.responseRedactionRanges?.length || 0} redaction ranges`)
+
 	// Apply response redaction ranges to the reconstructed response
-	const redactedResponse = applyResponseRedactionRanges(reconstructedResponse, kOutputPayload.responseRedactionRanges)
+	let processedResponse = applyResponseRedactionRanges(reconstructedResponse, kOutputPayload.responseRedactionRanges, logger)
+
+	// Apply OPRF replacements BEFORE trimming leading asterisks
+	if(oprfResults && oprfResults.length > 0) {
+		logger.info(`Applying ${oprfResults.length} OPRF replacements before trimming`)
+		const { replaceOprfRanges } = await import('#src/server/utils/tee-oprf-verification.ts')
+		processedResponse = replaceOprfRanges(processedResponse, oprfResults, logger)
+	}
+
+	// Count leading asterisks
 	let lastAsteriskIndex = -1
-	for(const element of redactedResponse) {
+	for(const element of processedResponse) {
 		if(element === REDACTION_CHAR_CODE) {
 			lastAsteriskIndex++
 		} else {
@@ -132,7 +150,10 @@ function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger: Logg
 		}
 	}
 
-	return redactedResponse.slice(lastAsteriskIndex + 1)
+	const trimOffset = lastAsteriskIndex + 1
+	logger.info(`After processing: ${processedResponse.length} bytes, ${trimOffset} leading asterisks trimmed, final: ${processedResponse.length - trimOffset} bytes`)
+
+	return processedResponse.slice(trimOffset)
 }
 
 // Removed legacy packet-based extraction functions since we now use consolidated streams
@@ -143,7 +164,8 @@ function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger: Logg
  */
 function applyResponseRedactionRanges(
 	response: Uint8Array,
-	redactionRanges?: Array<{ start: number, length: number }>
+	redactionRanges?: Array<{ start: number, length: number }>,
+	logger?: Logger
 ): Uint8Array {
 	if(!redactionRanges || redactionRanges.length === 0) {
 		return response
@@ -154,14 +176,26 @@ function applyResponseRedactionRanges(
 	// Consolidate overlapping ranges (same as client implementation)
 	const consolidatedRanges = consolidateRedactionRanges(redactionRanges)
 
+	if(logger) {
+		logger.info(`Applying ${consolidatedRanges.length} redaction ranges to ${response.length} byte response`)
+	}
+
 	// Apply each redaction range to replace random garbage with asterisks
-	for(const range of consolidatedRanges) {
+	for(const [idx, range] of consolidatedRanges.entries()) {
 		const rangeStart = range.start
 		const rangeEnd = range.start + range.length
 
 		// Check bounds
 		if(rangeStart < 0 || rangeEnd > result.length) {
-			continue // Skip invalid ranges
+			if(logger) {
+				logger.warn(`Redaction range #${idx} out of bounds: [${rangeStart}-${rangeEnd}] vs ${result.length}`)
+			}
+
+			continue
+		}
+
+		if(logger && idx < 3) {
+			logger.info(`Redaction range #${idx}: [${rangeStart}-${rangeEnd}]`)
 		}
 
 		// Replace random garbage with asterisks

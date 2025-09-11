@@ -38,11 +38,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 		// 2. Extract timestampS from TEE_K bundle for claim signing
 		const timestampS = Math.floor(teeData.kOutputPayload.timestampMs / 1000)
 
-		// 3. Reconstruct TLS transcript from TEE data
-		logger.info('Starting TLS transcript reconstruction')
-		const transcriptData = await reconstructTlsTranscript(teeData, logger)
-
-		// 4. Verify OPRF proofs and get replacement data
+		// 3. Verify OPRF proofs first (before transcript reconstruction)
 		logger.info('Verifying OPRF proofs')
 		// Parse the verification bundle to get OPRF verifications
 		const bundle = VerificationBundle.decode(verificationBundle)
@@ -51,25 +47,13 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 			logger
 		)
 
-		// 5. Create plaintext transcript for provider validation
+		// 4. Reconstruct TLS transcript with OPRF replacements applied
+		logger.info('Starting TLS transcript reconstruction with OPRF replacements')
+		const transcriptData = await reconstructTlsTranscript(teeData, logger, oprfResults)
+
+		// 5. Create plaintext transcript for provider validation (OPRF already applied)
 		logger.info('Creating plaintext transcript from TEE data')
 		const plaintextTranscript = createPlaintextTranscriptFromTeeData(transcriptData, logger)
-
-		// 5.5. Replace OPRF ranges in plaintext transcript if needed
-		if(oprfResults.length > 0 && plaintextTranscript.length > 0) {
-			logger.info('Replacing OPRF ranges in plaintext transcript')
-			// Find the server response message in the transcript and replace OPRF ranges
-			for(const message of plaintextTranscript) {
-				if(message.sender === 'server') {
-					message.message = replaceOprfRanges(
-						message.message,
-						oprfResults,
-						logger
-					)
-					logger.info(uint8ArrayToStr(message.message))
-				}
-			}
-		}
 
 
 		// 6. Direct provider validation
