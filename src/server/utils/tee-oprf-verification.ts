@@ -96,6 +96,7 @@ async function verifySingleOprfProof(
 		noncesAndCounters: publicSignals.blocks?.map((block: any) => ({
 			nonce: Buffer.from(block.nonce || '', 'base64'),
 			counter: block.counter || 0,
+			boundary: block.boundary || '',
 		})) || [],
 		// Process TOPRF data
 		toprf: publicSignals.toprf ? {
