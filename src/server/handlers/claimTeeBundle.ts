@@ -9,14 +9,14 @@ import type { CertificateInfo } from '#src/proto/tee-bundle.ts'
 import { VerificationBundle } from '#src/proto/tee-bundle.ts'
 import { assertValidProviderTranscript } from '#src/server/utils/assert-valid-claim-request.ts'
 import { getAttestorAddress, niceParseJsonObject, signAsAttestor } from '#src/server/utils/generics.ts'
-import { replaceOprfRanges, verifyOprfProofs } from '#src/server/utils/tee-oprf-verification.ts'
+import { verifyOprfProofs } from '#src/server/utils/tee-oprf-verification.ts'
 import type { TeeTranscriptData } from '#src/server/utils/tee-transcript-reconstruction.ts'
 import { reconstructTlsTranscript } from '#src/server/utils/tee-transcript-reconstruction.ts'
 import { verifyTeeBundle } from '#src/server/utils/tee-verification.ts'
 import type { Logger } from '#src/types/general.ts'
 import type { ProviderCtx, RPCHandler, Transcript } from '#src/types/index.ts'
 import { AttestorError } from '#src/utils/error.ts'
-import { createSignDataForClaim, getIdentifierFromClaimInfo, uint8ArrayToStr } from '#src/utils/index.ts'
+import { createSignDataForClaim, getIdentifierFromClaimInfo } from '#src/utils/index.ts'
 
 export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	teeBundleRequest,
