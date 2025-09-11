@@ -22,8 +22,8 @@ export const toprf: RPCHandler<'toprf'> = async(
 	const operator1 = makeDefaultOPRFOperator('chacha20', engineStr, logger)
 	const operator2 = makeDefaultOPRFOperator('aes-128-ctr', engineStr, logger)
 	const operator3 = makeDefaultOPRFOperator('aes-256-ctr', engineStr, logger)
-	await operator1.evaluateOPRF(PRIVATE_KEY, maskedData)
-	await operator2.evaluateOPRF(PRIVATE_KEY, maskedData)
-	const res = await operator3.evaluateOPRF(PRIVATE_KEY, maskedData)
+	await operator1.evaluateOPRF(PRIVATE_KEY, maskedData, logger)
+	await operator2.evaluateOPRF(PRIVATE_KEY, maskedData, logger)
+	const res = await operator3.evaluateOPRF(PRIVATE_KEY, maskedData, logger)
 	return { ...res, publicKeyShare: PUBLIC_KEY }
 }

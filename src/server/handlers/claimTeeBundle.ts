@@ -7,7 +7,6 @@ import type { ProviderClaimInfo } from '#src/proto/api.ts'
 import { ClaimTeeBundleResponse } from '#src/proto/api.ts'
 import type { CertificateInfo } from '#src/proto/tee-bundle.ts'
 import { VerificationBundle } from '#src/proto/tee-bundle.ts'
-import { getApm } from '#src/server/utils/apm.ts'
 import { assertValidProviderTranscript } from '#src/server/utils/assert-valid-claim-request.ts'
 import { getAttestorAddress, niceParseJsonObject, signAsAttestor } from '#src/server/utils/generics.ts'
 import { replaceOprfRanges, verifyOprfProofs } from '#src/server/utils/tee-oprf-verification.ts'
@@ -17,7 +16,7 @@ import { verifyTeeBundle } from '#src/server/utils/tee-verification.ts'
 import type { Logger } from '#src/types/general.ts'
 import type { ProviderCtx, RPCHandler, Transcript } from '#src/types/index.ts'
 import { AttestorError } from '#src/utils/error.ts'
-import { createSignDataForClaim, getIdentifierFromClaimInfo } from '#src/utils/index.ts'
+import { createSignDataForClaim, getIdentifierFromClaimInfo, uint8ArrayToStr } from '#src/utils/index.ts'
 
 export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	teeBundleRequest,
@@ -67,6 +66,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 						oprfResults,
 						logger
 					)
+					logger.info(uint8ArrayToStr(message.message))
 				}
 			}
 		}
@@ -74,8 +74,6 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 
 		// 6. Direct provider validation
 		logger.info('Running direct provider validation on TEE reconstructed data')
-		const validateTx = getApm()
-			?.startTransaction('validateTeeProviderReceipt', { childOf: tx })
 
 		try {
 			if(!data) {
@@ -102,10 +100,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 			logger.info({ claim: res.claim }, 'TEE bundle claim validation successful')
 
 		} catch(err) {
-			validateTx?.setOutcome('failure')
 			throw err
-		} finally {
-			validateTx?.end()
 		}
 
 	} catch(err) {

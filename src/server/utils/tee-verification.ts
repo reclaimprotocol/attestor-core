@@ -19,7 +19,6 @@ export interface TeeBundleData {
 	teetSigned: SignedMessage
 	kOutputPayload: KOutputPayload
 	tOutputPayload: TOutputPayload
-	handshakeKeys?: any // Optional handshake secrets (deprecated)
 }
 
 export interface TeeSignatureVerificationResult {
@@ -69,8 +68,7 @@ export async function verifyTeeBundle(
 			teekSigned: bundle.teekSigned,
 			teetSigned: bundle.teetSigned,
 			kOutputPayload,
-			tOutputPayload,
-			handshakeKeys: undefined, // handshakeKeys no longer in bundle - cert info now in kOutputPayload.certificateInfo
+			tOutputPayload
 		}
 
 	} catch(error) {

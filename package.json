@@ -81,7 +81,7 @@
     "@peculiar/webcrypto": "^1.5.0",
     "@peculiar/x509": "^1.12.3",
     "@reclaimprotocol/tls": "github:reclaimprotocol/tls",
-    "@reclaimprotocol/zk-symmetric-crypto": "^5.0.0",
+    "@reclaimprotocol/zk-symmetric-crypto": "^5.0.1",
     "ajv": "^8.17.1",
     "canonicalize": "^2.0.0",
     "cbor-x": "^1.6.0",
