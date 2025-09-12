@@ -33,5 +33,7 @@ jobs:
           cache-to: type=gha,mode=max
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/reclaimprotocol/${{ github.event.repository.name }}-tee:${{ github.sha }}
+          tags: |
+            ghcr.io/reclaimprotocol/${{ github.event.repository.name }}-tee:${{ github.sha }}
+            ghcr.io/reclaimprotocol/${{ github.event.repository.name }}-tee:tee
           file: attestor.dockerfile
