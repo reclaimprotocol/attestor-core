@@ -1,14 +1,19 @@
 import CIDR from 'ip-cidr'
 import type { Logger } from 'pino'
-import { BGP_WS_URL } from 'src/config'
-import { BGPAnnouncementOverlapData, BGPListener } from 'src/types'
-import { makeWebSocket } from 'src/utils/ws'
+
+import { BGP_WS_URL } from '#src/config/index.ts'
+import type { BGPAnnouncementOverlapData, BGPListener } from '#src/types/index.ts'
+import { makeWebSocket } from '#src/utils/ws.ts'
 
 const ANNOUNCEMENT_OVERLAP = 'announcement-overlap'
 
 class BGPAnnouncementOverlapEvent extends Event {
-	constructor(public readonly data: BGPAnnouncementOverlapData) {
+
+	readonly data: BGPAnnouncementOverlapData
+
+	constructor(data: BGPAnnouncementOverlapData) {
 		super(ANNOUNCEMENT_OVERLAP)
+		this.data = data
 	}
 }
 
@@ -64,7 +69,7 @@ export function createBgpListener(logger: Logger): BGPListener {
 
 		ws = makeWebSocket(BGP_WS_URL)
 		ws.onopen = onOpen
-		ws.onerror = (err) => onClose(err)
+		ws.onerror = (ev) => onClose(ev)
 		ws.onclose = () => onClose(new Error('Unexpected close'))
 		ws.onmessage = ({ data }) => {
 			const str = typeof data === 'string' ? data : data.toString()
@@ -88,7 +93,7 @@ export function createBgpListener(logger: Logger): BGPListener {
 		logger.info('connected to BGP websocket')
 	}
 
-	function onClose(err?: Error) {
+	function onClose(err?: Error | Event) {
 		if(closed) {
 			return
 		}
