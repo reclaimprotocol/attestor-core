@@ -20,7 +20,10 @@ import type { HttpRequest, HttpResponse } from '#src/utils/index.ts'
 
 type IdentifiedMessage = {
 	id: string
-	channel: string | undefined
+}
+
+type MessageWithChannel = {
+	channel?: string | undefined
 }
 
 type CreateClaimRPCBaseOpts = {
@@ -191,7 +194,7 @@ type AnyRPCClient = { [_: string]: (opts: any) => any }
 export type ExternalRPCRequest<T extends AnyRPCClient, K extends keyof T> = {
 	type: K
 	request: Parameters<T[K]>[0]
-}
+} & MessageWithChannel
 
 export type ExternalRPCResponse<T extends AnyRPCClient, K extends (keyof T) & string> = {
 	type: `${K}Done`
@@ -237,7 +240,7 @@ export type ExternalRPCIncomingMsg = (
 			err?: string
 		}
 	}
-) & IdentifiedMessage
+) & IdentifiedMessage & MessageWithChannel
 
 /**
  * Data sent back from the attestor to
@@ -287,4 +290,4 @@ export type ExternalRPCOutgoingMsg = (
 		}
 	)
 	| AsResponse<ExternalRPCErrorResponse>
-) & IdentifiedMessage
+) & IdentifiedMessage & MessageWithChannel

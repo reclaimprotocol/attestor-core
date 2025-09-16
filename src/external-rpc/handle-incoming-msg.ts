@@ -62,7 +62,7 @@ export async function handleIncomingMessage(data: string | ExternalRPCIncomingMs
 async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 	ExternalRPCResponse<ExternalRPCClient, keyof ExternalRPCClient> | undefined
 > {
-	const { id: reqId, type: reqType } = req
+	const { id: reqId, type: reqType, channel } = req
 	// ignore any messages not for us
 	if(!reqId || !reqType) {
 		return
@@ -89,10 +89,10 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 				? JSON.parse(req.request.context)
 				: undefined,
 			zkOperators: getZkOperators(
-				req.request.zkOperatorMode, req.request.zkEngine
+				req.request.zkOperatorMode, req.request.zkEngine, channel
 			),
 			oprfOperators: getOprfOperators(
-				req.request.zkOperatorMode, req.request.zkEngine
+				req.request.zkOperatorMode, req.request.zkEngine, channel
 			),
 			client: {
 				url: getWsApiUrlFromBaseUrl(),
@@ -107,11 +107,11 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 						step,
 					},
 					id: req.id,
-					channel: req.channel,
+					channel
 				})
 			},
 			updateProviderParams : req.request.updateProviderParams
-				? (transcript, tlsVersion) => updateProviderParams(transcript, tlsVersion, req.channel)
+				? (transcript, tlsVersion) => updateProviderParams(transcript, tlsVersion, channel)
 				: undefined
 		})
 		const response = mapToCreateClaimResponse(claimTunnelRes)
@@ -126,10 +126,10 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 				? JSON.parse(req.request.context)
 				: undefined,
 			zkOperators: getZkOperators(
-				req.request.zkOperatorMode, req.request.zkEngine
+				req.request.zkOperatorMode, req.request.zkEngine, channel
 			),
 			oprfOperators: getOprfOperators(
-				req.request.zkOperatorMode, req.request.zkEngine
+				req.request.zkOperatorMode, req.request.zkEngine, channel
 			),
 			logger,
 			onStep(step) {
@@ -152,10 +152,10 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 				? JSON.parse(req.request.context)
 				: undefined,
 			zkOperators: getZkOperators(
-				req.request.zkOperatorMode, req.request.zkEngine
+				req.request.zkOperatorMode, req.request.zkEngine, channel
 			),
 			oprfOperators: getOprfOperators(
-				req.request.zkOperatorMode, req.request.zkEngine
+				req.request.zkOperatorMode, req.request.zkEngine, channel
 			),
 			client: {	url: getWsApiUrlFromBaseUrl() },
 			logger,
@@ -228,7 +228,8 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 
 function getZkOperators(
 	mode: RPCCreateClaimOptions['zkOperatorMode'] = 'default',
-	zkEngine: ZKEngine = 'snarkjs'
+	zkEngine: ZKEngine = 'snarkjs',
+	channel: string | undefined
 ) {
 // use default snarkJS ops
 	if(mode === 'default') {
@@ -239,7 +240,7 @@ function getZkOperators(
 	// a ZK operator & wants to use it
 	const operators: ZKOperators = {}
 	for(const alg of ALL_ENC_ALGORITHMS) {
-		operators[alg] = makeExternalRpcZkOperator(alg, zkEngine)
+		operators[alg] = makeExternalRpcZkOperator(alg, zkEngine, channel)
 	}
 
 	return operators
@@ -247,7 +248,8 @@ function getZkOperators(
 
 function getOprfOperators(
 	mode: RPCCreateClaimOptions['zkOperatorMode'] = 'default',
-	zkEngine: ZKEngine = 'snarkjs'
+	zkEngine: ZKEngine = 'snarkjs',
+	channel: string | undefined
 ) {
 // use default webview ops
 	if(mode === 'default') {
@@ -258,7 +260,7 @@ function getOprfOperators(
 	// a ZK operator & wants to use it
 	const operators: OPRFOperators = {}
 	for(const alg of ALL_ENC_ALGORITHMS) {
-		operators[alg] = makeExternalRpcOprfOperator(alg, zkEngine)
+		operators[alg] = makeExternalRpcOprfOperator(alg, zkEngine, channel)
 	}
 
 	return operators

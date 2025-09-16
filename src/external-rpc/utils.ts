@@ -62,6 +62,7 @@ export function rpcRequest<T extends keyof ExternalRPCAppClient>(
 	// @ts-expect-error
 	sendMessageToApp({
 		id,
+		channel: opts.channel,
 		type: opts.type,
 		request: opts.request,
 	})

@@ -17,8 +17,13 @@ export const ALL_ENC_ALGORITHMS: EncryptionAlgorithm[] = [
  */
 export function makeExternalRpcZkOperator(
 	algorithm: EncryptionAlgorithm,
-	zkEngine: ZKEngine = 'snarkjs'
+	zkEngine: ZKEngine = 'snarkjs',
+	channel: string | undefined
 ): ZKOperator {
+	function callFnZk(request: ExecuteZKOpts) {
+		return rpcRequest({ channel: channel, type: 'executeZkFunctionV3', request })
+	}
+
 	return {
 		async generateWitness(input) {
 			const operator = await makeDefaultZkOperator(algorithm, zkEngine, logger)
@@ -33,12 +38,6 @@ export function makeExternalRpcZkOperator(
 	}
 }
 
-
-function callFnZk(request: ExecuteZKOpts) {
-	return rpcRequest({ type: 'executeZkFunctionV3', request })
-}
-
-
 /**
  * The goal of this RPC operator is if the attestor client
  * is running in a WebView, it can call the native
@@ -46,8 +45,13 @@ function callFnZk(request: ExecuteZKOpts) {
  */
 export function makeExternalRpcOprfOperator(
 	algorithm: EncryptionAlgorithm,
-	zkEngine: ZKEngine = 'snarkjs'
+	zkEngine: ZKEngine = 'snarkjs',
+	channel: string | undefined
 ): OPRFOperator {
+	function callFnOprf(request: ExecuteOPRFOpts) {
+		return rpcRequest({ channel, type: 'executeOprfFunctionV3', request })
+	}
+
 	return {
 		async generateWitness(input) {
 			const operator = await makeDefaultZkOperator(algorithm, zkEngine, logger)
@@ -72,8 +76,4 @@ export function makeExternalRpcOprfOperator(
 			return callFnOprf({ fn: 'evaluateOPRF', args: [serverPrivateKey, request] })
 		},
 	}
-}
-
-function callFnOprf(request: ExecuteOPRFOpts) {
-	return rpcRequest({ type: 'executeOprfFunctionV3', request })
 }
