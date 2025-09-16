@@ -177,7 +177,7 @@ type StepData = {
 export type CreateStep =
   | ({ name: 'creating' } & StepData)
   | ({
-    name: 'attestor-progress'
+    name: 'witness-progress'
     currentAttestor: AttestorData
     step: ProofGenerationStep
   } & StepData)

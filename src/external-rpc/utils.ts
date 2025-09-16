@@ -62,6 +62,7 @@ export function rpcRequest<T extends keyof ExternalRPCAppClient>(
 	// @ts-expect-error
 	sendMessageToApp({
 		id,
+		channel: opts.channel,
 		type: opts.type,
 		request: opts.request,
 	})
@@ -113,13 +114,15 @@ export function waitForResponse<T extends keyof ExternalRPCAppClient>(
  */
 export function sendMessageToApp(data: ExternalRPCOutgoingMsg) {
 	const str = JSON.stringify(data, B64_JSON_REPLACER)
-	if(!RPC_CHANNEL_NAME) {
-		throw new Error('global RPC_CHANNEL_NAME is not set')
+	const channelName = data.channel || RPC_CHANNEL_NAME
+
+	if(!channelName) {
+		throw new Error('RPC_CHANNEL_NAME is not set')
 	}
 
-	const channel = globalThis[RPC_CHANNEL_NAME] as AttestorRPCChannel
+	const channel = globalThis[channelName] as AttestorRPCChannel
 	if(!channel) {
-		throw new Error(`RPC channel ${RPC_CHANNEL_NAME} not set on globalThis`)
+		throw new Error(`RPC channel ${channelName} not set on globalThis`)
 	}
 
 	channel.postMessage(str)
