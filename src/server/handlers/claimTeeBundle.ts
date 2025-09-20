@@ -27,6 +27,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 		data
 	} = teeBundleRequest
 
+
 	// Initialize response
 	const res = ClaimTeeBundleResponse.create({ request: teeBundleRequest })
 
