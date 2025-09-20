@@ -1,5 +1,6 @@
-import { EncryptionAlgorithm, OPRFOperator, ZKEngine, ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
-import { TOPRFPayload } from 'src/proto/api'
+import type { EncryptionAlgorithm, OPRFOperator, ZKEngine, ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
+
+import type { TOPRFPayload } from '#src/proto/api.ts'
 
 export type ZKOperators = { [E in EncryptionAlgorithm]?: ZKOperator }
 
@@ -21,4 +22,10 @@ export type PrepareZKProofsBaseOpts = {
 export type TOPRFProofParams = TOPRFPayload & {
 	mask: Uint8Array
 	plaintext: Uint8Array
+
+	overshoot?: {
+		ciphertext: Uint8Array
+		iv: Uint8Array
+		recordNumber: number
+	}
 }
