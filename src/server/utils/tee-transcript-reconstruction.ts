@@ -140,10 +140,6 @@ async function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger
 		processedResponse = replaceOprfRanges(processedResponse, oprfResults, logger)
 	}
 
-	// Remove TLS 1.3 content type bytes (0x17 for application data)
-	// These can be left in unredacted portions and need to be removed
-	processedResponse = removeTlsContentTypeBytes(processedResponse, logger)
-
 	// Count leading asterisks
 	let lastAsteriskIndex = -1
 	for(const element of processedResponse) {
@@ -209,60 +205,6 @@ function applyResponseRedactionRanges(
 	}
 
 	return result
-}
-
-/**
- * Removes TLS 1.3 content type bytes from the response
- * These bytes (like 0x17 for application data) can be left in unredacted portions
- * and need to be removed for proper validation
- */
-function removeTlsContentTypeBytes(response: Uint8Array, logger?: Logger): Uint8Array {
-	// TLS 1.3 content type bytes to remove
-	const TLS_CONTENT_TYPES = [
-		0x17, // Application data
-		0x16, // Handshake
-		0x15, // Alert
-		0x14, // ChangeCipherSpec (legacy)
-	]
-
-	// Find all positions of TLS content type bytes
-	const bytesToRemove: number[] = []
-	for(const [i, element] of response.entries()) {
-		if(TLS_CONTENT_TYPES.includes(element)) {
-			bytesToRemove.push(i)
-		}
-	}
-
-	if(bytesToRemove.length === 0) {
-		return response
-	}
-
-	if(logger) {
-		logger.info(`Removing ${bytesToRemove.length} TLS content type bytes from response`)
-		// Log first few positions for debugging
-		const preview = bytesToRemove.slice(0, 5).map(pos => {
-			const context = response.slice(Math.max(0, pos - 2), Math.min(response.length, pos + 3))
-			return `pos ${pos}: [${Buffer.from(context).toString('hex')}]`
-		}).join(', ')
-		logger.debug(`TLS byte positions: ${preview}${bytesToRemove.length > 5 ? '...' : ''}`)
-	}
-
-	// Create new array without the TLS bytes
-	const cleanedResponse = new Uint8Array(response.length - bytesToRemove.length)
-	let writePos = 0
-	let removeIndex = 0
-
-	for(const [i, element] of response.entries()) {
-		if(removeIndex < bytesToRemove.length && i === bytesToRemove[removeIndex]) {
-			// Skip this byte
-			removeIndex++
-		} else {
-			// Copy this byte
-			cleanedResponse[writePos++] = element
-		}
-	}
-
-	return cleanedResponse
 }
 
 /**
