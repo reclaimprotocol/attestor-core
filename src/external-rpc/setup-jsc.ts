@@ -16,12 +16,12 @@ declare global {
 	var AttestorRPC: typeof AttestorRPCImport & {
 		/**
 		 * Sets up the library to run in JS environments like QuickJS or JavascriptCore.
-		 * 
+		 *
 		 * RPC will communicate with user by sending messages using `AttestorRPCChannel` by `<channel>.postMessage(message: string)`,
 		 * for example: `globalThis['attestor-core'].postMessage(message: string)`.
-		 * 
+		 *
 		 * @param baseUrl
-		 * @param channel The name of the channel for sending messages. Default channel is 'attestor-core'. 
+		 * @param channel The name of the channel for sending messages. Default channel is 'attestor-core'.
 		 */
 		setupJsRpc(baseUrl: string, channel?: string): void
 	}
