@@ -10,14 +10,14 @@ Communication with the attestor can be done via channels exposed in the native r
 
 For flutter, using `flutter_js`:
 ``` js
-import { setupFlutterJsRpc } from 'path/to/attestor-jsc.min.mjs'
+import { setupJsRpc } from 'path/to/attestor-jsc.min.mjs'
 
-setupFlutterJsRpc('https://attestor.reclaimprotocol.org')
+setupJsRpc('https://attestor.reclaimprotocol.org')
 ```
 
 You can call a method on the attestor like this:
 ``` js
-import { setupFlutterJsRpc } from 'path/to/attestor-jsc.min.mjs'
+import { setupJsRpc } from 'path/to/attestor-jsc.min.mjs'
 
 handleIncomingMessage({
 	// lets the window know this is a request
