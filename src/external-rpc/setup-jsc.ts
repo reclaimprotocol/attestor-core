@@ -9,13 +9,21 @@ import { makeLogger } from '#src/utils/logger.ts'
 
 declare global {
 	/**
-	 * FlutterJS sendMessage fn
-	 * https://pub.dev/packages/flutter_js/example
+	 * `sendMessage` function should be provided by the host of the JS environment for sending messages to host
 	 */
 	function sendMessage(channelName: string, message: any): void | Promise<void>
 
 	var AttestorRPC: typeof AttestorRPCImport & {
-		setupFlutterJsRpc(baseUrl: string, channel?: string): void
+		/**
+		 * Sets up the library to run in JS environments like QuickJS or JavascriptCore.
+		 *
+		 * RPC will communicate with user by sending messages using `AttestorRPCChannel` by `<channel>.postMessage(message: string)`,
+		 * for example: `globalThis['attestor-core'].postMessage(message: string)`.
+		 *
+		 * @param baseUrl
+		 * @param channel The name of the channel for sending messages. Default channel is 'attestor-core'.
+		 */
+		setupJsRpc(baseUrl: string, channel?: string): void
 	}
 }
 
@@ -23,11 +31,9 @@ setCryptoImplementation(pureJsCrypto)
 makeLogger(true)
 
 /**
- * Sets up the library to run in JSC environments like QuickJS or JavascriptCore.
- * inside a Flutter app.
- *
+ * Sets up the library to run in JS environments like QuickJS or JavascriptCore.
  */
-export function setupFlutterJsRpc(baseUrl: string, channel = 'attestor-core') {
+export function setupJsRpc(baseUrl: string, channel = 'attestor-core') {
 	globalThis.ATTESTOR_BASE_URL = baseUrl
 	globalThis.RPC_CHANNEL_NAME = channel
 	const rpcChannel: AttestorRPCChannel = {
@@ -39,4 +45,4 @@ export function setupFlutterJsRpc(baseUrl: string, channel = 'attestor-core') {
 	globalThis[channel] = rpcChannel
 }
 
-globalThis.AttestorRPC = { ...AttestorRPCImport, setupFlutterJsRpc }
+globalThis.AttestorRPC = { ...AttestorRPCImport, setupJsRpc }
