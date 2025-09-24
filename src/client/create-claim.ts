@@ -1,9 +1,11 @@
-import { strToUint8Array, TLSPacketContext } from '@reclaimprotocol/tls'
-import { makeRpcTlsTunnel } from 'src/client/tunnels/make-rpc-tls-tunnel'
-import { getAttestorClientFromPool } from 'src/client/utils/attestor-pool'
-import { DEFAULT_HTTPS_PORT, PROVIDER_CTX, TOPRF_DOMAIN_SEPARATOR } from 'src/config'
-import { ClaimTunnelRequest, ZKProofEngine } from 'src/proto/api'
-import { providers } from 'src/providers'
+import type { TLSPacketContext } from '@reclaimprotocol/tls'
+import { asciiToUint8Array } from '@reclaimprotocol/tls'
+
+import { makeRpcTlsTunnel } from '#src/client/tunnels/make-rpc-tls-tunnel.ts'
+import { getAttestorClientFromPool } from '#src/client/utils/attestor-pool.ts'
+import { DEFAULT_HTTPS_PORT, PROVIDER_CTX, TOPRF_DOMAIN_SEPARATOR } from '#src/config/index.ts'
+import { ClaimTunnelRequest, ZKProofEngine } from '#src/proto/api.ts'
+import { providers } from '#src/providers/index.ts'
 import type {
 	CreateClaimOnAttestorOpts,
 	IAttestorClient,
@@ -11,7 +13,9 @@ import type {
 	ProviderName,
 	TOPRFProofParams,
 	Transcript
-} from 'src/types'
+} from '#src/types/index.ts'
+import type {
+	RevealedSlices } from '#src/utils/index.ts'
 import {
 	AttestorError,
 	binaryHashToStr,
@@ -26,13 +30,12 @@ import {
 	makeHttpResponseParser,
 	preparePacketsForReveal,
 	redactSlices,
-	RevealedSlices,
 	uint8ArrayToStr,
 	unixTimestampSeconds
-} from 'src/utils'
-import { executeWithRetries } from 'src/utils/retries'
-import { SIGNATURES } from 'src/utils/signatures'
-import { getDefaultTlsOptions } from 'src/utils/tls'
+} from '#src/utils/index.ts'
+import { executeWithRetries } from '#src/utils/retries.ts'
+import { SIGNATURES } from '#src/utils/signatures/index.ts'
+import { getDefaultTlsOptions } from '#src/utils/tls.ts'
 
 type ServerAppDataPacket = {
 	plaintext: Uint8Array
@@ -217,7 +220,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		logger
 	)
 	const requestData = typeof requestStr === 'string'
-		? strToUint8Array(requestStr)
+		? asciiToUint8Array(requestStr)
 		: requestStr
 
 	logger.debug(
@@ -498,11 +501,14 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 
 			revealedPackets.push(...packets.filter(p => p.sender === 'server'))
 		} else {
-			for(const { block, redactedPlaintext, toprfs } of serverPacketsToReveal) {
+			for(const {
+				block, redactedPlaintext, overshotToprfFromPrevBlock, toprfs
+			} of serverPacketsToReveal) {
 				setRevealOfMessage(block.message, {
 					type: 'zk',
 					redactedPlaintext,
-					toprfs
+					toprfs,
+					overshotToprfFromPrevBlock
 				})
 				revealedPackets.push(
 					{ sender: 'server', message: redactedPlaintext }

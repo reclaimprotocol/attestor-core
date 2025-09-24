@@ -1,10 +1,14 @@
-import { base64 } from 'ethers/lib/utils'
-import { DEFAULT_METADATA, DEFAULT_RPC_TIMEOUT_MS } from 'src/config'
-import { InitResponse, RPCMessages } from 'src/proto/api'
-import { IAttestorClient, IAttestorClientCreateOpts, RPCEvent, RPCRequestData, RPCResponseData, RPCType } from 'src/types'
-import { AttestorError, generateRpcMessageId, getRpcRequestType, logger as LOGGER, packRpcMessages } from 'src/utils'
-import { AttestorSocket } from 'src/utils/socket-base'
-import { makeWebSocket as defaultMakeWebSocket } from 'src/utils/ws'
+import { utils } from 'ethers'
+
+import { DEFAULT_METADATA, DEFAULT_RPC_TIMEOUT_MS } from '#src/config/index.ts'
+import type { InitResponse } from '#src/proto/api.ts'
+import { RPCMessages } from '#src/proto/api.ts'
+import type { IAttestorClient, IAttestorClientCreateOpts, RPCEvent, RPCRequestData, RPCResponseData, RPCType } from '#src/types/index.ts'
+import { AttestorError, generateRpcMessageId, getRpcRequestType, logger as LOGGER, packRpcMessages } from '#src/utils/index.ts'
+import { AttestorSocket } from '#src/utils/socket-base.ts'
+import { makeWebSocket as defaultMakeWebSocket } from '#src/utils/ws.ts'
+
+const { base64 } = utils
 
 export class AttestorClient extends AttestorSocket implements IAttestorClient {
 

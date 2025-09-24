@@ -1,20 +1,28 @@
+import type { IncomingHttpHeaders } from 'http'
 import { HttpsProxyAgent } from 'https-proxy-agent'
-import type { ConnectResponse } from 'https-proxy-agent/dist/parse-proxy-response'
 import { Socket } from 'net'
-import { CONNECTION_TIMEOUT_MS } from 'src/config'
-import { CreateTunnelRequest } from 'src/proto/api'
-import { resolveHostnames } from 'src/server/utils/dns'
-import { isValidCountryCode } from 'src/server/utils/iso'
-import type { Logger } from 'src/types'
-import type { MakeTunnelFn, TCPSocketProperties } from 'src/types'
-import { AttestorError } from 'src/utils'
-import { getEnvVariable } from 'src/utils/env'
+
+import { CONNECTION_TIMEOUT_MS } from '#src/config/index.ts'
+import type { CreateTunnelRequest } from '#src/proto/api.ts'
+import { resolveHostnames } from '#src/server/utils/dns.ts'
+import { isValidCountryCode } from '#src/server/utils/iso.ts'
+import type { Logger } from '#src/types/index.ts'
+import type { MakeTunnelFn, TCPSocketProperties } from '#src/types/index.ts'
+import { getEnvVariable } from '#src/utils/env.ts'
+import { AttestorError } from '#src/utils/index.ts'
 
 const HTTPS_PROXY_URL = getEnvVariable('HTTPS_PROXY_URL')
 
 type ExtraOpts = Omit<CreateTunnelRequest, 'id' | 'initialMessage'> & {
 	logger: Logger
 }
+
+interface ConnectResponse {
+	statusCode: number
+	statusText: string
+	headers: IncomingHttpHeaders
+}
+
 /**
  * Builds a TCP tunnel to the given host and port.
  * If a geolocation is provided -- an HTTPS proxy is used
@@ -37,7 +45,6 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 	const socket = await connectTcp({ ...opts, logger })
 
 	let closed = false
-
 
 	socket.on('data', message => {
 		if(closed) {

@@ -1,10 +1,12 @@
 import { ethers } from 'ethers'
-import { DEFAULT_AUTH_EXPIRY_S } from 'src/config'
-import { AuthenticatedUserData, AuthenticationRequest, ServiceSignatureType } from 'src/proto/api'
-import { getEnvVariable } from 'src/utils/env'
-import { AttestorError } from 'src/utils/error'
-import { unixTimestampSeconds } from 'src/utils/generics'
-import { SelectedServiceSignature, SIGNATURES } from 'src/utils/signatures'
+
+import { DEFAULT_AUTH_EXPIRY_S } from '#src/config/index.ts'
+import type { AuthenticationRequest, ServiceSignatureType } from '#src/proto/api.ts'
+import { AuthenticatedUserData } from '#src/proto/api.ts'
+import { getEnvVariable } from '#src/utils/env.ts'
+import { AttestorError } from '#src/utils/error.ts'
+import { unixTimestampSeconds } from '#src/utils/generics.ts'
+import { SelectedServiceSignature, SIGNATURES } from '#src/utils/signatures/index.ts'
 
 export async function assertValidAuthRequest(
 	request: AuthenticationRequest | undefined,

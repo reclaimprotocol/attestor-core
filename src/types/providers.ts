@@ -1,8 +1,9 @@
 import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
-import type { AttestorVersion, ProviderClaimData } from 'src/proto/api'
-import type { ArraySlice, Logger, RedactedOrHashedArraySlice } from 'src/types/general'
-import type { ProvidersConfig } from 'src/types/providers.gen'
-import type { Transcript } from 'src/types/tunnel'
+
+import type { AttestorVersion, ProviderClaimData } from '#src/proto/api.ts'
+import type { ArraySlice, Logger, RedactedOrHashedArraySlice } from '#src/types/general.ts'
+import type { ProvidersConfig } from '#src/types/providers.gen.ts'
+import type { Transcript } from '#src/types/tunnel.ts'
 
 export type AttestorData = {
 	id: string

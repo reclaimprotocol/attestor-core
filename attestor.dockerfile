@@ -1,15 +1,15 @@
-FROM node:lts
+FROM node:24
 
 # install git
 RUN apt update -y && apt upgrade -y && apt install git -y
 
-ARG GL_TOKEN
-RUN git config --global url."https://git-push-pull:${GL_TOKEN}@gitlab.reclaimprotocol.org".insteadOf "https://gitlab.reclaimprotocol.org"
-
 COPY ./package.json /app/
 COPY ./package-lock.json /app/
+COPY ./tsconfig.json /app/
+COPY ./tsconfig.build.json /app/
 RUN mkdir -p /app/src/scripts
 RUN echo '' > /app/src/scripts/prepare.sh
+RUN echo 'console.log("TMP")' > /app/src/index.ts
 
 WORKDIR /app
 

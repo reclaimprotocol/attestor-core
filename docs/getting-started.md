@@ -28,7 +28,7 @@ const rslt = await createClaimOnAttestor({
 	// specify the address of the attestor to use
 	// (below is the official Reclaim attestor -- but you can
 	// specify your own attestor as well)
-	client: { url: 'wss://attestor.reclaimprotocol.org/ws' }
+	client: { url: 'wss://attestor.reclaimprotocol.org:444/ws' }
 })
 
 // if the attestor failed to find a proof in your claim --
@@ -95,7 +95,7 @@ import { AttestorClient, createClaimOnAttestor } from '@reclaimprotocol/attestor
 
 const client = new AttestorClient({
 	// some other attestor can be used here
-	url: 'wss://attestor.reclaimprotocol.org/ws'
+	url: 'wss://attestor.reclaimprotocol.org:444/ws'
 })
 const rslt = await createClaimOnAttestor({
 	name: 'http',

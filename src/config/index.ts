@@ -1,4 +1,5 @@
-import { AttestorVersion, InitRequest, ServiceSignatureType } from 'src/proto/api'
+import type { InitRequest } from '#src/proto/api.ts'
+import { AttestorVersion, ServiceSignatureType } from '#src/proto/api.ts'
 
 export const DEFAULT_ZK_CONCURRENCY = 10
 
@@ -25,7 +26,7 @@ export const DNS_SERVERS = [
 // 10m
 export const MAX_CLAIM_TIMESTAMP_DIFF_S = 10 * 60
 
-export const CURRENT_ATTESTOR_VERSION = AttestorVersion.ATTESTOR_VERSION_2_0_1
+export const CURRENT_ATTESTOR_VERSION = AttestorVersion.ATTESTOR_VERSION_3_0_0
 
 export const DEFAULT_METADATA: InitRequest = {
 	signatureType: ServiceSignatureType.SERVICE_SIGNATURE_TYPE_ETH,

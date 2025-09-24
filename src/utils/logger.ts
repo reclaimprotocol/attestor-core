@@ -1,12 +1,13 @@
-import P, { LoggerOptions } from 'pino'
-import type { LogLevel } from 'src/types'
-import { getEnvVariable } from 'src/utils/env'
+import { type LoggerOptions, pino, stdTimeFunctions } from 'pino'
+
+import type { LogLevel } from '#src/types/index.ts'
+import { getEnvVariable } from '#src/utils/env.ts'
 
 const PII_PROPERTIES = ['ownerPrivateKey', 'secretParams']
 const redactedText = '[REDACTED]'
 const envLevel = getEnvVariable('LOG_LEVEL') as LogLevel
 
-export let logger = P()
+export let logger = pino()
 
 makeLogger(false, envLevel)
 
@@ -26,7 +27,7 @@ export function makeLogger(
 ) {
 	const opts: LoggerOptions = {
 		// Log human readable time stamps instead of epoch time
-		timestamp: P.stdTimeFunctions.isoTime,
+		timestamp: stdTimeFunctions.isoTime,
 	}
 	if(redactPii) {
 		opts.formatters = { log: redact }
@@ -43,7 +44,7 @@ export function makeLogger(
 		}
 	}
 
-	const pLogger = P(opts)
+	const pLogger = pino(opts)
 	pLogger.level = level || 'info'
 
 	logger = pLogger

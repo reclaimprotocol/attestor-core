@@ -1,9 +1,9 @@
-import type { ProviderClaimData } from 'src/proto/api'
-import type { IAttestorClient, IAttestorClientInitParams } from 'src/types/client'
-import type { CompleteTLSPacket, Logger } from 'src/types/general'
-import type { ProofGenerationStep, ProviderName, ProviderParams, ProviderSecretParams } from 'src/types/providers'
-import type { Transcript } from 'src/types/tunnel'
-import type { PrepareZKProofsBaseOpts } from 'src/types/zk'
+import type { ProviderClaimData } from '#src/proto/api.ts'
+import type { IAttestorClient, IAttestorClientInitParams } from '#src/types/client.ts'
+import type { CompleteTLSPacket, Logger } from '#src/types/general.ts'
+import type { ProofGenerationStep, ProviderName, ProviderParams, ProviderSecretParams } from '#src/types/providers.ts'
+import type { Transcript } from '#src/types/tunnel.ts'
+import type { PrepareZKProofsBaseOpts } from '#src/types/zk.ts'
 
 /**
  * Uniquely identifies a claim.

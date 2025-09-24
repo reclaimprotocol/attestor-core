@@ -1,28 +1,41 @@
-import { CipherSuite, concatenateUint8Arrays, crypto, generateIV, strToUint8Array } from '@reclaimprotocol/tls'
-import {
-	CONFIG as ZK_CONFIG,
+import type { CipherSuite } from '@reclaimprotocol/tls'
+import { concatenateUint8Arrays, crypto, generateIV } from '@reclaimprotocol/tls'
+import type {
 	EncryptionAlgorithm,
-	generateProof,
-	getBlockSizeBytes,	makeGnarkOPRFOperator,
-	makeGnarkZkOperator,
-	makeLocalFileFetch,
 	MakeOPRFOperator,
-	makeRemoteFileFetch,
-	makeSnarkJsZKOperator,
 	MakeZKOperatorOpts,
 	OPRFOperator,	PrivateInput,
 	PublicInput,
-	verifyProof,
+	RawPublicInput,
 	ZKEngine,
-	ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
-import { DEFAULT_REMOTE_FILE_FETCH_BASE_URL, DEFAULT_ZK_CONCURRENCY, TOPRF_DOMAIN_SEPARATOR } from 'src/config'
-import { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_ZKProof as ZKProof, ZKProofEngine } from 'src/proto/api'
-import { ArraySlice, CompleteTLSPacket, Logger, OPRFOperators, PrepareZKProofsBaseOpts, TOPRFProofParams, ZKOperators, ZKRevealInfo } from 'src/types'
-import { detectEnvironment, getEnvVariable } from 'src/utils/env'
-import { AttestorError } from 'src/utils/error'
-import { getPureCiphertext, getRecordIV, getZkAlgorithmForCipherSuite, uint8ArrayToStr } from 'src/utils/generics'
-import { logger as LOGGER } from 'src/utils/logger'
-import { binaryHashToStr, isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from 'src/utils/redactions'
+	ZKOperator,
+	ZKTOPRFPublicSignals
+} from '@reclaimprotocol/zk-symmetric-crypto'
+import {
+	ceilToBlockSizeMultiple,
+	CONFIG as ZK_CONFIG,
+	generateProof,
+	getBlockSizeBytes,
+	makeLocalFileFetch,
+	makeRemoteFileFetch,
+	verifyProof
+} from '@reclaimprotocol/zk-symmetric-crypto'
+import {
+	makeGnarkOPRFOperator,
+	makeGnarkZkOperator,
+} from '@reclaimprotocol/zk-symmetric-crypto/gnark'
+import { makeSnarkJsZKOperator } from '@reclaimprotocol/zk-symmetric-crypto/snarkjs'
+import PQueue from 'p-queue'
+
+import { DEFAULT_REMOTE_FILE_FETCH_BASE_URL, DEFAULT_ZK_CONCURRENCY, TOPRF_DOMAIN_SEPARATOR } from '#src/config/index.ts'
+import type { MessageReveal_MessageRevealZk as ZKReveal, MessageReveal_TOPRFProof as TOPRFProof, MessageReveal_ZKProof as ZKProof } from '#src/proto/api.ts'
+import { ZKProofEngine } from '#src/proto/api.ts'
+import type { ArraySlice, CompleteTLSPacket, Logger, OPRFOperators, PrepareZKProofsBaseOpts, TOPRFProofParams, ZKOperators, ZKRevealInfo } from '#src/types/index.ts'
+import { detectEnvironment, getEnvVariable } from '#src/utils/env.ts'
+import { AttestorError } from '#src/utils/error.ts'
+import { getPureCiphertext, getRecordIV, getZkAlgorithmForCipherSuite, isTls13Suite, strToUint8Array } from '#src/utils/generics.ts'
+import { logger as LOGGER } from '#src/utils/logger.ts'
+import { binaryHashToStr, isFullyRedacted, isRedactionCongruent, REDACTION_CHAR_CODE } from '#src/utils/redactions.ts'
 
 type GenerateZKChunkProofOpts = {
 	key: Uint8Array
@@ -35,8 +48,19 @@ type GenerateZKChunkProofOpts = {
 	redactedPlaintext: Uint8Array
 
 	slice: ArraySlice
+}
 
-	toprf?: TOPRFProofParams
+type GenerateTOPRFChunkProofOpts = {
+	key: Uint8Array
+	iv: Uint8Array
+	/**
+	 * ciphertext obtained from the TLS packet
+	 * includes authTag, record IV, and ciphertext
+	 */
+	ciphertext: Uint8Array
+
+	slice: ArraySlice
+	toprf: TOPRFProofParams
 }
 
 type PrepareZKProofsOpts = {
@@ -48,13 +72,22 @@ type ZKVerifyOpts = {
 	cipherSuite: CipherSuite
 	ciphertext: Uint8Array
 	zkReveal: ZKReveal
+	iv: Uint8Array
+	recordNumber: number
+	toprfOvershotNullifier?: Uint8Array
+	/**
+	 * Get the ciphertext of the next packet.
+	 * @param overshotNullifier The TOPRF nullifier that overshoots into
+	 * the next packet. This should be passed into the verifyZkPacket function
+	 * of the next packet.
+	 */
+	getNextPacket: (overshotNullifier: Uint8Array) => (Uint8Array | undefined)
+
 	logger?: Logger
 	/** get ZK operator for specified algorithm */
 	zkOperators?: ZKOperators
 	oprfOperators?: OPRFOperators
 	zkEngine?: ZKEngine
-	iv: Uint8Array
-	recordNumber: number
 }
 
 type ZKProofToGenerate = {
@@ -62,13 +95,20 @@ type ZKProofToGenerate = {
 	redactedPlaintext: Uint8Array
 	privateInput: PrivateInput
 	publicInput: PublicInput
-	toprf?: TOPRFProofParams
+}
+
+type TOPRFProofToGenerate = {
+	privateInput: PrivateInput
+	publicInput: PublicInput
+	toprf: TOPRFProofParams
+	startIdx: number
 }
 
 type ZKPacketToProve = {
-	onGeneratedProofs(proofs: ZKProof[]): void
+	onGeneratedProofs(proofs: ZKProof[], toprfs: TOPRFProof[]): void
 	algorithm: EncryptionAlgorithm
 	proofsToGenerate: ZKProofToGenerate[]
+	toprfsToGenerate: TOPRFProofToGenerate[]
 	iv: Uint8Array
 }
 
@@ -86,16 +126,11 @@ export async function makeZkProofGenerator(
 		zkEngine = 'snarkjs'
 	}: PrepareZKProofsOpts
 ) {
-
-	const { default: PQueue } = await import('p-queue')
-	const zkQueue = new PQueue({
-		concurrency: zkProofConcurrency,
-		autoStart: true,
-	})
-
+	const zkQueue
+		= new PQueue({ concurrency: zkProofConcurrency, autoStart: true })
 	const packetsToProve: ZKPacketToProve[] = []
 
-	logger = (logger || LOGGER).child({ module: 'zk', zkEngine: zkEngine })
+	logger = logger.child({ module: 'zk', zkEngine })
 	let zkProofsToGen = 0
 
 	return {
@@ -107,8 +142,11 @@ export async function makeZkProofGenerator(
 		 */
 		async addPacketToProve(
 			packet: CompleteTLSPacket,
-			{ redactedPlaintext, toprfs }: ZKRevealInfo,
-			onGeneratedProofs: ZKPacketToProve['onGeneratedProofs']
+			{
+				redactedPlaintext, toprfs = [], overshotToprfFromPrevBlock
+			}: ZKRevealInfo,
+			onGeneratedProofs: ZKPacketToProve['onGeneratedProofs'],
+			getNextPacket: () => CompleteTLSPacket | undefined
 		) {
 			if(packet.type === 'plaintext') {
 				throw new Error('Cannot generate proof for plaintext')
@@ -119,125 +157,120 @@ export async function makeZkProofGenerator(
 
 			const key = await crypto.exportKey(packet.encKey)
 			const iv = packet.iv
-			const ciphertext = getPureCiphertext(
-				packet.ciphertext,
-				cipherSuite
-			)
+			const ciphertext = getPureCiphertext(packet.ciphertext, cipherSuite)
+			// if the packet starts with TOPRF overflow from previous packet,
+			// we can just redact that part of the ciphertext as it's not required
+			// to be proven. Decrypting the raw ciphertext of this part would also
+			// reveal the raw underlying text, which we don't want.
+			if(overshotToprfFromPrevBlock) {
+				redactedPlaintext.set(
+					new Uint8Array(overshotToprfFromPrevBlock.length)
+						.fill(REDACTION_CHAR_CODE)
+				)
+			}
+
+			const trueCiphertextLength = isTls13Suite(cipherSuite)
+				? ciphertext.length - 1 // remove content type byte
+				: ciphertext.length
 			const packetToProve: ZKPacketToProve = {
 				onGeneratedProofs,
 				algorithm: alg,
 				proofsToGenerate: [],
+				toprfsToGenerate: [],
 				iv: packet.fixedIv,
 			}
-			const slicesDone: ArraySlice[] = []
+
 			// first we'll handle all TOPRF blocks
 			// we do these first, because they can span multiple chunks
 			// & we need to be able to span the right chunks
-			for(const toprf of toprfs || []) {
-				if(
-					toprf.dataLocation!.fromIndex + toprf.dataLocation!.length
-						> ciphertext.length
-				) {
-					throw new AttestorError(
-						'ERROR_TOPRF_OUT_OF_BOUNDS',
-						'OPRF data spread across multiple chunks, please '
-						+ 'retry the request. If this error persists, '
-						+ 'try a different cipher suite, or try manipulating the location'
-						+ ' of the OPRF data in the TLS packet.'
-					)
+			for(const toprf of toprfs) {
+				// if the TOPRF data overshoots the ciphertext length,
+				// then it means that the OPRF data is spread across multiple
+				// TLS records & we need to include the next record's ciphertext
+				// in our proof.
+				// At most we support the OPRF data being spread across 2 records
+				const toprfDistFromEnd = trueCiphertextLength
+					- (toprf.dataLocation!.fromIndex + toprf.dataLocation!.length)
+				if(toprfDistFromEnd < 0) {
+					const nextPacket = getNextPacket()
+					if(nextPacket?.type !== 'ciphertext') {
+						throw new AttestorError(
+							'ERROR_INTERNAL',
+							'TOPRF data overshoots ciphertext length, '
+							+ 'but no next ciphertext packet found'
+						)
+					}
+
+					if(nextPacket.encKey !== packet.encKey) {
+						throw new AttestorError(
+							'ERROR_INTERNAL',
+							'TOPRF data overshoots ciphertext length, '
+							+ 'but next packet has different encryption key'
+						)
+					}
+
+					const nextCiphertext = nextPacket.ciphertext
+						.slice(0, Math.abs(toprfDistFromEnd))
+					const iv = nextPacket.iv
+					toprf.overshoot = {
+						ciphertext: nextCiphertext,
+						iv,
+						recordNumber: nextPacket.recordNumber,
+					}
 				}
 
 				const fromIndex = getIdealOffsetForToprfBlock(alg, toprf)
-				const toIndex = Math.min(fromIndex + chunkSizeBytes, ciphertext.length)
+				const toIndex = Math
+					.min(fromIndex + chunkSizeBytes, ciphertext.length)
 
 				// ensure this OPRF block doesn't overlap with any other OPRF block
 				const slice: ArraySlice = { fromIndex, toIndex }
-				assertNoOverlapOprf(slice)
-
-				addProofsToGenerate(
+				packetToProve.toprfsToGenerate.push(getTOPRFProofGenerationParamsForSlice({
+					key,
+					iv,
+					ciphertext,
 					slice,
-					{
+					toprf: {
 						...toprf,
 						dataLocation: {
 							...toprf.dataLocation!,
 							fromIndex: toprf.dataLocation!.fromIndex - fromIndex
 						}
 					}
+				}))
+				zkProofsToGen += 1
+
+				// we'll redact the OPRF part of the plaintext to not reveal
+				// the actual plaintext to the attestor
+				const pktToIndex = Math.min(
+					trueCiphertextLength,
+					toprf.dataLocation!.fromIndex + toprf.dataLocation!.length
 				)
+				const pktFromIndex = toprf.dataLocation!.fromIndex
+				for(let i = pktFromIndex;i < pktToIndex;i++) {
+					redactedPlaintext[i] = REDACTION_CHAR_CODE
+				}
 			}
 
-			// now we'll go through the rest of the ciphertext, and add proofs
-			// for the sections that haven't been covered by the TOPRF blocks
-			const slicesCp = sortSlices(slicesDone.slice())
-			let fromIndex = 0
-			for(const done of slicesCp) {
-				if(done.fromIndex > fromIndex) {
-					addProofsToGenerate({
-						fromIndex,
-						toIndex: done.fromIndex
-					})
+			for(let i = 0;i < ciphertext.length;i += chunkSizeBytes) {
+				const slice: ArraySlice = {
+					fromIndex: i,
+					toIndex: Math.min(i + chunkSizeBytes, ciphertext.length)
 				}
 
-				fromIndex = done.toIndex
+				const proofParams = getProofGenerationParamsForSlice(
+					{ key, iv, ciphertext, redactedPlaintext, slice }
+				)
+
+				if(!proofParams) {
+					continue
+				}
+
+				packetToProve.proofsToGenerate.push(proofParams)
+				zkProofsToGen += 1
 			}
 
-			if(fromIndex < ciphertext.length) {
-				addProofsToGenerate({
-					fromIndex,
-					toIndex: ciphertext.length
-				})
-			}
-
-			// generate proofs in order of start index
-			packetToProve.proofsToGenerate
-				.sort((a, b) => a.startIdx - b.startIdx)
 			packetsToProve.push(packetToProve)
-
-			function assertNoOverlapOprf(slice: ArraySlice) {
-				for(const done of slicesDone) {
-					if(
-						// 1d box overlap
-						slice.fromIndex < done.toIndex
-							&& slice.toIndex > done.fromIndex
-					) {
-						throw new AttestorError(
-							'ERROR_BAD_REQUEST',
-							'Single chunk has multiple OPRFs'
-						)
-					}
-				}
-			}
-
-			function addProofsToGenerate(
-				{ fromIndex, toIndex }: ArraySlice,
-				toprf?: TOPRFProofParams
-			) {
-				for(let i = fromIndex;i < toIndex;i += chunkSizeBytes) {
-					const slice: ArraySlice = {
-						fromIndex: i,
-						toIndex: Math.min(i + chunkSizeBytes, toIndex)
-					}
-
-					slicesDone.push(slice)
-					const proofParams = getProofGenerationParamsForSlice(
-						{
-							key,
-							iv,
-							ciphertext,
-							redactedPlaintext,
-							slice,
-							toprf,
-						},
-					)
-
-					if(!proofParams) {
-						continue
-					}
-
-					packetToProve.proofsToGenerate.push(proofParams)
-					zkProofsToGen += 1
-				}
-			}
 		},
 		getTotalChunksToProve() {
 			return zkProofsToGen
@@ -249,20 +282,38 @@ export async function makeZkProofGenerator(
 
 			const start = Date.now()
 			const tasks: Promise<void>[] = []
-			for(const { onGeneratedProofs, algorithm, proofsToGenerate } of packetsToProve) {
+			for(const {
+				onGeneratedProofs, algorithm, proofsToGenerate, toprfsToGenerate
+			} of packetsToProve) {
 				const proofs: ZKProof[] = []
+				const toprfs: TOPRFProof[] = []
 
 				let proofsLeft = proofsToGenerate.length
+				 + toprfsToGenerate.length
 				for(const proofToGen of proofsToGenerate) {
 					tasks.push(zkQueue.add(async() => {
-						const proof = await generateProofForChunk(algorithm, proofToGen)
+						const proof = await generateZkProofForChunk(algorithm, proofToGen)
 
 						onChunkDone?.()
 						proofs.push(proof)
 
 						proofsLeft -= 1
 						if(proofsLeft === 0) {
-							onGeneratedProofs(proofs)
+							onGeneratedProofs(proofs, toprfs)
+						}
+					}, { throwOnTimeout: true }))
+				}
+
+				for(const toprfToGen of toprfsToGenerate) {
+					tasks.push(zkQueue.add(async() => {
+						const toprf = await generateOprfProofForChunk(algorithm, toprfToGen)
+
+						onChunkDone?.()
+						toprfs.push(toprf)
+
+						proofsLeft -= 1
+						if(proofsLeft === 0) {
+							onGeneratedProofs(proofs, toprfs)
 						}
 					}, { throwOnTimeout: true }))
 				}
@@ -286,17 +337,57 @@ export async function makeZkProofGenerator(
 		},
 	}
 
-	async function generateProofForChunk(
+	async function generateZkProofForChunk(
 		algorithm: EncryptionAlgorithm,
 		{
-			startIdx, redactedPlaintext,
-			privateInput, publicInput,
-			toprf,
+			startIdx, redactedPlaintext, privateInput, publicInput
 		}: ZKProofToGenerate
 	): Promise<ZKProof> {
-		const operator = toprf
-			? getOprfOperatorForAlgorithm(algorithm)
-			: getZkOperatorForAlgorithm(algorithm)
+		const operator = getZkOperatorForAlgorithm(algorithm)
+		const proof = await generateProof(
+			{ algorithm, privateInput, publicInput, operator, logger }
+		)
+
+		logger?.debug({ startIdx }, 'generated proof for chunk')
+
+		return {
+			proofData: typeof proof.proofData === 'string'
+				? strToUint8Array(proof.proofData)
+				: proof.proofData,
+			decryptedRedactedCiphertext: proof.plaintext || new Uint8Array(),
+			redactedPlaintext,
+			startIdx
+		}
+	}
+
+	async function generateOprfProofForChunk(
+		algorithm: EncryptionAlgorithm,
+		{ startIdx, privateInput, publicInput, toprf }: TOPRFProofToGenerate
+	): Promise<TOPRFProof> {
+		const operator = getOprfOperatorForAlgorithm(algorithm)
+		const toprfLocations: ZKTOPRFPublicSignals['locations'] = []
+		if(toprf?.overshoot) {
+			const { dataLocation, overshoot: { ciphertext }	} = toprf
+			toprfLocations.push(
+				{
+					pos: dataLocation!.fromIndex,
+					len: dataLocation!.length - ciphertext.length
+				},
+				{
+					pos: ceilToBlockSizeMultiple(
+						dataLocation!.fromIndex + dataLocation!.length,
+						algorithm
+					),
+					len: ciphertext.length
+				}
+			)
+		} else if(toprf) {
+			toprfLocations.push({
+				pos: toprf.dataLocation!.fromIndex,
+				len: toprf.dataLocation!.length,
+			})
+		}
+
 		const proof = await generateProof(
 			{
 				algorithm,
@@ -308,8 +399,7 @@ export async function makeZkProofGenerator(
 					toprf
 						? {
 							toprf: {
-								pos: toprf.dataLocation!.fromIndex,
-								len: toprf.dataLocation!.length,
+								locations: toprfLocations,
 								output: toprf.nullifier,
 								responses: toprf.responses,
 								domainSeparator: TOPRF_DOMAIN_SEPARATOR
@@ -321,18 +411,14 @@ export async function makeZkProofGenerator(
 			}
 		)
 
-		logger?.debug({ startIdx }, 'generated proof for chunk')
+		logger?.debug({ toprfLocations }, 'generated TOPRF proof for chunk')
 
 		return {
-			// backwards compatibility
-			proofJson: '',
+			startIdx,
 			proofData: typeof proof.proofData === 'string'
 				? strToUint8Array(proof.proofData)
 				: proof.proofData,
-			toprf,
-			decryptedRedactedCiphertext: proof.plaintext,
-			redactedPlaintext,
-			startIdx
+			payload: toprf,
 		}
 	}
 
@@ -360,18 +446,44 @@ export async function verifyZkPacket(
 		logger = LOGGER,
 		zkEngine = 'snarkjs',
 		iv,
-		recordNumber
+		recordNumber,
+		toprfOvershotNullifier,
+		getNextPacket
 	}: ZKVerifyOpts,
 ) {
-	if(!zkReveal) {
-		throw new Error('No ZK reveal')
-	}
-
-	const { proofs } = zkReveal
+	const { proofs, toprfs } = zkReveal
 	const algorithm = getZkAlgorithmForCipherSuite(cipherSuite)
 
 	const recordIV = getRecordIV(ciphertext, cipherSuite)
-	ciphertext = getPureCiphertext(ciphertext, cipherSuite)
+	ciphertext = new Uint8Array(getPureCiphertext(ciphertext, cipherSuite))
+	const realRedactedPlaintext
+		= new Uint8Array(ciphertext.length).fill(REDACTION_CHAR_CODE)
+
+	const replacements = await Promise.all(toprfs.map(async(toprf, i) => {
+		try {
+			return await verifyToprfProofPacket(toprf)
+		} catch(e) {
+			e.message += ` (TOPRF proof ${i}, `
+				+ `from ${toprf.payload?.dataLocation?.fromIndex}, `
+				+ `record ${recordNumber})`
+			throw e
+		}
+	}))
+
+	await Promise.all(proofs.map(async(proof, i) => {
+		try {
+			await verifyZkProofPacket(proof)
+		} catch(e) {
+			e.message +=
+				` (ZK proof ${i}, startIdx ${proof.startIdx}, record ${recordNumber})`
+			throw e
+		}
+	}))
+
+	for(const { set, startIdx } of replacements) {
+		realRedactedPlaintext.set(set, startIdx)
+	}
+
 	/**
 	 * to verify if the user has given us the correct redacted plaintext,
 	 * and isn't providing plaintext that they haven't proven they have
@@ -379,40 +491,25 @@ export async function verifyZkPacket(
 	 * redacted parts with the plaintext that the user has provided
 	 * in the proofs
 	 */
-	const realRedactedPlaintext = new Uint8Array(
-		ciphertext.length,
-	).fill(REDACTION_CHAR_CODE)
-
-	await Promise.all(
-		proofs.map(async(proof, i) => {
-			try {
-				await verifyProofPacket(proof)
-			} catch(e) {
-				e.message += ` (chunk ${i}, startIdx ${proof.startIdx})`
-				throw e
-			}
-		})
-	)
+	if(toprfOvershotNullifier) {
+		realRedactedPlaintext.set(toprfOvershotNullifier)
+	}
 
 	return { redactedPlaintext: realRedactedPlaintext }
 
-	async function verifyProofPacket(
+	async function verifyZkProofPacket(
 		{
 			proofData,
-			proofJson,
 			decryptedRedactedCiphertext,
 			redactedPlaintext,
 			startIdx,
-			toprf,
 		}: ZKProof,
 	) {
 		// get the ciphertext chunk we received from the server
 		// the ZK library, will verify that the decrypted redacted
 		// ciphertext matches the ciphertext received from the server
-		const ciphertextChunk = ciphertext.slice(
-			startIdx,
-			startIdx + redactedPlaintext.length
-		)
+		const ciphertextChunkEnd = startIdx + redactedPlaintext.length
+		const ciphertextChunk = ciphertext.slice(startIdx, ciphertextChunkEnd)
 		// redact ciphertext if plaintext is redacted
 		// to prepare for decryption in ZK circuit
 		// the ZK circuit will take in the redacted ciphertext,
@@ -423,79 +520,32 @@ export async function verifyZkPacket(
 			}
 		}
 
-		// redact OPRF indices -- because they'll incorrectly
-		// be marked as incongruent
-		let comparePlaintext = redactedPlaintext
-		if(toprf) {
-			comparePlaintext = new Uint8Array(redactedPlaintext)
-			for(let i = 0;i < toprf.dataLocation!.length;i++) {
-				comparePlaintext[
-					i + toprf.dataLocation!.fromIndex
-				] = REDACTION_CHAR_CODE
-			}
-
-			// the transcript will contain only the stringified
-			// nullifier. So here, we'll compare the provable
-			// binary nullifier with the stringified nullifier
-			// that the user has provided
-			const nulliferStr = binaryHashToStr(
-				toprf.nullifier,
-				toprf.dataLocation!.length
-			)
-			const txtHash = redactedPlaintext.slice(
-				toprf.dataLocation?.fromIndex,
-				toprf.dataLocation?.fromIndex!
-					+ toprf.dataLocation?.length!
-			)
-			if(
-				uint8ArrayToStr(txtHash) !== nulliferStr
-					.slice(0, txtHash.length)
-			) {
-				throw new Error('OPRF nullifier not congruent')
-			}
-		}
-
-		if(!isRedactionCongruent(
-			comparePlaintext,
-			decryptedRedactedCiphertext
-		)) {
-			throw new Error('redacted ciphertext not congruent')
-		}
-
 		let nonce = concatenateUint8Arrays([iv, recordIV])
 		if(!recordIV.length) {
 			nonce = generateIV(nonce, recordNumber)
+		}
+
+		const ciphertextInput: RawPublicInput = {
+			ciphertext: ciphertextChunk,
+			iv: nonce,
+			offsetBytes: startIdx
+		}
+		if(
+			!isRedactionCongruent(redactedPlaintext, decryptedRedactedCiphertext)
+		) {
+			throw new Error('redacted ciphertext not congruent')
 		}
 
 		await verifyProof(
 			{
 				proof: {
 					algorithm,
-					proofData: proofData.length
-						? proofData
-						: strToUint8Array(proofJson),
+					proofData: proofData,
 					plaintext: decryptedRedactedCiphertext,
 				},
-				publicInput: {
-					ciphertext: ciphertextChunk,
-					iv: nonce,
-					offsetBytes: startIdx
-				},
+				publicInput: ciphertextInput,
 				logger,
-				...(
-					toprf
-						? {
-							operator: getOprfOperator(),
-							toprf: {
-								pos: toprf.dataLocation!.fromIndex,
-								len: toprf.dataLocation!.length,
-								domainSeparator: TOPRF_DOMAIN_SEPARATOR,
-								output: toprf.nullifier,
-								responses: toprf.responses,
-							}
-						}
-						: { operator: getZkOperator() }
-				)
+				operator: getZkOperator()
 			}
 		)
 
@@ -505,6 +555,108 @@ export async function verifyZkPacket(
 		)
 
 		realRedactedPlaintext.set(redactedPlaintext, startIdx)
+	}
+
+	async function verifyToprfProofPacket(
+		{ startIdx, proofData, payload: toprf }: TOPRFProof,
+	) {
+		if(!toprf?.dataLocation || !toprf.responses || !toprf.nullifier) {
+			throw new Error('invalid TOPRF proof payload')
+		}
+
+		const { dataLocation, nullifier } = toprf
+		const ciphertextChunkEnd = Math
+			.min(ciphertext.length, getChunkSizeBytes(algorithm) + startIdx)
+		const isLastChunk = ciphertextChunkEnd >= ciphertext.length
+		const ciphertextChunk = ciphertext.slice(startIdx, ciphertextChunkEnd)
+
+		let nonce = concatenateUint8Arrays([iv, recordIV])
+		if(!recordIV.length) {
+			nonce = generateIV(nonce, recordNumber)
+		}
+
+		const ciphertextInput: RawPublicInput = {
+			ciphertext: ciphertextChunk,
+			iv: nonce,
+			offsetBytes: startIdx
+		}
+		let pubInput: PublicInput = ciphertextInput
+		const nulliferStr = binaryHashToStr(nullifier, dataLocation.length)
+
+		const locations: ZKTOPRFPublicSignals['locations'] = []
+
+		const toprfEndIdx = dataLocation.fromIndex + dataLocation.length
+		const trueCiphLen = isLastChunk && isTls13Suite(cipherSuite)
+			? ciphertextChunk.length - 1
+			: ciphertextChunk.length
+		const overshoot = toprfEndIdx - trueCiphLen
+		if(overshoot > 0) {
+			// fetch the overshoot part of the nullifier
+			const nextPkt = getNextPacket(
+				strToUint8Array(nulliferStr.slice(dataLocation.length - overshoot))
+			)
+			if(!nextPkt) {
+				throw new Error('OPRF data overshot, but no next packet found')
+			}
+
+			const nextRecordIV = getRecordIV(ciphertext, cipherSuite)
+			let nextNonce = concatenateUint8Arrays([iv, nextRecordIV])
+			if(!nextRecordIV.length) {
+				nextNonce = generateIV(nextNonce, recordNumber + 1)
+			}
+
+			pubInput = [
+				ciphertextInput,
+				{
+					ciphertext: nextPkt.slice(0, overshoot),
+					iv: nextNonce,
+					offsetBytes: 0,
+				}
+			]
+
+			locations.push(
+				{
+					pos: dataLocation.fromIndex,
+					len: dataLocation.length - overshoot
+				},
+				{
+					pos: ceilToBlockSizeMultiple(
+						dataLocation.fromIndex + dataLocation.length,
+						algorithm
+					),
+					len: overshoot
+				}
+			)
+		} else {
+			locations.push({
+				pos: dataLocation.fromIndex,
+				len: dataLocation.length,
+			})
+		}
+
+		await verifyProof(
+			{
+				proof: { algorithm, proofData: proofData, plaintext: undefined },
+				publicInput: pubInput,
+				logger,
+				operator: getOprfOperator(),
+				toprf: {
+					locations,
+					domainSeparator: TOPRF_DOMAIN_SEPARATOR,
+					output: nullifier,
+					responses: toprf.responses,
+				}
+			}
+		)
+
+		logger?.debug({ locations }, 'verified TOPRF proof')
+
+		return {
+			set: strToUint8Array(
+				nulliferStr.slice(0, locations[0].len)
+			),
+			startIdx: locations[0].pos + startIdx,
+		}
 	}
 
 	function getZkOperator() {
@@ -638,7 +790,6 @@ function getProofGenerationParamsForSlice(
 		ciphertext,
 		redactedPlaintext,
 		slice: { fromIndex, toIndex },
-		toprf,
 	}: GenerateZKChunkProofOpts,
 ): ZKProofToGenerate | undefined {
 	const ciphertextChunk = ciphertext.slice(fromIndex, toIndex)
@@ -662,7 +813,43 @@ function getProofGenerationParamsForSlice(
 		redactedPlaintext: plaintextChunk,
 		privateInput: { key },
 		publicInput: { ciphertext: ciphertextChunk, iv, offsetBytes: fromIndex },
-		toprf
+	}
+}
+
+function getTOPRFProofGenerationParamsForSlice(
+	{
+		key,
+		iv,
+		ciphertext,
+		slice: { fromIndex, toIndex },
+		toprf,
+	}: GenerateTOPRFChunkProofOpts,
+): TOPRFProofToGenerate {
+	const ciphertextChunk = ciphertext.slice(fromIndex, toIndex)
+	if(toprf?.overshoot) {
+		const {
+			overshoot: { ciphertext: overshootCiphertext, iv: overshootIv }
+		} = toprf
+		return {
+			privateInput: { key },
+			publicInput: [
+				{
+					ciphertext: ciphertextChunk,
+					iv,
+					offsetBytes: fromIndex,
+				},
+				{ ciphertext: overshootCiphertext, iv: overshootIv }
+			],
+			toprf,
+			startIdx: fromIndex,
+		}
+	}
+
+	return {
+		privateInput: { key },
+		publicInput: { ciphertext: ciphertextChunk, iv, offsetBytes: fromIndex },
+		toprf,
+		startIdx: fromIndex,
 	}
 }
 
@@ -674,29 +861,31 @@ function getProofGenerationParamsForSlice(
  */
 function getIdealOffsetForToprfBlock(
 	alg: EncryptionAlgorithm,
-	{ dataLocation }: TOPRFProofParams,
+	{ dataLocation, overshoot }: TOPRFProofParams,
 ) {
 	const chunkSizeBytes = getChunkSizeBytes(alg)
-	const offsetChunks = Math.floor(
-		dataLocation!.fromIndex / chunkSizeBytes
-	)
-	const endOffsetChunks = Math.floor(
-		(dataLocation!.fromIndex + dataLocation!.length) / chunkSizeBytes
-	)
-
+	const blockSizeBytes = getBlockSizeBytes(alg)
+	const offsetChunks = Math
+		.floor(dataLocation!.fromIndex / chunkSizeBytes)
+	const endOffsetChunks = Math
+		.floor((dataLocation!.fromIndex + dataLocation!.length) / chunkSizeBytes)
 	// happy case -- the OPRF block fits into a single chunk, that's a
 	// divisor of the chunk size
 	if(endOffsetChunks === offsetChunks) {
-		return offsetChunks * chunkSizeBytes
+		const start = offsetChunks * chunkSizeBytes
+		if(overshoot) {
+			const overshootBlocks = Math
+				.ceil(overshoot.ciphertext.length / blockSizeBytes)
+			return start + (overshootBlocks * blockSizeBytes)
+		}
+
+		return start
 	}
 
-	const blockSizeBytes = getBlockSizeBytes(alg)
-	const offsetBytes = Math.floor(
-		dataLocation!.fromIndex / blockSizeBytes
-	) * blockSizeBytes
-	const endOffsetBytes = Math.ceil(
-		(dataLocation!.fromIndex + dataLocation!.length) / blockSizeBytes
-	)
+	const offsetBytes = Math
+		.floor(dataLocation!.fromIndex / blockSizeBytes) * blockSizeBytes
+	const endOffsetBytes = Math
+		.ceil((dataLocation!.fromIndex + dataLocation!.length) / blockSizeBytes)
 	if(endOffsetBytes - offsetBytes > chunkSizeBytes) {
 		throw new AttestorError(
 			'ERROR_BAD_REQUEST',
@@ -708,14 +897,12 @@ function getIdealOffsetForToprfBlock(
 }
 
 function getZkResourcesBaseUrl() {
-	return typeof window !== 'undefined' && window.WINDOW_RPC_ATTESTOR_BASE_URL
-		? new URL(
-			DEFAULT_REMOTE_FILE_FETCH_BASE_URL,
-			window.WINDOW_RPC_ATTESTOR_BASE_URL
-		).toString()
-		: DEFAULT_REMOTE_FILE_FETCH_BASE_URL
-}
+	if(typeof ATTESTOR_BASE_URL !== 'string') {
+		return DEFAULT_REMOTE_FILE_FETCH_BASE_URL
+	}
 
-function sortSlices(slices: ArraySlice[]) {
-	return slices.sort((a, b) => a.fromIndex - b.fromIndex)
+	return new URL(
+		DEFAULT_REMOTE_FILE_FETCH_BASE_URL,
+		ATTESTOR_BASE_URL
+	).toString()
 }

@@ -1,6 +1,7 @@
 import { base64Encode } from '@bufbuild/protobuf/wire'
 import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
-import type { ArraySlice, RedactedOrHashedArraySlice, TOPRFProofParams } from 'src/types'
+
+import type { ArraySlice, RedactedOrHashedArraySlice, TOPRFProofParams } from '#src/types/index.ts'
 
 export const REDACTION_CHAR = '*'
 export const REDACTION_CHAR_CODE = REDACTION_CHAR.charCodeAt(0)
@@ -12,6 +13,12 @@ type SliceWithReveal<T> = {
 	 * If the block has some TOPRF claims -- they'll be set here
 	 */
 	toprfs?: TOPRFProofParams[]
+	/**
+	 * If text was replaced in the previous block w TOPRF but
+	 * it overshot into this block. The "length" specifies how much
+	 * of it got overshot into this block
+	 */
+	overshotToprfFromPrevBlock?: { length: number }
 }
 
 export type RevealedSlices<T> = 'all' | SliceWithReveal<T>[]
@@ -85,10 +92,7 @@ export async function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 		// copy the plaintext to avoid mutating the original
 		redactedPlaintext: new Uint8Array(block.plaintext)
 	}))
-	const total = concatenateUint8Arrays(
-		blocks.map(b => b.plaintext)
-	)
-
+	const total = concatenateUint8Arrays(blocks.map(b => b.plaintext))
 	const redactions = redact(total)
 
 	if(!redactions.length) {
@@ -115,9 +119,7 @@ export async function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 
 		if(slice.hash) {
 			const plaintext = total.slice(slice.fromIndex, slice.toIndex)
-			const {
-				nullifier, responses, mask
-			} = await performOprf(plaintext)
+			const { nullifier, responses, mask } = await performOprf(plaintext)
 
 			// set the TOPRF claim on the first blocks this
 			// redaction covers
@@ -131,22 +133,31 @@ export async function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 				mask,
 				plaintext
 			}
+			const startBlockIdx = blockIdx
 			const block = slicesWithReveal[blockIdx]
 			block.toprfs ||= []
 			block.toprfs.push(toprf)
 
-			const nullifierStr = binaryHashToStr(
-				nullifier,
-				toprf.dataLocation!.length
-			)
+			const nullifierStr
+				= binaryHashToStr(nullifier, toprf.dataLocation!.length)
 
 			let i = 0
+			let overshootLen = 0
 			while(cursor < slice.toIndex) {
+				if(blockIdx !== startBlockIdx) {
+					overshootLen += 1
+				}
+
 				slicesWithReveal[blockIdx].redactedPlaintext[cursorInBlock]
 					= nullifierStr.charCodeAt(i)
 				advance()
 
 				i += 1
+			}
+
+			if(overshootLen) {
+				slicesWithReveal[blockIdx]
+					.overshotToprfFromPrevBlock = { length: overshootLen }
 			}
 		}
 

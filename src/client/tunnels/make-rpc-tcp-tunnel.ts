@@ -1,6 +1,6 @@
-import { CreateTunnelRequest } from 'src/proto/api'
-import { IAttestorClient, MakeTunnelFn, RPCEvent } from 'src/types'
-import { AttestorError } from 'src/utils'
+import type { CreateTunnelRequest } from '#src/proto/api.ts'
+import type { IAttestorClient, MakeTunnelFn, RPCEvent } from '#src/types/index.ts'
+import { AttestorError } from '#src/utils/index.ts'
 
 export type TCPTunnelCreateOpts = {
 	/**
@@ -29,9 +29,7 @@ export const makeRpcTcpTunnel: MakeTunnelFn<TCPTunnelCreateOpts> = ({
 
 	return {
 		async write(message) {
-			await client.sendMessage({
-				tunnelMessage: { tunnelId, message }
-			})
+			await client.sendMessage({ tunnelMessage: { tunnelId, message } })
 		},
 		async close(err) {
 			if(closed) {
