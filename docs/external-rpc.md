@@ -2,7 +2,7 @@
 
 To allow the Attestor to be used in non-browser environments with only access to a JS runtime like JavascriptCore or QuickJS, the attestor can be bundled into a single dependency free bundle that can be run in any ES6 compatible environment.
 
-The latest version of this JS bundle is hosted & available at `https://attestor.reclaimprotocol.org/browser-rpc/resources/attestor-jsc.min.mjs`.
+The latest version of this JS bundle is hosted & available at `https://attestor.reclaimprotocol.org:444/browser-rpc/resources/attestor-jsc.min.mjs`.
 
 Communication with the attestor can be done via channels exposed in the native runtime, such as `postMessage` in React Native. We have tests that ensure the attestor can be run in a `javascriptcore` environment using the `jsc` CLI.
 
@@ -12,7 +12,7 @@ For flutter, using `flutter_js`:
 ``` js
 import { setupJsRpc } from 'path/to/attestor-jsc.min.mjs'
 
-setupJsRpc('https://attestor.reclaimprotocol.org')
+setupJsRpc('https://attestor.reclaimprotocol.org:444')
 ```
 
 You can call a method on the attestor like this:

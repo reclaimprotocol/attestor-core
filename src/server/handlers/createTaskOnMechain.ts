@@ -28,7 +28,7 @@ export const createTaskOnMechain: RPCHandler<'createTaskOnMechain'> = async({
 
 	const hosts: string [] = []
 
-	// Fetch attestors's WebSocket URI, e.g. wss://attestor.reclaimprotocol.org/ws
+	// Fetch attestors's WebSocket URI, e.g. wss://attestor.reclaimprotocol.org:444/ws
 	for(let i = 0; i < requiredAttestors; i++) {
 		hosts.push(result[1][i].host)
 	}

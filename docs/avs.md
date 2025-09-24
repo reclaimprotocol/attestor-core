@@ -56,7 +56,7 @@ createClaimOnAvs({
 })
 ```
 
-Do note: the attestor can reject the request to pay for the fees if they do not wish to subsidize the claim. The official Reclaim attestor at `wss://attestor.reclaimprotocol.org/ws` does subsidize the claim fees.
+Do note: the attestor can reject the request to pay for the fees if they do not wish to subsidize the claim. The official Reclaim attestor at `wss://attestor.reclaimprotocol.org:444/ws` does subsidize the claim fees.
 
 If you're using the browser-rpc API, then the process is very similar to single attestor claim creation. All you really have to do is change the `type` to `createClaimOnAvs`, and add a `chainId` field to the request.
 
