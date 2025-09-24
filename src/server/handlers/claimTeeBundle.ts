@@ -31,68 +31,58 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	// Initialize response
 	const res = ClaimTeeBundleResponse.create({ request: teeBundleRequest })
 
-	try {
-		// 1. Verify TEE bundle (attestations + signatures) - this includes timestamp validation
-		logger.info('Starting TEE bundle verification')
-		const teeData = await verifyTeeBundle(verificationBundle, logger) as any
+	// 1. Verify TEE bundle (attestations + signatures) - this includes timestamp validation
+	logger.info('Starting TEE bundle verification')
+	const teeData = await verifyTeeBundle(verificationBundle, logger) as any
 
-		// 2. Extract timestampS from TEE_K bundle for claim signing
-		const timestampS = Math.floor(teeData.kOutputPayload.timestampMs / 1000)
+	// 2. Extract timestampS from TEE_K bundle for claim signing
+	const timestampS = Math.floor(teeData.kOutputPayload.timestampMs / 1000)
 
-		// 3. Verify OPRF proofs first (before transcript reconstruction)
-		logger.info('Verifying OPRF proofs')
-		// Parse the verification bundle to get OPRF verifications
-		const bundle = VerificationBundle.decode(verificationBundle)
-		const oprfResults = await verifyOprfProofs(
-			{ ...teeData, oprfVerifications: bundle.oprfVerifications },
-			logger
-		)
+	// 3. Verify OPRF proofs first (before transcript reconstruction)
+	logger.info('Verifying OPRF proofs')
+	// Parse the verification bundle to get OPRF verifications
+	const bundle = VerificationBundle.decode(verificationBundle)
+	const oprfResults = await verifyOprfProofs(
+		{ ...teeData, oprfVerifications: bundle.oprfVerifications },
+		logger
+	)
 
-		// 4. Reconstruct TLS transcript with OPRF replacements applied
-		logger.info('Starting TLS transcript reconstruction with OPRF replacements')
-		const transcriptData = await reconstructTlsTranscript(teeData, logger, oprfResults)
+	// 4. Reconstruct TLS transcript with OPRF replacements applied
+	logger.info('Starting TLS transcript reconstruction with OPRF replacements')
+	const transcriptData = await reconstructTlsTranscript(teeData, logger, oprfResults)
 
-		// 5. Create plaintext transcript for provider validation (OPRF already applied)
-		logger.info('Creating plaintext transcript from TEE data')
-		const plaintextTranscript = createPlaintextTranscriptFromTeeData(transcriptData, logger)
+	// 5. Create plaintext transcript for provider validation (OPRF already applied)
+	logger.info('Creating plaintext transcript from TEE data')
+	const plaintextTranscript = createPlaintextTranscriptFromTeeData(transcriptData, logger)
 
 
-		// 6. Direct provider validation
-		logger.info('Running direct provider validation on TEE reconstructed data')
+	// 6. Direct provider validation
+	logger.info('Running direct provider validation on TEE reconstructed data')
 
-		try {
-			if(!data) {
-				throw new AttestorError('ERROR_INVALID_CLAIM', 'No claim data provided in TEE bundle request')
-			}
 
-			const validatedClaim = await validateTeeProviderReceipt(
-				plaintextTranscript,
-				data,
-				logger,
-				{ version: client.metadata.clientVersion },
-				transcriptData.certificateInfo
-			)
-
-			res.claim = {
-				...validatedClaim,
-				identifier: getIdentifierFromClaimInfo(validatedClaim),
-				// Use timestampS from TEE_K bundle for claim signing
-				timestampS,
-				// hardcode for compatibility with V1 claims
-				epoch: 1
-			}
-
-			logger.info({ claim: res.claim }, 'TEE bundle claim validation successful')
-
-		} catch(err) {
-			throw err
-		}
-
-	} catch(err) {
-		logger.error({ err }, 'Invalid TEE bundle claim request')
-		const attestorErr = AttestorError.fromError(err, 'ERROR_INVALID_CLAIM')
-		res.error = attestorErr.toProto()
+	if(!data) {
+		throw new AttestorError('ERROR_INVALID_CLAIM', 'No claim data provided in TEE bundle request')
 	}
+
+	const validatedClaim = await validateTeeProviderReceipt(
+		plaintextTranscript,
+		data,
+		logger,
+		{ version: client.metadata.clientVersion },
+		transcriptData.certificateInfo
+	)
+
+	res.claim = {
+		...validatedClaim,
+		identifier: getIdentifierFromClaimInfo(validatedClaim),
+		// Use timestampS from TEE_K bundle for claim signing
+		timestampS,
+		// hardcode for compatibility with V1 claims
+		epoch: 1
+	}
+
+	logger.info({ claim: res.claim }, 'TEE bundle claim validation successful')
+
 
 	// 7. Sign the response
 	res.signatures = {
