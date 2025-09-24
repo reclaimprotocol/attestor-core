@@ -1,0 +1,101 @@
+syntax = "proto3";
+
+package teeproto;
+
+// Message definitions for TEE+MPC protocol verification bundles
+
+// Common structures
+message RequestRedactionRange {
+  int32 start = 1;
+  int32 length = 2;
+  // Values: "sensitive" or "sensitive_proof"
+  string type = 3;
+}
+
+message ResponseRedactionRange {
+  int32 start = 1;
+  int32 length = 2;
+}
+
+message SignedRedactedDecryptionStream {
+  bytes redacted_stream = 1;
+  uint64 seq_num = 2;
+}
+
+// Certificate information extracted during TLS handshake
+message CertificateInfo {
+  string common_name = 1;
+  string issuer_common_name = 2;
+  uint64 not_before_unix = 3;
+  uint64 not_after_unix = 4;
+  repeated string dns_names = 5;
+}
+
+// Handshake secrets disclosed for verification/display
+message HandshakeSecrets {
+  bytes handshake_key = 1;
+  bytes handshake_iv = 2;
+  uint32 cipher_suite = 3; // uint16 fits here
+  string algorithm = 4;
+}
+
+// Commitment opening for proof stream
+message Opening {
+  bytes proof_stream = 1; // Str_SP
+}
+
+message KOutputPayload {
+  bytes redacted_request = 1; // R_red
+  repeated RequestRedactionRange request_redaction_ranges = 2;
+
+  bytes consolidated_response_keystream = 3;  // NEW: Single response decryption keystream
+  CertificateInfo certificate_info = 4;      // NEW: Structured cert data instead of handshake packets
+
+  repeated ResponseRedactionRange response_redaction_ranges = 5;
+  uint64 timestamp_ms = 6; // Unix timestamp in milliseconds when payload was created (SIGNED)
+}
+
+message TOutputPayload {
+  bytes consolidated_response_ciphertext = 1;  // NEW: Single consolidated ciphertext instead of individual packets
+  repeated bytes request_proof_streams = 2;    // R_SP streams signed by TEE_T for cryptographic verification
+  uint64 timestamp_ms = 3;                     // Unix timestamp in milliseconds when payload was created (SIGNED)
+}
+
+// Attestation report with structured data
+message AttestationReport {
+  string type = 1; // "nitro" or "gcp"
+  bytes report = 2; // raw provider-specific attestation bytes
+}
+
+// Signature wrapper used everywhere
+enum BodyType {
+  BODY_TYPE_UNSPECIFIED = 0;
+  BODY_TYPE_K_OUTPUT = 1;
+  BODY_TYPE_T_OUTPUT = 2;
+}
+
+message SignedMessage {
+  BodyType body_type = 1;
+  bytes body = 2; // serialized deterministic KOutputPayload or TOutputPayload
+  bytes eth_address = 3; // ETH address (20 bytes, standalone mode only)
+  bytes signature = 4; // signature over body bytes
+  AttestationReport attestation_report = 5; // full attestation (enclave mode only)
+}
+
+// OPRF verification data for a single hashed range
+message OPRFVerificationData {
+  uint32 stream_pos = 1;      // Position in the consolidated TLS stream
+  uint32 stream_length = 2;   // Length of data in the stream
+  bytes public_signals_json = 3; // ZK proof and public parameters
+}
+
+// Single artefact produced by client for offline verification
+message VerificationBundle {
+
+  // Signed transcripts
+  SignedMessage teek_signed = 1; // BODY_TYPE_K_OUTPUT (contains signed certificate_info)
+  SignedMessage teet_signed = 2; // BODY_TYPE_T_OUTPUT
+
+  // OPRF verification data for hashed ranges
+  repeated OPRFVerificationData oprf_verifications = 3;
+}
