@@ -6,7 +6,6 @@ import { AsnParser } from '@peculiar/asn1-schema'
 import { SubjectPublicKeyInfo } from '@peculiar/asn1-x509'
 import { Crypto } from '@peculiar/webcrypto'
 import { X509Certificate, X509ChainBuilder } from '@peculiar/x509'
-// Dynamic import for cbor-x to avoid CommonJS/ESM issues
 import { sign } from 'cose-js'
 
 // Nitro-specific types
@@ -284,7 +283,7 @@ export async function validateNitroAttestationAndExtractKey(
 		const intermediateCerts: X509Certificate[] = []
 		for(let i = 0; i < doc.cabundle.length; i++) {
 			try {
-				const cert = new X509Certificate(doc.cabundle[i])
+				const cert = new X509Certificate(doc.cabundle[i].buffer as ArrayBuffer)
 				intermediateCerts.push(cert)
 			} catch(error) {
 				errors.push(`Failed to parse cabundle certificate ${i}: ${(error as Error).message}`)
@@ -294,7 +293,7 @@ export async function validateNitroAttestationAndExtractKey(
 		// Parse target certificate
 		let targetCert: X509Certificate
 		try {
-			targetCert = new X509Certificate(doc.certificate)
+			targetCert = new X509Certificate(doc.certificate.buffer as ArrayBuffer)
 		} catch(error) {
 			errors.push(`Failed to parse target certificate: ${(error as Error).message}`)
 			return { isValid: false, errors, warnings }
