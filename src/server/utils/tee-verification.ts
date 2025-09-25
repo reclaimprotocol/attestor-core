@@ -19,6 +19,8 @@ export interface TeeBundleData {
 	teetSigned: SignedMessage
 	kOutputPayload: KOutputPayload
 	tOutputPayload: TOutputPayload
+	teekPcr0: string
+	teetPcr0: string
 }
 
 export interface TeeSignatureVerificationResult {
@@ -37,43 +39,39 @@ export async function verifyTeeBundle(
 	bundleBytes: Uint8Array,
 	logger: Logger
 ): Promise<TeeBundleData> {
-	try {
-		// Parse the verification bundle protobuf
-		const bundle = parseVerificationBundle(bundleBytes)
+	// Parse the verification bundle protobuf
+	const bundle = parseVerificationBundle(bundleBytes)
 
-		// Validate required components are present
-		validateBundleCompleteness(bundle)
+	// Validate required components are present
+	validateBundleCompleteness(bundle)
 
-		// Extract public keys (from attestations or embedded keys)
-		const { teekKeyResult, teetKeyResult } = await extractPublicKeys(bundle, logger)
+	// Extract public keys (from attestations or embedded keys)
+	const { teekKeyResult, teetKeyResult } = await extractPublicKeys(bundle, logger)
 
-		// Verify TEE signatures using extracted public keys
-		await verifyTeeSignatures(bundle, teekKeyResult!, teetKeyResult!, logger)
+	// Verify TEE signatures using extracted public keys
+	await verifyTeeSignatures(bundle, teekKeyResult!, teetKeyResult!, logger)
 
-		// Ensure signed messages are present
-		if(!bundle.teekSigned || !bundle.teetSigned) {
-			throw new AttestorError('ERROR_INVALID_CLAIM', 'Missing TEE signed messages')
-		}
+	// Ensure signed messages are present
+	if(!bundle.teekSigned || !bundle.teetSigned) {
+		throw new AttestorError('ERROR_INVALID_CLAIM', 'Missing TEE signed messages')
+	}
 
-		// Parse TEE payloads
-		const kOutputPayload = parseKOutputPayload(bundle.teekSigned)
-		const tOutputPayload = parseTOutputPayload(bundle.teetSigned)
+	// Parse TEE payloads
+	const kOutputPayload = parseKOutputPayload(bundle.teekSigned)
+	const tOutputPayload = parseTOutputPayload(bundle.teetSigned)
 
-		// Validate timestamps
-		validateTimestamps(kOutputPayload, tOutputPayload, logger)
+	// Validate timestamps
+	validateTimestamps(kOutputPayload, tOutputPayload, logger)
 
-		logger.info('TEE bundle verification successful')
+	logger.info('TEE bundle verification successful')
 
-		return {
-			teekSigned: bundle.teekSigned,
-			teetSigned: bundle.teetSigned,
-			kOutputPayload,
-			tOutputPayload
-		}
-
-	} catch(error) {
-		logger.error({ error }, 'TEE bundle verification failed')
-		throw new AttestorError('ERROR_INVALID_CLAIM', `TEE bundle verification failed: ${(error as Error).message}`)
+	return {
+		teekSigned: bundle.teekSigned,
+		teetSigned: bundle.teetSigned,
+		kOutputPayload,
+		tOutputPayload,
+		teekPcr0: teekKeyResult!.pcr0,
+		teetPcr0: teetKeyResult!.pcr0,
 	}
 }
 
@@ -206,11 +204,13 @@ async function extractPublicKeys(
 		// Store the full extraction results for signature verification
 		teekKeyResult = {
 			teeType: 'tee_k',
-			ethAddress: teekResult.ethAddress
+			ethAddress: teekResult.ethAddress,
+			pcr0: teekResult.prc0
 		}
 		teetKeyResult = {
 			teeType: 'tee_t',
-			ethAddress: teetResult.ethAddress
+			ethAddress: teetResult.ethAddress,
+			pcr0: teetResult.prc0
 		}
 
 		logger.info('Nitro attestations validated successfully')
@@ -230,8 +230,8 @@ async function extractPublicKeys(
 		teekAddress = uint8ArrayToStr(bundle.teekSigned.ethAddress)
 		teetAddress = uint8ArrayToStr(bundle.teetSigned.ethAddress)
 
-		teekKeyResult = { ethAddress: teekAddress, teeType: 'tee_k' }
-		teetKeyResult = { ethAddress: teetAddress, teeType: 'tee_t' }
+		teekKeyResult = { ethAddress: teekAddress, teeType: 'tee_k', pcr0: 'standalone_k' }
+		teetKeyResult = { ethAddress: teetAddress, teeType: 'tee_t', pcr0: 'standalone_t' }
 
 		logger.info('Embedded public keys extracted successfully')
 	}
@@ -352,49 +352,40 @@ async function verifyTeeSignature(
  * Parses TEE_K output payload
  */
 function parseKOutputPayload(signedMessage: SignedMessage): KOutputPayload {
-	try {
-		// Use actual protobuf decoding
-		const payload = KOutputPayload.decode(signedMessage.body)
+	// Use actual protobuf decoding
+	const payload = KOutputPayload.decode(signedMessage.body)
 
-		// Validate required fields
-		if(!payload.redactedRequest) {
-			throw new Error('Missing redacted request in TEE_K payload')
-		}
-
-		if(!payload.consolidatedResponseKeystream || payload.consolidatedResponseKeystream.length === 0) {
-			throw new Error('Missing consolidated response keystream in TEE_K payload')
-		}
-
-		if(!payload.certificateInfo) {
-			throw new Error('Missing certificate info in TEE_K payload')
-		}
-
-		return payload
-
-	} catch(error) {
-		throw new Error(`Failed to parse TEE_K payload: ${(error as Error).message}`)
+	// Validate required fields
+	if(!payload.redactedRequest) {
+		throw new Error('Missing redacted request in TEE_K payload')
 	}
+
+	if(!payload.consolidatedResponseKeystream || payload.consolidatedResponseKeystream.length === 0) {
+		throw new Error('Missing consolidated response keystream in TEE_K payload')
+	}
+
+	if(!payload.certificateInfo) {
+		throw new Error('Missing certificate info in TEE_K payload')
+	}
+
+	return payload
+
 }
 
 /**
  * Parses TEE_T output payload
  */
 function parseTOutputPayload(signedMessage: SignedMessage): TOutputPayload {
-	try {
-		// Use actual protobuf decoding
-		const payload = TOutputPayload.decode(signedMessage.body)
+	// Use actual protobuf decoding
+	const payload = TOutputPayload.decode(signedMessage.body)
 
-		// Validate required fields
-		if(!payload.consolidatedResponseCiphertext || payload.consolidatedResponseCiphertext.length === 0) {
-			throw new Error('Missing consolidated response ciphertext in TEE_T payload')
-		}
-
-
-		return payload
-
-	} catch(error) {
-		throw new Error(`Failed to parse TEE_T payload: ${(error as Error).message}`)
+	// Validate required fields
+	if(!payload.consolidatedResponseCiphertext || payload.consolidatedResponseCiphertext.length === 0) {
+		throw new Error('Missing consolidated response ciphertext in TEE_T payload')
 	}
+
+
+	return payload
 }
 
 /**

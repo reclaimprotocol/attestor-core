@@ -33,7 +33,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 
 	// 1. Verify TEE bundle (attestations + signatures) - this includes timestamp validation
 	logger.info('Starting TEE bundle verification')
-	const teeData = await verifyTeeBundle(verificationBundle, logger) as any
+	const teeData = await verifyTeeBundle(verificationBundle, logger)
 
 	// 2. Extract timestampS from TEE_K bundle for claim signing
 	const timestampS = Math.floor(teeData.kOutputPayload.timestampMs / 1000)
@@ -71,6 +71,11 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 		{ version: client.metadata.clientVersion },
 		transcriptData.certificateInfo
 	)
+
+	const ctx = niceParseJsonObject(validatedClaim.context, 'context')
+	ctx.teekPcr0 = teeData.teekPcr0
+	ctx.teetPcr0 = teeData.teetPcr0
+	validatedClaim.context = JSON.stringify(ctx)
 
 	res.claim = {
 		...validatedClaim,

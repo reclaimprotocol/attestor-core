@@ -27,11 +27,13 @@ export interface NitroValidationResult {
 	warnings: string[]
 	userDataType?: 'tee_k' | 'tee_t'
 	ethAddress?: string
+	prc0: string
 }
 
 export interface AddressExtractionResult {
 	teeType: 'tee_k' | 'tee_t'
 	ethAddress?: string
+	pcr0: string
 }
 
 // Helper function to dynamically import cbor-x
@@ -175,14 +177,16 @@ function extractPublicKeyFromUserData(userDataBuffer: Buffer): AddressExtraction
 		if(teeKMatch) {
 			return {
 				teeType: 'tee_k',
-				ethAddress: teeKMatch[1] // Store the full ETH address with 0x prefix
+				ethAddress: teeKMatch[1], // Store the full ETH address with 0x prefix
+				pcr0: ''
 			}
 		}
 
 		if(teeTMatch) {
 			return {
 				teeType: 'tee_t',
-				ethAddress: teeTMatch[1] // Store the full ETH address with 0x prefix
+				ethAddress: teeTMatch[1], // Store the full ETH address with 0x prefix
+				pcr0: ''
 			}
 		}
 
@@ -212,13 +216,13 @@ export async function validateNitroAttestationAndExtractKey(
 			decoded = decode(Buffer.from(attestationBytes))
 		} catch(error) {
 			errors.push(`CBOR decoding failed: ${(error as Error).message}`)
-			return { isValid: false, errors, warnings }
+			return { isValid: false, errors, warnings, prc0: '' }
 		}
 
 		// Extract COSE_Sign1 structure
 		if(!Array.isArray(decoded) || decoded.length < 4) {
 			errors.push('Invalid COSE_Sign1 structure: expected array with 4 elements')
-			return { isValid: false, errors, warnings }
+			return { isValid: false, errors, warnings, prc0: '' }
 		}
 
 		const [, , payload] = decoded
@@ -226,7 +230,7 @@ export async function validateNitroAttestationAndExtractKey(
 		// Validate payload exists and is not empty
 		if(!payload || payload.length === 0) {
 			errors.push('Empty or missing payload in COSE_Sign1 structure')
-			return { isValid: false, errors, warnings }
+			return { isValid: false, errors, warnings, prc0: '' }
 		}
 
 		// Decode payload - use exact same approach as working code
@@ -235,7 +239,7 @@ export async function validateNitroAttestationAndExtractKey(
 			doc = decode(payload) as AttestationDocument
 		} catch(error) {
 			errors.push(`Payload decoding failed: ${(error as Error).message}`)
-			return { isValid: false, errors, warnings }
+			return { isValid: false, errors, warnings, prc0: '' }
 		}
 
 		// Validate mandatory fields with strict type checking
@@ -261,8 +265,10 @@ export async function validateNitroAttestationAndExtractKey(
 
 		// Early return if basic validation fails
 		if(errors.length > 0) {
-			return { isValid: false, errors, warnings }
+			return { isValid: false, errors, warnings, prc0: '' }
 		}
+
+		const pcr0 = doc.pcrs[0].toString('hex')
 
 		// Validate PCRs with secure comparison
 		for(const [index, expected] of Object.entries(EXPECTED_PCRS)) {
@@ -296,7 +302,7 @@ export async function validateNitroAttestationAndExtractKey(
 			targetCert = new X509Certificate(doc.certificate.toString('base64'))
 		} catch(error) {
 			errors.push(`Failed to parse target certificate: ${(error as Error).message}`)
-			return { isValid: false, errors, warnings }
+			return { isValid: false, errors, warnings, prc0: '' }
 		}
 
 		// Parse root certificate
@@ -305,14 +311,14 @@ export async function validateNitroAttestationAndExtractKey(
 			rootCert = new X509Certificate(AWS_NITRO_ROOT_CERT)
 		} catch(error) {
 			errors.push(`Failed to parse AWS Nitro root certificate: ${(error as Error).message}`)
-			return { isValid: false, errors, warnings }
+			return { isValid: false, errors, warnings, prc0: '' }
 		}
 
 		// Enhanced certificate chain validation
 		const chainResult = await validateCertificateChain(targetCert, intermediateCerts, rootCert, crypto)
 		if(!chainResult.isValid) {
 			errors.push(...chainResult.errors)
-			return { isValid: false, errors, warnings }
+			return { isValid: false, errors, warnings, prc0: '' }
 		}
 
 		// Parse and validate public key
@@ -321,13 +327,13 @@ export async function validateNitroAttestationAndExtractKey(
 			publicKeyRaw = Buffer.from(targetCert.publicKey.rawData)
 		} catch(error) {
 			errors.push(`Failed to extract public key: ${(error as Error).message}`)
-			return { isValid: false, errors, warnings }
+			return { isValid: false, errors, warnings, prc0: '' }
 		}
 
 		// Validate public key format (P-384 ECDSA)
 		if(publicKeyRaw.length !== 120 || publicKeyRaw[0] !== 0x30) {
 			errors.push(`Invalid public key format: expected 120-byte DER-encoded key, got ${publicKeyRaw.length} bytes`)
-			return { isValid: false, errors, warnings }
+			return { isValid: false, errors, warnings, prc0: '' }
 		}
 
 		let spki: SubjectPublicKeyInfo
@@ -335,13 +341,13 @@ export async function validateNitroAttestationAndExtractKey(
 			spki = AsnParser.parse(publicKeyRaw, SubjectPublicKeyInfo)
 		} catch(error) {
 			errors.push(`Failed to parse SubjectPublicKeyInfo: ${(error as Error).message}`)
-			return { isValid: false, errors, warnings }
+			return { isValid: false, errors, warnings, prc0: '' }
 		}
 
 		const ecPoint = Buffer.from(spki.subjectPublicKey)
 		if(ecPoint.length !== 97 || ecPoint[0] !== 0x04) {
 			errors.push('Invalid EC point: expected 97-byte uncompressed P-384 key')
-			return { isValid: false, errors, warnings }
+			return { isValid: false, errors, warnings, prc0: '' }
 		}
 
 		const x = ecPoint.subarray(1, 49) // 48-byte x coordinate
@@ -359,7 +365,7 @@ export async function validateNitroAttestationAndExtractKey(
 			await sign.verify(Buffer.from(attestationBytes), verifier, options)
 		} catch(error) {
 			errors.push(`COSE signature verification failed: ${(error as Error).message}`)
-			return { isValid: false, errors, warnings }
+			return { isValid: false, errors, warnings, prc0: '' }
 		}
 
 		// Extract public key from user_data if present
@@ -379,11 +385,12 @@ export async function validateNitroAttestationAndExtractKey(
 			errors,
 			warnings,
 			userDataType,
-			ethAddress
+			ethAddress,
+			prc0: pcr0
 		}
 
 	} catch(error) {
 		errors.push(`Unexpected error during validation: ${(error as Error).message}`)
-		return { isValid: false, errors, warnings }
+		return { isValid: false, errors, warnings, prc0: '' }
 	}
 }
