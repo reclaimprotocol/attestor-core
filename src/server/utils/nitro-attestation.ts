@@ -283,7 +283,7 @@ export async function validateNitroAttestationAndExtractKey(
 		const intermediateCerts: X509Certificate[] = []
 		for(let i = 0; i < doc.cabundle.length; i++) {
 			try {
-				const cert = new X509Certificate(doc.cabundle[i].buffer as ArrayBuffer)
+				const cert = new X509Certificate(doc.cabundle[i].toString('base64'))
 				intermediateCerts.push(cert)
 			} catch(error) {
 				errors.push(`Failed to parse cabundle certificate ${i}: ${(error as Error).message}`)
@@ -293,7 +293,7 @@ export async function validateNitroAttestationAndExtractKey(
 		// Parse target certificate
 		let targetCert: X509Certificate
 		try {
-			targetCert = new X509Certificate(doc.certificate.buffer as ArrayBuffer)
+			targetCert = new X509Certificate(doc.certificate.toString('base64'))
 		} catch(error) {
 			errors.push(`Failed to parse target certificate: ${(error as Error).message}`)
 			return { isValid: false, errors, warnings }
