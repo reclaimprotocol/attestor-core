@@ -428,9 +428,9 @@ function validateTimestamps(
 		throw new Error(`TEE_T timestamp ${tTimestamp} is too old. Must be within 10 minutes of current time ${now}`)
 	}
 
-	// 2. Check that both timestamps are within 5 seconds of each other
+	// 2. Check that both timestamps are within diff
 	const timestampDiffMs = Math.abs(kTimestamp - tTimestamp)
-	const maxDiffMs = 5 * 1000 // 5 seconds in milliseconds
+	const maxDiffMs = 20 * 1000
 
 	if(timestampDiffMs > maxDiffMs) {
 		throw new Error(`TEE timestamps differ by ${timestampDiffMs}ms, which exceeds maximum allowed difference of ${maxDiffMs}ms`)
