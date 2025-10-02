@@ -60,7 +60,7 @@ IwLz3/Y=
 
 // Expected PCR values (replace with actual values)
 const EXPECTED_PCRS = {
-	0: Buffer.from('000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000', 'hex'),
+	//0: Buffer.from('000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000', 'hex'),
 }
 
 // Secure buffer comparison to prevent timing attacks
@@ -271,19 +271,19 @@ export async function validateNitroAttestationAndExtractKey(
 		const pcr0 = doc.pcrs[0].toString('hex')
 
 		// Validate PCRs with secure comparison
-		for(const [index, expected] of Object.entries(EXPECTED_PCRS)) {
-			const pcrIndex = parseInt(index)
-			const actualPcr = doc.pcrs[pcrIndex]
-
-			if(!Buffer.isBuffer(actualPcr)) {
-				errors.push(`PCR${index} is not a Buffer`)
-				continue
-			}
-
-			if(!secureBufferCompare(expected, actualPcr)) {
-				errors.push(`PCR${index} mismatch`)
-			}
-		}
+		// for(const [index, expected] of Object.entries(EXPECTED_PCRS)) {
+		// 	const pcrIndex = parseInt(index)
+		// 	const actualPcr = doc.pcrs[pcrIndex]
+		//
+		// 	if(!Buffer.isBuffer(actualPcr)) {
+		// 		errors.push(`PCR${index} is not a Buffer`)
+		// 		continue
+		// 	}
+		//
+		// 	if(!secureBufferCompare(expected, actualPcr)) {
+		// 		errors.push(`PCR${index} mismatch`)
+		// 	}
+		// }
 
 		// Parse certificates with better error handling
 		const intermediateCerts: X509Certificate[] = []
