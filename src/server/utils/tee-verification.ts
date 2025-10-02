@@ -205,12 +205,12 @@ async function extractPublicKeys(
 		teekKeyResult = {
 			teeType: 'tee_k',
 			ethAddress: teekResult.ethAddress,
-			pcr0: teekResult.prc0
+			pcr0: teekResult.pcr0
 		}
 		teetKeyResult = {
 			teeType: 'tee_t',
 			ethAddress: teetResult.ethAddress,
-			pcr0: teetResult.prc0
+			pcr0: teetResult.pcr0
 		}
 
 		logger.info('Nitro attestations validated successfully')
