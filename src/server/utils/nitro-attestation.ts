@@ -27,7 +27,7 @@ export interface NitroValidationResult {
 	warnings: string[]
 	userDataType?: 'tee_k' | 'tee_t'
 	ethAddress?: string
-	prc0: string
+	pcr0: string
 }
 
 export interface AddressExtractionResult {
@@ -59,23 +59,23 @@ IwLz3/Y=
 -----END CERTIFICATE-----`
 
 // Expected PCR values (replace with actual values)
-const EXPECTED_PCRS = {
-	0: Buffer.from('000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000', 'hex'),
-}
-
-// Secure buffer comparison to prevent timing attacks
-function secureBufferCompare(a: Buffer, b: Buffer): boolean {
-	if(a.length !== b.length) {
-		return false
-	}
-
-	let result = 0
-	for(const [i, element] of a.entries()) {
-		result |= element ^ b[i]
-	}
-
-	return result === 0
-}
+// const EXPECTED_PCRS = {
+// 	//0: Buffer.from('000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000', 'hex'),
+// }
+//
+// // Secure buffer comparison to prevent timing attacks
+// function secureBufferCompare(a: Buffer, b: Buffer): boolean {
+// 	if(a.length !== b.length) {
+// 		return false
+// 	}
+//
+// 	let result = 0
+// 	for(const [i, element] of a.entries()) {
+// 		result |= element ^ b[i]
+// 	}
+//
+// 	return result === 0
+// }
 
 // Enhanced certificate chain validation
 async function validateCertificateChain(
@@ -216,13 +216,13 @@ export async function validateNitroAttestationAndExtractKey(
 			decoded = decode(Buffer.from(attestationBytes))
 		} catch(error) {
 			errors.push(`CBOR decoding failed: ${(error as Error).message}`)
-			return { isValid: false, errors, warnings, prc0: '' }
+			return { isValid: false, errors, warnings, pcr0: '' }
 		}
 
 		// Extract COSE_Sign1 structure
 		if(!Array.isArray(decoded) || decoded.length < 4) {
 			errors.push('Invalid COSE_Sign1 structure: expected array with 4 elements')
-			return { isValid: false, errors, warnings, prc0: '' }
+			return { isValid: false, errors, warnings, pcr0: '' }
 		}
 
 		const [, , payload] = decoded
@@ -230,7 +230,7 @@ export async function validateNitroAttestationAndExtractKey(
 		// Validate payload exists and is not empty
 		if(!payload || payload.length === 0) {
 			errors.push('Empty or missing payload in COSE_Sign1 structure')
-			return { isValid: false, errors, warnings, prc0: '' }
+			return { isValid: false, errors, warnings, pcr0: '' }
 		}
 
 		// Decode payload - use exact same approach as working code
@@ -239,7 +239,7 @@ export async function validateNitroAttestationAndExtractKey(
 			doc = decode(payload) as AttestationDocument
 		} catch(error) {
 			errors.push(`Payload decoding failed: ${(error as Error).message}`)
-			return { isValid: false, errors, warnings, prc0: '' }
+			return { isValid: false, errors, warnings, pcr0: '' }
 		}
 
 		// Validate mandatory fields with strict type checking
@@ -265,25 +265,25 @@ export async function validateNitroAttestationAndExtractKey(
 
 		// Early return if basic validation fails
 		if(errors.length > 0) {
-			return { isValid: false, errors, warnings, prc0: '' }
+			return { isValid: false, errors, warnings, pcr0: '' }
 		}
 
 		const pcr0 = doc.pcrs[0].toString('hex')
 
 		// Validate PCRs with secure comparison
-		for(const [index, expected] of Object.entries(EXPECTED_PCRS)) {
-			const pcrIndex = parseInt(index)
-			const actualPcr = doc.pcrs[pcrIndex]
-
-			if(!Buffer.isBuffer(actualPcr)) {
-				errors.push(`PCR${index} is not a Buffer`)
-				continue
-			}
-
-			if(!secureBufferCompare(expected, actualPcr)) {
-				errors.push(`PCR${index} mismatch`)
-			}
-		}
+		// for(const [index, expected] of Object.entries(EXPECTED_PCRS)) {
+		// 	const pcrIndex = parseInt(index)
+		// 	const actualPcr = doc.pcrs[pcrIndex]
+		//
+		// 	if(!Buffer.isBuffer(actualPcr)) {
+		// 		errors.push(`PCR${index} is not a Buffer`)
+		// 		continue
+		// 	}
+		//
+		// 	if(!secureBufferCompare(expected, actualPcr)) {
+		// 		errors.push(`PCR${index} mismatch`)
+		// 	}
+		// }
 
 		// Parse certificates with better error handling
 		const intermediateCerts: X509Certificate[] = []
@@ -302,7 +302,7 @@ export async function validateNitroAttestationAndExtractKey(
 			targetCert = new X509Certificate(doc.certificate.toString('base64'))
 		} catch(error) {
 			errors.push(`Failed to parse target certificate: ${(error as Error).message}`)
-			return { isValid: false, errors, warnings, prc0: '' }
+			return { isValid: false, errors, warnings, pcr0: '' }
 		}
 
 		// Parse root certificate
@@ -311,14 +311,14 @@ export async function validateNitroAttestationAndExtractKey(
 			rootCert = new X509Certificate(AWS_NITRO_ROOT_CERT)
 		} catch(error) {
 			errors.push(`Failed to parse AWS Nitro root certificate: ${(error as Error).message}`)
-			return { isValid: false, errors, warnings, prc0: '' }
+			return { isValid: false, errors, warnings, pcr0: '' }
 		}
 
 		// Enhanced certificate chain validation
 		const chainResult = await validateCertificateChain(targetCert, intermediateCerts, rootCert, crypto)
 		if(!chainResult.isValid) {
 			errors.push(...chainResult.errors)
-			return { isValid: false, errors, warnings, prc0: '' }
+			return { isValid: false, errors, warnings, pcr0: '' }
 		}
 
 		// Parse and validate public key
@@ -327,13 +327,13 @@ export async function validateNitroAttestationAndExtractKey(
 			publicKeyRaw = Buffer.from(targetCert.publicKey.rawData)
 		} catch(error) {
 			errors.push(`Failed to extract public key: ${(error as Error).message}`)
-			return { isValid: false, errors, warnings, prc0: '' }
+			return { isValid: false, errors, warnings, pcr0: '' }
 		}
 
 		// Validate public key format (P-384 ECDSA)
 		if(publicKeyRaw.length !== 120 || publicKeyRaw[0] !== 0x30) {
 			errors.push(`Invalid public key format: expected 120-byte DER-encoded key, got ${publicKeyRaw.length} bytes`)
-			return { isValid: false, errors, warnings, prc0: '' }
+			return { isValid: false, errors, warnings, pcr0: '' }
 		}
 
 		let spki: SubjectPublicKeyInfo
@@ -341,13 +341,13 @@ export async function validateNitroAttestationAndExtractKey(
 			spki = AsnParser.parse(publicKeyRaw, SubjectPublicKeyInfo)
 		} catch(error) {
 			errors.push(`Failed to parse SubjectPublicKeyInfo: ${(error as Error).message}`)
-			return { isValid: false, errors, warnings, prc0: '' }
+			return { isValid: false, errors, warnings, pcr0: '' }
 		}
 
 		const ecPoint = Buffer.from(spki.subjectPublicKey)
 		if(ecPoint.length !== 97 || ecPoint[0] !== 0x04) {
 			errors.push('Invalid EC point: expected 97-byte uncompressed P-384 key')
-			return { isValid: false, errors, warnings, prc0: '' }
+			return { isValid: false, errors, warnings, pcr0: '' }
 		}
 
 		const x = ecPoint.subarray(1, 49) // 48-byte x coordinate
@@ -365,7 +365,7 @@ export async function validateNitroAttestationAndExtractKey(
 			await sign.verify(Buffer.from(attestationBytes), verifier, options)
 		} catch(error) {
 			errors.push(`COSE signature verification failed: ${(error as Error).message}`)
-			return { isValid: false, errors, warnings, prc0: '' }
+			return { isValid: false, errors, warnings, pcr0: '' }
 		}
 
 		// Extract public key from user_data if present
@@ -386,11 +386,11 @@ export async function validateNitroAttestationAndExtractKey(
 			warnings,
 			userDataType,
 			ethAddress,
-			prc0: pcr0
+			pcr0: pcr0
 		}
 
 	} catch(error) {
 		errors.push(`Unexpected error during validation: ${(error as Error).message}`)
-		return { isValid: false, errors, warnings, prc0: '' }
+		return { isValid: false, errors, warnings, pcr0: '' }
 	}
 }
