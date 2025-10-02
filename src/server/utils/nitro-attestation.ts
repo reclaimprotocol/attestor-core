@@ -59,23 +59,23 @@ IwLz3/Y=
 -----END CERTIFICATE-----`
 
 // Expected PCR values (replace with actual values)
-const EXPECTED_PCRS = {
-	//0: Buffer.from('000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000', 'hex'),
-}
-
-// Secure buffer comparison to prevent timing attacks
-function secureBufferCompare(a: Buffer, b: Buffer): boolean {
-	if(a.length !== b.length) {
-		return false
-	}
-
-	let result = 0
-	for(const [i, element] of a.entries()) {
-		result |= element ^ b[i]
-	}
-
-	return result === 0
-}
+// const EXPECTED_PCRS = {
+// 	//0: Buffer.from('000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000', 'hex'),
+// }
+//
+// // Secure buffer comparison to prevent timing attacks
+// function secureBufferCompare(a: Buffer, b: Buffer): boolean {
+// 	if(a.length !== b.length) {
+// 		return false
+// 	}
+//
+// 	let result = 0
+// 	for(const [i, element] of a.entries()) {
+// 		result |= element ^ b[i]
+// 	}
+//
+// 	return result === 0
+// }
 
 // Enhanced certificate chain validation
 async function validateCertificateChain(
