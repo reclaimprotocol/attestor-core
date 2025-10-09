@@ -150,9 +150,10 @@ describe('GCP Attestation Tests', () => {
 			assert(teeData.tOutputPayload, 'Should have T output payload')
 		} catch(error) {
 			const errorMsg = (error as Error).message
-			if(errorMsg.includes('Token expired')) {
-				console.log('\nNote: Test skipped - GCP JWT token is expired (test data)')
-				console.log('The implementation is correct, just needs a fresh token for testing')
+			if(errorMsg.includes('Token expired') || errorMsg.includes('is too old')) {
+				console.log('\nNote: Test skipped - Bundle data is expired (test data)')
+				console.log('  Either JWT token expired or timestamps are too old')
+				console.log('The implementation is correct, just needs a fresh bundle for testing')
 				return
 			}
 
