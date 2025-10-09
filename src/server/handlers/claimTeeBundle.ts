@@ -73,8 +73,10 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	)
 
 	const ctx = niceParseJsonObject(validatedClaim.context, 'context')
-	ctx.teekPcr0 = teeData.teekPcr0
-	ctx.teetPcr0 = teeData.teetPcr0
+	// eslint-disable-next-line camelcase
+	ctx.pcr0_k = teeData.teekPcr0
+	// eslint-disable-next-line camelcase
+	ctx.pcr0_t = teeData.teetPcr0
 	validatedClaim.context = JSON.stringify(ctx)
 
 	res.claim = {
