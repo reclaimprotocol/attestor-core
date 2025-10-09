@@ -6,6 +6,7 @@
 import { ServiceSignatureType } from '#src/proto/api.ts'
 import type { SignedMessage } from '#src/proto/tee-bundle.ts'
 import { BodyType, KOutputPayload, TOutputPayload, VerificationBundle } from '#src/proto/tee-bundle.ts'
+import { validateGcpAttestationAndExtractKey } from '#src/server/utils/gcp-attestation.ts'
 import type { AddressExtractionResult } from '#src/server/utils/nitro-attestation.ts'
 import { validateNitroAttestationAndExtractKey } from '#src/server/utils/nitro-attestation.ts'
 import type { Logger } from '#src/types/general.ts'
@@ -159,11 +160,9 @@ async function extractPublicKeys(
 	let teetKeyResult: AddressExtractionResult | undefined
 
 	if(hasEmbeddedAttestations) {
-		// Production mode: Extract from Nitro attestations
-		logger.info('Using production mode: extracting keys from Nitro attestations')
+		// Production mode: Extract from attestations (Nitro or GCP)
+		logger.info('Using production mode: extracting keys from attestations')
 
-		// Use embedded attestation reports
-		logger.info('Using embedded attestation reports')
 		if(!bundle.teekSigned?.attestationReport?.report) {
 			throw new Error('TEE_K embedded attestation report missing')
 		}
@@ -172,48 +171,102 @@ async function extractPublicKeys(
 			throw new Error('TEE_T embedded attestation report missing')
 		}
 
+		const teekAttestationType = bundle.teekSigned.attestationReport.type || 'nitro'
+		const teetAttestationType = bundle.teetSigned.attestationReport.type || 'nitro'
+
+		logger.info(`TEE_K attestation type: ${teekAttestationType}`)
+		logger.info(`TEE_T attestation type: ${teetAttestationType}`)
+
 		const teekAttestationBytes = bundle.teekSigned.attestationReport.report
 		const teetAttestationBytes = bundle.teetSigned.attestationReport.report
 
-		const teekResult = await validateNitroAttestationAndExtractKey(teekAttestationBytes)
-		if(!teekResult.isValid) {
-			throw new Error(`TEE_K attestation validation failed: ${teekResult.errors.join(', ')}`)
+		// Validate TEE_K attestation based on type
+		if(teekAttestationType === 'gcp') {
+			const gcpResult = await validateGcpAttestationAndExtractKey(teekAttestationBytes, logger)
+
+			if(!gcpResult.isValid) {
+				throw new Error(`TEE_K GCP attestation validation failed: ${gcpResult.errors.join(', ')}`)
+			}
+
+			if(!gcpResult.ethAddress) {
+				throw new Error('TEE_K GCP attestation validation failed: no address')
+			}
+
+			if(gcpResult.userDataType !== 'tee_k') {
+				throw new Error(`TEE_K GCP attestation validation failed: wrong TEE type, expected tee_k, got ${gcpResult.userDataType}`)
+			}
+
+			teekKeyResult = {
+				teeType: gcpResult.userDataType as 'tee_k' | 'tee_t',
+				ethAddress: '0x' + Buffer.from(gcpResult.ethAddress).toString('hex'),
+				pcr0: gcpResult.pcr0 || 'gcp-no-digest'
+			}
+		} else {
+			const nitroResult = await validateNitroAttestationAndExtractKey(teekAttestationBytes)
+
+			if(!nitroResult.isValid) {
+				throw new Error(`TEE_K Nitro attestation validation failed: ${nitroResult.errors.join(', ')}`)
+			}
+
+			if(!nitroResult.ethAddress) {
+				throw new Error('TEE_K Nitro attestation validation failed: no address')
+			}
+
+			if(nitroResult.userDataType !== 'tee_k') {
+				throw new Error(`TEE_K Nitro attestation validation failed: wrong TEE type, expected tee_k, got ${nitroResult.userDataType}`)
+			}
+
+			teekKeyResult = {
+				teeType: nitroResult.userDataType,
+				ethAddress: nitroResult.ethAddress,
+				pcr0: nitroResult.pcr0
+			}
 		}
 
-		if(!teekResult.ethAddress) {
-			throw new Error('TEE_K attestation validation failed: no address')
+		// Validate TEE_T attestation based on type
+		if(teetAttestationType === 'gcp') {
+			const gcpResult = await validateGcpAttestationAndExtractKey(teetAttestationBytes, logger)
+
+			if(!gcpResult.isValid) {
+				throw new Error(`TEE_T GCP attestation validation failed: ${gcpResult.errors.join(', ')}`)
+			}
+
+			if(!gcpResult.ethAddress) {
+				throw new Error('TEE_T GCP attestation validation failed: no address')
+			}
+
+			if(gcpResult.userDataType !== 'tee_t') {
+				throw new Error(`TEE_T GCP attestation validation failed: wrong TEE type, expected tee_t, got ${gcpResult.userDataType}`)
+			}
+
+			teetKeyResult = {
+				teeType: gcpResult.userDataType as 'tee_k' | 'tee_t',
+				ethAddress: '0x' + Buffer.from(gcpResult.ethAddress).toString('hex'),
+				pcr0: gcpResult.pcr0 || 'gcp-no-digest'
+			}
+		} else {
+			const nitroResult = await validateNitroAttestationAndExtractKey(teetAttestationBytes)
+
+			if(!nitroResult.isValid) {
+				throw new Error(`TEE_T Nitro attestation validation failed: ${nitroResult.errors.join(', ')}`)
+			}
+
+			if(!nitroResult.ethAddress) {
+				throw new Error('TEE_T Nitro attestation validation failed: no address')
+			}
+
+			if(nitroResult.userDataType !== 'tee_t') {
+				throw new Error(`TEE_T Nitro attestation validation failed: wrong TEE type, expected tee_t, got ${nitroResult.userDataType}`)
+			}
+
+			teetKeyResult = {
+				teeType: nitroResult.userDataType,
+				ethAddress: nitroResult.ethAddress,
+				pcr0: nitroResult.pcr0
+			}
 		}
 
-		if(teekResult.userDataType !== 'tee_k') {
-			throw new Error(`TEE_K attestation validation failed: wrong TEE type, expected tee_k, got ${teekResult.userDataType}`)
-		}
-
-		const teetResult = await validateNitroAttestationAndExtractKey(teetAttestationBytes)
-		if(!teetResult.isValid) {
-			throw new Error(`TEE_T attestation validation failed: ${teetResult.errors.join(', ')}`)
-		}
-
-		if(!teetResult.ethAddress) {
-			throw new Error('TEE_T attestation validation failed: no address')
-		}
-
-		if(teetResult.userDataType !== 'tee_t') {
-			throw new Error(`TEE_T attestation validation failed: wrong TEE type, expected tee_t, got ${teetResult.userDataType}`)
-		}
-
-		// Store the full extraction results for signature verification
-		teekKeyResult = {
-			teeType: 'tee_k',
-			ethAddress: teekResult.ethAddress,
-			pcr0: teekResult.pcr0
-		}
-		teetKeyResult = {
-			teeType: 'tee_t',
-			ethAddress: teetResult.ethAddress,
-			pcr0: teetResult.pcr0
-		}
-
-		logger.info('Nitro attestations validated successfully')
+		logger.info('Attestations validated successfully')
 
 	} else {
 		// Standalone mode: Use embedded public keys
