@@ -367,10 +367,7 @@ export async function validateGcpAttestationAndExtractKey(
 		const userDataType = match[1] // "tee_k" or "tee_t"
 		const hexAddress = match[2]
 
-		const ethAddress = new Uint8Array(20)
-		for(let i = 0; i < 20; i++) {
-			ethAddress[i] = parseInt(hexAddress.substr(i * 2, 2), 16)
-		}
+		const ethAddress = new Uint8Array(Buffer.from(hexAddress, 'hex'))
 
 		if(logger) {
 			logger.info(`Extracted address from eat_nonce: ${payload.eat_nonce}`)
