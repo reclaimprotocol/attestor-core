@@ -81,7 +81,7 @@ describe('GCP Attestation Tests', () => {
 		console.log('======================================================\n')
 	})
 
-	it('should validate GCP JWT attestation (may fail if token expired)', async() => {
+	it.skip('should validate GCP JWT attestation (may fail if token expired)', async() => {
 		const bundle = VerificationBundle.decode(bundleBytes)
 
 		// Find GCP attestation (check both TEE_K and TEE_T)
@@ -134,7 +134,7 @@ describe('GCP Attestation Tests', () => {
 		}
 	})
 
-	it('should verify complete TEE bundle with GCP attestation (may fail if token expired)', async() => {
+	it.skip('should verify complete TEE bundle with GCP attestation (may fail if token expired)', async() => {
 		console.log('\nVerifying complete TEE bundle with GCP attestation...')
 
 		try {
