@@ -13,6 +13,7 @@ export interface GcpValidationResult {
 	ethAddress?: Uint8Array
 	userDataType?: string
 	pcr0?: string
+	envVars?: Record<string, string> // Environment variables from JWT payload
 }
 
 interface JwtHeader {
@@ -386,9 +387,15 @@ export async function validateGcpAttestationAndExtractKey(
 			pcr0 = 'debug_' + pcr0
 		}
 
+		// Extract environment variables if present
+		const envVars = payload.submods?.container?.env || {}
+
 		if(logger) {
 			const hexAddr = Buffer.from(ethAddress).toString('hex')
 			logger.info(`Extracted ETH address from GCP attestation: 0x${hexAddr}, type: ${userDataType}, pcr0: ${pcr0}`)
+			if(Object.keys(envVars).length > 0) {
+				logger.debug(`Environment variables: ${Object.keys(envVars).join(', ')}`)
+			}
 		}
 
 		return {
@@ -396,7 +403,8 @@ export async function validateGcpAttestationAndExtractKey(
 			errors: [],
 			ethAddress,
 			userDataType,
-			pcr0
+			pcr0,
+			envVars
 		}
 
 	} catch(error) {

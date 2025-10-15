@@ -244,6 +244,22 @@ async function extractPublicKeys(
 				ethAddress: '0x' + Buffer.from(gcpResult.ethAddress).toString('hex'),
 				pcr0: gcpResult.pcr0 || 'gcp-no-digest'
 			}
+
+			// Cross-validate: TEE_T must have EXPECTED_TEEK_PCR0 env var matching TEE_K's PCR0
+			if(!gcpResult.envVars?.EXPECTED_TEEK_PCR0) {
+				throw new Error('TEE_T GCP attestation missing required EXPECTED_TEEK_PCR0 environment variable')
+			}
+
+			const expectedPcr0 = gcpResult.envVars.EXPECTED_TEEK_PCR0
+			const actualPcr0 = teekKeyResult.pcr0
+
+			logger.info(`Cross-validating TEE_K PCR0: expected=${expectedPcr0}, actual=${actualPcr0}`)
+
+			if(expectedPcr0 !== actualPcr0) {
+				throw new Error(`TEE cross-validation failed: TEE_T expects TEE_K PCR0 "${expectedPcr0}" but got "${actualPcr0}"`)
+			}
+
+			logger.info('TEE cross-validation successful: TEE_K PCR0 matches TEE_T expectation')
 		} else {
 			const nitroResult = await validateNitroAttestationAndExtractKey(teetAttestationBytes)
 
