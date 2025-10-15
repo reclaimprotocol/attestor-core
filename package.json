@@ -93,6 +93,7 @@
     "https-proxy-agent": "^7.0.5",
     "ip-cidr": "^3.0.0",
     "jsonpath-plus": "^10.2.0",
+    "koffi": "^2.14.1",
     "p-queue": "^8.1.1",
     "parse5": "^8.0.0",
     "parse5-htmlparser2-tree-adapter": "^8.0.0",
@@ -132,8 +133,5 @@
       "ws": "^7.5.10"
     },
     "elliptic": "^v6.5.7"
-  },
-  "optionalDependencies": {
-    "koffi": "^2.14.1"
   }
 }
