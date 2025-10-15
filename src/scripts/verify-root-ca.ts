@@ -1,4 +1,5 @@
-import { makeTLSClient, verifyCertificateChain } from '@reclaimprotocol/tls'
+import { makeTLSClient, setCryptoImplementation, verifyCertificateChain } from '@reclaimprotocol/tls'
+import { webcryptoCrypto } from '@reclaimprotocol/tls/webcrypto'
 import { Socket } from 'net'
 
 import { DEFAULT_HTTPS_PORT } from '#src/config/index.ts'
@@ -7,6 +8,7 @@ import { logger } from '#src/utils/index.ts'
 const hostPort = process.argv[2]
 
 export async function main() {
+	setCryptoImplementation(webcryptoCrypto)
 	const [host, port] = hostPort.split(':')
 	const socket = new Socket()
 	let rootIssuer = ''
