@@ -2,7 +2,7 @@ import type {
 	CipherSuite,
 	TLSProtocolVersion,
 	X509Certificate } from '@reclaimprotocol/tls'
-import { concatenateUint8Arrays,
+import {
 	getSignatureDataTls12,
 	getSignatureDataTls13,
 	PACKET_TYPE,
@@ -23,18 +23,22 @@ import { decryptDirect } from '#src/utils/index.ts'
 
 const RECORD_LENGTH_BYTES = 3
 
+type HandshakeMessage = {
+	type: number
+	content: Uint8Array
+	contentWithHeader: Uint8Array
+}
+
 /**
  * Verifies server cert chain and removes handshake messages from transcript
  * @param receipt
  * @param logger
  */
 export async function processHandshake(receipt: ClaimTunnelRequest['transcript'], logger: Logger) {
-	let currentPacketIdx = 0
-	let readPacketIdx = 0
-	let handshakeData: Uint8Array = Uint8Array.from([])
-	let packetData: Awaited<ReturnType<typeof readPacket>>
-	const handshakeRawMessages: Uint8Array[] = []
 	const certificates: X509Certificate[] = []
+	const handshakeRawMessages: Uint8Array[] = []
+
+	let currentPacketIdx = 0
 	let cipherSuite: CipherSuite | undefined = undefined
 	let tlsVersion: TLSProtocolVersion | undefined = undefined
 	let serverRandom: Uint8Array | undefined = undefined
@@ -42,15 +46,134 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 	let serverFinishedIdx = -1
 	let clientFinishedIdx = -1
 	let certVerified = false
+	let certVerifyHandled = false
 	let hostname: string | undefined = undefined
 	let clientChangeCipherSpecMsgIdx = -1
 	let serverChangeCipherSpecMsgIdx = -1
-	while((packetData = await readPacket())) {
-		const { type, content } = packetData
+	while(serverFinishedIdx < 0 || clientFinishedIdx < 0) {
+		const packetIdx = currentPacketIdx++
+		if(packetIdx >= receipt.length) {
+			throw new Error(
+				'Receipt over but server finish: ' + serverFinishedIdx
+				+ ', client finish: ' + clientFinishedIdx
+			)
+		}
 
+		const { message, reveal, sender } = receipt[packetIdx]
+
+		// skip change cipher spec message
+		if(message[0] === PACKET_TYPE['CHANGE_CIPHER_SPEC']) {
+			if(
+				sender === TranscriptMessageSenderType
+					.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
+			) {
+				clientChangeCipherSpecMsgIdx = packetIdx
+				logger.trace('found client change cipher spec message')
+			} else {
+				serverChangeCipherSpecMsgIdx = packetIdx
+				logger.trace('found server change cipher spec message')
+			}
+
+			continue
+		}
+
+		let plaintext: Uint8Array = getWithoutHeader(message)
+
+		if(
+			// decrypt if wrapped record or after change cipher spec message,
+			// after which records are encrypted
+			message[0] === PACKET_TYPE['WRAPPED_RECORD']
+			|| (
+				serverChangeCipherSpecMsgIdx > 0
+					&& sender === TranscriptMessageSenderType
+						.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER
+			)
+			|| (
+				clientChangeCipherSpecMsgIdx > 0
+					&& sender === TranscriptMessageSenderType
+						.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT
+			)
+		) { // encrypted
+			if(!tlsVersion || !cipherSuite) {
+				throw new Error('Could not find cipherSuite to use & got enc record')
+			}
+
+			if(!reveal?.directReveal?.key) {
+				throw new Error(
+					'no direct reveal for handshake packet: ' + packetIdx
+				)
+			}
+
+			const recordHeader = message.slice(0, 5);
+			({ plaintext } = await decryptDirect(
+				reveal?.directReveal,
+				cipherSuite,
+				recordHeader,
+				tlsVersion,
+				plaintext
+			))
+
+			if(tlsVersion === 'TLS1_3') {
+				plaintext = plaintext.slice(0, -1)
+			}
+		}
+
+		// each handshake packet may contain multiple handshake messages
+		const handshakeMessages: HandshakeMessage[] = []
+		for(let offset = 0; offset < plaintext.length;) {
+			const type = plaintext[offset]
+			const content = readWithLength(plaintext.slice(offset + 1), RECORD_LENGTH_BYTES)
+			if(!content) {
+				throw new Error('could not read pkt length')
+			}
+
+			handshakeMessages.push({
+				type,
+				content,
+				contentWithHeader: plaintext
+					.slice(offset, offset + 1 + RECORD_LENGTH_BYTES + content.length),
+			})
+
+			offset += 1 + RECORD_LENGTH_BYTES + content.length
+		}
+
+		for(const msg of handshakeMessages) {
+			await processHandshakeMessage(msg, packetIdx)
+			handshakeRawMessages.push(msg.contentWithHeader)
+		}
+	}
+
+	if(!certVerified) {
+		throw new Error('No provider certificates received')
+	}
+
+	if(tlsVersion === 'TLS1_3' && serverFinishedIdx < 0) {
+		throw new Error('server finished message not found')
+	}
+
+	if(tlsVersion === 'TLS1_3' && !certVerifyHandled) {
+		throw new Error('TLS1.3 cert verify packet not received')
+	}
+
+	if(tlsVersion === 'TLS1_2' && (serverChangeCipherSpecMsgIdx < 0 || clientChangeCipherSpecMsgIdx < 0)) {
+		throw new Error('change cipher spec message not found')
+	}
+
+	const nextMsgIndex = Math.max(serverFinishedIdx, clientFinishedIdx) + 1
+
+	return {
+		tlsVersion: tlsVersion!,
+		cipherSuite: cipherSuite!,
+		hostname: hostname!,
+		nextMsgIndex,
+	}
+
+	async function processHandshakeMessage(
+		{ type, content, contentWithHeader }: HandshakeMessage, packetIdx: number
+	) {
 		switch (type) {
 		case SUPPORTED_RECORD_TYPE_MAP.CLIENT_HELLO:
-			const clientHello = parseClientHello(handshakeRawMessages[0])
+			const clientHello = parseClientHello(contentWithHeader)
 			clientRandom = clientHello.serverRandom
 			const { SERVER_NAME: sni } = clientHello.extensions
 			hostname = sni?.serverName
@@ -59,8 +182,6 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 			}
 
 			break
-
-
 		case SUPPORTED_RECORD_TYPE_MAP.SERVER_HELLO:
 			const serverHello = await parseServerHello(content)
 			cipherSuite = serverHello.cipherSuite
@@ -71,13 +192,14 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 				'extracted server hello params'
 			)
 			break
-
-
 		case SUPPORTED_RECORD_TYPE_MAP.CERTIFICATE:
-			const parseResult = parseCertificates(content, { version:tlsVersion! })
+			const parseResult = parseCertificates(content, { version: tlsVersion! })
 			certificates.push(...parseResult.certificates)
-			break
 
+			await verifyCertificateChain(certificates, hostname!)
+			logger.info({ hostname }, 'verified provider certificate chain')
+			certVerified = true
+			break
 		case SUPPORTED_RECORD_TYPE_MAP.CERTIFICATE_VERIFY:
 			const signature = parseServerCertificateVerify(content)
 			if(!certificates?.length) {
@@ -85,19 +207,16 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 			}
 
 			const signatureData = await getSignatureDataTls13(
-				handshakeRawMessages.slice(0, -1), cipherSuite!
+				handshakeRawMessages, cipherSuite!
 			)
 			await verifyCertificateSignature({
 				...signature,
 				publicKey: certificates[0].getPublicKey(),
 				signatureData,
 			})
-			await verifyCertificateChain(certificates, hostname!)
-			logger.info({ host:hostname }, 'verified provider certificate chain')
-			certVerified = true
+
+			certVerifyHandled = true
 			break
-
-
 		case SUPPORTED_RECORD_TYPE_MAP.SERVER_KEY_SHARE:
 			if(!certificates?.length) {
 				throw new Error('No provider certificates received')
@@ -123,111 +242,16 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 			logger.info({ host:hostname }, 'verified provider certificate chain')
 			certVerified = true
 			break
-
-
 		case SUPPORTED_RECORD_TYPE_MAP.FINISHED:
-			if(receipt[readPacketIdx].sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT) {
-				clientFinishedIdx = readPacketIdx
+			const packet = receipt[packetIdx]
+			if(packet.sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT) {
+				clientFinishedIdx = packetIdx
 			} else {
-				serverFinishedIdx = readPacketIdx
+				serverFinishedIdx = packetIdx
 			}
 
 			break
 		}
-	}
-
-	if(!certVerified) {
-		throw new Error('No provider certificates received')
-	}
-
-	if(tlsVersion === 'TLS1_3' && serverFinishedIdx < 0) {
-		throw new Error('server finished message not found')
-	}
-
-	if(tlsVersion === 'TLS1_2' && (serverChangeCipherSpecMsgIdx < 0 || clientChangeCipherSpecMsgIdx < 0)) {
-		throw new Error('change cipher spec message not found')
-	}
-
-
-	async function readPacket(getMoreData = false) {
-		if(currentPacketIdx > (receipt.length - 1)) {
-			return
-		}
-
-		if(certVerified && serverFinishedIdx > 0 && clientFinishedIdx > 0) {
-			return
-		}
-
-		readPacketIdx = currentPacketIdx
-		if(!handshakeData?.length || getMoreData) {
-			let newHandshakeData: Uint8Array
-			const { message, reveal, sender } = receipt[currentPacketIdx]
-			const recordHeader = message.slice(0, 5)
-			const content = getWithoutHeader(message)
-
-			if(message[0] === PACKET_TYPE['CHANGE_CIPHER_SPEC']) { //skip change cipher spec message
-
-				if(sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT) {
-					clientChangeCipherSpecMsgIdx = currentPacketIdx
-				} else {
-					serverChangeCipherSpecMsgIdx = currentPacketIdx
-				}
-
-				currentPacketIdx++
-				return await readPacket()
-			}
-
-			if(message[0] === PACKET_TYPE['WRAPPED_RECORD'] ||
-				(serverChangeCipherSpecMsgIdx > 0 && sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_SERVER) ||
-				(clientChangeCipherSpecMsgIdx > 0 && sender === TranscriptMessageSenderType.TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT)) { // encrypted
-
-				if(!tlsVersion || !cipherSuite) {
-					throw new Error('Could not find cipherSuite to use')
-				}
-
-				if(!reveal?.directReveal?.key) {
-					throw new Error('no direct reveal for handshake packet')
-				}
-
-
-				const { plaintext } = await decryptDirect(reveal?.directReveal, cipherSuite, recordHeader, tlsVersion, content)
-				newHandshakeData = plaintext
-
-				if(tlsVersion === 'TLS1_3') {
-					newHandshakeData = newHandshakeData.slice(0, -1)
-				}
-			} else {
-				newHandshakeData = content
-			}
-
-			handshakeData = concatenateUint8Arrays([handshakeData, newHandshakeData])
-		}
-
-		const type = handshakeData[0]
-		const content = readWithLength(handshakeData.slice(1), RECORD_LENGTH_BYTES)
-		if(!content) {
-			logger.warn('missing bytes from packet')
-			currentPacketIdx++
-			return await readPacket(true)
-		}
-
-		const totalLength = 1 + RECORD_LENGTH_BYTES + content.length
-		handshakeRawMessages.push(handshakeData.slice(0, totalLength))
-		handshakeData = handshakeData.slice(totalLength)
-		if(!handshakeData.length) {
-			currentPacketIdx++
-		}
-
-		return { type, content }
-	}
-
-	const nextMsgIndex = Math.max(serverFinishedIdx, clientFinishedIdx) + 1
-
-	return {
-		tlsVersion: tlsVersion!,
-		cipherSuite: cipherSuite!,
-		hostname: hostname!,
-		nextMsgIndex
 	}
 }
 
