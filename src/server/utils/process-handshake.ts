@@ -196,7 +196,7 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 			const parseResult = parseCertificates(content, { version: tlsVersion! })
 			certificates.push(...parseResult.certificates)
 
-			await verifyCertificateChain(certificates, hostname!)
+			await verifyCertificateChain(certificates, hostname!, logger)
 			logger.info({ hostname }, 'verified provider certificate chain')
 			certVerified = true
 			break
@@ -238,8 +238,8 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 				publicKey: certificates[0].getPublicKey(),
 				signatureData: signatureData12,
 			})
-			await verifyCertificateChain(certificates, hostname!)
-			logger.info({ host:hostname }, 'verified provider certificate chain')
+			await verifyCertificateChain(certificates, hostname!, logger)
+			logger.info({ hostname }, 'verified provider certificate chain')
 			certVerified = true
 			break
 		case SUPPORTED_RECORD_TYPE_MAP.FINISHED:

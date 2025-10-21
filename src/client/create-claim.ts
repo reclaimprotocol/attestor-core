@@ -1,4 +1,4 @@
-import type { TLSPacketContext } from '@reclaimprotocol/tls'
+import type { TLSConnectionOptions, TLSPacketContext } from '@reclaimprotocol/tls'
 import { asciiToUint8Array } from '@reclaimprotocol/tls'
 
 import { makeRpcTlsTunnel } from '#src/client/tunnels/make-rpc-tls-tunnel.ts'
@@ -99,6 +99,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		timestampS,
 		updateProviderParams,
 		updateParametersFromOprfData = true,
+		fetchCertificateBytes,
 		...zkOpts
 	}: CreateClaimOnAttestorOpts<N>
 ) {
@@ -109,7 +110,11 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		params,
 		provider.additionalClientOptions
 	)
-	const tlsOpts = { ...getDefaultTlsOptions(), ...providerTlsOpts }
+	const tlsOpts: TLSConnectionOptions = {
+		...getDefaultTlsOptions(),
+		fetchCertificateBytes,
+		...providerTlsOpts
+	}
 	const { zkEngine = 'snarkjs' } = zkOpts
 
 	let redactionMode = getProviderValue(params, provider.writeRedactionMode)

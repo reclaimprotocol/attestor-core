@@ -6,7 +6,7 @@ import { createClaimOnAvs } from '#src/avs/client/create-claim-on-avs.ts'
 import { createClaimOnAttestor } from '#src/client/index.ts'
 import { benchmark } from '#src/external-rpc/benchmark.ts'
 import type { CreateClaimResponse, ExternalRPCClient, ExternalRPCErrorResponse, ExternalRPCIncomingMsg, ExternalRPCOutgoingMsg, ExternalRPCResponse, RPCCreateClaimOptions } from '#src/external-rpc/types.ts'
-import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromBaseUrl, RPC_MSG_BRIDGE, sendMessageToApp, waitForResponse } from '#src/external-rpc/utils.ts'
+import { generateRpcRequestId, getCurrentMemoryUsage, getWsApiUrlFromBaseUrl, RPC_MSG_BRIDGE, rpcRequest, sendMessageToApp, waitForResponse } from '#src/external-rpc/utils.ts'
 import { ALL_ENC_ALGORITHMS, makeExternalRpcOprfOperator, makeExternalRpcZkOperator } from '#src/external-rpc/zk.ts'
 import { createClaimOnMechain } from '#src/mechain/client/create-claim-on-mechain.ts'
 import type { ClaimTunnelResponse } from '#src/proto/api.ts'
@@ -99,16 +99,18 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 			onStep(step) {
 				sendMessageToApp({
 					type: 'createClaimStep',
-					step: {
-						name: 'attestor-progress',
-						step,
-					},
+					step: { name: 'attestor-progress', step },
 					id: req.id,
 				})
 			},
 			updateProviderParams : req.request.updateProviderParams
 				? updateProviderParams
-				: undefined
+				: undefined,
+			fetchCertificateBytes: async url => {
+				const rslt
+					= await rpcRequest({ type: 'fetchCertificateBytes', request: { url } })
+				return rslt.bytes
+			}
 		})
 		const response = mapToCreateClaimResponse(claimTunnelRes)
 		return { type: 'createClaimDone', response }
