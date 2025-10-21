@@ -96,4 +96,20 @@ describeWithServer('RPC Communication', opts => {
 			}
 		)
 	})
+
+	it('should handle fetchCertificateBytes RPC', async() => {
+		const url = 'http://cacerts.rapidssl.com/RapidSSLTLSRSACAG1.crt'
+		const result = await client.rpc('fetchCertificateBytes', { url })
+		assert.ok(result.bytes?.length)
+	})
+
+	it('should fail fetchCertificateBytes RPC', async() => {
+		const url = 'http://cacerts.rapidssl.com/RapidSSLTLSRSACAG1.crt1'
+		await assert.rejects(
+			() => client.rpc('fetchCertificateBytes', { url }),
+			err => {
+				return err instanceof AttestorError
+			}
+		)
+	})
 })

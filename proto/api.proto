@@ -55,6 +55,8 @@ enum ErrorCode {
 	ERROR_TIMEOUT = 10;
 	// toprf couldn't be computed, as it went out of bounds
 	ERROR_TOPRF_OUT_OF_BOUNDS = 11;
+	// failed to fetch certificate bytes from the URL
+	ERROR_CERTIFICATE_FETCH_FAILED = 12;
 }
 
 enum ZKProofEngine {
@@ -144,6 +146,14 @@ message CreateTunnelRequest {
 	 * eg. US, IN, GB, etc.
 	 */
 	string geoLocation = 4;
+}
+
+message FetchCertificateBytesRequest {
+	string url = 1;
+}
+
+message FetchCertificateBytesResponse {
+	bytes bytes = 1;
 }
 
 message DisconnectTunnelRequest {
@@ -568,6 +578,14 @@ message RPCMessage {
 		 */
 		ClaimTeeBundleRequest claimTeeBundleRequest = 22;
 		ClaimTeeBundleResponse claimTeeBundleResponse = 23;
+
+		/**
+		 * Request the attestor to fetch certificate bytes from a URL. This RPC
+		 * is there as a helper for clients that cannot directly fetch certificates
+		 * due to network restrictions.
+		 */
+		FetchCertificateBytesRequest fetchCertificateBytesRequest = 24;
+		FetchCertificateBytesResponse fetchCertificateBytesResponse = 25;
 	}
 }
 

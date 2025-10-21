@@ -59,9 +59,7 @@ export function createClaimOnAttestor<N extends ProviderName>(
 		attempt => (
 			_createClaimOnAttestor<N>({
 				...opts,
-				logger: attempt
-					? logger.child({ attempt })
-					: logger
+				logger: attempt ? logger.child({ attempt }) : logger
 			})
 		),
 		{ maxRetries, logger, shouldRetry }
@@ -99,7 +97,6 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		timestampS,
 		updateProviderParams,
 		updateParametersFromOprfData = true,
-		fetchCertificateBytes,
 		...zkOpts
 	}: CreateClaimOnAttestorOpts<N>
 ) {
@@ -112,7 +109,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 	)
 	const tlsOpts: TLSConnectionOptions = {
 		...getDefaultTlsOptions(),
-		fetchCertificateBytes,
+		fetchCertificateBytes: fetchCertificateBytesFromAttestor,
 		...providerTlsOpts
 	}
 	const { zkEngine = 'snarkjs' } = zkOpts
@@ -325,6 +322,15 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 	logger.info({ success: !!result.claim }, 'recv claim response')
 
 	return result
+
+	async function fetchCertificateBytesFromAttestor(url: string) {
+		if(!client) {
+			throw new Error('attestor client not initialized')
+		}
+
+		const result = await client.rpc('fetchCertificateBytes', { url })
+		return result.bytes
+	}
 
 	async function writeRedactedWithKeyUpdate() {
 		let currentIndex = 0

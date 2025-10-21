@@ -52,4 +52,13 @@ export const DEFAULT_RPC_TIMEOUT_MS = 90_000
 
 export const TOPRF_DOMAIN_SEPARATOR = 'reclaim-toprf'
 
+export const MAX_CERT_SIZE_BYTES = 10 * 1024 * 1024 * 1024 // 10MB
+
+export const CERT_ALLOWED_MIMETYPES = [
+	'application/x-x509-ca-cert',
+	'application/x-x509-user-cert',
+	'application/pkix-cert',
+	'application/pkcs7-mime'
+]
+
 export const BGP_WS_URL = 'wss://ris-live.ripe.net/v1/ws/?client=reclaim-hijack-detector'

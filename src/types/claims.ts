@@ -1,5 +1,3 @@
-import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
-
 import type { ProviderClaimData } from '#src/proto/api.ts'
 import type { IAttestorClient, IAttestorClientInitParams } from '#src/types/client.ts'
 import type { CompleteTLSPacket, Logger } from '#src/types/general.ts'
@@ -78,6 +76,4 @@ export type CreateClaimOnAttestorOpts<N extends ProviderName> = {
 	 * For example: "domain.com" -> "dv4Nrgtr"
 	 */
 	updateParametersFromOprfData?: boolean
-
-	fetchCertificateBytes?: TLSConnectionOptions['fetchCertificateBytes']
 } & PrepareZKProofsBaseOpts

@@ -160,8 +160,6 @@ export type ExternalRPCAppClient = {
 	executeZkFunctionV3(opts: ExecuteZKOpts): Promise<any>
 	executeOprfFunctionV3(opts: ExecuteOPRFOpts): Promise<any>
 
-	fetchCertificateBytes(opts: { url: string }): Promise<{ bytes: Uint8Array }>
-
 	updateProviderParams(opts: UpdateProviderParamsOpts): Promise<{
 		params: Partial<ProviderParams<'http'>>
 		secretParams: Partial<ProviderSecretParams<'http'>>
@@ -229,7 +227,6 @@ export type ExternalRPCIncomingMsg = (
 	| AsResponse<ExternalRPCResponse<ExternalRPCAppClient, 'connectWs'>>
 	| AsResponse<ExternalRPCResponse<ExternalRPCAppClient, 'disconnectWs'>>
 	| AsResponse<ExternalRPCResponse<ExternalRPCAppClient, 'sendWsMessage'>>
-	| AsResponse<ExternalRPCResponse<ExternalRPCAppClient, 'fetchCertificateBytes'>>
 	| AsResponse<ExternalRPCErrorResponse>
 	| ExternalRPCRequest<ExternalRPCAppClient, 'sendWsMessage'>
 	| {
@@ -260,7 +257,6 @@ export type ExternalRPCOutgoingMsg = (
 	| ExternalRPCRequest<ExternalRPCAppClient, 'connectWs'>
 	| ExternalRPCRequest<ExternalRPCAppClient, 'disconnectWs'>
 	| ExternalRPCRequest<ExternalRPCAppClient, 'sendWsMessage'>
-	| ExternalRPCRequest<ExternalRPCAppClient, 'fetchCertificateBytes'>
 	| (
 		{
 			type: 'createClaimStep'

@@ -5,6 +5,7 @@ import { createClaimOnChain } from '#src/server/handlers/createClaimOnChain.ts'
 import { createTaskOnMechain } from '#src/server/handlers/createTaskOnMechain.ts'
 import { createTunnel } from '#src/server/handlers/createTunnel.ts'
 import { disconnectTunnel } from '#src/server/handlers/disconnectTunnel.ts'
+import { fetchCertificateBytes } from '#src/server/handlers/fetchCertificateBytes.ts'
 import { init } from '#src/server/handlers/init.ts'
 import { toprf } from '#src/server/handlers/toprf.ts'
 import type { RPCHandler, RPCType } from '#src/types/index.ts'
@@ -19,4 +20,5 @@ export const HANDLERS: { [T in RPCType]: RPCHandler<T> } = {
 	completeClaimOnChain,
 	toprf,
 	createTaskOnMechain,
+	fetchCertificateBytes
 }

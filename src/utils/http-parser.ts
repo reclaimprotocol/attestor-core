@@ -64,7 +64,7 @@ export function makeHttpResponseParser() {
 
 	let remainingBodyBytes = 0
 	let isChunked = false
-	let remaining = new Uint8Array()
+	let remaining: Uint8Array = new Uint8Array()
 	let currentByteIdx = 0
 
 	return {
