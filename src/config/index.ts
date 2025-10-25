@@ -58,7 +58,8 @@ export const CERT_ALLOWED_MIMETYPES = [
 	'application/x-x509-ca-cert',
 	'application/x-x509-user-cert',
 	'application/pkix-cert',
-	'application/pkcs7-mime'
+	'application/pkcs7-mime',
+	'application/octet-stream'
 ]
 
 export const BGP_WS_URL = 'wss://ris-live.ripe.net/v1/ws/?client=reclaim-hijack-detector'
