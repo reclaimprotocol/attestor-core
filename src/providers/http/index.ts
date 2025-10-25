@@ -1,5 +1,5 @@
 import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
-import { areUint8ArraysEqual, concatenateUint8Arrays } from '@reclaimprotocol/tls'
+import { areUint8ArraysEqual, concatenateUint8Arrays, uint8ArrayToBinaryStr } from '@reclaimprotocol/tls'
 import { utils } from 'ethers'
 
 import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '#src/config/index.ts'
@@ -19,7 +19,6 @@ import {
 	getHttpRequestDataFromTranscript, logger,
 	REDACTION_CHAR_CODE,
 	strToUint8Array,
-	uint8ArrayToBinaryStr,
 	uint8ArrayToStr,
 } from '#src/utils/index.ts'
 
@@ -175,7 +174,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const headerEndIndex = res.statusLineEndIndex!
 		const bodyStartIdx = res.bodyStartIndex ?? 0
 		if(bodyStartIdx < 4) {
-			logger.error({ response: uint8ArrayToBinaryStr(response) })
+			logger.error({ response: base64.encode(response) })
 			throw new Error('Failed to find response body')
 		}
 
@@ -188,7 +187,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			const crlfs = response
 				.slice(res.headerEndIdx, res.headerEndIdx + 4)
 			if(!areUint8ArraysEqual(crlfs, strToUint8Array('\r\n\r\n'))) {
-				logger.error({ response: uint8ArrayToBinaryStr(response) })
+				logger.error({ response: base64.encode(response) })
 				throw new Error(
 					`Failed to find header/body separator at index ${res.headerEndIdx}`
 				)
@@ -573,11 +572,8 @@ function *processRedactionRequest(
 		elementLength = grp.length
 
 		const reveal = getReveal(elementIdx, elementLength, rs.hash)
-		const chunkReds = getRedactionsForChunkHeaders(
-			reveal.fromIndex,
-			reveal.toIndex,
-			resChunks
-		)
+		const chunkReds
+			= getRedactionsForChunkHeaders(reveal.fromIndex, reveal.toIndex, resChunks)
 		if(chunkReds.length) {
 			throw new Error(
 				'Hash redactions cannot be performed if '

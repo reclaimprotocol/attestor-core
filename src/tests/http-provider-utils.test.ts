@@ -100,7 +100,6 @@ describe('HTTP Provider Utils tests', () => {
 		assert.equal(content, '<div id="content456">This is <span>some</span> other text!</div>')
 	})
 
-
 	it('should get multiple elements', () => {
 		const html = `<body>
 			  <div id="content123">This is <span>some</span> text!</div>
@@ -212,6 +211,36 @@ describe('HTTP Provider Utils tests', () => {
 			assert.equal(str, 'HTTP/1.1 200 OK\r\n\r\nchunk 1, chunk 2')
 		}
 
+	})
+
+	it.only('should redact non-ASCII chars', () => {
+		const provider = httpProvider
+		const text = '秘密の情報' // some non-ASCII text
+		const response = Buffer.from(`HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n<body> Hello <div id="c2">${text}</div></body>\r\n`, 'utf-8')
+
+		const redactions = provider.getResponseRedactions!({
+			response,
+			params: {
+				method: 'GET',
+				url: 'https://test.com',
+				'responseMatches': [],
+				'responseRedactions': [
+					{
+						'regex': text
+					}
+				],
+			},
+			logger,
+			ctx,
+		})
+		for(const item of redactions) {
+			for(let i = item.fromIndex; i < item.toIndex; i++) {
+				response[i] = 42 // '*'
+			}
+		}
+
+		const resStr = response.toString('utf-8')
+		assert.ok(resStr.includes(text), 'Original text should still be present in response buffer')
 	})
 
 	it('should perform complex redactions', () => {
