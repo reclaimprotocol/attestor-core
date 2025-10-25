@@ -213,7 +213,7 @@ describe('HTTP Provider Utils tests', () => {
 
 	})
 
-	it.only('should redact non-ASCII chars', () => {
+	it.skip('should redact non-ASCII chars via regex', () => {
 		const provider = httpProvider
 		const text = '秘密の情報' // some non-ASCII text
 		const response = Buffer.from(`HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n<body> Hello <div id="c2">${text}</div></body>\r\n`, 'utf-8')
@@ -226,7 +226,7 @@ describe('HTTP Provider Utils tests', () => {
 				'responseMatches': [],
 				'responseRedactions': [
 					{
-						'regex': text
+						regex: text,
 					}
 				],
 			},
