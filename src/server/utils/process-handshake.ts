@@ -3,6 +3,7 @@ import type {
 	TLSProtocolVersion,
 	X509Certificate } from '@reclaimprotocol/tls'
 import {
+	concatenateUint8Arrays,
 	getSignatureDataTls12,
 	getSignatureDataTls13,
 	PACKET_TYPE,
@@ -27,6 +28,12 @@ type HandshakeMessage = {
 	type: number
 	content: Uint8Array
 	contentWithHeader: Uint8Array
+	packetIdx: number
+}
+
+type IncompletePacket = {
+	remainingBytes: Uint8Array
+	packetIdx: number
 }
 
 /**
@@ -50,6 +57,8 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 	let hostname: string | undefined = undefined
 	let clientChangeCipherSpecMsgIdx = -1
 	let serverChangeCipherSpecMsgIdx = -1
+	let incompletePkt: IncompletePacket | undefined = undefined
+
 	while(serverFinishedIdx < 0 || clientFinishedIdx < 0) {
 		const packetIdx = currentPacketIdx++
 		if(packetIdx >= receipt.length) {
@@ -77,7 +86,10 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 			continue
 		}
 
-		let plaintext: Uint8Array = getWithoutHeader(message)
+		let plaintext: Uint8Array = getWithoutHeader(message)!
+		if(!plaintext) {
+			throw new Error('incomplete TLS record encountered')
+		}
 
 		if(
 			// decrypt if wrapped record or after change cipher spec message,
@@ -118,27 +130,53 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 			}
 		}
 
-		// each handshake packet may contain multiple handshake messages
+		if(incompletePkt) {
+			const incSender = receipt[incompletePkt.packetIdx].sender
+			if(incSender !== sender) {
+				throw new Error(
+					'Missing follow up to incomplete packet at idx: '
+						+ incompletePkt.packetIdx
+				)
+			}
+
+			plaintext = concatenateUint8Arrays([
+				incompletePkt.remainingBytes,
+				plaintext
+			])
+			incompletePkt = undefined
+		}
+
 		const handshakeMessages: HandshakeMessage[] = []
+		// each handshake packet may contain multiple handshake messages
 		for(let offset = 0; offset < plaintext.length;) {
 			const type = plaintext[offset]
-			const content = readWithLength(plaintext.slice(offset + 1), RECORD_LENGTH_BYTES)
+			// +1 for the record type byte
+			const content
+				= readWithLength(plaintext.slice(offset + 1), RECORD_LENGTH_BYTES)
 			if(!content) {
-				throw new Error('could not read pkt length')
+				incompletePkt = {
+					remainingBytes: plaintext.slice(offset),
+					packetIdx,
+				}
+
+				break
 			}
 
 			handshakeMessages.push({
 				type,
 				content,
-				contentWithHeader: plaintext
-					.slice(offset, offset + 1 + RECORD_LENGTH_BYTES + content.length),
+				contentWithHeader: plaintext.slice(
+					offset,
+					offset + 1 + RECORD_LENGTH_BYTES + content.length
+				),
+				packetIdx,
 			})
 
 			offset += 1 + RECORD_LENGTH_BYTES + content.length
 		}
 
 		for(const msg of handshakeMessages) {
-			await processHandshakeMessage(msg, packetIdx)
+			await processHandshakeMessage(msg)
 			handshakeRawMessages.push(msg.contentWithHeader)
 		}
 	}
@@ -169,7 +207,7 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 	}
 
 	async function processHandshakeMessage(
-		{ type, content, contentWithHeader }: HandshakeMessage, packetIdx: number
+		{ type, content, contentWithHeader, packetIdx }: HandshakeMessage
 	) {
 		switch (type) {
 		case SUPPORTED_RECORD_TYPE_MAP.CLIENT_HELLO:
@@ -257,7 +295,7 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 
 function getWithoutHeader(message: Uint8Array) {
 	// strip the record header (xx 03 03 xx xx)
-	return message.slice(5)
+	return readWithLength(message.slice(3), 2)
 }
 
 function readWithLength(data: Uint8Array, lengthBytes = 2) {
