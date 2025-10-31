@@ -22,7 +22,8 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 	let cancelBgp: (() => void) | undefined
 
 	const apm = getApm()
-	const sessionTx = apm?.startTransaction('tunnelConnection', { childOf: tx })
+	const sessionTx = apm
+		?.startTransaction('tunnelConnection', { childOf: tx })
 	sessionTx?.setLabel('tunnelId', id.toString())
 	sessionTx?.setLabel('hostPort', `${opts.host}:${opts.port}`)
 	sessionTx?.setLabel('geoLocation', opts.geoLocation)
@@ -37,12 +38,8 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 					return
 				}
 
-				void client.sendMessage({
-					tunnelMessage: {
-						tunnelId: id,
-						message
-					}
-				})
+				return client
+					.sendMessage({ tunnelMessage: { tunnelId: id, message } })
 			},
 			onClose(err) {
 				cancelBgp?.()

@@ -56,7 +56,7 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 		transcript.push({ sender: 'server', message })
 	})
 
-	socket.once('error', onSocketClose)
+	// socket.once('error', onSocketClose)
 	socket.once('close', () => onSocketClose(undefined))
 
 	return {

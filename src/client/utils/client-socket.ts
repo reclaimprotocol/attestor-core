@@ -65,7 +65,6 @@ export class AttestorClient extends AttestorSocket implements IAttestorClient {
 		request: Partial<RPCRequestData<T>>,
 		timeoutMs: number = DEFAULT_RPC_TIMEOUT_MS
 	) {
-
 		const msgId = generateRpcMessageId()
 		this.logger.debug({ type, id: msgId }, 'sending rpc request')
 		const now = Date.now()
