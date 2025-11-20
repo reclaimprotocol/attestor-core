@@ -8,15 +8,24 @@ import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
 	extractHTMLElementsIndexes,
-	extractJSONValueIndexes, getRedactionsForChunkHeaders,
+	extractJSONValueIndexes,
+	getRedactionsForChunkHeaders,
 	makeRegex,
 	matchRedactedStrings,
 	parseHttpResponse,
 } from '#src/providers/http/utils.ts'
-import type { ArraySlice, Provider, ProviderCtx, ProviderParams, ProviderSecretParams, RedactedOrHashedArraySlice } from '#src/types/index.ts'
+import type {
+	ArraySlice,
+	Provider,
+	ProviderCtx,
+	ProviderParams,
+	ProviderSecretParams,
+	RedactedOrHashedArraySlice
+} from '#src/types/index.ts'
 import {
 	findIndexInUint8Array,
-	getHttpRequestDataFromTranscript, logger,
+	getHttpRequestDataFromTranscript,
+	logger,
 	REDACTION_CHAR_CODE,
 	strToUint8Array,
 	uint8ArrayToStr,
@@ -46,7 +55,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 	},
 	additionalClientOptions(params): TLSConnectionOptions {
 		let defaultOptions: TLSConnectionOptions = {
-			applicationLayerProtocols : ['http/1.1']
+			applicationLayerProtocols: ['http/1.1']
 		}
 		if('additionalClientOptions' in params) {
 			defaultOptions = {
@@ -60,8 +69,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 	createRequest(secretParams, params, logger) {
 		if(
 			!secretParams.cookieStr &&
-            !secretParams.authorisationHeader &&
-            !secretParams.headers
+			!secretParams.authorisationHeader &&
+			!secretParams.headers
 		) {
 			throw new Error('auth parameters are not set')
 		}
@@ -78,8 +87,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		const hasUserAgent = Object.keys(pubHeaders)
 			.some(k => k.toLowerCase() === 'user-agent') ||
-            Object.keys(secHeaders)
-            	.some(k => k.toLowerCase() === 'user-agent')
+			Object.keys(secHeaders)
+				.some(k => k.toLowerCase() === 'user-agent')
 		if(!hasUserAgent) {
 			//only set user-agent if not set by provider
 			pubHeaders['User-Agent'] = RECLAIM_USER_AGENT
@@ -154,7 +163,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 	},
 	getResponseRedactions({ response, params: rawParams, logger, ctx }) {
-		logger.debug({ response:base64.encode(response), params:rawParams })
+		logger.debug({ response: base64.encode(response), params: rawParams })
 
 		const res = parseHttpResponse(response)
 		if(!rawParams.responseRedactions?.length) {
@@ -162,7 +171,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		if(((res.statusCode / 100) >> 0) !== 2) {
-			logger.error({ response:base64.encode(response), params:rawParams })
+			logger.error({ response: base64.encode(response), params: rawParams })
 			throw new Error(
 				`Expected status 2xx, got ${res.statusCode} (${res.statusMessage})`
 			)
@@ -194,7 +203,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			}
 		}
 
-		reveals.push({ fromIndex:res.headerEndIdx, toIndex:res.headerEndIdx + 4 })
+		reveals.push({ fromIndex: res.headerEndIdx, toIndex: res.headerEndIdx + 4 })
 
 		//reveal date header
 		if(res.headerIndices['date']) {
@@ -331,7 +340,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			const serverDate = new Date(dateHeader[1])
 			if((Date.now() - serverDate.getTime()) > dateDiff) {
 
-				logger.info({ dateHeader:dateHeader[0], current: Date.now() }, 'date header is off')
+				logger.info({ dateHeader: dateHeader[0], current: Date.now() }, 'date header is off')
 
 				// too many false positives
 				// throw new Error(
@@ -366,7 +375,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 				if(match === inv) { // if both true or both false then fail
 					throw new Error(
 						'Invalid receipt.'
-						+ ` Regex "${value}" ${invert ? 'matched' : "didn't match"}`
+						+ ` Regex "${value}" ${invert ? 'matched' : 'didn\'t match'}`
 					)
 				}
 
@@ -426,7 +435,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			const clientTranscript = base64.encode(concatenateUint8Arrays(clientMsgs))
 			const serverTranscript = base64.encode(concatenateUint8Arrays(serverMsgs))
 
-			logger.debug({ request: clientTranscript, response:serverTranscript, params:paramsAny })
+			logger.debug({ request: clientTranscript, response: serverTranscript, params: paramsAny })
 		}
 	},
 }
@@ -460,9 +469,9 @@ function getHostHeaderString(url: URL) {
 }
 
 type ReplacedParams = {
-    newParam: string
-    extractedValues: { [_: string]: string }
-    hiddenParts: { index: number, length: number } []
+	newParam: string
+	extractedValues: { [_: string]: string }
+	hiddenParts: { index: number, length: number } []
 } | null
 
 type RedactionItem = {
@@ -472,7 +481,7 @@ type RedactionItem = {
 
 const paramsRegex = /{{([^{}]+)}}/sgi
 
-function *processRedactionRequest(
+function* processRedactionRequest(
 	body: string,
 	rs: HTTPResponseRedaction,
 	bodyStartIdx: number,
@@ -489,24 +498,24 @@ function *processRedactionRequest(
 			elementIdx = start
 			elementLength = end - start
 			if(rs.jsonPath) {
-				yield *processJsonPath()
+				yield* processJsonPath()
 			} else if(rs.regex) {
-				yield *processRegexp()
+				yield* processRegexp()
 			} else {
-				yield *addRedaction()
+				yield* addRedaction()
 			}
 		}
 	} else if(rs.jsonPath) {
-		yield *processJsonPath()
+		yield* processJsonPath()
 	} else if(rs.regex) {
-		yield *processRegexp()
+		yield* processRegexp()
 	} else {
 		throw new Error(
 			'Expected either xPath, jsonPath or regex for redaction'
 		)
 	}
 
-	function *processJsonPath() {
+	function* processJsonPath() {
 		const jsonPathIndexes = extractJSONValueIndexes(element, rs.jsonPath!)
 		// eslint-disable-next-line max-depth
 		const eIndex = elementIdx
@@ -518,14 +527,14 @@ function *processRedactionRequest(
 			elementLength = jEnd - jStart
 			// eslint-disable-next-line max-depth
 			if(rs.regex) {
-				yield *processRegexp()
+				yield* processRegexp()
 			} else {
-				yield *addRedaction()
+				yield* addRedaction()
 			}
 		}
 	}
 
-	function *processRegexp() {
+	function* processRegexp() {
 		logger.debug({
 			element: base64.encode(strToUint8Array(element)),
 			body: base64.encode(strToUint8Array(body))
@@ -553,7 +562,7 @@ function *processRedactionRequest(
 		// if there are groups in the regex,
 		// we'll only hash the group values
 		if(!rs.hash || !match.groups) {
-			yield *addRedaction()
+			yield* addRedaction()
 			return
 		}
 
@@ -565,7 +574,7 @@ function *processRedactionRequest(
 		// don't hash the entire regex, we'll hash the group values
 		elementLength = grpIdx
 		element = fullStr.slice(0, grpIdx)
-		yield *addRedaction(null)
+		yield* addRedaction(null)
 
 		elementIdx += grpIdx
 		element = grp
@@ -587,11 +596,11 @@ function *processRedactionRequest(
 		elementIdx += grp.length
 		element = fullStr.slice(grpIdx + grp.length)
 		elementLength = element.length
-		yield *addRedaction(null)
+		yield* addRedaction(null)
 	}
 
 	// eslint-disable-next-line unicorn/consistent-function-scoping
-	function *addRedaction(
+	function* addRedaction(
 		hash: RedactedOrHashedArraySlice['hash'] | null = rs.hash,
 		_resChunks = resChunks
 	): Generator<RedactionItem> {
@@ -631,14 +640,14 @@ function *processRedactionRequest(
 	}
 }
 
-function substituteParamValues(
+export function substituteParamValues(
 	currentParams: HTTPProviderParams,
 	secretParams?: ProviderSecretParams<'http'>,
 	ignoreMissingParams?: boolean
 ): {
-    newParams: HTTPProviderParams
-    extractedValues: { [_: string]: string }
-    hiddenBodyParts: { index: number, length: number } []
+	newParams: HTTPProviderParams
+	extractedValues: { [_: string]: string }
+	hiddenBodyParts: { index: number, length: number } []
 	hiddenURLParts: { index: number, length: number } []
 } {
 
@@ -655,7 +664,7 @@ function substituteParamValues(
 			const host = getHostHeaderString(new URL(params.url))
 			const offset = `https://${host}`.length - currentParams.method.length - 1 //space between method and start of the path
 			for(const hiddenURLPart of urlParams.hiddenParts) {
-				hiddenURLParts.push({ index:hiddenURLPart.index - offset, length:hiddenURLPart.length })
+				hiddenURLParts.push({ index: hiddenURLPart.index - offset, length: hiddenURLPart.length })
 			}
 		}
 
@@ -714,7 +723,7 @@ function substituteParamValues(
 		newParams: params,
 		extractedValues: extractedValues,
 		hiddenBodyParts: hiddenBodyParts,
-		hiddenURLParts:hiddenURLParts
+		hiddenURLParts: hiddenURLParts
 	}
 
 	function extractAndReplaceTemplateValues(param: string | undefined, ignoreMissingParams?: boolean): ReplacedParams {
