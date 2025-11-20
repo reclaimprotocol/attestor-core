@@ -7,6 +7,7 @@ import type { ProviderClaimInfo } from '#src/proto/api.ts'
 import { ClaimTeeBundleResponse } from '#src/proto/api.ts'
 import type { CertificateInfo } from '#src/proto/tee-bundle.ts'
 import { VerificationBundle } from '#src/proto/tee-bundle.ts'
+import { substituteParamValues } from '#src/providers/http/index.ts'
 import { assertValidProviderTranscript } from '#src/server/utils/assert-valid-claim-request.ts'
 import { getAttestorAddress, niceParseJsonObject, signAsAttestor } from '#src/server/utils/generics.ts'
 import { verifyOprfProofs } from '#src/server/utils/tee-oprf-verification.ts'
@@ -184,7 +185,7 @@ async function validateTeeProviderReceipt<T extends ProviderClaimInfo>(
 		hasCertificateInfo: !!certificateInfo
 	})
 
-	// NEW: Validate certificate if available
+	// Validate certificate if available
 	if(certificateInfo) {
 		validateTlsCertificate(claimInfo, certificateInfo, logger)
 	}
@@ -242,8 +243,7 @@ function isHostnameValidForCertificate(hostname: string, certName: string): bool
 }
 
 /**
- * NEW: Validates that the TLS certificate is valid for the domain being claimed
- * This prevents domain substitution attacks in TEE+MPC scenarios
+ * Validates that the TLS certificate is valid for the domain being claimed
  */
 function validateTlsCertificate(
 	claimInfo: ProviderClaimInfo,
@@ -253,7 +253,8 @@ function validateTlsCertificate(
 	// Extract hostname from the claim (this varies by provider)
 	let claimedHostname: string | undefined
 
-	const params = niceParseJsonObject(claimInfo.parameters, 'params')
+	const paramsWithTemplates = niceParseJsonObject(claimInfo.parameters, 'params')
+	const params = substituteParamValues(paramsWithTemplates).newParams
 
 	// Different providers store hostname in different places
 	if('url' in params && typeof params.url === 'string') {
