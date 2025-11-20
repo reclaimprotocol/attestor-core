@@ -254,7 +254,7 @@ function validateTlsCertificate(
 	let claimedHostname: string | undefined
 
 	const paramsWithTemplates = niceParseJsonObject(claimInfo.parameters, 'params')
-	const params = substituteParamValues(paramsWithTemplates).newParams
+	const params = substituteParamValues(paramsWithTemplates, undefined, true).newParams
 
 	// Different providers store hostname in different places
 	if('url' in params && typeof params.url === 'string') {
