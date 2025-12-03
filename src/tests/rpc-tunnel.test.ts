@@ -33,7 +33,8 @@ describeWithServer('RPC Tunnel', opts => {
 				id: 1,
 				host: 'localhost',
 				port: opts.mockhttpsServerPort,
-				geoLocation: ''
+				geoLocation: '',
+				proxySessionId: '',
 			}
 		)
 
@@ -184,7 +185,9 @@ describeWithServer('RPC Tunnel', opts => {
 						host: 'localhost',
 						port: opts.mockhttpsServerPort,
 						// invalid geo location
-						geoLocation: 'XZ'
+						geoLocation: 'XZ',
+						// invalid proxy session id
+						proxySessionId: 'XZ',
 					},
 					tlsOpts: {
 						applicationLayerProtocols: [
@@ -202,7 +205,35 @@ describeWithServer('RPC Tunnel', opts => {
 					assert.match(err.message, /Geolocation "XZ" is invalid/)
 					return true
 				}
+			);
+
+			await assert.rejects(
+				async() => makeRpcTlsTunnel({
+					request: {
+						id: 1,
+						host: 'localhost',
+						port: opts.mockhttpsServerPort,
+						geoLocation: 'IN',
+						// invalid proxy session id
+						proxySessionId: 'XZ',
+					},
+					tlsOpts: {
+						applicationLayerProtocols: [
+							'invalid-protocol'
+						]
+					},
+					logger: client.logger,
+					connect(initMessages) {
+						client.sendMessage(...initMessages)
+							.catch(() => {})
+						return client
+					},
+				}),
+				(err: AttestorError) => {
+					assert.match(err.message, /proxySessionId "XZ" is invalid/)
+					return true
+				}
 			)
-		})
+		});
 	})
 })

@@ -30,6 +30,7 @@ import {
 	strToUint8Array,
 	uint8ArrayToStr,
 } from '#src/utils/index.ts'
+import { isValidProxySessionId } from '#src/server/utils/proxy-session.ts'
 
 const { base64 } = utils
 
@@ -51,6 +52,11 @@ const HTTP_PROVIDER: Provider<'http'> = {
 	geoLocation(params, secretParams) {
 		return ('geoLocation' in params)
 			? getGeoLocation(params, secretParams)
+			: undefined
+	},
+	proxySessionId(params, secretParams) {
+		return ('proxySessionId' in params)
+			? getProxySessionId(params, secretParams)
 			: undefined
 	},
 	additionalClientOptions(params): TLSConnectionOptions {
@@ -689,6 +695,11 @@ export function substituteParamValues(
 		params.geoLocation = geoParams.newParam
 		extractedValues = { ...extractedValues, ...geoParams.extractedValues }
 	}
+	const proxySessionIdParams = extractAndReplaceTemplateValues(params.getProxySessionId)
+	if(proxySessionIdParams) {
+		params.getProxySessionId = proxySessionIdParams.newParam
+		extractedValues = { ...extractedValues, ...proxySessionIdParams.extractedValues }
+	}
 
 	if(params.responseRedactions) {
 		for(const r of params.responseRedactions) {
@@ -798,6 +809,37 @@ function getGeoLocation(v2Params: HTTPProviderParams, secretParams?: ProviderSec
 		}
 
 		return geo
+	}
+
+	return undefined
+}
+
+function getProxySessionId(v2Params: HTTPProviderParams, secretParams?: ProviderSecretParams<'http'>) {
+	if(v2Params?.proxySessionId) {
+		const paramNames: Set<string> = new Set()
+		let proxySessionIdValue = v2Params.proxySessionId
+		//extract param names
+
+		let match: RegExpExecArray | null = null
+		while(match = paramsRegex.exec(proxySessionIdValue)) {
+			paramNames.add(match[1])
+		}
+
+		for(const pn of paramNames) {
+			if(v2Params.paramValues && pn in v2Params.paramValues) {
+				proxySessionIdValue = proxySessionIdValue?.replaceAll(`{{${pn}}}`, v2Params.paramValues[pn].toString())
+			} else if(secretParams?.paramValues && pn in secretParams.paramValues) {
+				proxySessionIdValue = proxySessionIdValue?.replaceAll(`{{${pn}}}`, secretParams.paramValues[pn].toString())
+			} else {
+				throw new Error(`parameter "${pn}" value not found in templateParams`)
+			}
+		}
+
+		if(!isValidProxySessionId(proxySessionIdValue)) {
+			throw new Error(`proxySessionId ${proxySessionIdValue} is invalid`)
+		}
+
+		return proxySessionIdValue
 	}
 
 	return undefined

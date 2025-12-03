@@ -103,6 +103,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 	const provider = providers[name]
 	const hostPort = getProviderValue(params, provider.hostPort, secretParams)
 	const geoLocation = getProviderValue(params, provider.geoLocation, secretParams)
+	const proxySessionId = getProviderValue(params, provider.proxySessionId, secretParams)
 	const providerTlsOpts = getProviderValue(
 		params,
 		provider.additionalClientOptions
@@ -131,6 +132,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		host,
 		port: port ? +port : DEFAULT_HTTPS_PORT,
 		geoLocation,
+		proxySessionId,
 		id: generateTunnelId()
 	}
 

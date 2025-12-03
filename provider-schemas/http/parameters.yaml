@@ -25,6 +25,13 @@ properties:
     description: >-
       Specify the geographical location from where
       to proxy the request. 2-letter ISO country code or parameter (public or secret)
+  proxySessionId:
+    type: string
+    nullable: true
+    description: >-
+      Specify the unique session id for allowing use of same proxy ip
+      across multiple requests. Can be an smallcase alphanumeric string of length 8-14 characters.
+      eg. "mystring12345", "something1234".
   headers:
     type: object
     description: >-
