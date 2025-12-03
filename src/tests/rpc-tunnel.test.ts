@@ -205,7 +205,7 @@ describeWithServer('RPC Tunnel', opts => {
 					assert.match(err.message, /Geolocation "XZ" is invalid/)
 					return true
 				}
-			);
+			)
 
 			await assert.rejects(
 				async() => makeRpcTlsTunnel({
@@ -234,6 +234,6 @@ describeWithServer('RPC Tunnel', opts => {
 					return true
 				}
 			)
-		});
+		})
 	})
 })

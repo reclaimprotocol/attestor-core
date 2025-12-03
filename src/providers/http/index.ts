@@ -14,6 +14,7 @@ import {
 	matchRedactedStrings,
 	parseHttpResponse,
 } from '#src/providers/http/utils.ts'
+import { isValidProxySessionId } from '#src/server/utils/proxy-session.ts'
 import type {
 	ArraySlice,
 	Provider,
@@ -30,7 +31,6 @@ import {
 	strToUint8Array,
 	uint8ArrayToStr,
 } from '#src/utils/index.ts'
-import { isValidProxySessionId } from '#src/server/utils/proxy-session.ts'
 
 const { base64 } = utils
 
@@ -695,6 +695,7 @@ export function substituteParamValues(
 		params.geoLocation = geoParams.newParam
 		extractedValues = { ...extractedValues, ...geoParams.extractedValues }
 	}
+
 	const proxySessionIdParams = extractAndReplaceTemplateValues(params.getProxySessionId)
 	if(proxySessionIdParams) {
 		params.getProxySessionId = proxySessionIdParams.newParam

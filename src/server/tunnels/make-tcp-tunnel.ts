@@ -6,11 +6,11 @@ import { CONNECTION_TIMEOUT_MS } from '#src/config/index.ts'
 import type { CreateTunnelRequest } from '#src/proto/api.ts'
 import { resolveHostnames } from '#src/server/utils/dns.ts'
 import { isValidCountryCode } from '#src/server/utils/iso.ts'
+import { isValidProxySessionId } from '#src/server/utils/proxy-session.ts'
 import type { Logger } from '#src/types/index.ts'
 import type { MakeTunnelFn, TCPSocketProperties } from '#src/types/index.ts'
 import { getEnvVariable } from '#src/utils/env.ts'
 import { AttestorError } from '#src/utils/index.ts'
-import { isValidProxySessionId } from '../utils/proxy-session.ts'
 
 const HTTPS_PROXY_URL = getEnvVariable('HTTPS_PROXY_URL')
 
@@ -201,14 +201,14 @@ async function _getSocket(
 	const socket = new Socket()
 	if((proxySessionId || geoLocation) && !HTTPS_PROXY_URL) {
 		logger.warn(
-			{ geoLocation },
+			{ geoLocation, proxySessionId },
 			'geoLocation or proxySessionId provided but no proxy URL found'
 		)
 		geoLocation = ''
 		proxySessionId = ''
 	}
 
-	if(!geoLocation || !proxySessionId) {
+	if(!geoLocation && !proxySessionId) {
 		socket.connect({ host, port, })
 		return socket
 	}
@@ -220,7 +220,7 @@ async function _getSocket(
 		)
 	}
 
-	if(!isValidProxySessionId(proxySessionId)) {
+	if(proxySessionId && !isValidProxySessionId(proxySessionId)) {
 		throw AttestorError.badRequest(
 			`proxySessionId "${proxySessionId}" is invalid. Must be a lowercase alphanumeric string of length 8-14 characters. eg. "mystring12345", "something1234".`,
 			{ proxySessionId }
@@ -230,10 +230,10 @@ async function _getSocket(
 	const agentUrl = HTTPS_PROXY_URL!.replace(
 		'{{geoLocation}}',
 		geoLocation?.toLowerCase() || ''
-	)!.replace(
+	).replace(
 		'{{proxySessionId}}',
 		proxySessionId ? `-session-${proxySessionId}` : ''
-	);
+	)
 
 	const agent = new HttpsProxyAgent(agentUrl)
 	const waitForProxyRes = new Promise<ConnectResponse>(resolve => {
