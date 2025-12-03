@@ -1,6 +1,11 @@
 {
   "compilerOptions": {
-    "lib": ["ESNext", "DOM", "ESNext.AsyncIterable", "DOM.AsyncIterable"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "ESNext.AsyncIterable",
+      "DOM.AsyncIterable"
+    ],
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "allowJs": true,
@@ -15,12 +20,15 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "#src/*": ["src/*"]
+      "#src/*": [
+        "src/*"
+      ]
     }
   },
   "include": [
     "src/*.ts",
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.js"
   ],
   "exclude": [
     "node_modules"
