@@ -696,9 +696,9 @@ export function substituteParamValues(
 		extractedValues = { ...extractedValues, ...geoParams.extractedValues }
 	}
 
-	const proxySessionIdParams = extractAndReplaceTemplateValues(params.getProxySessionId)
+	const proxySessionIdParams = extractAndReplaceTemplateValues(params.proxySessionId)
 	if(proxySessionIdParams) {
-		params.getProxySessionId = proxySessionIdParams.newParam
+		params.proxySessionId = proxySessionIdParams.newParam
 		extractedValues = { ...extractedValues, ...proxySessionIdParams.extractedValues }
 	}
 
