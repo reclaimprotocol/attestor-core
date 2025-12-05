@@ -90,7 +90,7 @@ export interface Provider<
    * are routed through the same proxy IP address. Useful for
    * maintaining IP consistency across multiple requests.
    *
-   * Can be an smallcase alphanumeric string of length 8-14 characters.
+   * Can be a smallcase alphanumeric string of length 8-14 characters.
    * @example "mystring12345", "something1234"
    */
   proxySessionId?: ProviderField<Params, SecretParams, string | undefined>
