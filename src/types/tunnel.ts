@@ -21,5 +21,5 @@ export type Transcript<T> = {
 
 export type TCPSocketProperties = {
 	transcript: Transcript<Uint8Array>
-	createRequest: Pick<CreateTunnelRequest, 'host' | 'port' | 'geoLocation'>
+	createRequest: Pick<CreateTunnelRequest, 'host' | 'port' | 'geoLocation' | 'proxySessionId'>
 }

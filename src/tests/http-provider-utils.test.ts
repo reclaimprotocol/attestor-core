@@ -23,6 +23,7 @@ describe('HTTP Provider Utils tests', () => {
 	const {
 		hostPort,
 		geoLocation,
+		proxySessionId,
 		getResponseRedactions,
 		createRequest,
 		assertValidProviderReceipt
@@ -510,6 +511,7 @@ describe('HTTP Provider Utils tests', () => {
 
 		const paramsEx: ProviderParams<'http'> = {
 			'geoLocation': '',
+			'proxySessionId': '',
 			'url': 'https://www.linkedin.com/dashboard/',
 			'method': 'GET',
 			'body': '',
@@ -957,6 +959,40 @@ Content-Type: text/html; charset=utf-8\r
 		}, /Invalid receipt. Response does not contain \"abc\"/)
 	})
 
+	it('should get proxy sessionId', () => {
+		const psessionId = getProviderValue(
+			{
+				proxySessionId: '{{psessionId}}',
+				paramValues: {
+					'psessionId': 'abcd12345'
+				}
+			} as unknown as ProviderParams<'http'>,
+			proxySessionId
+		)
+		assert.equal(psessionId, 'abcd12345')
+	})
+
+	it('should throw on bad proxy session id param', () => {
+
+		assert.throws(() => {
+			// @ts-ignore
+			proxySessionId({
+				proxySessionId: '{{psessionId}}',
+				paramValues: {
+					'psessionId1': 'abcd12345'
+				}
+			})
+		}, /parameter "psessionId" value not found in templateParams/)
+	})
+
+	it('should return empty proxy session id', () => {
+		assert.equal(
+			// @ts-ignore
+			proxySessionId({ proxySessionId: '' }),
+			undefined
+		)
+	})
+
 	it('should get geo', () => {
 		const geo = getProviderValue(
 			{
@@ -1071,6 +1107,7 @@ Content-Type: text/html; charset=utf-8\r
 			method: 'GET',
 			body: 'hello {{h}} {{b}} {{h1h1h1h1h1h1h1}} {{h2}} {{a}} {{h1h1h1h1h1h1h1}} {{h}} {{a}} {{h2}} {{a}} {{b}} world',
 			geoLocation: 'US',
+			proxySessionId: 'abcd12345',
 			responseMatches: [{
 				type: 'regex',
 				value: '<title.*?(?<domain>{{param2}} Domain)<\\/title>',
@@ -1123,6 +1160,7 @@ Content-Type: text/html; charset=utf-8\r
 		const params: ProviderParams<'http'> = {
 			'body': '{"includeGroups":{{REQ_DAT}},"includeLogins":{{REQ_SECRET}},"includeVerificationStatus":false}',
 			'geoLocation': '',
+			'proxySessionId': '',
 			'method': 'POST',
 			'paramValues': {
 				'REQ_DAT': 'false',
@@ -1244,6 +1282,7 @@ Content-Type: text/html; charset=utf-8\r
 		const params: ProviderParams<'http'> = {
 			'body': '',
 			'geoLocation': '',
+			'proxySessionId': '',
 			'method': 'POST',
 			'paramValues': {
 				'username': 'testyreclaim'

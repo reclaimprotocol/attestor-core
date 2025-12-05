@@ -83,6 +83,18 @@ export interface Provider<
    */
   geoLocation?: ProviderField<Params, SecretParams, string | undefined>
 
+  /**
+   * Session identifier for proxy IP persistence.
+   *
+   * When provided, ensures all requests within the same session
+   * are routed through the same proxy IP address. Useful for
+   * maintaining IP consistency across multiple requests.
+   *
+   * Can be a smallcase alphanumeric string of length 8-14 characters.
+   * @example "mystring12345", "something1234"
+   */
+  proxySessionId?: ProviderField<Params, SecretParams, string | undefined>
+
   /** extra options to pass to the client like root CA certificates */
   additionalClientOptions?: ProviderField<Params, SecretParams, TLSConnectionOptions | undefined>
   /**

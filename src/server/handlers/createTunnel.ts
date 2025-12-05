@@ -27,6 +27,7 @@ export const createTunnel: RPCHandler<'createTunnel'> = async(
 	sessionTx?.setLabel('tunnelId', id.toString())
 	sessionTx?.setLabel('hostPort', `${opts.host}:${opts.port}`)
 	sessionTx?.setLabel('geoLocation', opts.geoLocation)
+	sessionTx?.setLabel('proxySessionId', opts.proxySessionId)
 
 	try {
 		const tunnel = await makeTcpTunnel({

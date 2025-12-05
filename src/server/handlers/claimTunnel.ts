@@ -39,6 +39,7 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 		tunnel.createRequest?.host !== request?.host
 		|| tunnel.createRequest?.port !== request?.port
 		|| tunnel.createRequest?.geoLocation !== request?.geoLocation
+		|| tunnel.createRequest?.proxySessionId !== request?.proxySessionId
 	) {
 		throw AttestorError.badRequest('Tunnel request does not match')
 	}

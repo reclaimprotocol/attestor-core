@@ -80,6 +80,7 @@ export const makeRpcTlsTunnel: MakeTunnelFn<ExtraTLSOptions, TLSTunnelProperties
 							host: request.host || '',
 							port: request.port || DEFAULT_HTTPS_PORT,
 							geoLocation: request.geoLocation || '',
+							proxySessionId: request.proxySessionId || '',
 							id: tunnelId
 						},
 					},

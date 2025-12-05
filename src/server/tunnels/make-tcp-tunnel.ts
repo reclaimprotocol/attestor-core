@@ -6,6 +6,7 @@ import { CONNECTION_TIMEOUT_MS } from '#src/config/index.ts'
 import type { CreateTunnelRequest } from '#src/proto/api.ts'
 import { resolveHostnames } from '#src/server/utils/dns.ts'
 import { isValidCountryCode } from '#src/server/utils/iso.ts'
+import { isValidProxySessionId } from '#src/server/utils/proxy-session.ts'
 import type { Logger } from '#src/types/index.ts'
 import type { MakeTunnelFn, TCPSocketProperties } from '#src/types/index.ts'
 import { getEnvVariable } from '#src/utils/env.ts'
@@ -27,6 +28,8 @@ interface ConnectResponse {
  * Builds a TCP tunnel to the given host and port.
  * If a geolocation is provided -- an HTTPS proxy is used
  * to connect to the host.
+ * If a proxySessionId is provided -- a static ip is used with HTTPS proxy
+ * across multiple requests with this same proxySessionId.
  *
  * HTTPS proxy essentially creates an opaque tunnel to the
  * host using the CONNECT method. Any data can be sent through
@@ -98,7 +101,7 @@ export const makeTcpTunnel: MakeTunnelFn<ExtraOpts, TCPSocketProperties> = async
 	}
 }
 
-async function connectTcp({ host, port, geoLocation, logger }: ExtraOpts) {
+async function connectTcp({ host, port, geoLocation, proxySessionId, logger }: ExtraOpts) {
 	let connectTimeout: NodeJS.Timeout | undefined
 	let socket: Socket | undefined
 	try {
@@ -119,6 +122,7 @@ async function connectTcp({ host, port, geoLocation, logger }: ExtraOpts) {
 					host,
 					port,
 					geoLocation,
+					proxySessionId,
 					logger
 				})
 				socket.once('connect', resolve)
@@ -190,19 +194,21 @@ async function _getSocket(
 		host,
 		port,
 		geoLocation,
+		proxySessionId,
 		logger
 	}: ExtraOpts,
 ) {
 	const socket = new Socket()
-	if(geoLocation && !HTTPS_PROXY_URL) {
+	if((proxySessionId || geoLocation) && !HTTPS_PROXY_URL) {
 		logger.warn(
-			{ geoLocation },
-			'geoLocation provided but no proxy URL found'
+			{ geoLocation, proxySessionId },
+			'geoLocation or proxySessionId provided but no proxy URL found'
 		)
 		geoLocation = ''
+		proxySessionId = ''
 	}
 
-	if(!geoLocation) {
+	if(!geoLocation && !proxySessionId) {
 		socket.connect({ host, port, })
 		return socket
 	}
@@ -214,9 +220,19 @@ async function _getSocket(
 		)
 	}
 
+	if(proxySessionId && !isValidProxySessionId(proxySessionId)) {
+		throw AttestorError.badRequest(
+			`proxySessionId "${proxySessionId}" is invalid. Must be a lowercase alphanumeric string of length 8-14 characters. eg. "mystring12345", "something1234".`,
+			{ proxySessionId }
+		)
+	}
+
 	const agentUrl = HTTPS_PROXY_URL!.replace(
 		'{{geoLocation}}',
 		geoLocation?.toLowerCase() || ''
+	).replace(
+		'{{proxySessionId}}',
+		proxySessionId ? `-session-${proxySessionId}` : ''
 	)
 
 	const agent = new HttpsProxyAgent(agentUrl)
@@ -236,12 +252,12 @@ async function _getSocket(
 	const res = await waitForProxyRes
 	if(res.statusCode !== 200) {
 		logger.error(
-			{ geoLocation, res },
-			'Proxy geo location failed'
+			{ geoLocation, proxySessionId, res },
+			'Proxy geo location or session id failed'
 		)
 		throw new AttestorError(
 			'ERROR_PROXY_ERROR',
-			`Proxy via geo location "${geoLocation}" failed with status code: ${res.statusCode}, message: ${res.statusText}`,
+			`Proxy via ${geoLocation ? `geo location "${geoLocation}"` : ''}${geoLocation && proxySessionId ? ', or ' : ''}${proxySessionId ? `session id "${proxySessionId}"` : ''} failed with status code: ${res.statusCode}, message: ${res.statusText}`,
 			{
 				code: res.statusCode,
 				message: res.statusText,
