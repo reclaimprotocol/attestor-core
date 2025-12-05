@@ -109,7 +109,7 @@ describe.skip('TCP Tunnel', () => {
 			const session = await makeTcpTunnel({
 				host: 'api.ipify.org',
 				port: 80,
-				geoLocation: '',
+				geoLocation: 'IN',
 				proxySessionId: proxySessionId,
 				logger,
 				onClose(err) {
