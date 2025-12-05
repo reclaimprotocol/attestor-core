@@ -141,19 +141,29 @@ async function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger
 	}
 
 	// Count leading asterisks
-	let lastAsteriskIndex = -1
+	let leadingAsterisks = 0
 	for(const element of processedResponse) {
 		if(element === REDACTION_CHAR_CODE) {
-			lastAsteriskIndex++
+			leadingAsterisks++
 		} else {
 			break
 		}
 	}
 
-	const trimOffset = lastAsteriskIndex + 1
-	logger.info(`After processing: ${processedResponse.length} bytes, ${trimOffset} leading asterisks trimmed, final: ${processedResponse.length - trimOffset} bytes`)
+	// Count trailing asterisks (may contain undesired data like alerts)
+	let trailingAsterisks = 0
+	for(let i = processedResponse.length - 1; i >= leadingAsterisks; i--) {
+		if(processedResponse[i] === REDACTION_CHAR_CODE) {
+			trailingAsterisks++
+		} else {
+			break
+		}
+	}
 
-	return processedResponse.slice(trimOffset)
+	const finalLength = processedResponse.length - leadingAsterisks - trailingAsterisks
+	logger.info(`After processing: ${processedResponse.length} bytes, ${leadingAsterisks} leading and ${trailingAsterisks} trailing asterisks trimmed, final: ${finalLength} bytes`)
+
+	return processedResponse.slice(leadingAsterisks, processedResponse.length - trailingAsterisks)
 }
 
 // Removed legacy packet-based extraction functions since we now use consolidated streams
