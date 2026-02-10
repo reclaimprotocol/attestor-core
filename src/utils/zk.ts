@@ -713,7 +713,7 @@ export function makeDefaultZkOperator(
 
 		const fetcher = opType === 'local'
 			? makeLocalFileFetch()
-			: makeRemoteFileFetch({ baseUrl: zkBaseUrl })
+			: makeRemoteFileFetch({ baseUrl: zkBaseUrl, logger })
 		const maker = operatorMakers[zkEngine]
 		if(!maker) {
 			throw new Error(`No ZK operator maker for ${zkEngine}`)
@@ -753,7 +753,7 @@ export function makeDefaultOPRFOperator(
 
 		const fetcher = type === 'local'
 			? makeLocalFileFetch()
-			: makeRemoteFileFetch({ baseUrl: zkBaseUrl })
+			: makeRemoteFileFetch({ baseUrl: zkBaseUrl, logger })
 		const maker = OPRF_OPERATOR_MAKERS[zkEngine]
 		if(!maker) {
 			throw new Error(`No OPRF operator maker for ${zkEngine}`)
