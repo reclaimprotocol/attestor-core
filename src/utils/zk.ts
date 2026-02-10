@@ -706,8 +706,7 @@ export function makeDefaultZkOperator(
 	}
 
 	if(!zkOperators[algorithm]) {
-		const isNode = detectEnvironment() === 'node'
-		const opType = isNode ? 'local' : 'remote'
+		const opType = getOperatorType()
 		const zkBaseUrl = opType === 'remote' ? getZkResourcesBaseUrl()	: undefined
 
 		logger?.info({ type: opType, algorithm, zkBaseUrl }, 'fetching zk operator')
@@ -726,6 +725,15 @@ export function makeDefaultZkOperator(
 	return zkOperators[algorithm]
 }
 
+function getOperatorType() {
+	const envop = getEnvVariable('ZK_OPERATOR_TYPE')
+	if(envop === 'local' || envop === 'remote') {
+		return envop
+	}
+
+	return detectEnvironment() === 'node' ? 'local' : 'remote'
+}
+
 export function makeDefaultOPRFOperator(
 	algorithm: EncryptionAlgorithm,
 	zkEngine: ZKEngine,
@@ -738,8 +746,7 @@ export function makeDefaultOPRFOperator(
 	}
 
 	if(!operators[algorithm]) {
-		const isNode = detectEnvironment() === 'node'
-		const type = isNode ? 'local' : 'remote'
+		const type = getOperatorType()
 		const zkBaseUrl = type === 'remote' ? getZkResourcesBaseUrl() : undefined
 
 		logger?.info({ type, algorithm, zkBaseUrl }, 'fetching oprf operator')

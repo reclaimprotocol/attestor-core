@@ -56,6 +56,10 @@ export async function main<T extends ProviderName>(
 		attestorHostPort = `ws://localhost:${API_SERVER_PORT}${WS_PATHNAME}`
 	}
 
+	globalThis.ATTESTOR_BASE_URL = attestorHostPort
+		.replace('ws://', 'http://')
+		.replace('wss://', 'https://')
+
 	const zkEngine = getCliArgument('zk') === 'gnark' ? 'gnark' : 'snarkjs'
 	const { request, error, claim } = await createClaimOnAttestor({
 		name: paramsJson.name,
