@@ -275,6 +275,7 @@ export async function processHandshake(receipt: ClaimTunnelRequest['transcript']
 				algorithm: keyShare.signatureAlgorithm,
 				publicKey: certificates[0].getPublicKey(),
 				signatureData: signatureData12,
+				publicKeyType: keyShare.publicKeyType
 			})
 			await verifyCertificateChain(certificates, hostname!, logger)
 			logger.info({ hostname }, 'verified provider certificate chain')
