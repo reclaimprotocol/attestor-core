@@ -11,6 +11,8 @@ export const WS_PATHNAME = '/ws'
 
 export const BROWSER_RPC_PATHNAME = '/browser-rpc'
 
+export const ATTESTOR_ADDRESS_PATHNAME = '/address'
+
 export const DEFAULT_REMOTE_FILE_FETCH_BASE_URL = `${BROWSER_RPC_PATHNAME}/resources`
 
 export const API_SERVER_PORT = 8001

@@ -1,5 +1,6 @@
 import { ethers } from 'ethers'
 
+import { getAttestorAddress } from '#src/server/utils/generics.ts'
 import type { RPCHandler } from '#src/types/index.ts'
 import { assertValidAuthRequest } from '#src/utils/auth.ts'
 import { getEnvVariable } from '#src/utils/env.ts'
@@ -24,10 +25,7 @@ export const init: RPCHandler<'init'> = async(
 		throw AttestorError.badRequest('Unsupported client version')
 	}
 
-	await assertValidAuthRequest(
-		initRequest.auth,
-		initRequest.signatureType
-	)
+	await assertValidAuthRequest(initRequest.auth, initRequest.signatureType)
 
 	if(initRequest.auth?.data) {
 		client.logger = client.logger.child({
@@ -41,6 +39,7 @@ export const init: RPCHandler<'init'> = async(
 	return {
 		toprfPublicKey: TOPRF_PUBLIC_KEY
 			? ethers.utils.arrayify(TOPRF_PUBLIC_KEY)
-			: new Uint8Array()
+			: new Uint8Array(),
+		attestorAddress: getAttestorAddress(initRequest.signatureType)
 	}
 }

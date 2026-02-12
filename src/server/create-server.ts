@@ -5,7 +5,7 @@ import type { Duplex } from 'stream'
 import type { WebSocket } from 'ws'
 import { WebSocketServer } from 'ws'
 
-import { API_SERVER_PORT, BROWSER_RPC_PATHNAME, WS_PATHNAME } from '#src/config/index.ts'
+import { API_SERVER_PORT, ATTESTOR_ADDRESS_PATHNAME, BROWSER_RPC_PATHNAME, WS_PATHNAME } from '#src/config/index.ts'
 import { AttestorServerSocket } from '#src/server/socket.ts'
 import { getAttestorAddress } from '#src/server/utils/generics.ts'
 import { addKeepAlive } from '#src/server/utils/keep-alive.ts'
@@ -18,6 +18,11 @@ import { promisifySend } from '#src/utils/ws.ts'
 
 const PORT = +(getEnvVariable('PORT') || API_SERVER_PORT)
 const DISABLE_BGP_CHECKS = getEnvVariable('DISABLE_BGP_CHECKS') === '1'
+
+const ATTESTOR_ADDRESS_JSON_RES = JSON.stringify({
+	address: getAttestorAddress(SelectedServiceSignatureType),
+	signatureType: SelectedServiceSignatureType
+})
 
 /**
  * Creates the WebSocket API server,
@@ -42,21 +47,31 @@ export async function createServer(port = PORT) {
 	const wss = new WebSocketServer({ noServer: true })
 	http.on('upgrade', handleUpgrade.bind(wss))
 	http.on('request', (req, res) => {
+		const url = URL.parse(req.url || '', 'http://localhost')
+		if(!url) {
+			res.statusCode = 422
+			res.end('Invalid URL')
+			return
+		}
+
+		if(url.pathname === ATTESTOR_ADDRESS_PATHNAME) {
+			res.writeHead(200, { 'Content-Type': 'application/json' })
+			res.end(ATTESTOR_ADDRESS_JSON_RES)
+			return
+		}
+
 		// simple way to serve files at the browser RPC path
-		if(!req.url?.startsWith(BROWSER_RPC_PATHNAME)) {
+		if(!url.pathname?.startsWith(BROWSER_RPC_PATHNAME)) {
 			res.statusCode = 404
 			res.end('Not found')
 			return
 		}
 
-		req.url = req.url.slice(BROWSER_RPC_PATHNAME.length) || '/'
+		req.url = req.url!.slice(BROWSER_RPC_PATHNAME.length) || '/'
 
 		serveBrowserRpc(req, res, (err) => {
 			if(err) {
-				LOGGER.error(
-					{ err, url: req.url },
-					'Failed to serve file'
-				)
+				LOGGER.error({ err, url: req.url }, 'Failed to serve file')
 			}
 
 			res.statusCode = err?.statusCode ?? 404

@@ -148,7 +148,7 @@ message CreateTunnelRequest {
 	string geoLocation = 4;
 	/**
 	 * Session identifier for proxy IP persistence.
-	 * 
+	 *
 	 * When provided, ensures all requests within the same session
 	 * are routed through the same proxy IP address. Useful for
 	 * maintaining IP consistency across multiple requests.
@@ -342,7 +342,7 @@ message ClaimTunnelRequest {
 	 *
 	 * Attach a proof (if any) to each message
 	 * to reveal the contents of the message inside
-	 * 
+	 *
 	 * The revealed messages should support the proving
 	 * of the claim as defined in the provider's implementation
 	 */
@@ -390,7 +390,7 @@ message ClaimTunnelResponse {
 		 * Address of the attestor that has signed the claim
 		 */
 		string attestorAddress = 1;
-		/** 
+		/**
 		* signature of `stringifyProviderClaimData(claim)`,
 		* if the claim was successful
 		*/
@@ -488,6 +488,10 @@ message InitRequest {
 
 message InitResponse {
 	bytes toprfPublicKey = 1;
+	/**
+	 * Address of the attestor
+	 */
+	string attestorAddress = 2;
 }
 
 message TOPRFRequest {
@@ -558,7 +562,7 @@ message RPCMessage {
 		 */
 		ClaimTunnelRequest claimTunnelRequest = 12;
 		ClaimTunnelResponse claimTunnelResponse = 13;
-		
+
 		/**
 		 * Request the attestor to pay for the claim on the chain.
 		 * The Attestor can choose to reject the request.
