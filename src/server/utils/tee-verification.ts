@@ -11,7 +11,6 @@ import type { AddressExtractionResult } from '#src/server/utils/nitro-attestatio
 import { validateNitroAttestationAndExtractKey } from '#src/server/utils/nitro-attestation.ts'
 import type { Logger } from '#src/types/general.ts'
 import { AttestorError } from '#src/utils/error.ts'
-import { uint8ArrayToStr } from '#src/utils/index.ts'
 import { SIGNATURES } from '#src/utils/signatures/index.ts'
 
 // Types specific to TEE verification
@@ -154,8 +153,6 @@ async function extractPublicKeys(
 	const hasEmbeddedAttestations = (bundle.teekSigned!.attestationReport?.report && bundle.teekSigned!.attestationReport.report.length > 0) &&
 		(bundle.teetSigned!.attestationReport?.report && bundle.teetSigned!.attestationReport.report.length > 0)
 
-	let teekAddress: string | undefined
-	let teetAddress: string | undefined
 	let teekKeyResult: AddressExtractionResult | undefined
 	let teetKeyResult: AddressExtractionResult | undefined
 
@@ -285,24 +282,7 @@ async function extractPublicKeys(
 		logger.info('Attestations validated successfully')
 
 	} else {
-		// Standalone mode: Use embedded public keys
-		logger.info('Using standalone mode: extracting embedded public keys')
-
-		if(!bundle.teekSigned?.ethAddress || bundle.teekSigned.ethAddress.length === 0) {
-			throw new Error('TEE_K eth address missing in standalone mode')
-		}
-
-		if(!bundle.teetSigned?.ethAddress || bundle.teetSigned.ethAddress.length === 0) {
-			throw new Error('TEE_T eth address missing in standalone mode')
-		}
-
-		teekAddress = uint8ArrayToStr(bundle.teekSigned.ethAddress)
-		teetAddress = uint8ArrayToStr(bundle.teetSigned.ethAddress)
-
-		teekKeyResult = { ethAddress: teekAddress, teeType: 'tee_k', pcr0: 'standalone_k' }
-		teetKeyResult = { ethAddress: teetAddress, teeType: 'tee_t', pcr0: 'standalone_t' }
-
-		logger.info('Embedded public keys extracted successfully')
+		throw new Error('Missing attestation')
 	}
 
 	return {
