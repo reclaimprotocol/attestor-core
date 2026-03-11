@@ -12,11 +12,8 @@ import { SIGNATURES, strToUint8Array } from '#src/utils/index.ts'
  * verifies a claim.
  */
 export function createSignDataForClaim(data: CompleteClaimData) {
-	const identifier = 'identifier' in data
-		? data.identifier
-		: getIdentifierFromClaimInfo(data)
 	const lines = [
-		identifier,
+		getIdentifierFromClaimInfo(data),
 		// we lowercase the owner to ensure that the
 		// ETH addresses always serialize the same way
 		data.owner.toLowerCase(),

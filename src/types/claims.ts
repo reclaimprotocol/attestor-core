@@ -12,12 +12,11 @@ import type { PrepareZKProofsBaseOpts } from '#src/types/zk.ts'
  */
 export type ClaimID = ProviderClaimData['identifier']
 
-export type ClaimInfo = Pick<ProviderClaimData, 'context' | 'provider' | 'parameters'>
+export type ClaimInfo
+	= Pick<ProviderClaimData, 'context' | 'provider' | 'parameters'>
 
-export type AnyClaimInfo = ClaimInfo | { identifier: ClaimID }
-
-export type CompleteClaimData = Pick<ProviderClaimData, 'owner' | 'timestampS' | 'epoch'>
-	& AnyClaimInfo
+export type CompleteClaimData
+	= Pick<ProviderClaimData, 'owner' | 'timestampS' | 'epoch'> & ClaimInfo
 
 export type CreateClaimOnAttestorOpts<N extends ProviderName> = {
 	/** name of the provider to generate signed receipt for */
