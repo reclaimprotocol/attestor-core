@@ -155,6 +155,7 @@ properties:
             the named groups will be hashed.
           enum:
             - oprf
+            - oprf-mpc
       additionalProperties: false
   paramValues:
     type: object

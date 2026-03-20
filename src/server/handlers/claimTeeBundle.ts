@@ -10,6 +10,8 @@ import { VerificationBundle } from '#src/proto/tee-bundle.ts'
 import { substituteParamValues } from '#src/providers/http/index.ts'
 import { assertValidProviderTranscript } from '#src/server/utils/assert-valid-claim-request.ts'
 import { getAttestorAddress, niceParseJsonObject, signAsAttestor } from '#src/server/utils/generics.ts'
+import { verifyOprfMpcOutputs } from '#src/server/utils/tee-oprf-mpc-verification.ts'
+import type { OprfVerificationResult } from '#src/server/utils/tee-oprf-verification.ts'
 import { verifyOprfProofs } from '#src/server/utils/tee-oprf-verification.ts'
 import type { TeeTranscriptData } from '#src/server/utils/tee-transcript-reconstruction.ts'
 import { reconstructTlsTranscript } from '#src/server/utils/tee-transcript-reconstruction.ts'
@@ -43,21 +45,32 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	logger.info('Verifying OPRF proofs')
 	// Parse the verification bundle to get OPRF verifications
 	const bundle = VerificationBundle.decode(verificationBundle)
-	const oprfResults = await verifyOprfProofs(
+	const zkOprfResults = await verifyOprfProofs(
 		{ ...teeData, oprfVerifications: bundle.oprfVerifications },
 		logger
 	)
 
-	// 4. Reconstruct TLS transcript with OPRF replacements applied
-	logger.info('Starting TLS transcript reconstruction with OPRF replacements')
-	const transcriptData = await reconstructTlsTranscript(teeData, logger, oprfResults)
+	// 4. Verify OPRF MPC outputs (TEE-to-TEE computed OPRF)
+	logger.info('Verifying OPRF MPC outputs')
+	const oprfMpcResults = verifyOprfMpcOutputs(
+		teeData.kOutputPayload,
+		teeData.tOutputPayload,
+		logger
+	)
 
-	// 5. Create plaintext transcript for provider validation (OPRF already applied)
+	// 5. Combine ZK and OPRF MPC results for transcript reconstruction
+	const allOprfResults = validateAndCombineOprfResults(zkOprfResults, oprfMpcResults, logger)
+
+	// 6. Reconstruct TLS transcript with all OPRF replacements applied
+	logger.info('Starting TLS transcript reconstruction with OPRF replacements')
+	const transcriptData = await reconstructTlsTranscript(teeData, logger, allOprfResults)
+
+	// 7. Create plaintext transcript for provider validation (OPRF already applied)
 	logger.info('Creating plaintext transcript from TEE data')
 	const plaintextTranscript = createPlaintextTranscriptFromTeeData(transcriptData, logger)
 
 
-	// 6. Direct provider validation
+	// 8. Direct provider validation
 	logger.info('Running direct provider validation on TEE reconstructed data')
 
 
@@ -92,7 +105,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	logger.info({ claim: res.claim }, 'TEE bundle claim validation successful')
 
 
-	// 7. Sign the response
+	// 9. Sign the response
 	res.signatures = {
 		attestorAddress: getAttestorAddress(
 			client.metadata.signatureType
@@ -304,5 +317,62 @@ function validateTlsCertificate(
 			`CommonName: ${certificateInfo.commonName}` :
 			`SAN: ${certificateInfo.dnsNames.find(name => isHostnameValidForCertificate(claimedHostname, name))}`
 	})
+}
+
+/**
+ * Validates OPRF results have no overlapping ranges and combines them
+ * SECURITY: Prevents position collisions between ZK and OPRF MPC results
+ */
+function validateAndCombineOprfResults(
+	zkOprfResults: OprfVerificationResult[],
+	oprfMpcResults: OprfVerificationResult[],
+	logger: Logger
+): OprfVerificationResult[] {
+	const allOprfResults = [...zkOprfResults, ...oprfMpcResults]
+
+	if(allOprfResults.length === 0) {
+		return allOprfResults
+	}
+
+	logger.info(`Combined ${zkOprfResults.length} ZK OPRF + ${oprfMpcResults.length} OPRF MPC results`)
+
+	// Check for overlapping ranges (position collision detection)
+	const seen: Record<number, { length: number, source: string }> = {}
+	for(const result of zkOprfResults) {
+		seen[result.position] = { length: result.length, source: 'zk' }
+	}
+
+	for(const result of oprfMpcResults) {
+		const existing = seen[result.position]
+		if(existing) {
+			// Exact duplicate at same position - verify they match
+			if(existing.length !== result.length) {
+				throw new AttestorError(
+					'ERROR_INVALID_CLAIM',
+					`OPRF range conflict at position ${result.position}: ZK length ${existing.length} vs MPC length ${result.length}`
+				)
+			}
+
+			logger.warn(`Duplicate OPRF range at position ${result.position} from both ZK and MPC - using MPC result`)
+		}
+
+		// Check for overlapping (but not identical) ranges
+		for(const [pos, data] of Object.entries(seen)) {
+			const position = Number(pos)
+			const existingEnd = position + data.length
+			const newEnd = result.position + result.length
+			const overlaps = (result.position < existingEnd && newEnd > position) && result.position !== position
+			if(overlaps) {
+				throw new AttestorError(
+					'ERROR_INVALID_CLAIM',
+					`Overlapping OPRF ranges: [${position}:${existingEnd}] (${data.source}) and [${result.position}:${newEnd}] (mpc)`
+				)
+			}
+		}
+
+		seen[result.position] = { length: result.length, source: 'mpc' }
+	}
+
+	return allOprfResults
 }
 

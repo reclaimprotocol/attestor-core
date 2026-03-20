@@ -282,7 +282,41 @@ async function extractPublicKeys(
 		logger.info('Attestations validated successfully')
 
 	} else {
-		throw new Error('Missing attestation')
+		// Standalone/Development mode: Extract from embedded ETH addresses
+		// SECURITY: Only allow standalone mode when explicitly enabled via environment variable
+		const standaloneEnabled = process.env.TEE_STANDALONE === 'true' || process.env.TEE_STANDALONE === '1'
+		if(!standaloneEnabled) {
+			throw new Error('Missing attestation reports and standalone mode is not enabled (set TEE_STANDALONE=true to enable)')
+		}
+
+		const hasEmbeddedKeys = (bundle.teekSigned!.ethAddress && bundle.teekSigned!.ethAddress.length > 0) &&
+			(bundle.teetSigned!.ethAddress && bundle.teetSigned!.ethAddress.length > 0)
+
+		if(!hasEmbeddedKeys) {
+			throw new Error('Missing attestation and no embedded ETH addresses for standalone mode')
+		}
+
+		logger.warn('STANDALONE MODE ENABLED: Using embedded ETH addresses without attestation verification')
+
+		// Extract TEE_K address (stored as UTF-8 string like "0xe3c8d66...")
+		const teekAddress = Buffer.from(bundle.teekSigned!.ethAddress).toString('utf8')
+		teekKeyResult = {
+			teeType: 'tee_k',
+			ethAddress: teekAddress,
+			pcr0: 'standalone-mode' // No PCR0 in standalone mode
+		}
+		logger.info(`TEE_K standalone address: ${teekAddress}`)
+
+		// Extract TEE_T address (stored as UTF-8 string like "0x3b8ad67...")
+		const teetAddress = Buffer.from(bundle.teetSigned!.ethAddress).toString('utf8')
+		teetKeyResult = {
+			teeType: 'tee_t',
+			ethAddress: teetAddress,
+			pcr0: 'standalone-mode' // No PCR0 in standalone mode
+		}
+		logger.info(`TEE_T standalone address: ${teetAddress}`)
+
+		logger.info('Standalone mode key extraction successful')
 	}
 
 	return {
