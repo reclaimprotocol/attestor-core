@@ -283,6 +283,12 @@ async function extractPublicKeys(
 
 	} else {
 		// Standalone/Development mode: Extract from embedded ETH addresses
+		// SECURITY: Only allow standalone mode when explicitly enabled via environment variable
+		const standaloneEnabled = process.env.TEE_STANDALONE === 'true' || process.env.TEE_STANDALONE === '1'
+		if(!standaloneEnabled) {
+			throw new Error('Missing attestation reports and standalone mode is not enabled (set TEE_STANDALONE=true to enable)')
+		}
+
 		const hasEmbeddedKeys = (bundle.teekSigned!.ethAddress && bundle.teekSigned!.ethAddress.length > 0) &&
 			(bundle.teetSigned!.ethAddress && bundle.teetSigned!.ethAddress.length > 0)
 
@@ -290,7 +296,7 @@ async function extractPublicKeys(
 			throw new Error('Missing attestation and no embedded ETH addresses for standalone mode')
 		}
 
-		logger.info('Using standalone/development mode: extracting keys from embedded ETH addresses')
+		logger.warn('STANDALONE MODE ENABLED: Using embedded ETH addresses without attestation verification')
 
 		// Extract TEE_K address (stored as UTF-8 string like "0xe3c8d66...")
 		const teekAddress = Buffer.from(bundle.teekSigned!.ethAddress).toString('utf8')
