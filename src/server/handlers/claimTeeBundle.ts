@@ -11,6 +11,7 @@ import { substituteParamValues } from '#src/providers/http/index.ts'
 import { assertValidProviderTranscript } from '#src/server/utils/assert-valid-claim-request.ts'
 import { getAttestorAddress, niceParseJsonObject, signAsAttestor } from '#src/server/utils/generics.ts'
 import { verifyOprfMpcOutputs } from '#src/server/utils/tee-oprf-mpc-verification.ts'
+import type { OprfVerificationResult } from '#src/server/utils/tee-oprf-verification.ts'
 import { verifyOprfProofs } from '#src/server/utils/tee-oprf-verification.ts'
 import type { TeeTranscriptData } from '#src/server/utils/tee-transcript-reconstruction.ts'
 import { reconstructTlsTranscript } from '#src/server/utils/tee-transcript-reconstruction.ts'
@@ -57,48 +58,8 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 		logger
 	)
 
-	// 5. Combine ZK and MPC OPRF results for transcript reconstruction
-	// SECURITY: Validate no overlapping ranges between ZK and OPRF MPC
-	const allOprfResults = [...zkOprfResults, ...oprfMpcResults]
-	if(allOprfResults.length > 0) {
-		logger.info(`Combined ${zkOprfResults.length} ZK OPRF + ${oprfMpcResults.length} OPRF MPC results`)
-
-		// Check for overlapping ranges (position collision detection)
-		const seen = new Map<number, { length: number, source: string }>()
-		for(const result of zkOprfResults) {
-			seen.set(result.position, { length: result.length, source: 'zk' })
-		}
-
-		for(const result of oprfMpcResults) {
-			const existing = seen.get(result.position)
-			if(existing) {
-				// Exact duplicate at same position - verify they match
-				if(existing.length !== result.length) {
-					throw new AttestorError(
-						'ERROR_INVALID_CLAIM',
-						`OPRF range conflict at position ${result.position}: ZK length ${existing.length} vs MPC length ${result.length}`
-					)
-				}
-
-				logger.warn(`Duplicate OPRF range at position ${result.position} from both ZK and MPC - using MPC result`)
-			}
-
-			// Check for overlapping (but not identical) ranges
-			for(const [pos, data] of seen) {
-				const existingEnd = pos + data.length
-				const newEnd = result.position + result.length
-				const overlaps = (result.position < existingEnd && newEnd > pos) && result.position !== pos
-				if(overlaps) {
-					throw new AttestorError(
-						'ERROR_INVALID_CLAIM',
-						`Overlapping OPRF ranges: [${pos}:${existingEnd}] (${data.source}) and [${result.position}:${newEnd}] (mpc)`
-					)
-				}
-			}
-
-			seen.set(result.position, { length: result.length, source: 'mpc' })
-		}
-	}
+	// 5. Combine ZK and OPRF MPC results for transcript reconstruction
+	const allOprfResults = validateAndCombineOprfResults(zkOprfResults, oprfMpcResults, logger)
 
 	// 6. Reconstruct TLS transcript with all OPRF replacements applied
 	logger.info('Starting TLS transcript reconstruction with OPRF replacements')
@@ -356,5 +317,62 @@ function validateTlsCertificate(
 			`CommonName: ${certificateInfo.commonName}` :
 			`SAN: ${certificateInfo.dnsNames.find(name => isHostnameValidForCertificate(claimedHostname, name))}`
 	})
+}
+
+/**
+ * Validates OPRF results have no overlapping ranges and combines them
+ * SECURITY: Prevents position collisions between ZK and OPRF MPC results
+ */
+function validateAndCombineOprfResults(
+	zkOprfResults: OprfVerificationResult[],
+	oprfMpcResults: OprfVerificationResult[],
+	logger: Logger
+): OprfVerificationResult[] {
+	const allOprfResults = [...zkOprfResults, ...oprfMpcResults]
+
+	if(allOprfResults.length === 0) {
+		return allOprfResults
+	}
+
+	logger.info(`Combined ${zkOprfResults.length} ZK OPRF + ${oprfMpcResults.length} OPRF MPC results`)
+
+	// Check for overlapping ranges (position collision detection)
+	const seen: Record<number, { length: number, source: string }> = {}
+	for(const result of zkOprfResults) {
+		seen[result.position] = { length: result.length, source: 'zk' }
+	}
+
+	for(const result of oprfMpcResults) {
+		const existing = seen[result.position]
+		if(existing) {
+			// Exact duplicate at same position - verify they match
+			if(existing.length !== result.length) {
+				throw new AttestorError(
+					'ERROR_INVALID_CLAIM',
+					`OPRF range conflict at position ${result.position}: ZK length ${existing.length} vs MPC length ${result.length}`
+				)
+			}
+
+			logger.warn(`Duplicate OPRF range at position ${result.position} from both ZK and MPC - using MPC result`)
+		}
+
+		// Check for overlapping (but not identical) ranges
+		for(const [pos, data] of Object.entries(seen)) {
+			const position = Number(pos)
+			const existingEnd = position + data.length
+			const newEnd = result.position + result.length
+			const overlaps = (result.position < existingEnd && newEnd > position) && result.position !== position
+			if(overlaps) {
+				throw new AttestorError(
+					'ERROR_INVALID_CLAIM',
+					`Overlapping OPRF ranges: [${position}:${existingEnd}] (${data.source}) and [${result.position}:${newEnd}] (mpc)`
+				)
+			}
+		}
+
+		seen[result.position] = { length: result.length, source: 'mpc' }
+	}
+
+	return allOprfResults
 }
 
