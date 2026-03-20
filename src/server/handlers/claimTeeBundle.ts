@@ -10,6 +10,7 @@ import { VerificationBundle } from '#src/proto/tee-bundle.ts'
 import { substituteParamValues } from '#src/providers/http/index.ts'
 import { assertValidProviderTranscript } from '#src/server/utils/assert-valid-claim-request.ts'
 import { getAttestorAddress, niceParseJsonObject, signAsAttestor } from '#src/server/utils/generics.ts'
+import { verifyMpcOprfOutputs } from '#src/server/utils/tee-mpc-oprf-verification.ts'
 import { verifyOprfProofs } from '#src/server/utils/tee-oprf-verification.ts'
 import type { TeeTranscriptData } from '#src/server/utils/tee-transcript-reconstruction.ts'
 import { reconstructTlsTranscript } from '#src/server/utils/tee-transcript-reconstruction.ts'
@@ -43,21 +44,35 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	logger.info('Verifying OPRF proofs')
 	// Parse the verification bundle to get OPRF verifications
 	const bundle = VerificationBundle.decode(verificationBundle)
-	const oprfResults = await verifyOprfProofs(
+	const zkOprfResults = await verifyOprfProofs(
 		{ ...teeData, oprfVerifications: bundle.oprfVerifications },
 		logger
 	)
 
-	// 4. Reconstruct TLS transcript with OPRF replacements applied
-	logger.info('Starting TLS transcript reconstruction with OPRF replacements')
-	const transcriptData = await reconstructTlsTranscript(teeData, logger, oprfResults)
+	// 4. Verify MPC OPRF outputs (TEE-to-TEE computed OPRF)
+	logger.info('Verifying MPC OPRF outputs')
+	const mpcOprfResults = verifyMpcOprfOutputs(
+		teeData.kOutputPayload,
+		teeData.tOutputPayload,
+		logger
+	)
 
-	// 5. Create plaintext transcript for provider validation (OPRF already applied)
+	// 5. Combine ZK and MPC OPRF results for transcript reconstruction
+	const allOprfResults = [...zkOprfResults, ...mpcOprfResults]
+	if(allOprfResults.length > 0) {
+		logger.info(`Combined ${zkOprfResults.length} ZK OPRF + ${mpcOprfResults.length} MPC OPRF results`)
+	}
+
+	// 6. Reconstruct TLS transcript with all OPRF replacements applied
+	logger.info('Starting TLS transcript reconstruction with OPRF replacements')
+	const transcriptData = await reconstructTlsTranscript(teeData, logger, allOprfResults)
+
+	// 7. Create plaintext transcript for provider validation (OPRF already applied)
 	logger.info('Creating plaintext transcript from TEE data')
 	const plaintextTranscript = createPlaintextTranscriptFromTeeData(transcriptData, logger)
 
 
-	// 6. Direct provider validation
+	// 8. Direct provider validation
 	logger.info('Running direct provider validation on TEE reconstructed data')
 
 
@@ -92,7 +107,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	logger.info({ claim: res.claim }, 'TEE bundle claim validation successful')
 
 
-	// 7. Sign the response
+	// 9. Sign the response
 	res.signatures = {
 		attestorAddress: getAttestorAddress(
 			client.metadata.signatureType

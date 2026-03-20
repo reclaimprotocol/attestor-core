@@ -282,7 +282,35 @@ async function extractPublicKeys(
 		logger.info('Attestations validated successfully')
 
 	} else {
-		throw new Error('Missing attestation')
+		// Standalone/Development mode: Extract from embedded ETH addresses
+		const hasEmbeddedKeys = (bundle.teekSigned!.ethAddress && bundle.teekSigned!.ethAddress.length > 0) &&
+			(bundle.teetSigned!.ethAddress && bundle.teetSigned!.ethAddress.length > 0)
+
+		if(!hasEmbeddedKeys) {
+			throw new Error('Missing attestation and no embedded ETH addresses for standalone mode')
+		}
+
+		logger.info('Using standalone/development mode: extracting keys from embedded ETH addresses')
+
+		// Extract TEE_K address (stored as UTF-8 string like "0xe3c8d66...")
+		const teekAddress = Buffer.from(bundle.teekSigned!.ethAddress).toString('utf8')
+		teekKeyResult = {
+			teeType: 'tee_k',
+			ethAddress: teekAddress,
+			pcr0: 'standalone-mode' // No PCR0 in standalone mode
+		}
+		logger.info(`TEE_K standalone address: ${teekAddress}`)
+
+		// Extract TEE_T address (stored as UTF-8 string like "0x3b8ad67...")
+		const teetAddress = Buffer.from(bundle.teetSigned!.ethAddress).toString('utf8')
+		teetKeyResult = {
+			teeType: 'tee_t',
+			ethAddress: teetAddress,
+			pcr0: 'standalone-mode' // No PCR0 in standalone mode
+		}
+		logger.info(`TEE_T standalone address: ${teetAddress}`)
+
+		logger.info('Standalone mode key extraction successful')
 	}
 
 	return {

@@ -15,10 +15,11 @@ export type RedactedOrHashedArraySlice = {
 	toIndex: number
 	/**
 	 * By default, the the data is redacted. Instead if you'd like
-	 * a deterministic hash, set this to 'oprf'
+	 * a deterministic hash, set this to 'oprf' for client-side TOPRF
+	 * or 'oprf-mpc' for TEE-to-TEE MPC OPRF
 	 * @default undefined
 	 */
-	hash?: 'oprf'
+	hash?: 'oprf' | 'oprf-mpc'
 }
 
 export type Logger = TLSLogger & {

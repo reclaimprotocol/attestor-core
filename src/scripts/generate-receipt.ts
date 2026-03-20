@@ -4,10 +4,7 @@ import { readFile } from 'fs/promises'
 import type { WebSocketServer } from 'ws'
 import '#src/server/utils/config-env.ts'
 
-import type {
-	ProviderName,
-	ProviderParams,
-	ProviderSecretParams } from '#src/index.ts'
+import type { ProviderName, ProviderParams, ProviderSecretParams } from '#src/index.ts'
 import {
 	API_SERVER_PORT,
 	createClaimOnAttestor,
@@ -25,13 +22,13 @@ import { getEnvVariable } from '#src/utils/env.ts'
 setCryptoImplementation(webcryptoCrypto)
 
 type ProviderReceiptGenerationParams<P extends ProviderName> = {
-    name: P
-    params: ProviderParams<P>
-    secretParams: ProviderSecretParams<P>
+	name: P
+	params: ProviderParams<P>
+	secretParams: ProviderSecretParams<P>
 }
 
 // tmp change till we move OPRF attestor to prod
-const DEFAULT_ATTESTOR_HOST_PORT = 'wss://attestor.reclaimprotocol.org:444/ws'
+const DEFAULT_ATTESTOR_HOST_PORT = 'wss://eu.attestor.reclaimprotocol.org/ws'
 const PRIVATE_KEY_HEX = getEnvVariable('PRIVATE_KEY_HEX')
 	// demo private key
 	|| '0x0123788edad59d7c013cdc85e4372f350f828e2cec62d9a2de4560e69aec7f89'
@@ -49,7 +46,7 @@ export async function main<T extends ProviderName>(
 	assertValidateProviderParams<'http'>(paramsJson.name, paramsJson.params)
 
 	let attestorHostPort = getCliArgument('attestor')
-        || DEFAULT_ATTESTOR_HOST_PORT
+		|| DEFAULT_ATTESTOR_HOST_PORT
 	if(attestorHostPort === 'local') {
 		console.log('starting local attestor server...')
 		server = await createServer()
@@ -126,7 +123,7 @@ async function getInputParameters(): Promise<ProviderReceiptGenerationParams<any
 	for(const variable in process.env) {
 		fileContents = fileContents.replace(
 			`{{${variable}}}`,
-            process.env[variable]!
+			process.env[variable]!
 		)
 	}
 
