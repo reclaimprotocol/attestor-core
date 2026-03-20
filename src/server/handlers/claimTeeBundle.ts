@@ -68,6 +68,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 		for(const result of zkOprfResults) {
 			seen.set(result.position, { length: result.length, source: 'zk' })
 		}
+
 		for(const result of oprfMpcResults) {
 			const existing = seen.get(result.position)
 			if(existing) {
@@ -78,8 +79,10 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 						`OPRF range conflict at position ${result.position}: ZK length ${existing.length} vs MPC length ${result.length}`
 					)
 				}
+
 				logger.warn(`Duplicate OPRF range at position ${result.position} from both ZK and MPC - using MPC result`)
 			}
+
 			// Check for overlapping (but not identical) ranges
 			for(const [pos, data] of seen) {
 				const existingEnd = pos + data.length
@@ -92,6 +95,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 					)
 				}
 			}
+
 			seen.set(result.position, { length: result.length, source: 'mpc' })
 		}
 	}
