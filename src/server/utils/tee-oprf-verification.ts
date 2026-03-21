@@ -223,8 +223,8 @@ export function replaceOprfRanges(
 
 	// Build new transcript by copying segments and inserting replacements
 	const newPlaintext = new Uint8Array(newSize)
-	let srcPos = 0  // Position in original plaintext
-	let dstPos = 0  // Position in new plaintext
+	let srcPos = 0 // Position in original plaintext
+	let dstPos = 0 // Position in new plaintext
 
 	for(const [idx, { result, outputBytes, encodedOutput }] of replacements.entries()) {
 		// Copy segment before this replacement
