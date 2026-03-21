@@ -83,6 +83,7 @@
     "@reclaimprotocol/tls": "github:reclaimprotocol/tls",
     "@reclaimprotocol/zk-symmetric-crypto": "^5.0.4",
     "ajv": "^8.17.1",
+    "bs58": "^6.0.0",
     "canonicalize": "^2.0.0",
     "cbor-x": "^1.6.0",
     "cose-js": "^0.9.0",

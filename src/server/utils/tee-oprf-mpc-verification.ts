@@ -105,10 +105,12 @@ export function verifyOprfMpcOutputs(
 		)
 
 		// Return in same format as ZK OPRF for unified replacement
+		// MPC OPRF uses full hash length (not truncated like TOPRF)
 		results.push({
 			position: kOut.tlsStart,
 			length: kOut.tlsLength,
-			output: new Uint8Array(kOut.hashOutput) // Use SHA256(CMAC) as the replacement value
+			output: new Uint8Array(kOut.hashOutput), // Use SHA256(CMAC) as the replacement value
+			isMPC: true
 		})
 	}
 

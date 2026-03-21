@@ -4,6 +4,7 @@
  */
 
 import type { ZKProofPublicSignalsOPRF } from '@reclaimprotocol/zk-symmetric-crypto'
+import bs58 from 'bs58'
 
 import type { OPRFVerificationData } from '#src/proto/tee-bundle.ts'
 import type { TeeBundleData } from '#src/server/utils/tee-verification.ts'
@@ -15,6 +16,7 @@ export interface OprfVerificationResult {
 	position: number
 	length: number
 	output: Uint8Array // Base64-decoded OPRF output
+	isMPC?: boolean // If true, keep full hash length (don't truncate)
 }
 
 /**
@@ -171,7 +173,8 @@ async function verifySingleOprfProof(
 }
 
 /**
- * Replaces OPRF ranges in the reconstructed plaintext with verified outputs
+ * Replaces OPRF ranges in the reconstructed plaintext with verified outputs.
+ * Properly expands or contracts the transcript to fit replacement hashes.
  */
 export function replaceOprfRanges(
 	plaintext: Uint8Array,
@@ -182,50 +185,72 @@ export function replaceOprfRanges(
 		return plaintext
 	}
 
-	// Create a copy to modify
-	const modifiedPlaintext = new Uint8Array(plaintext)
+	// Pre-compute replacement data for each result
+	interface ReplacementData {
+		result: OprfVerificationResult
+		outputBytes: Uint8Array
+		encodedOutput: string
+	}
+	const replacements: ReplacementData[] = oprfResults.map(result => {
+		let outputBytes: Uint8Array
+		let encodedOutput: string
 
-	for(const [idx, result] of oprfResults.entries()) {
-		// Convert OPRF output to base64 string then to bytes
-		const base64Output = Buffer.from(result.output).toString('base64')
-		const outputBytes = new TextEncoder().encode(base64Output)
+		if(result.isMPC) {
+			// MPC OPRF: use base58 encoding, full hash length (no truncation)
+			encodedOutput = bs58.encode(result.output)
+			outputBytes = new TextEncoder().encode(encodedOutput)
+		} else {
+			// TOPRF: use base64 encoding, truncate to fit original data length
+			encodedOutput = Buffer.from(result.output).toString('base64')
+			const truncated = encodedOutput.substring(0, result.length)
+			outputBytes = new TextEncoder().encode(truncated)
+		}
 
-		// Calculate how much we can fit
-		const availableSpace = result.length
-		const bytesToWrite = Math.min(outputBytes.length, availableSpace)
+		return { result, outputBytes, encodedOutput }
+	})
 
-		// Log what we're about to replace
+	// Sort by position (ascending) to process in order
+	replacements.sort((a, b) => a.result.position - b.result.position)
+
+	// Calculate new transcript size
+	let newSize = plaintext.length
+	for(const { result, outputBytes } of replacements) {
+		const sizeDiff = outputBytes.length - result.length
+		newSize += sizeDiff
+	}
+
+	logger.info(`Transcript size: ${plaintext.length} -> ${newSize} (${newSize - plaintext.length >= 0 ? '+' : ''}${newSize - plaintext.length} bytes)`)
+
+	// Build new transcript by copying segments and inserting replacements
+	const newPlaintext = new Uint8Array(newSize)
+	let srcPos = 0 // Position in original plaintext
+	let dstPos = 0 // Position in new plaintext
+
+	for(const [idx, { result, outputBytes, encodedOutput }] of replacements.entries()) {
+		// Copy segment before this replacement
+		const segmentLength = result.position - srcPos
+		if(segmentLength > 0) {
+			newPlaintext.set(plaintext.slice(srcPos, result.position), dstPos)
+			dstPos += segmentLength
+		}
+
+		// Log replacement
 		const currentContent = plaintext.slice(result.position, result.position + result.length)
-		logger.info(`OPRF #${idx} replacing at pos ${result.position}-${result.position + result.length}: "${Buffer.from(currentContent).toString('utf8')}" -> "${base64Output.substring(0, result.length)}"`)
+		logger.info(`OPRF #${idx} at pos ${result.position}: "${Buffer.from(currentContent).toString('utf8')}" (${result.length}b) -> "${encodedOutput}" (${outputBytes.length}b)${result.isMPC ? ' [MPC/base58]' : ''}`)
 
-		// Show context
-		const contextBefore = plaintext.slice(Math.max(0, result.position - 20), result.position)
-		const contextAfter = plaintext.slice(result.position + result.length, Math.min(plaintext.length, result.position + result.length + 20))
-		logger.info(`OPRF #${idx} context: "${Buffer.from(contextBefore).toString('utf8')}[${Buffer.from(currentContent).toString('utf8')}]${Buffer.from(contextAfter).toString('utf8')}")`)
+		// Insert replacement hash
+		newPlaintext.set(outputBytes, dstPos)
+		dstPos += outputBytes.length
 
-		// Replace the range with base64 output (truncated if necessary)
-		let actualBytesWritten = 0
-		for(let i = 0; i < bytesToWrite; i++) {
-			if(result.position + i < modifiedPlaintext.length) {
-				modifiedPlaintext[result.position + i] = outputBytes[i]
-				actualBytesWritten++
-			} else {
-				logger.warn(`OPRF #${idx}: Tried to write at position ${result.position + i} but it's out of bounds (plaintext length: ${modifiedPlaintext.length})`)
-			}
-		}
+		// Move source position past the replaced range
+		srcPos = result.position + result.length
+	}
 
-		// Fill remaining space with asterisks if output is shorter
-		for(let i = bytesToWrite; i < availableSpace; i++) {
-			if(result.position + i < modifiedPlaintext.length) {
-				modifiedPlaintext[result.position + i] = 42 // '*' character
-			}
-		}
-
-		// Log result
-		const newContent = modifiedPlaintext.slice(result.position, result.position + result.length)
-		logger.info(`OPRF #${idx} completed: wrote ${actualBytesWritten} bytes, result="${Buffer.from(newContent).toString('utf8')}"`)
+	// Copy remaining segment after last replacement
+	if(srcPos < plaintext.length) {
+		newPlaintext.set(plaintext.slice(srcPos), dstPos)
 	}
 
 	logger.info(`Replaced ${oprfResults.length} OPRF ranges in plaintext`)
-	return modifiedPlaintext
+	return newPlaintext
 }
