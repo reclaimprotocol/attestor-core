@@ -124,6 +124,8 @@ export interface KOutputPayload {
   responseRedactionRanges: ResponseRedactionRange[];
   /** Unix timestamp in milliseconds when payload was created (SIGNED) */
   timestampMs: number;
+  /** Session binding - cryptographically links TEE_K and TEE_T outputs */
+  sessionId: string;
   /** MPC OPRF outputs (TEE-to-TEE computation) - field 10 to match reclaim-tee */
   oprfOutputs: OPRFOutput[];
 }
@@ -135,6 +137,8 @@ export interface TOutputPayload {
   requestProofStreams: Uint8Array[];
   /** Unix timestamp in milliseconds when payload was created (SIGNED) */
   timestampMs: number;
+  /** Session binding - cryptographically links TEE_K and TEE_T outputs */
+  sessionId: string;
   /** MPC OPRF outputs (TEE-to-TEE computation) - field 10 to match reclaim-tee */
   oprfOutputs: OPRFOutput[];
 }
@@ -817,6 +821,7 @@ function createBaseKOutputPayload(): KOutputPayload {
     certificateInfo: undefined,
     responseRedactionRanges: [],
     timestampMs: 0,
+    sessionId: "",
     oprfOutputs: [],
   };
 }
@@ -840,6 +845,9 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
     }
     if (message.timestampMs !== 0) {
       writer.uint32(48).uint64(message.timestampMs);
+    }
+    if (message.sessionId !== "") {
+      writer.uint32(58).string(message.sessionId);
     }
     for (const v of message.oprfOutputs) {
       OPRFOutput.encode(v!, writer.uint32(82).fork()).join();
@@ -902,6 +910,14 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
           message.timestampMs = longToNumber(reader.uint64());
           continue;
         }
+        case 7: {
+          if (tag !== 58) {
+            break;
+          }
+
+          message.sessionId = reader.string();
+          continue;
+        }
         case 10: {
           if (tag !== 82) {
             break;
@@ -933,6 +949,7 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
         ? object.responseRedactionRanges.map((e: any) => ResponseRedactionRange.fromJSON(e))
         : [],
       timestampMs: isSet(object.timestampMs) ? globalThis.Number(object.timestampMs) : 0,
+      sessionId: isSet(object.sessionId) ? globalThis.String(object.sessionId) : "",
       oprfOutputs: globalThis.Array.isArray(object?.oprfOutputs)
         ? object.oprfOutputs.map((e: any) => OPRFOutput.fromJSON(e))
         : [],
@@ -959,6 +976,9 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
     if (message.timestampMs !== 0) {
       obj.timestampMs = Math.round(message.timestampMs);
     }
+    if (message.sessionId !== "") {
+      obj.sessionId = message.sessionId;
+    }
     if (message.oprfOutputs?.length) {
       obj.oprfOutputs = message.oprfOutputs.map((e) => OPRFOutput.toJSON(e));
     }
@@ -980,6 +1000,7 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
     message.responseRedactionRanges =
       object.responseRedactionRanges?.map((e) => ResponseRedactionRange.fromPartial(e)) || [];
     message.timestampMs = object.timestampMs ?? 0;
+    message.sessionId = object.sessionId ?? "";
     message.oprfOutputs = object.oprfOutputs?.map((e) => OPRFOutput.fromPartial(e)) || [];
     return message;
   },
@@ -990,6 +1011,7 @@ function createBaseTOutputPayload(): TOutputPayload {
     consolidatedResponseCiphertext: new Uint8Array(0),
     requestProofStreams: [],
     timestampMs: 0,
+    sessionId: "",
     oprfOutputs: [],
   };
 }
@@ -1004,6 +1026,9 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
     }
     if (message.timestampMs !== 0) {
       writer.uint32(24).uint64(message.timestampMs);
+    }
+    if (message.sessionId !== "") {
+      writer.uint32(34).string(message.sessionId);
     }
     for (const v of message.oprfOutputs) {
       OPRFOutput.encode(v!, writer.uint32(82).fork()).join();
@@ -1042,6 +1067,14 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
           message.timestampMs = longToNumber(reader.uint64());
           continue;
         }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.sessionId = reader.string();
+          continue;
+        }
         case 10: {
           if (tag !== 82) {
             break;
@@ -1068,6 +1101,7 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
         ? object.requestProofStreams.map((e: any) => bytesFromBase64(e))
         : [],
       timestampMs: isSet(object.timestampMs) ? globalThis.Number(object.timestampMs) : 0,
+      sessionId: isSet(object.sessionId) ? globalThis.String(object.sessionId) : "",
       oprfOutputs: globalThis.Array.isArray(object?.oprfOutputs)
         ? object.oprfOutputs.map((e: any) => OPRFOutput.fromJSON(e))
         : [],
@@ -1085,6 +1119,9 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
     if (message.timestampMs !== 0) {
       obj.timestampMs = Math.round(message.timestampMs);
     }
+    if (message.sessionId !== "") {
+      obj.sessionId = message.sessionId;
+    }
     if (message.oprfOutputs?.length) {
       obj.oprfOutputs = message.oprfOutputs.map((e) => OPRFOutput.toJSON(e));
     }
@@ -1099,6 +1136,7 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
     message.consolidatedResponseCiphertext = object.consolidatedResponseCiphertext ?? new Uint8Array(0);
     message.requestProofStreams = object.requestProofStreams?.map((e) => e) || [];
     message.timestampMs = object.timestampMs ?? 0;
+    message.sessionId = object.sessionId ?? "";
     message.oprfOutputs = object.oprfOutputs?.map((e) => OPRFOutput.fromPartial(e)) || [];
     return message;
   },

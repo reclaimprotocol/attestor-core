@@ -55,13 +55,12 @@ message OPRFOutput {
 message KOutputPayload {
   bytes redacted_request = 1; // R_red
   repeated RequestRedactionRange request_redaction_ranges = 2;
-
   bytes consolidated_response_keystream = 3;  // NEW: Single response decryption keystream
   CertificateInfo certificate_info = 4;      // NEW: Structured cert data instead of handshake packets
-
   repeated ResponseRedactionRange response_redaction_ranges = 5;
   uint64 timestamp_ms = 6; // Unix timestamp in milliseconds when payload was created (SIGNED)
-
+  // Session binding - cryptographically links TEE_K and TEE_T outputs
+  string session_id = 7; // Shared session ID for cross-TEE binding
   repeated OPRFOutput oprf_outputs = 10;  // MPC OPRF outputs (TEE-to-TEE computation) - field 10 to match reclaim-tee
 }
 
@@ -69,6 +68,8 @@ message TOutputPayload {
   bytes consolidated_response_ciphertext = 1;  // NEW: Single consolidated ciphertext instead of individual packets
   repeated bytes request_proof_streams = 2;    // R_SP streams signed by TEE_T for cryptographic verification
   uint64 timestamp_ms = 3;                     // Unix timestamp in milliseconds when payload was created (SIGNED)
+  // Session binding - cryptographically links TEE_K and TEE_T outputs
+  string session_id = 4; // Shared session ID for cross-TEE binding
 
   repeated OPRFOutput oprf_outputs = 10;  // MPC OPRF outputs (TEE-to-TEE computation) - field 10 to match reclaim-tee
 }
