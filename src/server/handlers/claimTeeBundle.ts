@@ -91,6 +91,8 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 	ctx.pcr0_k = teeData.teekPcr0
 	// eslint-disable-next-line camelcase
 	ctx.pcr0_t = teeData.teetPcr0
+	// eslint-disable-next-line camelcase
+	ctx.tee_session_id = teeData.teeSessionId
 	validatedClaim.context = JSON.stringify(ctx)
 
 	res.claim = {

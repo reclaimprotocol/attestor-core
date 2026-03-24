@@ -21,6 +21,7 @@ export interface TeeBundleData {
 	tOutputPayload: TOutputPayload
 	teekPcr0: string
 	teetPcr0: string
+	teeSessionId: string
 }
 
 export interface TeeSignatureVerificationResult {
@@ -63,6 +64,9 @@ export async function verifyTeeBundle(
 	// Validate timestamps
 	validateTimestamps(kOutputPayload, tOutputPayload, logger)
 
+	// Validate session IDs match (prevents cross-session component substitution)
+	const teeSessionId = validateSessionIds(kOutputPayload, tOutputPayload, logger)
+
 	logger.info('TEE bundle verification successful')
 
 	return {
@@ -72,6 +76,7 @@ export async function verifyTeeBundle(
 		tOutputPayload,
 		teekPcr0: teekKeyResult!.pcr0,
 		teetPcr0: teetKeyResult!.pcr0,
+		teeSessionId,
 	}
 }
 
@@ -511,12 +516,24 @@ function validateTimestamps(
 		throw new Error(`TEE_T timestamp ${tTimestamp} is too old. Must be within 10 minutes of current time ${now}`)
 	}
 
-	// 2. Check that both timestamps are within diff
+	// 1b. Check that timestamps are not in the future (with small tolerance for clock skew)
+	const maxFutureMs = 60 * 1000 // 1 minute tolerance for clock skew
+	const maxAllowed = now + maxFutureMs
+
+	if(kTimestamp > maxAllowed) {
+		throw new Error(`TEE_K timestamp ${kTimestamp} is in the future. Current time is ${now}`)
+	}
+
+	if(tTimestamp > maxAllowed) {
+		throw new Error(`TEE_T timestamp ${tTimestamp} is in the future. Current time is ${now}`)
+	}
+
+	// 2. Check that both timestamps are within 1 minute of each other
 	const timestampDiffMs = Math.abs(kTimestamp - tTimestamp)
-	const maxDiffMs = 20 * 1000
+	const maxDiffMs = 60 * 1000 // 1 minute
 
 	if(timestampDiffMs > maxDiffMs) {
-		throw new Error(`TEE timestamps differ by ${timestampDiffMs}ms, which exceeds maximum allowed difference of ${maxDiffMs}ms`)
+		throw new Error(`TEE timestamps differ by ${timestampDiffMs}ms, which exceeds maximum allowed difference of ${maxDiffMs}ms (1 minute)`)
 	}
 
 	logger.info('TEE timestamp validation successful', {
@@ -524,4 +541,55 @@ function validateTimestamps(
 		ageKMs: now - kTimestamp,
 		ageTMs: now - tTimestamp
 	})
+}
+
+/**
+ * Validates that both K and T payloads have matching session IDs
+ * SECURITY: Prevents cross-session component substitution attacks
+ * @param kPayload - K output payload with session_id
+ * @param tPayload - T output payload with session_id
+ * @param logger - Logger instance
+ * @returns The validated session ID
+ */
+function validateSessionIds(
+	kPayload: KOutputPayload,
+	tPayload: TOutputPayload,
+	logger: Logger
+): string {
+	const kSessionId = kPayload.sessionId
+	const tSessionId = tPayload.sessionId
+
+	logger.info('Validating TEE session IDs', {
+		kSessionId,
+		tSessionId
+	})
+
+	// Both session IDs must be present
+	if(!kSessionId || kSessionId.length === 0) {
+		throw new AttestorError(
+			'ERROR_INVALID_CLAIM',
+			'Missing session_id in TEE_K payload - required for cross-TEE binding'
+		)
+	}
+
+	if(!tSessionId || tSessionId.length === 0) {
+		throw new AttestorError(
+			'ERROR_INVALID_CLAIM',
+			'Missing session_id in TEE_T payload - required for cross-TEE binding'
+		)
+	}
+
+	// Session IDs must match
+	if(kSessionId !== tSessionId) {
+		throw new AttestorError(
+			'ERROR_INVALID_CLAIM',
+			`Session ID mismatch: TEE_K session_id "${kSessionId}" does not match TEE_T session_id "${tSessionId}".`
+		)
+	}
+
+	logger.info('TEE session ID validation successful', {
+		sessionId: kSessionId
+	})
+
+	return kSessionId
 }
