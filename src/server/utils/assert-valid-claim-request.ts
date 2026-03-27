@@ -275,6 +275,15 @@ export async function decryptTranscript(
 		}
 	}
 
+	// Fail if any oprf-raw markers remain incomplete
+	const remainingPending = Object.keys(pendingOprfRaw)
+	if(remainingPending.length) {
+		throw new AttestorError(
+			'ERROR_INVALID_CLAIM',
+			`oprf-raw cross-block markers incomplete: pending for packets ${remainingPending.join(', ')}`
+		)
+	}
+
 	return {
 		transcript: decryptedTranscript,
 		hostname: hostname,
@@ -353,6 +362,15 @@ export async function decryptTranscript(
 					pendingForThis.partialData,
 					overshootData
 				])
+
+				// Verify accumulated length matches declared length
+				const expectedLen = pendingForThis.dataLocation.length
+				if(fullData.length !== expectedLen) {
+					throw new AttestorError(
+						'ERROR_INVALID_CLAIM',
+						`oprf-raw cross-block length mismatch: got ${fullData.length}, expected ${expectedLen}`
+					)
+				}
 
 				// Compute OPRF for the complete data
 				const oprfResults = await computeOPRFRaw(
