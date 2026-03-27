@@ -1,6 +1,6 @@
 import type { Logger as TLSLogger, TLSPacketContext, TLSProtocolVersion } from '@reclaimprotocol/tls'
 
-import type { TOPRFProofParams } from '#src/types/zk.ts'
+import type { OPRFRawMarker, TOPRFProofParams } from '#src/types/zk.ts'
 
 /**
  * Represents a slice of any array or string
@@ -14,12 +14,14 @@ export type RedactedOrHashedArraySlice = {
 	fromIndex: number
 	toIndex: number
 	/**
-	 * By default, the the data is redacted. Instead if you'd like
-	 * a deterministic hash, set this to 'oprf' for client-side TOPRF
-	 * or 'oprf-mpc' for TEE-to-TEE MPC OPRF
+	 * By default, the data is redacted. Instead if you'd like
+	 * a deterministic hash, set this to:
+	 * - 'oprf' for client-side TOPRF with ZK proof
+	 * - 'oprf-mpc' for TEE-to-TEE MPC OPRF
+	 * - 'oprf-raw' for server-side OPRF (data revealed to attestor)
 	 * @default undefined
 	 */
-	hash?: 'oprf' | 'oprf-mpc'
+	hash?: 'oprf' | 'oprf-mpc' | 'oprf-raw'
 }
 
 export type Logger = TLSLogger & {
@@ -34,6 +36,7 @@ export type ZKRevealInfo = {
 	type: 'zk'
 	redactedPlaintext: Uint8Array
 	toprfs?: TOPRFProofParams[]
+	oprfRawMarkers?: OPRFRawMarker[]
 	overshotToprfFromPrevBlock?: { length: number }
 }
 
@@ -59,4 +62,16 @@ export type IDecryptedTranscript = {
 	transcript: IDecryptedTranscriptMessage[]
 	tlsVersion: TLSProtocolVersion
 	hostname: string
+	/**
+	 * oprf-raw replacements: original plaintext -> nullifier mappings
+	 * for server-side parameter replacement
+	 */
+	oprfRawReplacements?: OPRFRawReplacement[]
+}
+
+export type OPRFRawReplacement = {
+	/** Original plaintext that was OPRF'd */
+	originalText: string
+	/** OPRF nullifier string to replace with */
+	nullifierText: string
 }

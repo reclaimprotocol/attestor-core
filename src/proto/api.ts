@@ -507,6 +507,14 @@ export interface MessageReveal_MessageRevealDirect {
 export interface MessageReveal_MessageRevealZk {
   proofs: MessageReveal_ZKProof[];
   toprfs: MessageReveal_TOPRFProof[];
+  /** Markers for server-side OPRF computation (oprf-raw mode) */
+  oprfRawMarkers: MessageReveal_OPRFRawMarker[];
+}
+
+/** Marker for server-side OPRF computation (oprf-raw mode). */
+export interface MessageReveal_OPRFRawMarker {
+  /** Location of the data to OPRF in the revealed plaintext */
+  dataLocation: DataSlice | undefined;
 }
 
 export interface MessageReveal_ZKProof {
@@ -2072,7 +2080,7 @@ export const MessageReveal_MessageRevealDirect: MessageFns<MessageReveal_Message
 };
 
 function createBaseMessageReveal_MessageRevealZk(): MessageReveal_MessageRevealZk {
-  return { proofs: [], toprfs: [] };
+  return { proofs: [], toprfs: [], oprfRawMarkers: [] };
 }
 
 export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageRevealZk> = {
@@ -2082,6 +2090,9 @@ export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageReve
     }
     for (const v of message.toprfs) {
       MessageReveal_TOPRFProof.encode(v!, writer.uint32(18).fork()).join();
+    }
+    for (const v of message.oprfRawMarkers) {
+      MessageReveal_OPRFRawMarker.encode(v!, writer.uint32(26).fork()).join();
     }
     return writer;
   },
@@ -2109,6 +2120,14 @@ export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageReve
           message.toprfs.push(MessageReveal_TOPRFProof.decode(reader, reader.uint32()));
           continue;
         }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.oprfRawMarkers.push(MessageReveal_OPRFRawMarker.decode(reader, reader.uint32()));
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2126,6 +2145,9 @@ export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageReve
       toprfs: globalThis.Array.isArray(object?.toprfs)
         ? object.toprfs.map((e: any) => MessageReveal_TOPRFProof.fromJSON(e))
         : [],
+      oprfRawMarkers: globalThis.Array.isArray(object?.oprfRawMarkers)
+        ? object.oprfRawMarkers.map((e: any) => MessageReveal_OPRFRawMarker.fromJSON(e))
+        : [],
     };
   },
 
@@ -2137,6 +2159,9 @@ export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageReve
     if (message.toprfs?.length) {
       obj.toprfs = message.toprfs.map((e) => MessageReveal_TOPRFProof.toJSON(e));
     }
+    if (message.oprfRawMarkers?.length) {
+      obj.oprfRawMarkers = message.oprfRawMarkers.map((e) => MessageReveal_OPRFRawMarker.toJSON(e));
+    }
     return obj;
   },
 
@@ -2147,6 +2172,67 @@ export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageReve
     const message = createBaseMessageReveal_MessageRevealZk();
     message.proofs = object.proofs?.map((e) => MessageReveal_ZKProof.fromPartial(e)) || [];
     message.toprfs = object.toprfs?.map((e) => MessageReveal_TOPRFProof.fromPartial(e)) || [];
+    message.oprfRawMarkers = object.oprfRawMarkers?.map((e) => MessageReveal_OPRFRawMarker.fromPartial(e)) || [];
+    return message;
+  },
+};
+
+function createBaseMessageReveal_OPRFRawMarker(): MessageReveal_OPRFRawMarker {
+  return { dataLocation: undefined };
+}
+
+export const MessageReveal_OPRFRawMarker: MessageFns<MessageReveal_OPRFRawMarker> = {
+  encode(message: MessageReveal_OPRFRawMarker, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.dataLocation !== undefined) {
+      DataSlice.encode(message.dataLocation, writer.uint32(10).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): MessageReveal_OPRFRawMarker {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseMessageReveal_OPRFRawMarker();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.dataLocation = DataSlice.decode(reader, reader.uint32());
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): MessageReveal_OPRFRawMarker {
+    return { dataLocation: isSet(object.dataLocation) ? DataSlice.fromJSON(object.dataLocation) : undefined };
+  },
+
+  toJSON(message: MessageReveal_OPRFRawMarker): unknown {
+    const obj: any = {};
+    if (message.dataLocation !== undefined) {
+      obj.dataLocation = DataSlice.toJSON(message.dataLocation);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<MessageReveal_OPRFRawMarker>): MessageReveal_OPRFRawMarker {
+    return MessageReveal_OPRFRawMarker.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<MessageReveal_OPRFRawMarker>): MessageReveal_OPRFRawMarker {
+    const message = createBaseMessageReveal_OPRFRawMarker();
+    message.dataLocation = (object.dataLocation !== undefined && object.dataLocation !== null)
+      ? DataSlice.fromPartial(object.dataLocation)
+      : undefined;
     return message;
   },
 };

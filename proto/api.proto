@@ -212,6 +212,14 @@ message MessageReveal {
 	message MessageRevealZk {
 		repeated ZKProof proofs = 1;
 		repeated TOPRFProof toprfs = 2;
+		/** Markers for server-side OPRF computation (oprf-raw mode) */
+		repeated OPRFRawMarker oprfRawMarkers = 3;
+	}
+
+	/** Marker for server-side OPRF computation (oprf-raw mode). */
+	message OPRFRawMarker {
+		/** Location of the data to OPRF in the revealed plaintext */
+		DataSlice dataLocation = 1;
 	}
 
 	message ZKProof {

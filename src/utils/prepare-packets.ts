@@ -66,10 +66,15 @@ export async function preparePacketsForReveal(
 				message.plaintext.slice(reveal.redactedPlaintext.length)
 			])
 
+			// Capture oprfRawMarkers for server-side OPRF computation
+			const oprfRawMarkers = reveal.oprfRawMarkers?.map(m => ({
+				dataLocation: m.dataLocation
+			})) || []
+
 			await proofGenerator.addPacketToProve(
 				message,
 				reveal,
-				(proofs, toprfs) => (msg.reveal = { zkReveal: { proofs, toprfs } }),
+				(proofs, toprfs) => (msg.reveal = { zkReveal: { proofs, toprfs, oprfRawMarkers } }),
 				() => {
 					const next = tlsTranscript
 						.slice(i + 1)

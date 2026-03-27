@@ -16,11 +16,13 @@ import {
 } from '#src/proto/api.ts'
 import { providers } from '#src/providers/index.ts'
 import { niceParseJsonObject } from '#src/server/utils/generics.ts'
+import { computeOPRFRaw } from '#src/server/utils/oprf-raw.ts'
 import { processHandshake } from '#src/server/utils/process-handshake.ts'
 import { assertValidateProviderParams } from '#src/server/utils/validation.ts'
 import type {
 	IDecryptedTranscript, IDecryptedTranscriptMessage,
 	Logger,
+	OPRFRawReplacement,
 	ProviderCtx,
 	ProviderName,
 	TCPSocketProperties,
@@ -28,6 +30,7 @@ import type {
 } from '#src/types/index.ts'
 import {
 	AttestorError,
+	binaryHashToStr,
 	canonicalStringify, decryptDirect,
 	extractApplicationDataFromTranscript,
 	hashProviderParams,	SIGNATURES,
@@ -102,7 +105,8 @@ export async function assertValidClaimRequest(
 	// get all application data messages
 	const applData = extractApplicationDataFromTranscript(receipt)
 	const newData = await assertValidProviderTranscript(
-		applData, data, logger, { version: metadata.clientVersion }
+		applData, data, logger, { version: metadata.clientVersion },
+		receipt.oprfRawReplacements
 	)
 	if(newData !== data) {
 		logger.info({ newData }, 'updated claim info')
@@ -119,7 +123,8 @@ export async function assertValidProviderTranscript<T extends ProviderClaimInfo>
 	applData: Transcript<Uint8Array>,
 	info: T,
 	logger: Logger,
-	providerCtx: ProviderCtx
+	providerCtx: ProviderCtx,
+	oprfRawReplacements?: OPRFRawReplacement[]
 ) {
 	const providerName = info.provider as ProviderName
 	const provider = providers[providerName]
@@ -130,8 +135,24 @@ export async function assertValidProviderTranscript<T extends ProviderClaimInfo>
 		)
 	}
 
-	const params = niceParseJsonObject(info.parameters, 'params')
+	let params = niceParseJsonObject(info.parameters, 'params')
 	const ctx = niceParseJsonObject(info.context, 'context')
+
+	// Apply oprf-raw replacements to parameters (server-side OPRF)
+	if(oprfRawReplacements?.length) {
+		let strParams = canonicalStringify(params) ?? '{}'
+		for(const { originalText, nullifierText } of oprfRawReplacements) {
+			strParams = strParams.replaceAll(originalText, nullifierText)
+		}
+
+		params = JSON.parse(strParams)
+		// Update info.parameters with replaced values
+		info.parameters = strParams
+		logger.debug(
+			{ replacements: oprfRawReplacements.length },
+			'applied oprf-raw parameter replacements'
+		)
+	}
 
 	assertValidateProviderParams(providerName, params)
 
@@ -223,6 +244,7 @@ export async function decryptTranscript(
 
 	const overshotMap: { [pkt: number]: { data: Uint8Array } } = {}
 	const decryptedTranscript: IDecryptedTranscriptMessage[] = []
+	const oprfRawReplacements: { originalText: string, nullifierText: string }[] = []
 
 	for(const [i, {
 		sender,
@@ -250,6 +272,7 @@ export async function decryptTranscript(
 		transcript: decryptedTranscript,
 		hostname: hostname,
 		tlsVersion: tlsVersion,
+		oprfRawReplacements: oprfRawReplacements.length ? oprfRawReplacements : undefined
 	}
 
 	async function decryptMessage(
@@ -312,6 +335,28 @@ export async function decryptTranscript(
 				}
 			)
 			plaintext = result.redactedPlaintext
+
+			// Process oprf-raw markers: compute OPRF server-side and replace with nullifier
+			if(result.oprfRawMarkers?.length) {
+				const oprfResults = await computeOPRFRaw(
+					plaintext,
+					result.oprfRawMarkers,
+					logger
+				)
+				// Replace plaintext at marker positions with nullifier string
+				for(const { dataLocation, nullifier } of oprfResults) {
+					// Capture original text for parameter replacement
+					const originalText = new TextDecoder().decode(
+						plaintext.slice(dataLocation.fromIndex, dataLocation.fromIndex + dataLocation.length)
+					)
+					const nullifierStr = binaryHashToStr(nullifier, dataLocation.length)
+					oprfRawReplacements.push({ originalText, nullifierText: nullifierStr })
+
+					const nullifierBytes = new TextEncoder().encode(nullifierStr)
+					plaintext.set(nullifierBytes, dataLocation.fromIndex)
+				}
+			}
+
 			redacted = false
 			plaintextLength = plaintext.length
 		} else {

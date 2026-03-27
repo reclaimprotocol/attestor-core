@@ -169,6 +169,64 @@ describe('Redaction Tests', () => {
 			}
 		}
 	})
+
+	it('should correctly handle oprf-raw markers (no redaction, no OPRF call)', async() => {
+		// oprf-raw: data is revealed (not redacted), OPRF computed server-side
+		const input = ['secret: abc123', ' end']
+		const redactions: RedactedOrHashedArraySlice[] = [
+			{ fromIndex: 8, toIndex: 14, hash: 'oprf-raw' } // 'abc123'
+		]
+
+		const realOutput = await getBlocksToReveal(
+			input.map(i => ({ plaintext: Buffer.from(i) })),
+			() => redactions,
+			async() => {
+				throw new Error('should not call performOprf for oprf-raw')
+			}
+		)
+
+		assert(realOutput !== 'all', 'should not return "all"')
+		// For oprf-raw: plaintext is NOT redacted
+		assert.equal(uint8ArrayToStr(realOutput[0].redactedPlaintext), 'secret: abc123')
+		assert.equal(uint8ArrayToStr(realOutput[1].redactedPlaintext), ' end')
+
+		// Check oprfRawMarkers are set
+		assert.ok(realOutput[0].oprfRawMarkers, 'oprfRawMarkers should be set')
+		assert.equal(realOutput[0].oprfRawMarkers.length, 1)
+		assert.deepEqual(realOutput[0].oprfRawMarkers[0].dataLocation, {
+			fromIndex: 8,
+			length: 6
+		})
+	})
+
+	it('should handle mixed oprf-raw and regular redactions', async() => {
+		const input = ['email: test@example.com, token: secret123']
+		const redactions: RedactedOrHashedArraySlice[] = [
+			{ fromIndex: 7, toIndex: 23 }, // 'test@example.com' - redacted
+			{ fromIndex: 31, toIndex: 40, hash: 'oprf-raw' } // 'secret123' - oprf-raw
+		]
+
+		const realOutput = await getBlocksToReveal(
+			input.map(i => ({ plaintext: Buffer.from(i) })),
+			() => redactions,
+			async() => {
+				throw new Error('should not call performOprf for oprf-raw or regular redaction')
+			}
+		)
+
+		assert(realOutput !== 'all')
+		// First part is redacted, oprf-raw part is revealed
+		const expectedRedacted = 'email: ****************, token: secret123'
+		assert.equal(uint8ArrayToStr(realOutput[0].redactedPlaintext), expectedRedacted)
+
+		// oprfRawMarkers should be set for the oprf-raw portion
+		assert.ok(realOutput[0].oprfRawMarkers)
+		assert.equal(realOutput[0].oprfRawMarkers.length, 1)
+		assert.deepEqual(realOutput[0].oprfRawMarkers[0].dataLocation, {
+			fromIndex: 31,
+			length: 9
+		})
+	})
 })
 
 describe('OPRF Slicing Tests', () => {
@@ -434,7 +492,7 @@ for(const { cipherSuite, zkEngine } of ZK_TEST_MATRIX) {
 				const x = await verifyZkPacket(
 					{
 						ciphertext,
-						zkReveal: { proofs: proofs!, toprfs: [] },
+						zkReveal: { proofs: proofs!, toprfs: [], oprfRawMarkers: [] },
 						logger,
 						cipherSuite,
 						zkEngine: zkEngine,

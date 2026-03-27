@@ -1,7 +1,7 @@
 import { base64Encode } from '@bufbuild/protobuf/wire'
 import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
 
-import type { ArraySlice, RedactedOrHashedArraySlice, TOPRFProofParams } from '#src/types/index.ts'
+import type { ArraySlice, OPRFRawMarker, RedactedOrHashedArraySlice, TOPRFProofParams } from '#src/types/index.ts'
 
 export const REDACTION_CHAR = '*'
 export const REDACTION_CHAR_CODE = REDACTION_CHAR.charCodeAt(0)
@@ -13,6 +13,10 @@ type SliceWithReveal<T> = {
 	 * If the block has some TOPRF claims -- they'll be set here
 	 */
 	toprfs?: TOPRFProofParams[]
+	/**
+	 * If the block has oprf-raw markers for server-side OPRF computation
+	 */
+	oprfRawMarkers?: OPRFRawMarker[]
 	/**
 	 * If text was replaced in the previous block w TOPRF but
 	 * it overshot into this block. The "length" specifies how much
@@ -115,6 +119,25 @@ export async function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 	async function redactBlocks(slice: RedactedOrHashedArraySlice) {
 		while(cursor < slice.fromIndex) {
 			advance()
+		}
+
+		// Handle oprf-raw: don't redact, don't call OPRF, just mark position
+		if(slice.hash === 'oprf-raw') {
+			const block = slicesWithReveal[blockIdx]
+			block.oprfRawMarkers ||= []
+			block.oprfRawMarkers.push({
+				dataLocation: {
+					fromIndex: cursorInBlock,
+					length: slice.toIndex - slice.fromIndex
+				}
+			})
+
+			// Advance cursor past this slice (data stays as-is, revealed to server)
+			while(cursor < slice.toIndex) {
+				advance()
+			}
+
+			return
 		}
 
 		if(slice.hash) {
