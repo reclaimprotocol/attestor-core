@@ -509,6 +509,12 @@ export interface MessageReveal_MessageRevealZk {
   toprfs: MessageReveal_TOPRFProof[];
   /** Markers for server-side OPRF computation (oprf-raw mode) */
   oprfRawMarkers: MessageReveal_OPRFRawMarker[];
+  /**
+   * If an oprf-raw marker from the previous packet overshot into this packet,
+   * this indicates how many bytes of plaintext from this packet should be
+   * collected to complete the server-side OPRF computation.
+   */
+  overshotOprfRawLength: number;
 }
 
 /** Marker for server-side OPRF computation (oprf-raw mode). */
@@ -2080,7 +2086,7 @@ export const MessageReveal_MessageRevealDirect: MessageFns<MessageReveal_Message
 };
 
 function createBaseMessageReveal_MessageRevealZk(): MessageReveal_MessageRevealZk {
-  return { proofs: [], toprfs: [], oprfRawMarkers: [] };
+  return { proofs: [], toprfs: [], oprfRawMarkers: [], overshotOprfRawLength: 0 };
 }
 
 export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageRevealZk> = {
@@ -2093,6 +2099,9 @@ export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageReve
     }
     for (const v of message.oprfRawMarkers) {
       MessageReveal_OPRFRawMarker.encode(v!, writer.uint32(26).fork()).join();
+    }
+    if (message.overshotOprfRawLength !== 0) {
+      writer.uint32(32).uint32(message.overshotOprfRawLength);
     }
     return writer;
   },
@@ -2128,6 +2137,14 @@ export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageReve
           message.oprfRawMarkers.push(MessageReveal_OPRFRawMarker.decode(reader, reader.uint32()));
           continue;
         }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.overshotOprfRawLength = reader.uint32();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -2148,6 +2165,7 @@ export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageReve
       oprfRawMarkers: globalThis.Array.isArray(object?.oprfRawMarkers)
         ? object.oprfRawMarkers.map((e: any) => MessageReveal_OPRFRawMarker.fromJSON(e))
         : [],
+      overshotOprfRawLength: isSet(object.overshotOprfRawLength) ? globalThis.Number(object.overshotOprfRawLength) : 0,
     };
   },
 
@@ -2162,6 +2180,9 @@ export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageReve
     if (message.oprfRawMarkers?.length) {
       obj.oprfRawMarkers = message.oprfRawMarkers.map((e) => MessageReveal_OPRFRawMarker.toJSON(e));
     }
+    if (message.overshotOprfRawLength !== 0) {
+      obj.overshotOprfRawLength = Math.round(message.overshotOprfRawLength);
+    }
     return obj;
   },
 
@@ -2173,6 +2194,7 @@ export const MessageReveal_MessageRevealZk: MessageFns<MessageReveal_MessageReve
     message.proofs = object.proofs?.map((e) => MessageReveal_ZKProof.fromPartial(e)) || [];
     message.toprfs = object.toprfs?.map((e) => MessageReveal_TOPRFProof.fromPartial(e)) || [];
     message.oprfRawMarkers = object.oprfRawMarkers?.map((e) => MessageReveal_OPRFRawMarker.fromPartial(e)) || [];
+    message.overshotOprfRawLength = object.overshotOprfRawLength ?? 0;
     return message;
   },
 };

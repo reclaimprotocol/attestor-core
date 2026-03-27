@@ -57,7 +57,7 @@ export async function preparePacketsForReveal(
 				},
 			}
 			break
-		case 'zk':
+		case 'zk': {
 			// the redacted section can be smaller than the actual
 			// plaintext encrypted, in case of TLS1.3 as it has a
 			// content type suffix
@@ -71,10 +71,15 @@ export async function preparePacketsForReveal(
 				dataLocation: m.dataLocation
 			})) || []
 
+			// Capture overshoot from previous block's oprf-raw marker
+			const overshotOprfRawLength = reveal.overshotOprfRawFromPrevBlock?.length ?? 0
+
 			await proofGenerator.addPacketToProve(
 				message,
 				reveal,
-				(proofs, toprfs) => (msg.reveal = { zkReveal: { proofs, toprfs, oprfRawMarkers } }),
+				(proofs, toprfs) => (msg.reveal = {
+					zkReveal: { proofs, toprfs, oprfRawMarkers, overshotOprfRawLength }
+				}),
 				() => {
 					const next = tlsTranscript
 						.slice(i + 1)
@@ -83,6 +88,8 @@ export async function preparePacketsForReveal(
 				}
 			)
 			break
+		}
+
 		default:
 			// no reveal
 			break

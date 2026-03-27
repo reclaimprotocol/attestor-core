@@ -245,6 +245,15 @@ export async function decryptTranscript(
 	const overshotMap: { [pkt: number]: { data: Uint8Array } } = {}
 	const decryptedTranscript: IDecryptedTranscriptMessage[] = []
 	const oprfRawReplacements: { originalText: string, nullifierText: string }[] = []
+	// Track pending oprf-raw markers that span multiple packets
+	// keyed by packet index that will receive the overshot data
+	const pendingOprfRaw: {
+		[nextPktIdx: number]: {
+			partialData: Uint8Array
+			dataLocation: { fromIndex: number, length: number }
+			originPktIdx: number
+		}
+	} = {}
 
 	for(const [i, {
 		sender,
@@ -336,24 +345,86 @@ export async function decryptTranscript(
 			)
 			plaintext = result.redactedPlaintext
 
-			// Process oprf-raw markers: compute OPRF server-side and replace with nullifier
-			if(result.oprfRawMarkers?.length) {
+			// Handle pending oprf-raw data from previous packet (cross-block)
+			const pendingForThis = pendingOprfRaw[i]
+			if(pendingForThis && zkReveal?.overshotOprfRawLength) {
+				const overshootLen = zkReveal.overshotOprfRawLength
+				// Collect the overshot plaintext from this packet
+				const overshootData = plaintext.slice(0, overshootLen)
+				const fullData = concatenateUint8Arrays([
+					pendingForThis.partialData,
+					overshootData
+				])
+
+				// Compute OPRF for the complete data
 				const oprfResults = await computeOPRFRaw(
-					plaintext,
-					result.oprfRawMarkers,
+					fullData,
+					[{ dataLocation: { fromIndex: 0, length: fullData.length } }],
 					logger
 				)
-				// Replace plaintext at marker positions with nullifier string
-				for(const { dataLocation, nullifier } of oprfResults) {
-					// Capture original text for parameter replacement
-					const originalText = new TextDecoder().decode(
-						plaintext.slice(dataLocation.fromIndex, dataLocation.fromIndex + dataLocation.length)
-					)
-					const nullifierStr = binaryHashToStr(nullifier, dataLocation.length)
+
+				if(oprfResults.length) {
+					const { nullifier } = oprfResults[0]
+					const originalText = new TextDecoder().decode(fullData)
+					const nullifierStr = binaryHashToStr(nullifier, fullData.length)
 					oprfRawReplacements.push({ originalText, nullifierText: nullifierStr })
 
+					// Replace in original packet (handled when that packet was processed)
+					// Replace in current packet
 					const nullifierBytes = new TextEncoder().encode(nullifierStr)
-					plaintext.set(nullifierBytes, dataLocation.fromIndex)
+					const overshootNullifier = nullifierBytes.slice(pendingForThis.partialData.length)
+					plaintext.set(overshootNullifier, 0)
+
+					// Also need to update the previous packet's plaintext
+					// The previous packet has the first part of the nullifier
+					const prevPkt = decryptedTranscript[pendingForThis.originPktIdx]
+					if(prevPkt) {
+						const firstPartNullifier = nullifierBytes.slice(0, pendingForThis.partialData.length)
+						prevPkt.message.set(firstPartNullifier, pendingForThis.dataLocation.fromIndex)
+					}
+				}
+
+				delete pendingOprfRaw[i]
+			}
+
+			// Process oprf-raw markers: compute OPRF server-side and replace with nullifier
+			if(result.oprfRawMarkers?.length) {
+				const { markersThisPacket, pendingMarker } = separateOprfRawMarkers(
+					result.oprfRawMarkers,
+					plaintext.length,
+					() => transcript.findIndex((t, j) => t.sender === sender && j > i),
+					decryptedTranscript.length,
+					logger
+				)
+
+				// Store pending marker for cross-block processing
+				if(pendingMarker) {
+					// Copy partial data from plaintext
+					pendingMarker.pending.partialData.set(
+						plaintext.slice(pendingMarker.pending.dataLocation.fromIndex)
+					)
+					pendingOprfRaw[pendingMarker.nextIdx] = pendingMarker.pending
+				}
+
+				// Process markers that fit in this packet
+				if(markersThisPacket.length) {
+					const oprfResults = await computeOPRFRaw(plaintext, markersThisPacket, logger)
+
+					// Capture all original texts BEFORE any replacements
+					// to avoid reading corrupted data when markers are adjacent
+					const originalTexts = oprfResults.map(({ dataLocation }) => new TextDecoder().decode(
+						plaintext.slice(dataLocation.fromIndex, dataLocation.fromIndex + dataLocation.length)
+					))
+
+					// Now replace plaintext at marker positions with nullifier string
+					for(const [idx, { dataLocation, nullifier }] of oprfResults.entries()) {
+						const originalText = originalTexts[idx]
+						const nullifierStr = binaryHashToStr(nullifier, dataLocation.length)
+						oprfRawReplacements.push({ originalText, nullifierText: nullifierStr })
+
+						const nullifierBytes = new TextEncoder().encode(nullifierStr)
+						plaintext.set(nullifierBytes, dataLocation.fromIndex)
+					}
 				}
 			}
 
@@ -380,6 +451,72 @@ export async function decryptTranscript(
 export function getWithoutHeader(message: Uint8Array) {
 	// strip the record header (xx 03 03 xx xx)
 	return message.slice(5)
+}
+
+type PendingOprfRaw = {
+	partialData: Uint8Array
+	dataLocation: { fromIndex: number, length: number }
+	originPktIdx: number
+}
+
+type ProcessOprfRawMarkersResult = {
+	markersThisPacket: { dataLocation: { fromIndex: number, length: number } }[]
+	pendingMarker?: { nextIdx: number, pending: PendingOprfRaw }
+}
+
+/**
+ * Separate oprf-raw markers into those that fit in current packet
+ * vs those that span to the next packet
+ */
+function separateOprfRawMarkers(
+	markers: { dataLocation?: { fromIndex: number, length: number } }[],
+	plaintextLength: number,
+	findNextPacketIdx: () => number,
+	currentTranscriptLength: number,
+	logger: Logger
+): ProcessOprfRawMarkersResult {
+	const markersThisPacket: { dataLocation: { fromIndex: number, length: number } }[] = []
+	let pendingMarker: ProcessOprfRawMarkersResult['pendingMarker']
+
+	for(const marker of markers) {
+		const dataLocation = marker.dataLocation
+		if(!dataLocation) {
+			continue
+		}
+
+		const { fromIndex, length } = dataLocation
+		const endInPacket = fromIndex + length
+
+		if(endInPacket <= plaintextLength) {
+			markersThisPacket.push({ dataLocation })
+			continue
+		}
+
+		// Spans to next packet
+		const nextIdx = findNextPacketIdx()
+		if(nextIdx < 0) {
+			throw new AttestorError(
+				'ERROR_INVALID_CLAIM',
+				'oprf-raw marker spans packets but no next packet found'
+			)
+		}
+
+		pendingMarker = {
+			nextIdx,
+			pending: {
+				partialData: new Uint8Array(plaintextLength - fromIndex),
+				dataLocation: { fromIndex, length },
+				originPktIdx: currentTranscriptLength
+			}
+		}
+
+		logger.debug(
+			{ fromIndex, length, partialLen: plaintextLength - fromIndex, nextIdx },
+			'oprf-raw marker spans packets, storing partial data'
+		)
+	}
+
+	return { markersThisPacket, pendingMarker }
 }
 
 

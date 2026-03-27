@@ -23,6 +23,11 @@ type SliceWithReveal<T> = {
 	 * of it got overshot into this block
 	 */
 	overshotToprfFromPrevBlock?: { length: number }
+	/**
+	 * If an oprf-raw marker from the previous block overshot into this block.
+	 * The server will collect plaintext from this block to complete the OPRF.
+	 */
+	overshotOprfRawFromPrevBlock?: { length: number }
 }
 
 export type RevealedSlices<T> = 'all' | SliceWithReveal<T>[]
@@ -122,19 +127,36 @@ export async function getBlocksToReveal<T extends { plaintext: Uint8Array }>(
 		}
 
 		// Handle oprf-raw: don't redact, don't call OPRF, just mark position
+		// Server will compute OPRF and do replacement
 		if(slice.hash === 'oprf-raw') {
+			const startBlockIdx = blockIdx
+			const startCursorInBlock = cursorInBlock
+			const totalLength = slice.toIndex - slice.fromIndex
+
+			// Set marker on first block
 			const block = slicesWithReveal[blockIdx]
 			block.oprfRawMarkers ||= []
 			block.oprfRawMarkers.push({
 				dataLocation: {
-					fromIndex: cursorInBlock,
-					length: slice.toIndex - slice.fromIndex
+					fromIndex: startCursorInBlock,
+					length: totalLength
 				}
 			})
 
-			// Advance cursor past this slice (data stays as-is, revealed to server)
+			// Advance cursor past this slice, tracking overshoot
+			let overshootLen = 0
 			while(cursor < slice.toIndex) {
+				if(blockIdx !== startBlockIdx) {
+					overshootLen += 1
+				}
+
 				advance()
+			}
+
+			// If data overshot into next block, mark it
+			if(overshootLen) {
+				slicesWithReveal[blockIdx]
+					.overshotOprfRawFromPrevBlock = { length: overshootLen }
 			}
 
 			return

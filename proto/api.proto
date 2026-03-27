@@ -214,6 +214,12 @@ message MessageReveal {
 		repeated TOPRFProof toprfs = 2;
 		/** Markers for server-side OPRF computation (oprf-raw mode) */
 		repeated OPRFRawMarker oprfRawMarkers = 3;
+		/**
+		 * If an oprf-raw marker from the previous packet overshot into this packet,
+		 * this indicates how many bytes of plaintext from this packet should be
+		 * collected to complete the server-side OPRF computation.
+		 */
+		uint32 overshotOprfRawLength = 4;
 	}
 
 	/** Marker for server-side OPRF computation (oprf-raw mode). */

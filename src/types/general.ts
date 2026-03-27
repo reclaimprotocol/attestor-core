@@ -38,6 +38,11 @@ export type ZKRevealInfo = {
 	toprfs?: TOPRFProofParams[]
 	oprfRawMarkers?: OPRFRawMarker[]
 	overshotToprfFromPrevBlock?: { length: number }
+	/**
+	 * If an oprf-raw marker from the previous block overshot into this block.
+	 * The server will collect plaintext from this block to complete the OPRF.
+	 */
+	overshotOprfRawFromPrevBlock?: { length: number }
 }
 
 export type MessageRevealInfo = { type: 'complete' } | ZKRevealInfo
