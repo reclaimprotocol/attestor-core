@@ -1,26 +1,21 @@
-import {
-	areUint8ArraysEqual,
-	concatenateUint8Arrays
-} from '@reclaimprotocol/tls'
+import { areUint8ArraysEqual, concatenateUint8Arrays } from '@reclaimprotocol/tls'
 import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 
 import type {
 	InitRequest,
 	MessageReveal_MessageRevealDirect as MessageRevealDirect,
 	MessageReveal_MessageRevealZk as MessageRevealZk,
-	ProviderClaimInfo } from '#src/proto/api.ts'
-import {
-	ClaimTunnelRequest,
-	TranscriptMessageSenderType,
-	ZKProofEngine
+	ProviderClaimInfo
 } from '#src/proto/api.ts'
+import { ClaimTunnelRequest, TranscriptMessageSenderType, ZKProofEngine } from '#src/proto/api.ts'
 import { providers } from '#src/providers/index.ts'
 import { niceParseJsonObject } from '#src/server/utils/generics.ts'
 import { computeOPRFRaw } from '#src/server/utils/oprf-raw.ts'
 import { processHandshake } from '#src/server/utils/process-handshake.ts'
 import { assertValidateProviderParams } from '#src/server/utils/validation.ts'
 import type {
-	IDecryptedTranscript, IDecryptedTranscriptMessage,
+	IDecryptedTranscript,
+	IDecryptedTranscriptMessage,
 	Logger,
 	OPRFRawReplacement,
 	ProviderCtx,
@@ -31,10 +26,13 @@ import type {
 import {
 	AttestorError,
 	binaryHashToStr,
-	canonicalStringify, decryptDirect,
+	canonicalStringify,
+	decryptDirect,
 	extractApplicationDataFromTranscript,
-	hashProviderParams,	SIGNATURES,
-	verifyZkPacket } from '#src/utils/index.ts'
+	hashProviderParams,
+	SIGNATURES,
+	verifyZkPacket
+} from '#src/utils/index.ts'
 
 /**
  * Asserts that the claim request is valid.
@@ -408,12 +406,14 @@ export async function decryptTranscript(
 
 				// Process markers that fit in this packet
 				if(markersThisPacket.length) {
-					const oprfResults = await computeOPRFRaw(plaintext, markersThisPacket, logger)
+					// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- TS narrowing doesn't extend into callbacks
+					const pt = plaintext!
+					const oprfResults = await computeOPRFRaw(pt, markersThisPacket, logger)
 
 					// Capture all original texts BEFORE any replacements
 					// to avoid reading corrupted data when markers are adjacent
 					const originalTexts = oprfResults.map(({ dataLocation }) => new TextDecoder().decode(
-						plaintext.slice(dataLocation.fromIndex, dataLocation.fromIndex + dataLocation.length)
+						pt.slice(dataLocation.fromIndex, dataLocation.fromIndex + dataLocation.length)
 					))
 
 					// Now replace plaintext at marker positions with nullifier string
@@ -423,7 +423,7 @@ export async function decryptTranscript(
 						oprfRawReplacements.push({ originalText, nullifierText: nullifierStr })
 
 						const nullifierBytes = new TextEncoder().encode(nullifierStr)
-						plaintext.set(nullifierBytes, dataLocation.fromIndex)
+						pt.set(nullifierBytes, dataLocation.fromIndex)
 					}
 				}
 			}
