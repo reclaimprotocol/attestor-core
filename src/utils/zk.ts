@@ -25,6 +25,7 @@ import {
 	makeGnarkZkOperator,
 } from '@reclaimprotocol/zk-symmetric-crypto/gnark'
 import { makeSnarkJsZKOperator } from '@reclaimprotocol/zk-symmetric-crypto/snarkjs'
+import { makeStwoZkOperator } from '@reclaimprotocol/zk-symmetric-crypto/stwo'
 import PQueue from 'p-queue'
 
 import { DEFAULT_REMOTE_FILE_FETCH_BASE_URL, DEFAULT_ZK_CONCURRENCY, TOPRF_DOMAIN_SEPARATOR } from '#src/config/index.ts'
@@ -688,6 +689,7 @@ const oprfEngines: {
 const operatorMakers: { [z in ZKEngine]?: (opts: MakeZKOperatorOpts<{}>) => ZKOperator } = {
 	'snarkjs': makeSnarkJsZKOperator,
 	'gnark': makeGnarkZkOperator,
+	'stwo': makeStwoZkOperator,
 }
 
 const OPRF_OPERATOR_MAKERS: { [z in ZKEngine]?: MakeOPRFOperator<{}> } = {
@@ -774,6 +776,10 @@ export function getEngineString(engine: ZKProofEngine) {
 		return 'snarkjs'
 	}
 
+	if(engine === ZKProofEngine.ZK_ENGINE_STWO) {
+		return 'stwo'
+	}
+
 	throw new Error(`Unknown ZK engine: ${engine}`)
 }
 
@@ -785,6 +791,10 @@ export function getEngineProto(engine: ZKEngine) {
 
 	if(engine === 'snarkjs') {
 		return ZKProofEngine.ZK_ENGINE_SNARKJS
+	}
+
+	if(engine === 'stwo') {
+		return ZKProofEngine.ZK_ENGINE_STWO
 	}
 
 	throw new Error(`Unknown ZK engine: ${engine}`)

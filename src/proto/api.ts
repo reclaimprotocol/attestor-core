@@ -318,13 +318,14 @@ export function errorCodeToJSON(object: ErrorCode): string {
   }
 }
 
-export const ZKProofEngine = { ZK_ENGINE_SNARKJS: 0, ZK_ENGINE_GNARK: 1, UNRECOGNIZED: -1 } as const;
+export const ZKProofEngine = { ZK_ENGINE_SNARKJS: 0, ZK_ENGINE_GNARK: 1, ZK_ENGINE_STWO: 2, UNRECOGNIZED: -1 } as const;
 
 export type ZKProofEngine = typeof ZKProofEngine[keyof typeof ZKProofEngine];
 
 export namespace ZKProofEngine {
   export type ZK_ENGINE_SNARKJS = typeof ZKProofEngine.ZK_ENGINE_SNARKJS;
   export type ZK_ENGINE_GNARK = typeof ZKProofEngine.ZK_ENGINE_GNARK;
+  export type ZK_ENGINE_STWO = typeof ZKProofEngine.ZK_ENGINE_STWO;
   export type UNRECOGNIZED = typeof ZKProofEngine.UNRECOGNIZED;
 }
 
@@ -336,6 +337,9 @@ export function zKProofEngineFromJSON(object: any): ZKProofEngine {
     case 1:
     case "ZK_ENGINE_GNARK":
       return ZKProofEngine.ZK_ENGINE_GNARK;
+    case 2:
+    case "ZK_ENGINE_STWO":
+      return ZKProofEngine.ZK_ENGINE_STWO;
     case -1:
     case "UNRECOGNIZED":
     default:
@@ -349,6 +353,8 @@ export function zKProofEngineToJSON(object: ZKProofEngine): string {
       return "ZK_ENGINE_SNARKJS";
     case ZKProofEngine.ZK_ENGINE_GNARK:
       return "ZK_ENGINE_GNARK";
+    case ZKProofEngine.ZK_ENGINE_STWO:
+      return "ZK_ENGINE_STWO";
     case ZKProofEngine.UNRECOGNIZED:
     default:
       return "UNRECOGNIZED";

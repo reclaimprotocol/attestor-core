@@ -17,6 +17,7 @@ const rslt = await esbuild.build({
 		'ip-cidr': '#src/scripts/fallbacks/empty.ts',
 		'snarkjs': '#src/scripts/fallbacks/snarkjs.ts',
 		're2': '#src/scripts/fallbacks/re2.ts',
+		'@reclaimprotocol/zk-symmetric-crypto/stwo': '#src/scripts/fallbacks/stwo.ts',
 	},
 	external: [
 		'dotenv',

@@ -11,8 +11,7 @@ import type {
 	ProviderClaimInfo } from '#src/proto/api.ts'
 import {
 	ClaimTunnelRequest,
-	TranscriptMessageSenderType,
-	ZKProofEngine
+	TranscriptMessageSenderType
 } from '#src/proto/api.ts'
 import { providers } from '#src/providers/index.ts'
 import { niceParseJsonObject } from '#src/server/utils/generics.ts'
@@ -32,6 +31,7 @@ import {
 	extractApplicationDataFromTranscript,
 	hashProviderParams,	SIGNATURES,
 	verifyZkPacket } from '#src/utils/index.ts'
+import { getEngineString } from '#src/utils/zk.ts'
 
 /**
  * Asserts that the claim request is valid.
@@ -88,7 +88,7 @@ export async function assertValidClaimRequest(
 	const receipt = await decryptTranscript(
 		request.transcript,
 		logger,
-		zkEngine === ZKProofEngine.ZK_ENGINE_GNARK ? 'gnark' : 'snarkjs',
+		getEngineString(zkEngine),
 		fixedServerIV,
 		fixedClientIV
 	)
