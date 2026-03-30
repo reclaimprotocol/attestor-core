@@ -4,7 +4,7 @@ import { asciiToUint8Array } from '@reclaimprotocol/tls'
 import { makeRpcTlsTunnel } from '#src/client/tunnels/make-rpc-tls-tunnel.ts'
 import { getAttestorClientFromPool } from '#src/client/utils/attestor-pool.ts'
 import { DEFAULT_HTTPS_PORT, PROVIDER_CTX, TOPRF_DOMAIN_SEPARATOR } from '#src/config/index.ts'
-import { ClaimTunnelRequest, ZKProofEngine } from '#src/proto/api.ts'
+import { ClaimTunnelRequest } from '#src/proto/api.ts'
 import { providers } from '#src/providers/index.ts'
 import type {
 	CreateClaimOnAttestorOpts,
@@ -304,9 +304,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			owner: getAddress(),
 		},
 		transcript:transcript,
-		zkEngine: zkEngine === 'gnark'
-			? ZKProofEngine.ZK_ENGINE_GNARK
-			: ZKProofEngine.ZK_ENGINE_SNARKJS,
+		zkEngine: getEngineProto(zkEngine),
 		fixedServerIV: serverIV!,
 		fixedClientIV: clientIV!,
 	})
