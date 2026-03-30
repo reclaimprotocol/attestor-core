@@ -3,9 +3,11 @@
 <head>
 	<script src="browser-rpc/resources/snarkjs/snarkjs.min.js">
 	</script>
-	<script src="browser-rpc/resources/stwo/s2circuits.js">
-	</script>
 	<script type="module">
+		// Load s2circuits as ES module and assign to window BEFORE attestor loads
+		import * as s2circuits from './browser-rpc/resources/stwo/s2circuits.js'
+		window.s2circuits = s2circuits
+
 		import * as ReclaimAttestorCore from './browser-rpc/resources/attestor-browser.min.mjs'
 		window.ReclaimAttestorCore = ReclaimAttestorCore
 		ReclaimAttestorCore.setupWindowRpc()
