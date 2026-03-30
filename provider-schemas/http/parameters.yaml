@@ -156,6 +156,7 @@ properties:
           enum:
             - oprf
             - oprf-mpc
+            - oprf-raw
       additionalProperties: false
   paramValues:
     type: object
