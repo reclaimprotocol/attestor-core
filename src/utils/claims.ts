@@ -86,16 +86,18 @@ export async function assertValidClaimSignatures(
  */
 export function getIdentifierFromClaimInfo(info: ClaimInfo): ClaimID {
 	//re-canonicalize context if it's not empty
-	if(info.context?.length > 0) {
+	let context = info.context || ''
+
+	if(context.length > 0) {
 		try {
-			const ctx = JSON.parse(info.context)
-			info.context = canonicalStringify(ctx)!
+			const ctx = JSON.parse(context)
+			context = canonicalStringify(ctx)!
 		} catch(e) {
 			throw new Error('unable to parse non-empty context. Must be JSON')
 		}
 	}
-
-	const str = `${info.provider}\n${info.parameters}\n${info.context || ''}`
+	
+	const str = `${info.provider}\n${info.parameters}\n${context || ''}`
 	//console.log('Identifier: ' + btoa(str))
 	return utils.keccak256(strToUint8Array(str)).toLowerCase()
 }
