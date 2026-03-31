@@ -1,7 +1,8 @@
-import { randomBytes } from 'crypto'
 import assert from 'node:assert'
 import type { Mock } from 'node:test'
 import { setTimeout } from 'node:timers/promises'
+
+import { randomBytes } from 'crypto'
 
 import type { ClaimTunnelRequest } from '#src/proto/api.ts'
 import { SPY_PREPARER } from '#src/tests/mocks.ts'

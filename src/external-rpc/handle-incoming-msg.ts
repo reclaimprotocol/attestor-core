@@ -1,6 +1,6 @@
 
 import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
-import { utils } from 'ethers'
+import { hexlify } from 'ethers'
 
 import { createClaimOnAvs } from '#src/avs/client/create-claim-on-avs.ts'
 import { createClaimOnAttestor } from '#src/client/index.ts'
@@ -300,8 +300,7 @@ function mapToCreateClaimResponse(
 			}
 		],
 		signatures: [
-			utils
-				.hexlify(res.signatures!.claimSignature)
+			hexlify(res.signatures!.claimSignature)
 				.toLowerCase()
 		]
 	}

@@ -1,6 +1,7 @@
-import { utils, Wallet } from 'ethers'
 import assert from 'node:assert'
 import { describe, it } from 'node:test'
+
+import { getBytes, hexlify, Wallet } from 'ethers'
 
 import { ServiceSignatureType } from '#src/proto/api.ts'
 import { SIGNATURES } from '#src/utils/signatures/index.ts'
@@ -25,11 +26,11 @@ for(const { algorithm } of ALGS) {
 				alice.privateKey,
 			)
 
-			const addr = algorithm.getAddress(utils.arrayify(alice.publicKey))
+			const addr = algorithm.getAddress(getBytes(alice.publicKey))
 			let res = await algorithm.verify(data, signature, addr)
 
 			assert.ok(res)
-			res = await algorithm.verify(data, utils.hexlify(signature), addr)
+			res = await algorithm.verify(data, hexlify(signature), addr)
 
 			assert.ok(res)
 		})

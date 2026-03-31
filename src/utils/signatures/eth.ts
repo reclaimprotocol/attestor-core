@@ -1,27 +1,29 @@
-import { utils, Wallet } from 'ethers'
+import { computeAddress, getBytes, hexlify, SigningKey, verifyMessage, Wallet } from 'ethers'
 
 import type { ServiceSignatureProvider } from '#src/types/index.ts'
 
-const { computeAddress, computePublicKey } = utils
-
 export const ETH_SIGNATURE_PROVIDER: ServiceSignatureProvider = {
 	getPublicKey(privateKey) {
-		const pub = computePublicKey(privateKey, true)
-		return utils.arrayify(pub)
+		const pub = SigningKey.computePublicKey(privateKey, true)
+		return getBytes(pub)
 	},
 	getAddress(publicKey) {
-		return computeAddress(publicKey).toLowerCase()
+		// computeAddress in v6 expects hex string
+		const pubKeyHex = typeof publicKey === 'string' ? publicKey : hexlify(publicKey)
+		return computeAddress(pubKeyHex).toLowerCase()
 	},
 	async sign(data, privateKey) {
 		const wallet = getEthWallet(privateKey)
 		const signature = await wallet.signMessage(data)
-		return utils.arrayify(signature)
+		return getBytes(signature)
 	},
 	async verify(data, signature, addressBytes) {
 		const address = typeof addressBytes === 'string'
 			? addressBytes
-			: utils.hexlify(addressBytes)
-		const signerAddress = utils.verifyMessage(data, signature)
+			: hexlify(addressBytes)
+		// verifyMessage in v6 expects SignatureLike (hex string)
+		const signatureHex = typeof signature === 'string' ? signature : hexlify(signature)
+		const signerAddress = verifyMessage(data, signatureHex)
 		return signerAddress.toLowerCase() === address.toLowerCase()
 	}
 }

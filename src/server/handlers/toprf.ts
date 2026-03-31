@@ -1,4 +1,4 @@
-import { ethers } from 'ethers'
+import { getBytes } from 'ethers'
 
 import type { RPCHandler } from '#src/types/index.ts'
 import { getEnvVariable } from '#src/utils/env.ts'
@@ -14,8 +14,8 @@ export const toprf: RPCHandler<'toprf'> = async(
 		throw new Error('private/public keys not set. Cannot execute OPRF')
 	}
 
-	const PRIVATE_KEY = ethers.utils.arrayify(PRIVATE_KEY_STR)
-	const PUBLIC_KEY = ethers.utils.arrayify(PUBLIC_KEY_STR)
+	const PRIVATE_KEY = getBytes(PRIVATE_KEY_STR)
+	const PUBLIC_KEY = getBytes(PUBLIC_KEY_STR)
 
 	const engineStr = getEngineString(engine)
 	const operator = makeDefaultOPRFOperator('chacha20', engineStr, logger)

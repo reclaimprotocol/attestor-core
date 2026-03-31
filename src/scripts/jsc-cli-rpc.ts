@@ -1,4 +1,4 @@
-// eslint-disable-next-line simple-import-sort/imports
+
 import '#src/external-rpc/jsc-polyfills/index.ts'
 
 import { setCryptoImplementation } from '@reclaimprotocol/tls'

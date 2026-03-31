@@ -1,8 +1,9 @@
-import { type CipherSuite, type TLSProtocolVersion } from '@reclaimprotocol/tls'
-import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
 import { beforeEach, describe, it } from 'node:test'
+
+import { type CipherSuite, type TLSProtocolVersion } from '@reclaimprotocol/tls'
+import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 
 import type { AttestorClient } from '#src/client/index.ts'
 import { createClaimOnAttestor, getAttestorClientFromPool } from '#src/client/index.ts'

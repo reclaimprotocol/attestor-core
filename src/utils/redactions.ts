@@ -41,7 +41,6 @@ export function isRedactionCongruent<T extends string | Uint8Array>(
 	redacted: T,
 	original: T
 ): boolean {
-	// eslint-disable-next-line unicorn/no-for-loop
 	for(let i = 0;i < redacted.length;i++) {
 		const element = redacted[i]
 		const areSame = element === original[i]

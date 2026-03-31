@@ -1,4 +1,4 @@
-import { ethers } from 'ethers'
+import { getBytes } from 'ethers'
 
 import { getAttestorAddress } from '#src/server/utils/generics.ts'
 import type { RPCHandler } from '#src/types/index.ts'
@@ -38,7 +38,7 @@ export const init: RPCHandler<'init'> = async(
 
 	return {
 		toprfPublicKey: TOPRF_PUBLIC_KEY
-			? ethers.utils.arrayify(TOPRF_PUBLIC_KEY)
+			? getBytes(TOPRF_PUBLIC_KEY)
 			: new Uint8Array(),
 		attestorAddress: getAttestorAddress(initRequest.signatureType)
 	}

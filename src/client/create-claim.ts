@@ -280,12 +280,12 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 	let serverIV: Uint8Array
 	let clientIV: Uint8Array
 	const [serverBlock] = getLastBlocks('server', 1)
-	if(serverBlock && serverBlock.message.type === 'ciphertext') {
+	if(serverBlock?.message.type === 'ciphertext') {
 		serverIV = serverBlock.message.fixedIv
 	}
 
 	const [clientBlock] = getLastBlocks('client', 1)
-	if(clientBlock && clientBlock.message.type === 'ciphertext') {
+	if(clientBlock?.message.type === 'ciphertext') {
 		clientIV = clientBlock.message.fixedIv
 	}
 

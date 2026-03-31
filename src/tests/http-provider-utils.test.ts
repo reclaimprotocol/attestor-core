@@ -1,5 +1,6 @@
-import assert from 'assert'
 import { describe, it } from 'node:test'
+
+import assert from 'assert'
 import { deserialize, serialize } from 'v8'
 
 import { PROVIDER_CTX } from '#src/config/index.ts'

@@ -2,10 +2,11 @@
  * Test with the new verification bundle that contains attestation docs
  */
 
-import type { ZKProofPublicSignalsOPRF } from '@reclaimprotocol/zk-symmetric-crypto'
-import { readFileSync } from 'fs'
 import assert from 'node:assert'
 import { describe, it } from 'node:test'
+
+import type { ZKProofPublicSignalsOPRF } from '@reclaimprotocol/zk-symmetric-crypto'
+import { readFileSync } from 'fs'
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -35,7 +36,7 @@ describe('TEE Bundle Analysis', () => {
 	try {
 		const teePath = join(__dirname, 'verification_bundle_tee.pb')
 		teeBundleBytes = new Uint8Array(readFileSync(teePath))
-	} catch(error) {
+	} catch {
 		console.warn('TEE attestation bundle not found, will skip TEE tests')
 	}
 
@@ -137,7 +138,7 @@ describe('TEE Bundle Analysis', () => {
 						const publicSignals = JSON.parse(new TextDecoder().decode(oprfData.publicSignalsJson))
 						console.log('  Public signals (parsed):')
 						console.log(`    ${JSON.stringify(publicSignals, null, 4).split('\n').join('\n    ')}`)
-					} catch(e) {
+					} catch {
 						console.log(`  Public signals: [Binary data, ${oprfData.publicSignalsJson.length} bytes]`)
 					}
 				}

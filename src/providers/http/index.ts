@@ -1,6 +1,6 @@
 import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
 import { areUint8ArraysEqual, concatenateUint8Arrays, uint8ArrayToBinaryStr } from '@reclaimprotocol/tls'
-import { utils } from 'ethers'
+import { encodeBase64 } from 'ethers'
 
 import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '#src/config/index.ts'
 import { AttestorVersion } from '#src/proto/api.ts'
@@ -31,8 +31,6 @@ import {
 	strToUint8Array,
 	uint8ArrayToStr,
 } from '#src/utils/index.ts'
-
-const { base64 } = utils
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
 const dateHeaderRegex = '[dD]ate: ((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (?:[0-3][0-9]) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?:[0-9]{4}) (?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2} GMT)'
@@ -169,7 +167,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 	},
 	getResponseRedactions({ response, params: rawParams, logger, ctx }) {
-		logger.debug({ response: base64.encode(response), params: rawParams })
+		logger.debug({ response: encodeBase64(response), params: rawParams })
 
 		const res = parseHttpResponse(response)
 		if(!rawParams.responseRedactions?.length) {
@@ -177,7 +175,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		if(((res.statusCode / 100) >> 0) !== 2) {
-			logger.error({ response: base64.encode(response), params: rawParams })
+			logger.error({ response: encodeBase64(response), params: rawParams })
 			throw new Error(
 				`Expected status 2xx, got ${res.statusCode} (${res.statusMessage})`
 			)
@@ -189,7 +187,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const headerEndIndex = res.statusLineEndIndex!
 		const bodyStartIdx = res.bodyStartIndex ?? 0
 		if(bodyStartIdx < 4) {
-			logger.error({ response: base64.encode(response) })
+			logger.error({ response: encodeBase64(response) })
 			throw new Error('Failed to find response body')
 		}
 
@@ -202,7 +200,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			const crlfs = response
 				.slice(res.headerEndIdx, res.headerEndIdx + 4)
 			if(!areUint8ArraysEqual(crlfs, strToUint8Array('\r\n\r\n'))) {
-				logger.error({ response: base64.encode(response) })
+				logger.error({ response: encodeBase64(response) })
 				throw new Error(
 					`Failed to find header/body separator at index ${res.headerEndIdx}`
 				)
@@ -438,8 +436,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			const clientMsgs = receipt.filter(s => s.sender === 'client').map(m => m.message)
 			const serverMsgs = receipt.filter(s => s.sender === 'server').map(m => m.message)
 
-			const clientTranscript = base64.encode(concatenateUint8Arrays(clientMsgs))
-			const serverTranscript = base64.encode(concatenateUint8Arrays(serverMsgs))
+			const clientTranscript = encodeBase64(concatenateUint8Arrays(clientMsgs))
+			const serverTranscript = encodeBase64(concatenateUint8Arrays(serverMsgs))
 
 			logger.debug({ request: clientTranscript, response: serverTranscript, params: paramsAny })
 		}
@@ -523,7 +521,7 @@ function* processRedactionRequest(
 
 	function* processJsonPath() {
 		const jsonPathIndexes = extractJSONValueIndexes(element, rs.jsonPath!)
-		// eslint-disable-next-line max-depth
+
 		const eIndex = elementIdx
 		for(const ji of jsonPathIndexes) {
 			const jStart = ji.start
@@ -531,7 +529,7 @@ function* processRedactionRequest(
 			element = body.slice(eIndex + jStart, eIndex + jEnd)
 			elementIdx = eIndex + jStart
 			elementLength = jEnd - jStart
-			// eslint-disable-next-line max-depth
+
 			if(rs.regex) {
 				yield* processRegexp()
 			} else {
@@ -542,16 +540,16 @@ function* processRedactionRequest(
 
 	function* processRegexp() {
 		logger.debug({
-			element: base64.encode(strToUint8Array(element)),
-			body: base64.encode(strToUint8Array(body))
+			element: encodeBase64(strToUint8Array(element)),
+			body: encodeBase64(strToUint8Array(body))
 		})
 		const regexp = makeRegex(rs.regex!)
 		const elem = element || body
 		const match = regexp.exec(elem)
-		// eslint-disable-next-line max-depth
+
 		if(!match?.[0]) {
 			throw new Error(
-				`regexp ${rs.regex} does not match found element '${base64.encode(strToUint8Array(elem))}'`
+				`regexp ${rs.regex} does not match found element '${encodeBase64(strToUint8Array(elem))}'`
 			)
 		}
 
@@ -605,7 +603,6 @@ function* processRedactionRequest(
 		yield* addRedaction(null)
 	}
 
-	// eslint-disable-next-line unicorn/consistent-function-scoping
 	function* addRedaction(
 		hash: RedactedOrHashedArraySlice['hash'] | null = rs.hash,
 		_resChunks = resChunks

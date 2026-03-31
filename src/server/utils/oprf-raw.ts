@@ -1,4 +1,4 @@
-import { ethers } from 'ethers'
+import { getBytes } from 'ethers'
 
 import { TOPRF_DOMAIN_SEPARATOR } from '#src/config/index.ts'
 import type { MessageReveal_OPRFRawMarker as OPRFRawMarker } from '#src/proto/api.ts'
@@ -40,8 +40,8 @@ export async function computeOPRFRaw(
 		throw new Error('TOPRF keys not configured. Cannot compute oprf-raw.')
 	}
 
-	const privateKey = ethers.utils.arrayify(PRIVATE_KEY_STR)
-	const publicKey = ethers.utils.arrayify(PUBLIC_KEY_STR)
+	const privateKey = getBytes(PRIVATE_KEY_STR)
+	const publicKey = getBytes(PUBLIC_KEY_STR)
 
 	// Use gnark engine for server-side OPRF (same as TOPRF handler)
 	const operator = makeDefaultOPRFOperator('chacha20', 'gnark', logger)

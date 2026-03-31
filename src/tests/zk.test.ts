@@ -1,15 +1,22 @@
+import '#src/server/utils/config-env.ts'
+
+import assert from 'node:assert'
+import { describe, it } from 'node:test'
+
 import type { CipherSuite } from '@reclaimprotocol/tls'
 import { crypto, encryptWrappedRecord, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
-import assert from 'node:assert'
-import { describe, it } from 'node:test'
-import '#src/server/utils/config-env.ts'
 
 import { TOPRF_DOMAIN_SEPARATOR } from '#src/config/index.ts'
 import type { MessageReveal_ZKProof as ZKProof } from '#src/proto/api.ts'
 import { ZKProofEngine } from '#src/proto/api.ts'
 import { toprf } from '#src/server/handlers/toprf.ts'
-import type { CompleteTLSPacket, MessageRevealInfo, RedactedOrHashedArraySlice, TOPRFProofParams } from '#src/types/index.ts'
+import type {
+	CompleteTLSPacket,
+	MessageRevealInfo,
+	RedactedOrHashedArraySlice,
+	TOPRFProofParams
+} from '#src/types/index.ts'
 import {
 	getBlocksToReveal,
 	isTls13Suite,
@@ -30,6 +37,7 @@ const ZK_CIPHER_SUITES: CipherSuite[] = [
 ]
 
 const ZK_ENGINES: ZKEngine[] = [
+	'stwo',
 	'gnark',
 	'snarkjs'
 ]

@@ -425,7 +425,7 @@ export async function decryptTranscript(
 
 				// Process markers that fit in this packet
 				if(markersThisPacket.length) {
-					// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- TS narrowing doesn't extend into callbacks
+
 					const pt = plaintext!
 					const oprfResults = await computeOPRFRaw(pt, markersThisPacket, logger)
 
