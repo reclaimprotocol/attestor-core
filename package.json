@@ -1,10 +1,11 @@
 {
   "name": "@reclaimprotocol/attestor-core",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "",
   "type": "module",
   "imports": {
-    "#src/*.ts": "./src/*.ts"
+    "#src/*.ts": "./src/*.ts",
+    "#src/*.js": "./lib/*.js"
   },
   "exports": {
     ".": {
@@ -14,10 +15,13 @@
     "./external-rpc": {
       "types": "./lib/external-rpc/index.d.ts",
       "default": "./lib/external-rpc/index.js"
+    },
+    "./browser": {
+      "default": "./browser/resources/attestor-browser.min.mjs"
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && npm run run:tsc -- src/scripts/build-lib.ts",
     "build:browser": "sh ./src/scripts/build-browser.sh",
     "run:tsc": "node --experimental-strip-types",
     "start": "npm run run:tsc -- src/scripts/start-server.ts",
@@ -47,7 +51,8 @@
     "publish:pkg": "npm publish --access public"
   },
   "files": [
-    "lib/*"
+    "lib/*",
+    "browser/resources/attestor-browser.min.mjs"
   ],
   "keywords": [
     "reclaim-protocol",

@@ -5,7 +5,7 @@ import {
 	encryptWrappedRecord,
 	SUPPORTED_CIPHER_SUITE_MAP
 } from '@reclaimprotocol/tls'
-import { strToUint8Array } from 'src/utils/generics.ts'
+import { strToUint8Array } from '#src/utils/generics.ts'
 
 import type { CompleteTLSPacket } from '#src/types/index.ts'
 import { logger } from '#src/utils/logger.ts'

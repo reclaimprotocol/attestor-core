@@ -1,0 +1,43 @@
+import * as esbuild from 'esbuild'
+
+await esbuild.build({
+	entryPoints: ['src/index.ts', 'src/external-rpc/index.ts'],
+	outdir: 'lib',
+	format: 'esm',
+	platform: 'node',
+	target: 'es2022',
+	bundle: true,
+	splitting: false,
+	external: [
+		'@reclaimprotocol/tls',
+		'@reclaimprotocol/zk-symmetric-crypto',
+		'@bufbuild/protobuf',
+		'@peculiar/asn1-x509',
+		'@peculiar/webcrypto',
+		'@peculiar/x509',
+		'ajv',
+		'bs58',
+		'canonicalize',
+		'cbor-x',
+		'cose-js',
+		'dotenv',
+		'elastic-apm-node',
+		'esprima-next',
+		'ethers',
+		'https-proxy-agent',
+		'ip-cidr',
+		'jsonpath-plus',
+		'koffi',
+		'p-queue',
+		'parse5',
+		'parse5-htmlparser2-tree-adapter',
+		'pino',
+		're2',
+		'serve-static',
+		'snarkjs',
+		'ws',
+		'xpath',
+	],
+})
+
+console.log('Built lib/')
