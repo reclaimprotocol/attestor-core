@@ -6,6 +6,7 @@
     "module": "NodeNext",
     "outDir": "lib",
     "strict": false,
+    "strictNullChecks": true,
     "skipLibCheck": true,
     "erasableSyntaxOnly": true,
     "rewriteRelativeImportExtensions": true,
