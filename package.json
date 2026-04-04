@@ -17,7 +17,7 @@
     }
   },
   "scripts": {
-    "build": "rm -r lib && tspc -p tsconfig.build.json",
+    "build": "rm -rf lib && tspc -p tsconfig.build.json",
     "build:browser": "sh ./src/scripts/build-browser.sh",
     "run:tsc": "node --experimental-strip-types",
     "start": "npm run run:tsc -- src/scripts/start-server.ts",
