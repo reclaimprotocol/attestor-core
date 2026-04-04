@@ -4,6 +4,7 @@
     "node_modules",
     "src/tests",
     "src/avs/tests",
-    "src/test.ts"
+    "src/test.ts",
+    "src/scripts"
   ]
 }
