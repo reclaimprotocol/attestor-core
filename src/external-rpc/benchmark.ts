@@ -1,12 +1,8 @@
-import type {
-	CipherSuite } from '@reclaimprotocol/tls'
-import {
-	crypto,
-	encryptWrappedRecord,
-	SUPPORTED_CIPHER_SUITE_MAP
-} from '@reclaimprotocol/tls'
+import type { CipherSuite } from '@reclaimprotocol/tls'
+import { crypto, encryptWrappedRecord, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 
 import type { CompleteTLSPacket } from '#src/types/index.ts'
+import { strToUint8Array } from '#src/utils/index.ts'
 import { logger } from '#src/utils/logger.ts'
 import { makeZkProofGenerator } from '#src/utils/zk.ts'
 
@@ -82,9 +78,10 @@ export async function benchmark() {
 				packet,
 				{
 					type: 'zk',
-					redactedPlaintext:plaintextArr,
+					redactedPlaintext: plaintextArr,
 				},
-				() => {},
+				() => {
+				},
 				() => {
 					throw new Error('should not be called in benchmark')
 				}
