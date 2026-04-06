@@ -29,3 +29,14 @@ export type TOPRFProofParams = TOPRFPayload & {
 		recordNumber: number
 	}
 }
+
+/**
+ * Marker for server-side OPRF computation (oprf-raw mode).
+ * Data is revealed to attestor who computes OPRF directly.
+ */
+export type OPRFRawMarker = {
+	dataLocation: {
+		fromIndex: number
+		length: number
+	}
+}

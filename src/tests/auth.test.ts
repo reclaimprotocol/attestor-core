@@ -1,6 +1,7 @@
-import { ethers } from 'ethers'
 import assert from 'node:assert'
 import { after, before, describe, it } from 'node:test'
+
+import { Wallet } from 'ethers'
 import type { WebSocketServer } from 'ws'
 
 import { createClaimOnAttestor } from '#src/client/index.ts'
@@ -14,7 +15,7 @@ import { type AttestorError, createAuthRequest } from '#src/utils/index.ts'
 
 describe('Authentication Tests', () => {
 
-	const authKp = ethers.Wallet.createRandom()
+	const authKp = Wallet.createRandom()
 	let wsServer: WebSocketServer
 
 	let wsServerUrl: string

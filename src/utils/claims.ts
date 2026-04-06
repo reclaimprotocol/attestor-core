@@ -1,5 +1,5 @@
 import canonicalize from 'canonicalize'
-import { utils } from 'ethers'
+import { keccak256 } from 'ethers'
 
 import { DEFAULT_METADATA } from '#src/config/index.ts'
 import { ClaimTunnelResponse } from '#src/proto/api.ts'
@@ -91,14 +91,14 @@ export function getIdentifierFromClaimInfo(info: ClaimInfo): ClaimID {
 		try {
 			const ctx = JSON.parse(info.context)
 			info.context = canonicalStringify(ctx)!
-		} catch(e) {
+		} catch {
 			throw new Error('unable to parse non-empty context. Must be JSON')
 		}
 	}
 
 	const str = `${info.provider}\n${info.parameters}\n${info.context || ''}`
 	//console.log('Identifier: ' + btoa(str))
-	return utils.keccak256(strToUint8Array(str)).toLowerCase()
+	return keccak256(strToUint8Array(str)).toLowerCase()
 }
 
 /**
@@ -124,7 +124,7 @@ export function hashProviderParams(params: ProviderParams<'http'>): string {
 	}
 
 	const serializedParams = canonicalStringify(filteredParams)
-	return utils.keccak256(
+	return keccak256(
 		strToUint8Array(serializedParams)
 	).toLowerCase()
 }

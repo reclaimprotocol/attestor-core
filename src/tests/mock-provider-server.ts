@@ -88,7 +88,7 @@ export function createMockServer(port: number) {
 			logger.info({ status, message }, 'ended with error')
 		}
 
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 		function endWithJson(status: number, json: any) {
 			const str = JSON.stringify(json)
 			res.writeHead(status, {

@@ -1,15 +1,22 @@
+import '#src/server/utils/config-env.ts'
+
+import assert from 'node:assert'
+import { describe, it } from 'node:test'
+
 import type { CipherSuite } from '@reclaimprotocol/tls'
 import { crypto, encryptWrappedRecord, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
-import assert from 'node:assert'
-import { describe, it } from 'node:test'
-import '#src/server/utils/config-env.ts'
 
 import { TOPRF_DOMAIN_SEPARATOR } from '#src/config/index.ts'
 import type { MessageReveal_ZKProof as ZKProof } from '#src/proto/api.ts'
 import { ZKProofEngine } from '#src/proto/api.ts'
 import { toprf } from '#src/server/handlers/toprf.ts'
-import type { CompleteTLSPacket, MessageRevealInfo, RedactedOrHashedArraySlice, TOPRFProofParams } from '#src/types/index.ts'
+import type {
+	CompleteTLSPacket,
+	MessageRevealInfo,
+	RedactedOrHashedArraySlice,
+	TOPRFProofParams
+} from '#src/types/index.ts'
 import {
 	getBlocksToReveal,
 	isTls13Suite,
@@ -30,6 +37,7 @@ const ZK_CIPHER_SUITES: CipherSuite[] = [
 ]
 
 const ZK_ENGINES: ZKEngine[] = [
+	'stwo',
 	'gnark',
 	'snarkjs'
 ]
@@ -168,6 +176,189 @@ describe('Redaction Tests', () => {
 				)
 			}
 		}
+	})
+
+	it('should correctly handle oprf-raw markers (no redaction, no OPRF call)', async() => {
+		// oprf-raw: data is revealed (not redacted), OPRF computed server-side
+		const input = ['secret: abc123', ' end']
+		const redactions: RedactedOrHashedArraySlice[] = [
+			{ fromIndex: 8, toIndex: 14, hash: 'oprf-raw' } // 'abc123'
+		]
+
+		const realOutput = await getBlocksToReveal(
+			input.map(i => ({ plaintext: Buffer.from(i) })),
+			() => redactions,
+			async() => {
+				throw new Error('should not call performOprf for oprf-raw')
+			}
+		)
+
+		assert(realOutput !== 'all', 'should not return "all"')
+		// For oprf-raw: plaintext is NOT redacted
+		assert.equal(uint8ArrayToStr(realOutput[0].redactedPlaintext), 'secret: abc123')
+		assert.equal(uint8ArrayToStr(realOutput[1].redactedPlaintext), ' end')
+
+		// Check oprfRawMarkers are set
+		assert.ok(realOutput[0].oprfRawMarkers, 'oprfRawMarkers should be set')
+		assert.equal(realOutput[0].oprfRawMarkers.length, 1)
+		assert.deepEqual(realOutput[0].oprfRawMarkers[0].dataLocation, {
+			fromIndex: 8,
+			length: 6
+		})
+	})
+
+	it('should handle mixed oprf-raw and regular redactions', async() => {
+		const input = ['email: test@example.com, token: secret123']
+		const redactions: RedactedOrHashedArraySlice[] = [
+			{ fromIndex: 7, toIndex: 23 }, // 'test@example.com' - redacted
+			{ fromIndex: 31, toIndex: 40, hash: 'oprf-raw' } // 'secret123' - oprf-raw
+		]
+
+		const realOutput = await getBlocksToReveal(
+			input.map(i => ({ plaintext: Buffer.from(i) })),
+			() => redactions,
+			async() => {
+				throw new Error('should not call performOprf for oprf-raw or regular redaction')
+			}
+		)
+
+		assert(realOutput !== 'all')
+		// First part is redacted, oprf-raw part is revealed
+		const expectedRedacted = 'email: ****************, token: secret123'
+		assert.equal(uint8ArrayToStr(realOutput[0].redactedPlaintext), expectedRedacted)
+
+		// oprfRawMarkers should be set for the oprf-raw portion
+		assert.ok(realOutput[0].oprfRawMarkers)
+		assert.equal(realOutput[0].oprfRawMarkers.length, 1)
+		assert.deepEqual(realOutput[0].oprfRawMarkers[0].dataLocation, {
+			fromIndex: 31,
+			length: 9
+		})
+	})
+
+	it('should handle cross-block oprf-raw markers', async() => {
+		// oprf-raw data spanning multiple blocks
+		const input = ['token: abc', '123xyz end']
+		const redactions: RedactedOrHashedArraySlice[] = [
+			// 'abc123xyz' spans from block 0 (position 7) to block 1 (position 6)
+			{ fromIndex: 7, toIndex: 16, hash: 'oprf-raw' }
+		]
+
+		const realOutput = await getBlocksToReveal(
+			input.map(i => ({ plaintext: Buffer.from(i) })),
+			() => redactions,
+			async() => {
+				throw new Error('should not call performOprf for oprf-raw')
+			}
+		)
+
+		assert(realOutput !== 'all', 'should not return "all"')
+		assert.equal(realOutput.length, 2, 'should have 2 blocks')
+
+		// For oprf-raw: plaintext is NOT redacted (revealed to server)
+		assert.equal(uint8ArrayToStr(realOutput[0].redactedPlaintext), 'token: abc')
+		assert.equal(uint8ArrayToStr(realOutput[1].redactedPlaintext), '123xyz end')
+
+		// First block should have the marker with total length
+		assert.ok(realOutput[0].oprfRawMarkers, 'oprfRawMarkers should be set on first block')
+		assert.equal(realOutput[0].oprfRawMarkers.length, 1)
+		assert.deepEqual(realOutput[0].oprfRawMarkers[0].dataLocation, {
+			fromIndex: 7, // position in first block
+			length: 9 // total length across blocks: 'abc123xyz'
+		})
+
+		// Second block should have overshotOprfRawFromPrevBlock
+		assert.ok(
+			realOutput[1].overshotOprfRawFromPrevBlock,
+			'second block should have overshotOprfRawFromPrevBlock'
+		)
+		assert.equal(
+			realOutput[1].overshotOprfRawFromPrevBlock.length,
+			6, // '123xyz' = 6 bytes overshot into second block
+			'overshotOprfRawFromPrevBlock should be 6 bytes'
+		)
+	})
+})
+
+describe('OPRF-Raw Nullifier Consistency', () => {
+	// This test verifies that oprf-raw (server-side OPRF) produces
+	// the SAME nullifier as ZK OPRF (client masks, server evaluates, client finalizes)
+	// for identical input data
+	it('should produce same nullifier as ZK OPRF for same input', async() => {
+		const testData = strToUint8Array('test@example.com')
+
+		// 1. Compute via ZK OPRF flow (client masks → server evaluates → client finalizes)
+		const oprfOperator = makeDefaultOPRFOperator('chacha20', 'gnark', logger)
+		const reqData = await oprfOperator.generateOPRFRequestData(
+			testData,
+			TOPRF_DOMAIN_SEPARATOR,
+			logger
+		)
+		const serverResponse = await toprf(
+			{
+				maskedData: reqData.maskedData,
+				engine: ZKProofEngine.ZK_ENGINE_GNARK
+			},
+			{ logger } as any
+		)
+		const zkOprfNullifier = await oprfOperator.finaliseOPRF(
+			serverResponse.publicKeyShare,
+			reqData,
+			[serverResponse]
+		)
+
+		// 2. Compute via oprf-raw flow (server does everything)
+		// This simulates what computeOPRFRaw does
+		const oprfRawRequest = await oprfOperator.generateOPRFRequestData(
+			testData,
+			TOPRF_DOMAIN_SEPARATOR,
+			logger
+		)
+		const oprfRawResponse = await toprf(
+			{
+				maskedData: oprfRawRequest.maskedData,
+				engine: ZKProofEngine.ZK_ENGINE_GNARK
+			},
+			{ logger } as any
+		)
+		const oprfRawNullifier = await oprfOperator.finaliseOPRF(
+			oprfRawResponse.publicKeyShare,
+			oprfRawRequest,
+			[oprfRawResponse]
+		)
+
+		// 3. Both should produce the same nullifier
+		// (the mask cancels out in the final computation)
+		assert.deepEqual(
+			zkOprfNullifier,
+			oprfRawNullifier,
+			'ZK OPRF and oprf-raw should produce identical nullifiers for same input'
+		)
+
+		// Verify determinism - running again should give same result
+		const thirdRequest = await oprfOperator.generateOPRFRequestData(
+			testData,
+			TOPRF_DOMAIN_SEPARATOR,
+			logger
+		)
+		const thirdResponse = await toprf(
+			{
+				maskedData: thirdRequest.maskedData,
+				engine: ZKProofEngine.ZK_ENGINE_GNARK
+			},
+			{ logger } as any
+		)
+		const thirdNullifier = await oprfOperator.finaliseOPRF(
+			thirdResponse.publicKeyShare,
+			thirdRequest,
+			[thirdResponse]
+		)
+
+		assert.deepEqual(
+			zkOprfNullifier,
+			thirdNullifier,
+			'OPRF should be deterministic for same input'
+		)
 	})
 })
 
@@ -434,7 +625,7 @@ for(const { cipherSuite, zkEngine } of ZK_TEST_MATRIX) {
 				const x = await verifyZkPacket(
 					{
 						ciphertext,
-						zkReveal: { proofs: proofs!, toprfs: [] },
+						zkReveal: { proofs: proofs!, toprfs: [], oprfRawMarkers: [] },
 						logger,
 						cipherSuite,
 						zkEngine: zkEngine,

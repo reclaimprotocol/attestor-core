@@ -1,6 +1,7 @@
+import '#src/server/utils/config-env.ts'
+
 import { setCryptoImplementation } from '@reclaimprotocol/tls'
 import { webcryptoCrypto } from '@reclaimprotocol/tls/webcrypto'
-import '#src/server/utils/config-env.ts'
 
 import { getApm } from '#src/server/utils/apm.ts'
 getApm()

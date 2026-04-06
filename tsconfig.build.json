@@ -1,10 +1,13 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "emitDeclarationOnly": true
+  },
   "exclude": [
     "node_modules",
     "src/tests",
     "src/avs/tests",
-    "src/test.ts",
-    "src/scripts"
+    "src/test.ts"
   ]
 }

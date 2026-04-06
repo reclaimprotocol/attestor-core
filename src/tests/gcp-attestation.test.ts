@@ -2,9 +2,10 @@
  * Test GCP attestation validation with proof_bundle.bin
  */
 
-import { readFileSync } from 'fs'
 import assert from 'node:assert'
 import { describe, it } from 'node:test'
+
+import { readFileSync } from 'fs'
 import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -65,7 +66,7 @@ describe('GCP Attestation Tests', () => {
 				try {
 					const headerJson = Buffer.from(parts[0], 'base64url').toString('utf8')
 					console.log(`  Decoded header: ${headerJson}`)
-				} catch(e) {
+				} catch {
 					// Try with padding
 					let base64 = parts[0].replace(/-/g, '+').replace(/_/g, '/')
 					while(base64.length % 4) {

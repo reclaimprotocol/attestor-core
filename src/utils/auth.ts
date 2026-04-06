@@ -1,4 +1,4 @@
-import { ethers } from 'ethers'
+import { getBytes } from 'ethers'
 
 import { DEFAULT_AUTH_EXPIRY_S } from '#src/config/index.ts'
 import type { AuthenticationRequest, ServiceSignatureType } from '#src/proto/api.ts'
@@ -52,7 +52,7 @@ export async function assertValidAuthRequest(
 	const proto = AuthenticatedUserData.encode(data).finish()
 	const signatureAlg = SIGNATURES[signatureType]
 	const address = signatureAlg.getAddress(
-		await ethers.utils.arrayify(publicKey)
+		getBytes(publicKey)
 	)
 	const verified = await signatureAlg
 		.verify(proto, signature, address)

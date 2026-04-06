@@ -1,8 +1,9 @@
+import '#src/server/utils/config-env.ts'
+
 import { setCryptoImplementation } from '@reclaimprotocol/tls'
 import { webcryptoCrypto } from '@reclaimprotocol/tls/webcrypto'
 import { readFile } from 'fs/promises'
 import type { WebSocketServer } from 'ws'
-import '#src/server/utils/config-env.ts'
 
 import type { ProviderName, ProviderParams, ProviderSecretParams } from '#src/index.ts'
 import {
@@ -57,7 +58,7 @@ export async function main<T extends ProviderName>(
 		.replace('ws://', 'http://')
 		.replace('wss://', 'https://')
 
-	const zkEngine = getCliArgument('zk') === 'gnark' ? 'gnark' : 'snarkjs'
+	const zkEngine = getCliArgument('zk') === 'gnark' ? 'gnark' : 'stwo'
 	const { request, error, claim } = await createClaimOnAttestor({
 		name: paramsJson.name,
 		secretParams: paramsJson.secretParams,
@@ -101,7 +102,7 @@ export async function main<T extends ProviderName>(
 
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 async function getInputParameters(): Promise<ProviderReceiptGenerationParams<any>> {
 	const paramsJsonFile = getCliArgument('json')
 	if(!paramsJsonFile) {

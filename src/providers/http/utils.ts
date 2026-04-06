@@ -1,5 +1,7 @@
 // noinspection ExceptionCaughtLocallyJS
 
+import '#src/providers/http/patch-parse5-tree.ts'
+
 import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
 import type { Element, Node } from 'domhandler'
 import type {
@@ -17,7 +19,6 @@ import { parse } from 'parse5'
 import { adapter as htmlAdapter, } from 'parse5-htmlparser2-tree-adapter'
 import RE2 from 're2'
 import xpath from 'xpath'
-import '#src/providers/http/patch-parse5-tree.ts'
 
 import type { ArraySlice, CompleteTLSPacket, ProviderParams, RedactedOrHashedArraySlice, Transcript } from '#src/types/index.ts'
 import type { HttpRequest, HttpResponse } from '#src/utils/index.ts'

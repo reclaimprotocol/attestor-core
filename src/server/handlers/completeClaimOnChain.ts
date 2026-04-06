@@ -1,4 +1,6 @@
-import type { IReclaimServiceManager, TaskCompletedEventObject } from '#src/avs/contracts/ReclaimServiceManager.ts'
+import { EventLog } from 'ethers'
+
+import type { IReclaimServiceManager, TaskCompletedEvent } from '#src/avs/contracts/ReclaimServiceManager.ts'
 import { getContracts } from '#src/avs/utils/contracts.ts'
 import type { RPCHandler } from '#src/types/index.ts'
 import { getEnvVariable } from '#src/utils/env.ts'
@@ -24,13 +26,14 @@ export const completeClaimOnChain: RPCHandler<'completeClaimOnChain'> = async(
 	const rslt = await tx.wait()
 
 	// check task created event was emitted
-	const ev = rslt.events?.[0]
-	const obj = ev?.args as unknown as TaskCompletedEventObject
+	const logs = rslt?.logs ?? []
+	const eventLogs = logs.filter((log): log is EventLog => log instanceof EventLog)
+	const obj = eventLogs[0]?.args as unknown as TaskCompletedEvent.OutputObject
 
 	const plainObj = ethersStructToPlainObject(obj)
 
 	return {
-		txHash: rslt.transactionHash,
+		txHash: rslt?.hash ?? '',
 		taskCompletedObjectJson: JSON.stringify(plainObj)
 	}
 }

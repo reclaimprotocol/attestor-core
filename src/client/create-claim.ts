@@ -4,7 +4,7 @@ import { asciiToUint8Array } from '@reclaimprotocol/tls'
 import { makeRpcTlsTunnel } from '#src/client/tunnels/make-rpc-tls-tunnel.ts'
 import { getAttestorClientFromPool } from '#src/client/utils/attestor-pool.ts'
 import { DEFAULT_HTTPS_PORT, PROVIDER_CTX, TOPRF_DOMAIN_SEPARATOR } from '#src/config/index.ts'
-import { ClaimTunnelRequest, ZKProofEngine } from '#src/proto/api.ts'
+import { ClaimTunnelRequest } from '#src/proto/api.ts'
 import { providers } from '#src/providers/index.ts'
 import type {
 	CreateClaimOnAttestorOpts,
@@ -280,12 +280,12 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 	let serverIV: Uint8Array
 	let clientIV: Uint8Array
 	const [serverBlock] = getLastBlocks('server', 1)
-	if(serverBlock && serverBlock.message.type === 'ciphertext') {
+	if(serverBlock?.message.type === 'ciphertext') {
 		serverIV = serverBlock.message.fixedIv
 	}
 
 	const [clientBlock] = getLastBlocks('client', 1)
-	if(clientBlock && clientBlock.message.type === 'ciphertext') {
+	if(clientBlock?.message.type === 'ciphertext') {
 		clientIV = clientBlock.message.fixedIv
 	}
 
@@ -304,9 +304,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			owner: getAddress(),
 		},
 		transcript:transcript,
-		zkEngine: zkEngine === 'gnark'
-			? ZKProofEngine.ZK_ENGINE_GNARK
-			: ZKProofEngine.ZK_ENGINE_SNARKJS,
+		zkEngine: getEngineProto(zkEngine),
 		fixedServerIV: serverIV!,
 		fixedClientIV: clientIV!,
 	})
@@ -515,12 +513,13 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			revealedPackets.push(...packets.filter(p => p.sender === 'server'))
 		} else {
 			for(const {
-				block, redactedPlaintext, overshotToprfFromPrevBlock, toprfs
+				block, redactedPlaintext, overshotToprfFromPrevBlock, toprfs, oprfRawMarkers
 			} of serverPacketsToReveal) {
 				setRevealOfMessage(block.message, {
 					type: 'zk',
 					redactedPlaintext,
 					toprfs,
+					oprfRawMarkers,
 					overshotToprfFromPrevBlock
 				})
 				revealedPackets.push(

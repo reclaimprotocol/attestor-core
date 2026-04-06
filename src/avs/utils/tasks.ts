@@ -1,6 +1,6 @@
-import { ethers, type Wallet } from 'ethers'
+import { EventLog, getBytes, type Wallet } from 'ethers'
 
-import type { IReclaimServiceManager, NewTaskCreatedEventObject } from '#src/avs/contracts/ReclaimServiceManager.ts'
+import type { IReclaimServiceManager, NewTaskCreatedEvent } from '#src/avs/contracts/ReclaimServiceManager.ts'
 import { getContracts } from '#src/avs/utils/contracts.ts'
 
 type CreateClaimWithoutOwner = Omit<IReclaimServiceManager.ClaimRequestStruct, 'owner'>
@@ -37,10 +37,11 @@ export async function createNewClaimRequestOnChain({
 	const signature = await getSignature()
 	const task = await contract.createNewTask(fullRequest, signature || '0x00')
 	const rslt = await task.wait()
-	const events = rslt.events
+	const logs = rslt?.logs ?? []
+	const eventLogs = logs.filter((log): log is EventLog => log instanceof EventLog)
 	// check task created event was emitted
-	const ev = events?.[0]
-	const arg = ev?.args as unknown as NewTaskCreatedEventObject
+	const ev = eventLogs[0]
+	const arg = ev?.args as unknown as NewTaskCreatedEvent.OutputObject
 
 	return { task: arg, tx: rslt }
 
@@ -71,6 +72,6 @@ export async function signClaimRequest(
 ) {
 	const contract = getContracts(chainId).contract
 	const encoded = await contract.encodeClaimRequest(request)
-	const strSig = await owner.signMessage(ethers.utils.arrayify(encoded))
-	return ethers.utils.arrayify(strSig)
+	const strSig = await owner.signMessage(getBytes(encoded))
+	return getBytes(strSig)
 }

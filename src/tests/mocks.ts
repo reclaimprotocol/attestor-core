@@ -1,7 +1,9 @@
+import '#src/server/utils/config-env.ts'
+
+import { mock } from 'node:test'
+
 import { setCryptoImplementation } from '@reclaimprotocol/tls'
 import { webcryptoCrypto } from '@reclaimprotocol/tls/webcrypto'
-import { mock } from 'node:test'
-import '#src/server/utils/config-env.ts'
 
 import { preparePacketsForReveal } from '#src/utils/prepare-packets.ts'
 

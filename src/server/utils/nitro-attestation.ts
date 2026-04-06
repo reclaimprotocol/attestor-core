@@ -142,7 +142,7 @@ async function validateCertificateChain(
 				try {
 					const issuer = chain[i + 1]
 					const isValid = await cert.verify(issuer, crypto)
-					// eslint-disable-next-line max-depth
+
 					if(!isValid) {
 						errors.push(`Certificate ${i} signature verification failed`)
 					}
@@ -191,7 +191,7 @@ function extractPublicKeyFromUserData(userDataBuffer: Buffer): AddressExtraction
 		}
 
 		return null
-	} catch(error) {
+	} catch {
 		return null
 	}
 }

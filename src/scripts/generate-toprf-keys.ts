@@ -1,4 +1,4 @@
-import { ethers } from 'ethers'
+import { hexlify } from 'ethers'
 
 import { logger, makeDefaultOPRFOperator } from '#src/utils/index.ts'
 
@@ -24,7 +24,7 @@ async function main() {
 }
 
 function logEnvValue(name: string, value: Uint8Array) {
-	console.log(`${name}=${ethers.utils.hexlify(value)}`)
+	console.log(`${name}=${hexlify(value)}`)
 }
 
 void main()
