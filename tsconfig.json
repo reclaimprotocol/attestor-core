@@ -1,22 +1,23 @@
 {
   "compilerOptions": {
     "lib": ["ESNext", "DOM", "ESNext.AsyncIterable", "DOM.AsyncIterable"],
-    "module": "nodenext",
     "moduleResolution": "nodenext",
-    "allowJs": true,
+    "target": "ESNext",
+    "module": "NodeNext",
     "outDir": "lib",
     "strict": false,
     "strictNullChecks": true,
-    "noImplicitThis": true,
     "skipLibCheck": true,
-    "declaration": true,
-    "allowImportingTsExtensions": true,
     "erasableSyntaxOnly": true,
-    "noEmit": true,
-    "baseUrl": ".",
+    "rewriteRelativeImportExtensions": true,
+    "allowJs": true,
+    "declaration": true,
+    "resolveJsonModule": true,
+    "rootDir": "./src",
     "paths": {
-      "#src/*": ["src/*"]
-    }
+			"#src/*": ["./lib/*"]
+		},
+    "plugins": [{ "transform": "typescript-transform-paths" }]
   },
   "include": [
     "src/*.ts",
