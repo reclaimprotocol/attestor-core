@@ -4,6 +4,7 @@ const rslt = await esbuild.build({
 	entryPoints: ['src/external-rpc/setup-browser.ts'],
 	bundle: true,
 	minify: true,
+	sourcemap: true,
 	outfile: 'browser/resources/attestor-browser.min.mjs',
 	platform: 'browser',
 	format: 'esm',
