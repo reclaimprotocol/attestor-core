@@ -57,7 +57,7 @@ export async function main<T extends ProviderName>(
 		.replace('ws://', 'http://')
 		.replace('wss://', 'https://')
 
-	const zkEngine = getCliArgument('zk') === 'gnark' ? 'gnark' : 'stwo'
+	const zkEngine = getCliArgument('zk') === 'gnark' ? 'gnark' : getCliArgument('zk') === 'snarkjs' ? 'snarkjs' : 'stwo'
 	const { request, error, claim } = await createClaimOnAttestor({
 		name: paramsJson.name,
 		secretParams: paramsJson.secretParams,
