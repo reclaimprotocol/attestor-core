@@ -4,7 +4,12 @@ import { getApm } from '#src/server/utils/apm.ts'
 import { assertTranscriptsMatch, assertValidClaimRequest } from '#src/server/utils/assert-valid-claim-request.ts'
 import { getAttestorAddress, signAsAttestor } from '#src/server/utils/generics.ts'
 import type { RPCHandler } from '#src/types/index.ts'
-import { AttestorError, createSignDataForClaim, getIdentifierFromClaimInfo, unixTimestampSeconds } from '#src/utils/index.ts'
+import {
+	AttestorError,
+	createSignDataForClaim,
+	getIdentifierFromClaimInfo,
+	unixTimestampSeconds
+} from '#src/utils/index.ts'
 
 export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 	claimRequest,
@@ -81,6 +86,12 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 		logger.error({ err }, 'invalid claim request')
 		const attestorErr = AttestorError.fromError(err, 'ERROR_INVALID_CLAIM')
 		res.error = attestorErr.toProto()
+	}
+
+	// Strip transcript before signing -- client already has it.
+	// Reduces response size dramatically for STARK proofs.
+	if(res.request) {
+		res.request.transcript = []
 	}
 
 	res.signatures = {
