@@ -176,7 +176,8 @@ export function makeStwoZkOperator({
 				throw new Error('Stwo proof generation failed: no proof returned')
 			}
 
-			return { proof: result.proof }
+			// Decode base64 to binary for compact protobuf storage
+			return { proof: Base64.toUint8Array(result.proof) }
 		},
 
 		async groth16Verify(publicSignals, proof, logger) {
@@ -195,9 +196,10 @@ export function makeStwoZkOperator({
 
 			assertU32Counter(expectedCounter)
 
+			// Re-encode to base64 for WASM verify function
 			const proofStr = typeof proof === 'string'
 				? proof
-				: new TextDecoder().decode(proof)
+				: Base64.fromUint8Array(proof)
 
 			let resultJson: string
 			if(algorithm === 'chacha20') {

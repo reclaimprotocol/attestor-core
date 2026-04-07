@@ -10,13 +10,12 @@ import {
 	API_SERVER_PORT,
 	createClaimOnAttestor,
 	getAttestorClientFromPool,
-	getTranscriptString,
 	logger,
 	providers,
 	WS_PATHNAME,
 } from '#src/index.ts'
 import { getCliArgument } from '#src/scripts/utils.ts'
-import { createServer, decryptTranscript } from '#src/server/index.ts'
+import { createServer } from '#src/server/index.ts'
 import { assertValidateProviderParams } from '#src/server/utils/validation.ts'
 import { getEnvVariable } from '#src/utils/env.ts'
 
@@ -29,7 +28,7 @@ type ProviderReceiptGenerationParams<P extends ProviderName> = {
 }
 
 // tmp change till we move OPRF attestor to prod
-const DEFAULT_ATTESTOR_HOST_PORT = 'wss://eu.attestor.reclaimprotocol.org/ws'
+const DEFAULT_ATTESTOR_HOST_PORT = 'wss://attestor.reclaimprotocol.org:444/ws'
 const PRIVATE_KEY_HEX = getEnvVariable('PRIVATE_KEY_HEX')
 	// demo private key
 	|| '0x0123788edad59d7c013cdc85e4372f350f828e2cec62d9a2de4560e69aec7f89'
@@ -58,7 +57,7 @@ export async function main<T extends ProviderName>(
 		.replace('ws://', 'http://')
 		.replace('wss://', 'https://')
 
-	const zkEngine = getCliArgument('zk') === 'gnark' ? 'gnark' : 'stwo'
+	const zkEngine = getCliArgument('zk') === 'gnark' ? 'gnark' : getCliArgument('zk') === 'snarkjs' ? 'snarkjs' : 'stwo'
 	const { request, error, claim } = await createClaimOnAttestor({
 		name: paramsJson.name,
 		secretParams: paramsJson.secretParams,
@@ -86,15 +85,6 @@ export async function main<T extends ProviderName>(
 		throw new Error('Missing request in claim')
 	}
 
-	const decTranscript = await decryptTranscript(
-		request?.transcript,
-		logger,
-		zkEngine,
-		request?.fixedServerIV,
-		request?.fixedClientIV
-	)
-	const transcriptStr = getTranscriptString(decTranscript)
-	console.log('receipt:\n', transcriptStr)
 	console.log('claim:\n', claim)
 
 	const client = getAttestorClientFromPool(attestorHostPort)
