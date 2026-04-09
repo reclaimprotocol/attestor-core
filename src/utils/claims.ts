@@ -116,11 +116,21 @@ export function canonicalStringify(params: { [key: string]: any } | undefined) {
 
 export function hashProviderParams(params: ProviderParams<'http'>): string {
 	const filteredParams = {
-		url:params.url,
-		method:params.method,
-		body: params.body,
-		responseMatches: params.responseMatches,
-		responseRedactions: params.responseRedactions
+		url: params.url,
+		method: params.method,
+		body: params.body ?? '',
+		responseMatches: params.responseMatches.map(it => ({
+			value: it.value,
+			type: it.type,
+			// default undefined, even if false
+			invert: it.invert || undefined,
+		})),
+		responseRedactions: params.responseRedactions?.map(it => ({
+			xPath: it.xPath ?? '',
+			jsonPath: it.jsonPath ?? '',
+			regex: it.regex ?? '',
+			hash: it.hash || undefined,
+		})) ?? [],
 	}
 
 	const serializedParams = canonicalStringify(filteredParams)

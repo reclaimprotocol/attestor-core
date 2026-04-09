@@ -45,7 +45,7 @@ describeWithServer('HTTP Provider', opts => {
 		assert.ok(!resp.error)
 		assert.match(
 			resp.claim?.context || '',
-			/0x5e3e976476ded7b58120d606b33b75be52adb8345a7979c181764f00763e7b2a/
+			/0x9b26b1c18a7169a7533d4b6d1969198db8df8be52f58aad6d729ca3ecf90ea17/
 		)
 	})
 
@@ -114,7 +114,7 @@ describeWithServer('HTTP Provider', opts => {
 		assert.ok(!resp.error)
 		assert.match(
 			resp.claim?.context || '',
-			/0x51004e4a2d91eda6fa8cf2e6fa9a8dd973070114a7c670a4c47797e9a55ab872/
+			/0x52eefd230287404d1053327c183eb0ebd9327a117539ac48e2a5ace143ee711c/
 		)
 	})
 })
