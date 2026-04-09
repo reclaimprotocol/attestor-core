@@ -116,11 +116,22 @@ export function canonicalStringify(params: { [key: string]: any } | undefined) {
 
 export function hashProviderParams(params: ProviderParams<'http'>): string {
 	const filteredParams = {
-		url:params.url,
-		method:params.method,
-		body: params.body,
-		responseMatches: params.responseMatches,
-		responseRedactions: params.responseRedactions
+		url: params?.url ?? '',
+		// METHOD needs to be explicitly specified and absence or unknown method should cause error, but we're choosing to ignore it in this case
+		method: params?.method ?? 'GET',
+		body: params?.body ?? '',
+		responseMatches: params?.responseMatches?.map(it => ({
+			value: it.value ?? '',
+			// This needs to be explicitly specified and absence should cause error, but we're choosing to ignore it in this case
+			type: it.type ?? 'contains',
+			invert: it.invert || undefined,
+		})) ?? [],
+		responseRedactions: params?.responseRedactions?.map(it => ({
+			xPath: it.xPath ?? '',
+			jsonPath: it.jsonPath ?? '',
+			regex: it.regex ?? '',
+			hash: it.hash || undefined,
+		})) ?? [],
 	}
 
 	const serializedParams = canonicalStringify(filteredParams)
