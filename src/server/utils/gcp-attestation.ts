@@ -27,7 +27,7 @@ interface JwtPayload {
 	exp: number
 	iat: number
 	aud: string
-	eat_nonce?: string // Contains "tee_k_public_key:0x..." or "tee_t_public_key:0x..."
+	eat_nonce?: string | string[] // Single nonce or array; first element is always the public key nonce
 	dbgstat?: string // Debug status: "enabled" or "disabled-since-boot"
 	// GCP Confidential Computing specific claims
 	google?: {
@@ -353,15 +353,26 @@ export async function validateGcpAttestationAndExtractKey(
 		}
 
 		// 5. Extract ETH address from eat_nonce
+		// GCP returns eat_nonce as a string (single nonce) or string array (multiple nonces).
+		// The public key nonce is always first; additional nonces (e.g. cert hash) may follow.
 		if(!payload.eat_nonce) {
 			errors.push('No eat_nonce field found in JWT payload')
 			return { isValid: false, errors }
 		}
 
+		const eatNonce = Array.isArray(payload.eat_nonce)
+			? payload.eat_nonce[0]
+			: payload.eat_nonce
+
+		if(!eatNonce) {
+			errors.push('eat_nonce is empty')
+			return { isValid: false, errors }
+		}
+
 		// Format: "tee_k_public_key:0x..." or "tee_t_public_key:0x..."
-		const match = payload.eat_nonce.match(/^(tee_[kt])_public_key:0x([0-9a-fA-F]{40})$/)
+		const match = eatNonce.match(/^(tee_[kt])_public_key:0x([0-9a-fA-F]{40})$/)
 		if(!match) {
-			errors.push(`Invalid eat_nonce format: ${payload.eat_nonce}`)
+			errors.push(`Invalid eat_nonce format: ${eatNonce}`)
 			return { isValid: false, errors }
 		}
 
@@ -371,7 +382,7 @@ export async function validateGcpAttestationAndExtractKey(
 		const ethAddress = new Uint8Array(Buffer.from(hexAddress, 'hex'))
 
 		if(logger) {
-			logger.info(`Extracted address from eat_nonce: ${payload.eat_nonce}`)
+			logger.info(`Extracted address from eat_nonce: ${eatNonce}`)
 		}
 
 		// Extract image digest from JWT payload (GCP's equivalent to PCR0)
