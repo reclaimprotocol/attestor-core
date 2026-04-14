@@ -354,25 +354,30 @@ export async function validateGcpAttestationAndExtractKey(
 
 		// 5. Extract ETH address from eat_nonce
 		// GCP returns eat_nonce as a string (single nonce) or string array (multiple nonces).
-		// The public key nonce is always first; additional nonces (e.g. cert hash) may follow.
+		// Find the public key nonce by pattern; additional nonces (e.g. cert hash) are ignored here.
 		if(!payload.eat_nonce) {
 			errors.push('No eat_nonce field found in JWT payload')
 			return { isValid: false, errors }
 		}
 
-		const eatNonce = Array.isArray(payload.eat_nonce)
-			? payload.eat_nonce[0]
-			: payload.eat_nonce
+		const publicKeyPattern = /^(tee_[kt])_public_key:0x([0-9a-fA-F]{40})$/
+		const nonces = Array.isArray(payload.eat_nonce)
+			? payload.eat_nonce
+			: [payload.eat_nonce]
 
-		if(!eatNonce) {
-			errors.push('eat_nonce is empty')
-			return { isValid: false, errors }
+		let eatNonce: string | undefined
+		let match: RegExpMatchArray | null = null
+		for(const n of nonces) {
+			const m = n.match(publicKeyPattern)
+			if(m) {
+				eatNonce = n
+				match = m
+				break
+			}
 		}
 
-		// Format: "tee_k_public_key:0x..." or "tee_t_public_key:0x..."
-		const match = eatNonce.match(/^(tee_[kt])_public_key:0x([0-9a-fA-F]{40})$/)
-		if(!match) {
-			errors.push(`Invalid eat_nonce format: ${eatNonce}`)
+		if(!match || !eatNonce) {
+			errors.push(`No public key nonce found in eat_nonce: ${JSON.stringify(payload.eat_nonce)}`)
 			return { isValid: false, errors }
 		}
 
