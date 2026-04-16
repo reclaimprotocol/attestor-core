@@ -84,6 +84,16 @@ export function replaceByteSequence(
 	search: Uint8Array,
 	replace: Uint8Array,
 ) {
+	if(search.length !== replace.length) {
+		throw new Error(
+			`replaceByteSequence requires equal lengths, got search=${search.length} replace=${replace.length}`
+		)
+	}
+
+	if(!search.length) {
+		return
+	}
+
 	for(let i = 0; i <= buf.length - search.length; i++) {
 		let match = true
 		for(let j = 0; j < search.length; j++) {
