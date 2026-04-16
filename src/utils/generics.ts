@@ -76,6 +76,31 @@ export function findIndexInUint8Array(
 }
 
 /**
+ * In-place replacement of all occurrences of `search` with `replace`
+ * in the buffer. Both must be the same length.
+ */
+export function replaceByteSequence(
+	buf: Uint8Array,
+	search: Uint8Array,
+	replace: Uint8Array,
+) {
+	for(let i = 0; i <= buf.length - search.length; i++) {
+		let match = true
+		for(let j = 0; j < search.length; j++) {
+			if(buf[i + j] !== search[j]) {
+				match = false
+				break
+			}
+		}
+
+		if(match) {
+			buf.set(replace, i)
+			i += replace.length - 1
+		}
+	}
+}
+
+/**
  * Fetch the ZK algorithm for the specified cipher suite
  */
 export function getZkAlgorithmForCipherSuite(cipherSuite: CipherSuite) {
