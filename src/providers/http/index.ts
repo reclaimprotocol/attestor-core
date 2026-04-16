@@ -21,13 +21,15 @@ import type {
 	ProviderCtx,
 	ProviderParams,
 	ProviderSecretParams,
-	RedactedOrHashedArraySlice
+	RedactedOrHashedArraySlice,
+	Transcript,
 } from '#src/types/index.ts'
 import {
 	findIndexInUint8Array,
 	getHttpRequestDataFromTranscript,
 	logger,
 	REDACTION_CHAR_CODE,
+	replaceByteSequence,
 	strToUint8Array,
 	uint8ArrayToStr,
 } from '#src/utils/index.ts'
@@ -281,8 +283,13 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		//brackets in URL path turn into %7B and %7D, so replace them back
 		const expectedPath = pathname.replaceAll('%7B', '{').replaceAll('%7D', '}') + (searchParams?.length ? '?' + searchParams : '')
 		if(!matchRedactedStrings(strToUint8Array(expectedPath), strToUint8Array(req.url))) {
-			logger.error('params URL: %s', params.url)
-			throw new Error(`Expected path: ${expectedPath}, found: ${req.url}`)
+			// when TOPRF hashes replaced values in params that also
+			// appear in the request URL, derive the originals and
+			// reconcile the client request packets
+			if(!reconcileToprfInUrl(expectedPath, req.url, ctx, receipt)) {
+				logger.error('params URL: %s', params.url)
+				throw new Error(`Expected path: ${expectedPath}, found: ${req.url}`)
+			}
 		}
 
 		const expectedHostStr = getHostHeaderString(url)
@@ -442,6 +449,58 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			logger.debug({ request: clientTranscript, response: serverTranscript, params: paramsAny })
 		}
 	},
+}
+
+/**
+ * When TOPRF hashes appear in the expected URL but the actual
+ * request URL has the originals (sent before OPRF), derive
+ * the originals by positional comparison and replace in the
+ * client request packets so subsequent validation succeeds.
+ *
+ * Returns true if reconciliation succeeded.
+ */
+function reconcileToprfInUrl(
+	expectedPath: string,
+	actualUrl: string,
+	ctx: ProviderCtx,
+	receipt: Transcript<Uint8Array>,
+): boolean {
+	const nullifiers = ctx.toprfNullifiers
+	if(!nullifiers?.length || expectedPath.length !== actualUrl.length) {
+		return false
+	}
+
+	let reconciled = false
+	for(const hash of nullifiers) {
+		let pos = 0
+		while((pos = expectedPath.indexOf(hash, pos)) >= 0) {
+			const original = actualUrl.substring(pos, pos + hash.length)
+			if(original !== hash) {
+				const ogBytes = strToUint8Array(original)
+				const hashBytes = strToUint8Array(hash)
+				for(const pkt of receipt) {
+					if(pkt.sender === 'client') {
+						replaceByteSequence(pkt.message, ogBytes, hashBytes)
+					}
+				}
+
+				reconciled = true
+			}
+
+			pos += hash.length
+		}
+	}
+
+	if(!reconciled) {
+		return false
+	}
+
+	// re-parse and re-check after reconciliation
+	const req = getHttpRequestDataFromTranscript(receipt)
+	return matchRedactedStrings(
+		strToUint8Array(expectedPath),
+		strToUint8Array(req.url)
+	)
 }
 
 // revealing CRLF is a breaking change -- and should only be done

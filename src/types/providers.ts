@@ -35,6 +35,8 @@ export type ProviderField<Params, SecretParams, T> = T | ((params: Params, secre
 
 export type ProviderCtx = {
   version: AttestorVersion
+  /** TOPRF nullifier strings for reconciling request URLs */
+  toprfNullifiers?: string[]
 }
 
 type GetResponseRedactionsOpts<P> = {
