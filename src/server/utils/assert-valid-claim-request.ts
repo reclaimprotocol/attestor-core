@@ -31,8 +31,8 @@ import {
 	extractApplicationDataFromTranscript,
 	hashProviderParams,
 	replaceByteSequence,
-	strToUint8Array,
 	SIGNATURES,
+	strToUint8Array,
 	verifyZkPacket
 } from '#src/utils/index.ts'
 import { getEngineString } from '#src/utils/zk.ts'
