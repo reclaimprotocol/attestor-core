@@ -72,11 +72,19 @@ async function _handleIncomingMessage(req: ExternalRPCIncomingMsg): Promise<
 	}
 
 	if(!reqId) {
-		logger.warn({ req }, 'Window RPC request missing ID')
+		logger.warn({ type: req.type }, 'Window RPC request missing ID')
 		return
 	}
 
-	logger.info({ req }, 'processing RPC request')
+	logger.info(
+		{
+			reqId,
+			type: req.type,
+			module: (req as { module?: string }).module,
+			channel: (req as { channel?: string }).channel,
+		},
+		'processing RPC request'
+	)
 
 	switch (req.type) {
 	case 'createClaim':
