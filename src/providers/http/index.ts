@@ -439,7 +439,10 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			const clientTranscript = encodeBase64(concatenateUint8Arrays(clientMsgs))
 			const serverTranscript = encodeBase64(concatenateUint8Arrays(serverMsgs))
 
-			logger.debug({ request: clientTranscript, response: serverTranscript, params: paramsAny })
+			logger.debug({
+				requestBytes: clientTranscript.length,
+				responseBytes: serverTranscript.length,
+			}, 'http transcript captured')
 		}
 	},
 }
