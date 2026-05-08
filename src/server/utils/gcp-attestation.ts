@@ -360,7 +360,7 @@ export async function validateGcpAttestationAndExtractKey(
 			return { isValid: false, errors }
 		}
 
-		const publicKeyPattern = /^(tee_[kt])_public_key:0x([0-9a-fA-F]{40})$/
+		const publicKeyPattern = /^(tee_[kt]|attestor)_public_key:0x([0-9a-fA-F]{40})$/
 		const nonces = Array.isArray(payload.eat_nonce)
 			? payload.eat_nonce
 			: [payload.eat_nonce]

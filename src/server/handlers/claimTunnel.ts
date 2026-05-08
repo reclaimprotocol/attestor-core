@@ -1,5 +1,6 @@
 import { MAX_CLAIM_TIMESTAMP_DIFF_S } from '#src/config/index.ts'
 import { ClaimTunnelResponse } from '#src/proto/api.ts'
+import { makeClaimAttestation } from '#src/server/tee/attestation-generate.ts'
 import { getApm } from '#src/server/utils/apm.ts'
 import { assertTranscriptsMatch, assertValidClaimRequest } from '#src/server/utils/assert-valid-claim-request.ts'
 import { getAttestorAddress, signAsAttestor } from '#src/server/utils/generics.ts'
@@ -107,7 +108,8 @@ export const claimTunnel: RPCHandler<'claimTunnel'> = async(
 		resultSignature: await signAsAttestor(
 			ClaimTunnelResponse.encode(res).finish(),
 			client.metadata.signatureType
-		)
+		),
+		claimAttestation: makeClaimAttestation()
 	}
 
 	// remove tunnel from client -- to free up our mem
