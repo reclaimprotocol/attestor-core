@@ -1,17 +1,16 @@
 import { Wallet } from 'ethers'
-
-import { logger as LOGGER } from '#src/utils/logger.ts'
-
 import {
 	startAttestationRefresh
-} from './attestation-generate.ts'
+} from 'src/server/tee/attestation-generate.ts'
 import {
 	bootstrapCertificate,
 	getActiveCertificate,
 	startRenewalLoop
-} from './cert-manager.ts'
-import { installCloudLogging } from './cloud-logging.ts'
-import { loadSecretsIntoEnv } from './secret-loader.ts'
+} from 'src/server/tee/cert-manager.ts'
+import { installCloudLogging } from 'src/server/tee/cloud-logging.ts'
+import { loadSecretsIntoEnv } from 'src/server/tee/secret-loader.ts'
+
+import { logger as LOGGER } from '#src/utils/logger.ts'
 
 function requireEnv(name: string): string {
 	const v = process.env[name]

@@ -39,6 +39,7 @@ export async function generateAttestationJwt(
 ): Promise<Uint8Array> {
 	const body = JSON.stringify({
 		audience: LAUNCHER_AUDIENCE,
+		// eslint-disable-next-line camelcase
 		token_type: 'PKI',
 		nonces: nonces.map(clampNonce)
 	})

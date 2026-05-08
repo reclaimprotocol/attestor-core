@@ -1,6 +1,6 @@
-import { logger } from '#src/utils/logger.ts'
+import { accessLatestSecret } from 'src/server/tee/secret-manager.ts'
 
-import { accessLatestSecret } from './secret-manager.ts'
+import { logger } from '#src/utils/logger.ts'
 
 const SECRET_TO_ENV: Record<string, string> = {
 	'attestor-signing-key': 'PRIVATE_KEY',

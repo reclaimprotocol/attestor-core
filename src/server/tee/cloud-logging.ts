@@ -62,12 +62,13 @@ class CloudLoggingStream extends Writable {
 			let parsed: Record<string, unknown>
 			try {
 				parsed = JSON.parse(chunk.toString())
-			} catch{
+			} catch {
 				parsed = { message: chunk.toString().trim() }
 			}
 
 			const level = (parsed.level as number) ?? 30
 			const severity = pinoLevelToSeverity(level)
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			const { msg, message, time, level: _level, ...rest } = parsed
 			const entry = this.cloudLogger.entry(
 				{
@@ -83,7 +84,7 @@ class CloudLoggingStream extends Writable {
 			)
 			// Cloud Logging buffers internally; don't block the producer.
 			this.cloudLogger.write(entry).catch(() => undefined)
-		} catch{
+		} catch {
 			// Never let logging crash the process.
 		}
 
@@ -127,7 +128,7 @@ export function installCloudLogging(opts: CloudLoggingOptions): void {
 	}
 	process.on('unhandledRejection', (reason) => {
 		if(isLoggingErr(reason)) {
-			// eslint-disable-next-line no-console
+
 			console.error('tee: cloud logging async rejection swallowed:',
 				(reason as Error)?.message)
 			return
@@ -137,7 +138,7 @@ export function installCloudLogging(opts: CloudLoggingOptions): void {
 	})
 	process.on('uncaughtException', (err) => {
 		if(isLoggingErr(err)) {
-			// eslint-disable-next-line no-console
+
 			console.error('tee: cloud logging uncaught error swallowed:',
 				err?.message)
 			return
