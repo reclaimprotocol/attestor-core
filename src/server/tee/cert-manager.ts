@@ -1,10 +1,10 @@
 import * as acme from 'acme-client'
 import { Buffer } from 'buffer'
 import crypto, { X509Certificate } from 'crypto'
-import { AcmeChallengeServer } from 'src/server/tee/acme-http-server.ts'
-import { accessLatestSecret, addSecretVersion, createSecretIfNotExists } from 'src/server/tee/secret-manager.ts'
 import tls from 'tls'
 
+import { AcmeChallengeServer } from '#src/server/tee/acme-http-server.ts'
+import { accessLatestSecret, addSecretVersion, createSecretIfNotExists } from '#src/server/tee/secret-manager.ts'
 import { logger as LOGGER } from '#src/utils/logger.ts'
 
 const RENEW_IF_EXPIRES_WITHIN_MS = 14 * 24 * 60 * 60 * 1000
