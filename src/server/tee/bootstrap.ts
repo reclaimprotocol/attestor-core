@@ -10,6 +10,7 @@ import {
 	getActiveCertificate,
 	startRenewalLoop
 } from './cert-manager.ts'
+import { installCloudLogging } from './cloud-logging.ts'
 import { loadSecretsIntoEnv } from './secret-loader.ts'
 
 function requireEnv(name: string): string {
@@ -38,7 +39,9 @@ export async function bootstrapTee(): Promise<void> {
 	const directoryUrl = process.env.ACME_DIRECTORY_URL
 		|| 'https://acme-v02.api.letsencrypt.org/directory'
 	const httpChallengePort = +(process.env.HTTP_PORT || 80)
+	const logName = process.env.LOG_NAME || 'attestor-core'
 
+	installCloudLogging({ projectId, logName })
 	LOGGER.info({ projectId, domain }, 'tee: bootstrap start')
 
 	await loadSecretsIntoEnv(projectId)

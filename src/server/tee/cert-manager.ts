@@ -1,6 +1,7 @@
 import * as acme from 'acme-client'
 import { Buffer } from 'buffer'
 import crypto, { X509Certificate } from 'crypto'
+import tls from 'tls'
 
 import { logger as LOGGER } from '#src/utils/logger.ts'
 
@@ -33,7 +34,7 @@ export interface ActiveCertificate {
 	keyPem: string
 	notAfter: Date
 	sha256Hex: string
-	secureContext: ReturnType<typeof import('tls').createSecureContext>
+	secureContext: tls.SecureContext
 }
 
 let active: ActiveCertificate | undefined
@@ -109,7 +110,6 @@ function buildActive(cert: PersistedCert): ActiveCertificate {
 	const x509 = new X509Certificate(cert.certPem)
 	const der = Buffer.from(x509.raw)
 	const sha256 = crypto.createHash('sha256').update(der).digest('hex')
-	const tls = require('tls') as typeof import('tls')
 	return {
 		certPem: cert.certPem,
 		keyPem: cert.keyPem,

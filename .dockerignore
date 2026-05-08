@@ -5,3 +5,10 @@ example-local
 .github
 docker-compose.yaml
 attestor.dockerfile
+.git
+.dockerignore
+deploy/build.env
+deploy/*.tar
+coverage
+.env
+.env.*
