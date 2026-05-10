@@ -10,8 +10,14 @@ import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 
 import { VerificationBundle } from '#src/proto/tee-bundle.ts'
-import { validateGcpAttestationAndExtractKey } from '#src/server/utils/gcp-attestation.ts'
 import { verifyTeeBundle } from '#src/server/utils/tee-verification.ts'
+import {
+	ATTESTOR_JWT,
+	ATTESTOR_JWT_ETH_ADDRESS,
+	ATTESTOR_JWT_IMAGE_DIGEST,
+	ATTESTOR_JWT_VALID_AT_MS
+} from '#src/tests/fixtures/attestor-jwt.ts'
+import { validateGcpAttestationAndExtractKey } from '#src/server/utils/gcp-attestation.ts'
 import { logger } from '#src/utils/logger.ts'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -203,5 +209,26 @@ describe('GCP Attestation Tests', () => {
 
 		assert(teeData.kOutputPayload, 'Should have K output payload')
 		assert(teeData.tOutputPayload, 'Should have T output payload')
+	})
+
+	it('should validate a real attestor JWT and extract the signer address', async(t) => {
+		// JWT iat/exp are baked in; mock Date.now into the validity window
+		// so the test stays valid forever.
+		t.mock.timers.enable({ apis: ['Date'], now: ATTESTOR_JWT_VALID_AT_MS })
+
+		const result = await validateGcpAttestationAndExtractKey(
+			new TextEncoder().encode(ATTESTOR_JWT)
+		)
+
+		assert.strictEqual(result.isValid, true,
+			`expected valid, got errors: ${result.errors.join(', ')}`)
+		assert.strictEqual(result.userDataType, 'attestor')
+		assert.strictEqual(result.pcr0, ATTESTOR_JWT_IMAGE_DIGEST)
+		assert.ok(result.ethAddress, 'eth address should be extracted')
+		const recoveredAddress = '0x' + Buffer.from(result.ethAddress!).toString('hex')
+		assert.strictEqual(
+			recoveredAddress.toLowerCase(),
+			ATTESTOR_JWT_ETH_ADDRESS.toLowerCase()
+		)
 	})
 })
