@@ -1,6 +1,6 @@
 {
   "name": "@reclaimprotocol/attestor-core",
-  "version": "5.0.2",
+  "version": "5.0.3",
   "description": "",
   "type": "module",
   "imports": {
@@ -97,6 +97,7 @@
     "esprima-next": "^5.8.4",
     "ethers": "^6.16.0",
     "https-proxy-agent": "^7.0.6",
+    "ip-address": "^10.2.0",
     "ip-cidr": "^3.1.0",
     "jsonpath-plus": "^10.4.0",
     "koffi": "^2.15.2",

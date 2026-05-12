@@ -4,7 +4,7 @@ import { Socket } from 'net'
 
 import { CONNECTION_TIMEOUT_MS } from '#src/config/index.ts'
 import type { CreateTunnelRequest } from '#src/proto/api.ts'
-import { resolveHostnames } from '#src/server/utils/dns.ts'
+import { getPublicAddresses } from '#src/server/utils/generics.ts'
 import { isValidCountryCode } from '#src/server/utils/iso.ts'
 import { isValidProxySessionId } from '#src/server/utils/proxy-session.ts'
 import type { Logger } from '#src/types/index.ts'
@@ -13,6 +13,10 @@ import { getEnvVariable } from '#src/utils/env.ts'
 import { AttestorError } from '#src/utils/index.ts'
 
 const HTTPS_PROXY_URL = getEnvVariable('HTTPS_PROXY_URL')
+// allow these hosts to be directed w/o any IP resolution checks,
+// useful for testing. Use with caution in production.
+const ALLOWED_DIRECT_HOSTS = getEnvVariable('ALLOWED_DIRECT_HOSTS')
+	?.split(',')
 
 type ExtraOpts = Omit<CreateTunnelRequest, 'id' | 'initialMessage'> & {
 	logger: Logger
@@ -152,41 +156,69 @@ async function connectTcp({ host, port, geoLocation, proxySessionId, logger }: E
 }
 
 async function getSocket(opts: ExtraOpts) {
-	const { logger } = opts
-	try {
-		return await _getSocket(opts)
-	} catch(err) {
-		// see if the proxy is blocking the connection
-		// due to their own arbitrary rules,
-		// if so -- we resolve hostname first &
-		// connect directly via address to
-		// avoid proxy knowing which host we're connecting to
-		if(
-			!(err instanceof AttestorError)
-			|| err.data?.code !== 403
-		) {
+	const { logger, geoLocation } = opts
+	if(geoLocation) {
+		try {
+			return await _getSocket(opts)
+		} catch(err) {
+			// see if the proxy is blocking the connection
+			// due to their own arbitrary rules,
+			// if so -- we resolve hostname first &
+			// connect directly via address to
+			// avoid proxy knowing which host we're connecting to
+			if(
+				!(err instanceof AttestorError)
+				|| err.data?.code !== 403
+			) {
+				throw err
+			}
+
+			const addrs = await getPublicAddresses(opts.host)
+			logger.info(
+				{ addrs, host: opts.host },
+				'failed to connect due to restricted IP, trying via raw addr'
+			)
+
+			for(const addr of addrs) {
+				try {
+					return await _getSocket({ ...opts, host: addr })
+				} catch(err) {
+					logger.error(
+						{ addr, err },
+						'failed to connect to host'
+					)
+				}
+			}
+
 			throw err
 		}
+	}
 
-		const addrs = await resolveHostnames(opts.host)
-		logger.info(
-			{ addrs, host: opts.host },
-			'failed to connect due to restricted IP, trying via raw addr'
-		)
-
-		for(const addr of addrs) {
-			try {
-				return await _getSocket({ ...opts, host: addr })
-			} catch(err) {
-				logger.error(
-					{ addr, err },
-					'failed to connect to host'
-				)
+	const addrs = ALLOWED_DIRECT_HOSTS?.includes(opts.host)
+		? [opts.host]
+		: await getPublicAddresses(opts.host)
+	logger.debug(
+		{ addrs, host: opts.host },
+		'got public addresses for connection attempt'
+	)
+	for(const [i, addr] of addrs.entries()) {
+		try {
+			return await _getSocket({ ...opts, host: addr })
+		} catch (err) {
+			logger.error(
+				{ addr, err },
+				`failed to connect to address ${i + 1} of ${addrs.length}`
+			)
+			if(i === addrs.length - 1) {
+				throw err
 			}
 		}
-
-		throw err
 	}
+
+	throw new AttestorError(
+		'ERROR_NETWORK_ERROR',
+		`Failed to connect to host ${opts.host} at any resolved address`
+	)
 }
 
 async function _getSocket(
