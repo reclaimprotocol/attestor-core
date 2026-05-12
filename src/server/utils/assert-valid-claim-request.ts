@@ -30,7 +30,9 @@ import {
 	decryptDirect,
 	extractApplicationDataFromTranscript,
 	hashProviderParams,
+	replaceByteSequence,
 	SIGNATURES,
+	strToUint8Array,
 	verifyZkPacket
 } from '#src/utils/index.ts'
 import { getEngineString } from '#src/utils/zk.ts'
@@ -104,7 +106,8 @@ export async function assertValidClaimRequest(
 	// get all application data messages
 	const applData = extractApplicationDataFromTranscript(receipt)
 	const newData = await assertValidProviderTranscript(
-		applData, data, logger, { version: metadata.clientVersion },
+		applData, data, logger,
+		{ version: metadata.clientVersion, toprfNullifiers: receipt.toprfNullifiers },
 		receipt.oprfRawReplacements
 	)
 	if(newData !== data) {
@@ -137,11 +140,21 @@ export async function assertValidProviderTranscript<T extends ProviderClaimInfo>
 	let params = niceParseJsonObject(info.parameters, 'params')
 	const ctx = niceParseJsonObject(info.context, 'context')
 
-	// Apply oprf-raw replacements to parameters (server-side OPRF)
+	// Apply oprf-raw replacements to parameters and client request packets
 	if(oprfRawReplacements?.length) {
 		let strParams = canonicalStringify(params) ?? '{}'
 		for(const { originalText, nullifierText } of oprfRawReplacements) {
 			strParams = strParams.replaceAll(originalText, nullifierText)
+
+			// also replace in client request packets so the
+			// request URL matches the updated params
+			const ogBytes = strToUint8Array(originalText)
+			const hashBytes = strToUint8Array(nullifierText)
+			for(const pkt of applData) {
+				if(pkt.sender === 'client') {
+					replaceByteSequence(pkt.message, ogBytes, hashBytes)
+				}
+			}
 		}
 
 		params = JSON.parse(strParams)
@@ -244,6 +257,7 @@ export async function decryptTranscript(
 	const overshotMap: { [pkt: number]: { data: Uint8Array } } = {}
 	const decryptedTranscript: IDecryptedTranscriptMessage[] = []
 	const oprfRawReplacements: { originalText: string, nullifierText: string }[] = []
+	const toprfNullifiers: string[] = []
 	// Track pending oprf-raw markers that span multiple packets
 	// keyed by packet index that will receive the overshot data
 	const pendingOprfRaw: {
@@ -289,7 +303,8 @@ export async function decryptTranscript(
 		transcript: decryptedTranscript,
 		hostname: hostname,
 		tlsVersion: tlsVersion,
-		oprfRawReplacements: oprfRawReplacements.length ? oprfRawReplacements : undefined
+		oprfRawReplacements: oprfRawReplacements.length ? oprfRawReplacements : undefined,
+		toprfNullifiers: toprfNullifiers.length ? toprfNullifiers : undefined
 	}
 
 	async function decryptMessage(
@@ -352,6 +367,17 @@ export async function decryptTranscript(
 				}
 			)
 			plaintext = result.redactedPlaintext
+
+			// Collect TOPRF nullifier strings from verified proofs
+			if(isServer && zkReveal.toprfs?.length) {
+				for(const toprf of zkReveal.toprfs) {
+					if(toprf.payload?.nullifier?.length && toprf.payload.dataLocation) {
+						toprfNullifiers.push(
+							binaryHashToStr(toprf.payload.nullifier, toprf.payload.dataLocation.length)
+						)
+					}
+				}
+			}
 
 			// Handle pending oprf-raw data from previous packet (cross-block)
 			const pendingForThis = pendingOprfRaw[i]

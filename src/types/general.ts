@@ -72,6 +72,8 @@ export type IDecryptedTranscript = {
 	 * for server-side parameter replacement
 	 */
 	oprfRawReplacements?: OPRFRawReplacement[]
+	/** TOPRF nullifier strings from ZK-verified OPRF proofs */
+	toprfNullifiers?: string[]
 }
 
 export type OPRFRawReplacement = {

@@ -30,6 +30,8 @@ import {
 	makeHttpResponseParser,
 	preparePacketsForReveal,
 	redactSlices,
+	replaceByteSequence,
+	strToUint8Array,
 	uint8ArrayToStr,
 	unixTimestampSeconds
 } from '#src/utils/index.ts'
@@ -534,6 +536,18 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 							toprf.dataLocation!.length
 						)
 						strParams = strParams.replaceAll(ogText, hashedText)
+
+						// also replace in client request packets so the
+						// request URL matches the updated params
+						const ogBytes = strToUint8Array(ogText)
+						const hashBytes = strToUint8Array(hashedText)
+						for(const pkt of revealedPackets) {
+							if(pkt.sender === 'client') {
+								replaceByteSequence(
+									pkt.message, ogBytes, hashBytes
+								)
+							}
+						}
 					}
 
 					params = JSON.parse(strParams)
