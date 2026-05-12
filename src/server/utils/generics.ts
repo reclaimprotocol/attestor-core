@@ -1,7 +1,9 @@
 import type { IncomingMessage } from 'http'
+import { Address4, Address6 } from 'ip-address'
 
 import type { ServiceSignatureType } from '#src/proto/api.ts'
 import { RPCMessages } from '#src/proto/api.ts'
+import { resolveHostnames } from '#src/server/utils/dns.ts'
 import { getEnvVariable } from '#src/utils/env.ts'
 import { AttestorError, strToUint8Array } from '#src/utils/index.ts'
 import { SIGNATURES } from '#src/utils/signatures/index.ts'
@@ -65,4 +67,58 @@ export function getInitialMessagesFromQuery(req: IncomingMessage) {
 	const msgsBytes = Buffer.from(messagesB64, 'base64')
 	const msgs = RPCMessages.decode(msgsBytes)
 	return msgs.messages
+}
+
+export async function getPublicAddresses(host: string) {
+	const resolvedAddresses = await resolveHostnames(host)
+	const publicAddresses = resolvedAddresses
+		.filter(isPublicIpAddress)
+	if(!publicAddresses.length) {
+		throw AttestorError.badRequest(
+			`Host "${host}" does not resolve to a public IP address`
+		)
+	}
+
+	return publicAddresses
+}
+
+function isPublicIpAddress(ip: string) {
+	const ipv4Address = new Address4(ip)
+	if(Address4.isValid(ip)) {
+		return isPublicIpv4(ipv4Address)
+	}
+
+	const ipv6Address = new Address6(ip)
+	if(Address6.isValid(ip)) {
+		return isPublicIpv6(ipv6Address)
+	}
+
+	return false
+}
+
+function isPublicIpv4(address: Address4) {
+	return !(
+		address.isPrivate()
+		|| address.isLoopback()
+		|| address.isLinkLocal()
+		|| address.isUnspecified()
+		|| address.isBroadcast()
+		|| address.isMulticast()
+		|| address.isCGNAT()
+	)
+}
+
+function isPublicIpv6(address: Address6) {
+	if(address.isMapped4()) {
+		return isPublicIpv4(address.to4())
+	}
+
+	return !(
+		address.isULA()
+		|| address.isLoopback()
+		|| address.isLinkLocal()
+		|| address.isUnspecified()
+		|| address.isMulticast()
+		|| address.isDocumentation()
+	)
 }
