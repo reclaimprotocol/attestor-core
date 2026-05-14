@@ -24,6 +24,7 @@ enum AttestorVersion {
 	ATTESTOR_VERSION_2_0_0 = 3;
 	ATTESTOR_VERSION_2_0_1 = 4;
 	ATTESTOR_VERSION_3_0_0 = 5;
+	ATTESTOR_VERSION_3_1_0 = 6;
 }
 
 enum ErrorCode {

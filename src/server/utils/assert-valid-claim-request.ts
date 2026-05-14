@@ -104,7 +104,11 @@ export async function assertValidClaimRequest(
 	// get all application data messages
 	const applData = extractApplicationDataFromTranscript(receipt)
 	const newData = await assertValidProviderTranscript(
-		applData, data, logger, { version: metadata.clientVersion },
+		applData,
+		metadata,
+		data,
+		logger,
+		{ version: metadata.clientVersion },
 		receipt.oprfRawReplacements
 	)
 	if(newData !== data) {
@@ -120,6 +124,7 @@ export async function assertValidClaimRequest(
  */
 export async function assertValidProviderTranscript<T extends ProviderClaimInfo>(
 	applData: Transcript<Uint8Array>,
+	metadata: InitRequest,
 	info: T,
 	logger: Logger,
 	providerCtx: ProviderCtx,
@@ -156,6 +161,7 @@ export async function assertValidProviderTranscript<T extends ProviderClaimInfo>
 	assertValidateProviderParams(providerName, params)
 
 	const rslt = await provider.assertValidProviderReceipt({
+		clientVersion: metadata.clientVersion,
 		receipt: applData,
 		params,
 		logger,
@@ -537,5 +543,3 @@ function separateOprfRawMarkers(
 
 	return { markersThisPacket, pendingMarker }
 }
-
-

@@ -45,6 +45,7 @@ type GetResponseRedactionsOpts<P> = {
 }
 
 type AssertValidProviderReceipt<P> = {
+	clientVersion: AttestorVersion
   receipt: Transcript<Uint8Array>
   params: P
   logger: Logger

@@ -258,7 +258,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		return redactions
 	},
-	assertValidProviderReceipt({ receipt, params: paramsAny, logger, ctx }) {
+	assertValidProviderReceipt({ clientVersion, receipt, params: paramsAny, logger, ctx }) {
 		logTranscript()
 		let extractedParams: { [_: string]: string } = {}
 		const secretParams = ('secretParams' in paramsAny)
@@ -268,48 +268,22 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const params = newParams.newParams
 		extractedParams = { ...extractedParams, ...newParams.extractedValues }
 
-		// We need to validate that the request starts correctly, the first two
-		// headers must be the host & connection: close header. This ensures that
-		// even if another request was made before the one we're reading now, the
-		// validation happens against the last one. Prevents a spoof where the claim
-		// response was received for another request that we did not expect.
-		const reqBuffer = extractRequestBufferFromTranscript(receipt)
-		const reqStr = uint8ArrayToBinaryStr(reqBuffer)
-		const expRegex = makeRegex(
-			`^${params.method} (?<path>[^\\s]+) HTTP\\/1\\.1\\r\\n`
-			+ `Host: ${getHostHeaderString(new URL(params.url))}\\r\\n`
-			+ 'Connection: close\\r\\n'
-		)
-		const rslt = expRegex.exec(reqStr)
-		if(!rslt?.groups?.path) {
-			throw new Error(
-				'Expected request to be in order: '
-				+ 'request line, Host, Connection'
-			)
-		}
-
-		let redInPathCount = 0
-		for(const char of rslt.groups.path) {
-			if(char === REDACTION_CHAR) {
-				redInPathCount++
-			}
-		}
-
-		if(redInPathCount > MAX_REDACTIONS_IN_PATH) {
-			throw new Error(`Too many redactions in URL path: ${redInPathCount}`)
-		}
-
-		const req = getHttpRequestDataFromTranscript(reqBuffer)
-		if(req.method !== params.method.toLowerCase()) {
-			throw new Error(`Invalid method: ${req.method}`)
-		}
-
 		const url = new URL(params.url)
 		const { protocol, pathname } = url
 
 		if(protocol !== 'https:') {
 			logger.error('params URL: %s', params.url)
 			throw new Error(`Expected protocol: https, found: ${protocol}`)
+		}
+
+		const reqBuffer = extractRequestBufferFromTranscript(receipt)
+		if(clientVersion >= AttestorVersion.ATTESTOR_VERSION_3_1_0) {
+			assertNoSmuggle(reqBuffer, params)
+		}
+
+		const req = getHttpRequestDataFromTranscript(reqBuffer)
+		if(req.method !== params.method.toLowerCase()) {
+			throw new Error(`Invalid method: ${req.method}`)
 		}
 
 		const searchParams = params.url.includes('?') ? params.url.split('?')[1] : ''
@@ -480,6 +454,37 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			}, 'http transcript captured')
 		}
 	},
+}
+
+// We need to validate that the request starts correctly, the first two
+// headers must be the host & connection: close header. This ensures that
+// even if another request was made before the one we're reading now, the
+// validation happens against the last one. Prevents a spoof where the claim
+// response was received for another request that we did not expect.
+function assertNoSmuggle(reqBuffer: Uint8Array, params: HTTPProviderParams) {
+	const reqStr = uint8ArrayToBinaryStr(reqBuffer)
+	const expRegex = makeRegex(
+		`^${params.method} (?<path>[^\\s]+) HTTP\\/1\\.1\\r\\n`
+		+ `Host: ${getHostHeaderString(new URL(params.url))}\\r\\n`
+		+ 'Connection: close\\r\\n'
+	)
+	const rslt = expRegex.exec(reqStr)
+	if(!rslt?.groups?.path) {
+		throw new Error(
+			'Method/Host mismatch, or first 2 headers were not Host and Connection'
+		)
+	}
+
+	let redInPathCount = 0
+	for(const char of rslt.groups.path) {
+		if(char === REDACTION_CHAR) {
+			redInPathCount++
+		}
+	}
+
+	if(redInPathCount > MAX_REDACTIONS_IN_PATH) {
+		throw new Error(`Too many redactions in URL path: ${redInPathCount}`)
+	}
 }
 
 // revealing CRLF is a breaking change -- and should only be done

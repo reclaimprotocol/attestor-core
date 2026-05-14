@@ -543,6 +543,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		}
 
 		await provider.assertValidProviderReceipt({
+			clientVersion: client.metadata.clientVersion,
 			receipt: revealedPackets,
 			params: {
 				...params,
