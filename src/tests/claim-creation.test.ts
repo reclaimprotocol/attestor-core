@@ -1,6 +1,6 @@
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
-import { beforeEach, describe, it } from 'node:test'
+import { beforeEach, describe, it, mock } from 'node:test'
 
 import { type CipherSuite, type TLSProtocolVersion } from '@reclaimprotocol/tls'
 import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
@@ -13,6 +13,7 @@ import { verifyNoDirectRevealLeaks } from '#src/tests/utils.ts'
 import {
 	assertValidClaimSignatures,
 	AttestorError,
+	uint8ArrayToStr,
 } from '#src/utils/index.ts'
 
 const TLS_VERSIONS: TLSProtocolVersion[] = [
@@ -29,6 +30,15 @@ const OPRF_CIPHER_SUITES: CipherSuite[] = [
 TLS_ADDITIONAL_ROOT_CA_LIST.push(
 	readFileSync('./cert/public-cert.pem', 'utf8')
 )
+
+const GET_RESPONSE_REDCTIONS = mock.fn(providers.http.getResponseRedactions)
+providers.http.getResponseRedactions = GET_RESPONSE_REDCTIONS
+
+const CREATE_REQUEST = mock.fn(providers.http.createRequest)
+providers.http.createRequest = CREATE_REQUEST
+
+const ASSERT_VALID_RECEIPT = mock.fn(providers.http.assertValidProviderReceipt)
+providers.http.assertValidProviderReceipt = ASSERT_VALID_RECEIPT
 
 describeWithServer('Claim Creation', opts => {
 
@@ -310,6 +320,112 @@ describeWithServer('Claim Creation', opts => {
 			assert.notEqual(client2, client)
 		})
 	})
+
+	it('should reject claims where redactions have a smuggled HTTP request', async() => {
+		const honestUser = 'honest'
+		const attackerUser = 'attacker'
+
+		CREATE_REQUEST.mock.mockImplementationOnce((secretParams,	params) => {
+			const url = new URL(params.url)
+			const { pathname } = url
+			const searchParams = params.url.includes('?')
+				? params.url.split('?')[1]
+				: ''
+			const path = pathname + (searchParams ? '?' + searchParams : '')
+
+			const authHonest = `Authorization: ${secretParams.authorisationHeader}`
+			const req1Lines = [
+				`GET ${path} HTTP/1.1`,
+				`Host: ${url.host}`,
+				'Content-Length: 0',
+				'Accept-Encoding: identity',
+				authHonest,
+				'Connection: keep-alive',
+				'',
+				'',
+			]
+			const req1 = req1Lines.join('\r\n')
+
+			const authAttacker = `Authorization: Bearer ${attackerUser}`
+			const req2Lines = [
+				`GET ${path} HTTP/1.1`,
+				`Host: ${url.host}`,
+				'Content-Length: 0',
+				'Accept-Encoding: identity',
+				authAttacker,
+				'Connection: close',
+				'',
+				'',
+			]
+			const req2 = req2Lines.join('\r\n')
+
+			const fullPayload = req1 + req2
+
+			const bearerTokenStart = fullPayload.indexOf(authHonest)
+			const attackerTokenStart = fullPayload.indexOf(authAttacker, bearerTokenStart)
+
+			return {
+				data: fullPayload,
+				redactions: [{ fromIndex: bearerTokenStart, toIndex: attackerTokenStart }],
+			}
+		})
+
+		GET_RESPONSE_REDCTIONS.mock.mockImplementationOnce((opts) => {
+			const { response } = opts
+			const bodyRedact = getFirstResponseBodyRedaction(response)
+			assert(bodyRedact)
+
+			return [bodyRedact]
+		})
+
+		ASSERT_VALID_RECEIPT.mock
+			.mockImplementationOnce(() => ({ extractedParameters: {} }))
+
+		const rslt = await createClaimOnAttestor({
+			name: 'http',
+			params: {
+				url: claimUrl,
+				method: 'GET',
+				responseRedactions: [],
+				responseMatches: [
+					{
+						type: 'contains',
+						value: `${attackerUser}@mock.com`,
+					},
+				],
+			},
+			secretParams: {
+				authorisationHeader: `Bearer ${honestUser}`,
+			},
+			ownerPrivateKey: opts.privateKeyHex,
+			client,
+			zkEngine,
+		})
+		assert.ok(rslt.error)
+		assert.match(rslt.error.message, /Expected request to be in order/)
+	})
+
+	function getFirstResponseBodyRedaction(response: Uint8Array) {
+		const str = uint8ArrayToStr(response)
+		const hdrEnd = str.indexOf('\r\n\r\n')
+		if(hdrEnd === -1) {return null}
+
+		const clMatch = str.match(/content-length:\s*(\d+)/i)
+		if(!clMatch) {return null}
+
+		const bodyLen = parseInt(clMatch[1])
+		const bodyStart = hdrEnd + 4
+		const secondResponseStart = str.indexOf(
+			'HTTP/',
+			bodyStart + bodyLen,
+		)
+		if(secondResponseStart === -1) {return null}
+
+		return {
+			fromIndex: bodyStart,
+			toIndex: secondResponseStart,
+		}
+	}
 
 	function createClaim() {
 		const user = 'testing-123'

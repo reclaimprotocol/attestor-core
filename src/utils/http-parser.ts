@@ -231,12 +231,7 @@ export function makeHttpResponseParser() {
 	}
 }
 
-/**
- * Read the HTTP request from a TLS receipt transcript.
- * @param receipt the transcript to read from or application messages if they were extracted beforehand
- * @returns the parsed HTTP request
- */
-export function getHttpRequestDataFromTranscript(receipt: Transcript<Uint8Array>) {
+export function extractRequestBufferFromTranscript(receipt: Transcript<Uint8Array>) {
 	const clientMsgs = receipt
 		.filter(s => s.sender === 'client')
 
@@ -246,13 +241,21 @@ export function getHttpRequestDataFromTranscript(receipt: Transcript<Uint8Array>
 		throw new Error('First client message request is redacted. Cannot parse')
 	}
 
+	return concatenateUint8Arrays(clientMsgs.map(m => m.message))
+}
+
+/**
+ * Read the HTTP request from a TLS receipt transcript.
+ * @param receipt the transcript to read from or application messages if they were extracted beforehand
+ * @returns the parsed HTTP request
+ */
+export function getHttpRequestDataFromTranscript(requestBuffer: Uint8Array) {
 	const request: HttpRequest = {
 		method: '',
 		url: '',
 		protocol: '',
 		headers: {}
 	}
-	let requestBuffer = concatenateUint8Arrays(clientMsgs.map(m => m.message))
 	// keep reading lines until we get to the end of the headers
 	for(let line = getLine(); typeof line !== 'undefined'; line = getLine()) {
 		if(line === '') {
