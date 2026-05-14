@@ -402,7 +402,7 @@ describeWithServer('Claim Creation', opts => {
 			zkEngine,
 		})
 		assert.ok(rslt.error)
-		assert.match(rslt.error.message, /Expected request to be in order/)
+		assert.match(rslt.error.message, /mismatch/)
 	})
 
 	function getFirstResponseBodyRedaction(response: Uint8Array) {
