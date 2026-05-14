@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import assert from 'assert'
 import { deserialize, serialize } from 'v8'
 
-import { PROVIDER_CTX } from '#src/config/index.ts'
+import { CURRENT_ATTESTOR_VERSION, PROVIDER_CTX } from '#src/config/index.ts'
 import httpProvider from '#src/providers/http/index.ts'
 import {
 	extractHTMLElement, extractHTMLElements,
@@ -37,7 +37,19 @@ describe('HTTP Provider Utils tests', () => {
 		'{"message":"KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKg==","sender":"server"},' +
 		'{"message":"KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKio=","sender":"server"},' +
 		'{"message":"KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKio=","sender":"server"},' +
-		'{"message":"R0VUIC8gSFRUUC8xLjENCkhvc3Q6IHhhcmdzLm9yZw0KQ29udGVudC1MZW5ndGg6IDQNCkNvbm5lY3Rpb246IGNsb3NlDQpBY2NlcHQtRW5jb2Rpbmc6IGlkZW50aXR5DQp1c2VyLWFnZW50OiBNb3ppbGxhLzUuMA0K","sender":"client"},' +
+		// to replace
+		'{"message":"'
+			+ Buffer.from(
+				[
+					'GET / HTTP/1.1',
+					'Host: xargs.org',
+					'Connection: close',
+					'Content-Length: 4',
+					'Accept-Encoding: identity',
+					'user-agent: Mozilla/5.0'
+				].join('\r\n')
+			).toString('base64')
+		+ '","sender":"client"},' +
 		'{"message":"KioqKio=","sender":"client"},' +
 		'{"message":"KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKg==","sender":"client"},' +
 		'{"message":"KioqKio=","sender":"client"},' +
@@ -774,8 +786,9 @@ Content-Type: text/html; charset=utf-8\r
 		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
+				clientVersion: CURRENT_ATTESTOR_VERSION,
 				params: {
-					url: 'abc',
+					url: 'https://abcd.com/abcd',
 					responseMatches: [],
 					responseRedactions: [],
 					method: 'POST'
@@ -783,13 +796,14 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx
 			})
-		}, /Invalid method: get/)
+		}, /mismatch/)
 	})
 
 	it('should throw on bad protocol', async() => {
 		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
+				clientVersion: CURRENT_ATTESTOR_VERSION,
 				params: {
 					url: 'http://xargs.com',
 					responseMatches: [],
@@ -803,10 +817,10 @@ Content-Type: text/html; charset=utf-8\r
 	})
 
 	it('should throw on duplicate groups', async() => {
-
 		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
+				clientVersion: CURRENT_ATTESTOR_VERSION,
 				params: {
 					url: 'https://xargs.{{abc}}',
 					responseMatches: [{
@@ -826,12 +840,12 @@ Content-Type: text/html; charset=utf-8\r
 	})
 
 	it('should throw on bad path', async() => {
-
 		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
+				clientVersion: CURRENT_ATTESTOR_VERSION,
 				params: {
-					url: 'https://xargs.com/abc',
+					url: 'https://xargs.org/abc',
 					responseMatches: [],
 					responseRedactions: [],
 					method: 'GET'
@@ -846,6 +860,7 @@ Content-Type: text/html; charset=utf-8\r
 		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
+				clientVersion: CURRENT_ATTESTOR_VERSION,
 				params: {
 					url: 'https://abc.com/',
 					responseMatches: [],
@@ -855,7 +870,7 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx,
 			})
-		}, /Expected host: abc.com, found: xargs.org/)
+		}, /mismatch/)
 	})
 
 	it('should throw on bad OK string', async() => {
@@ -867,6 +882,7 @@ Content-Type: text/html; charset=utf-8\r
 		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: temp,
+				clientVersion: CURRENT_ATTESTOR_VERSION,
 				params: {
 					url: 'https://xargs.org/',
 					responseMatches: [],
@@ -889,10 +905,15 @@ Content-Type: text/html; charset=utf-8\r
 			return uint8ArrayToStr(x.message)
 				.includes('Connection: close')
 		})!
-		clientMsgWithClose.message[68] = 102
+		const msgStr = uint8ArrayToStr(clientMsgWithClose.message)
+		clientMsgWithClose.message = Buffer.from(
+			msgStr.replace('close', 'keep-alive')
+		)
+
 		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: temp,
+				clientVersion: CURRENT_ATTESTOR_VERSION,
 				params: {
 					url: 'https://xargs.org/',
 					responseMatches: [],
@@ -902,13 +923,14 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx
 			})
-		}, /Connection header must be \"close\"/)
+		}, /mismatch/)
 	})
 
 	it('should throw on bad body', async() => {
 		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
+				clientVersion: CURRENT_ATTESTOR_VERSION,
 				params: {
 					url: 'https://xargs.org/',
 					responseMatches: [],
@@ -926,6 +948,7 @@ Content-Type: text/html; charset=utf-8\r
 		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
+				clientVersion: CURRENT_ATTESTOR_VERSION,
 				params: {
 					url: 'https://xargs.org/',
 					responseMatches: [{
@@ -945,6 +968,7 @@ Content-Type: text/html; charset=utf-8\r
 		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
+				clientVersion: CURRENT_ATTESTOR_VERSION,
 				params: {
 					url: 'https://xargs.org/',
 					responseMatches: [{
@@ -1061,6 +1085,7 @@ Content-Type: text/html; charset=utf-8\r
 			}
 			await assertValidProviderReceipt({
 				receipt: transcript,
+				clientVersion: CURRENT_ATTESTOR_VERSION,
 				// @ts-ignore
 				params,
 				logger,
@@ -1069,10 +1094,11 @@ Content-Type: text/html; charset=utf-8\r
 		}, /Invalid response match type abc/)
 	})
 
-	it('should throw on no non present params', async() => {
+	it('should throw on absent params', async() => {
 		await assert.rejects(async() => {
 			await assertValidProviderReceipt({
 				receipt: transcript,
+				clientVersion: CURRENT_ATTESTOR_VERSION,
 				params: {
 					url: 'https://xargs.{{org}}/',
 					responseMatches: [{
@@ -1085,10 +1111,10 @@ Content-Type: text/html; charset=utf-8\r
 				logger,
 				ctx
 			})
-		}, /Expected host: xargs.{{org}}, found: xargs.org/)
+		}, /mismatch/)
 	})
 
-	it('should throw on non present secret params', () => {
+	it('should throw on absent secret params', () => {
 		assert.throws(() => {
 			createRequest({
 				cookieStr: 'abc',

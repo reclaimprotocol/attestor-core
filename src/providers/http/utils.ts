@@ -22,7 +22,7 @@ import xpath from 'xpath'
 
 import type { ArraySlice, CompleteTLSPacket, ProviderParams, RedactedOrHashedArraySlice, Transcript } from '#src/types/index.ts'
 import type { HttpRequest, HttpResponse } from '#src/utils/index.ts'
-import { getHttpRequestDataFromTranscript, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from '#src/utils/index.ts'
+import { extractRequestBufferFromTranscript, getHttpRequestDataFromTranscript, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from '#src/utils/index.ts'
 
 export type JSONIndex = {
 	start: number
@@ -431,7 +431,8 @@ export function generateRequstAndResponseFromTranscript(transcript: Transcript<C
 		})
 	}
 
-	const req = getHttpRequestDataFromTranscript(packets)
+	const reqTranscript = extractRequestBufferFromTranscript(packets)
+	const req = getHttpRequestDataFromTranscript(reqTranscript)
 
 	const responsePackets = concatenateUint8Arrays(packets.filter(p => p.sender === 'server').map(p => p.message).filter(b => !b.every(b => b === REDACTION_CHAR_CODE)))
 	const res = parseHttpResponse(responsePackets)

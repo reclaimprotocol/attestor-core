@@ -3,7 +3,7 @@
  * Handles ClaimTeeBundleRequest by verifying TEE attestations and reconstructing TLS transcript
  */
 
-import type { ProviderClaimInfo } from '#src/proto/api.ts'
+import type { InitRequest, ProviderClaimInfo } from '#src/proto/api.ts'
 import { ClaimTeeBundleResponse } from '#src/proto/api.ts'
 import type { CertificateInfo } from '#src/proto/tee-bundle.ts'
 import { VerificationBundle } from '#src/proto/tee-bundle.ts'
@@ -80,6 +80,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 
 	const validatedClaim = await validateTeeProviderReceipt(
 		plaintextTranscript,
+		client.metadata,
 		data,
 		logger,
 		{ version: client.metadata.clientVersion },
@@ -189,6 +190,7 @@ function createPlaintextTranscriptFromTeeData(
  */
 async function validateTeeProviderReceipt<T extends ProviderClaimInfo>(
 	plaintextTranscript: Transcript<Uint8Array>,
+	metadata: InitRequest,
 	claimInfo: T,
 	logger: Logger,
 	providerCtx: ProviderCtx,
@@ -208,6 +210,7 @@ async function validateTeeProviderReceipt<T extends ProviderClaimInfo>(
 	// Use the existing provider validation logic directly
 	const validatedClaim = await assertValidProviderTranscript(
 		plaintextTranscript,
+		metadata,
 		claimInfo,
 		logger,
 		providerCtx
@@ -377,4 +380,3 @@ function validateAndCombineOprfResults(
 
 	return allOprfResults
 }
-
