@@ -107,7 +107,7 @@
     "pino": "^9.14.0",
     "re2": "^1.23.3",
     "serve-static": "^1.16.3",
-    "snarkjs": "git+https://github.com/reclaimprotocol/snarkjs.git",
+    "snarkjs": "^0.7.6",
     "ws": "^8.20.0",
     "xpath": "^0.0.34"
   },
