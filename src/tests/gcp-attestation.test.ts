@@ -10,6 +10,7 @@ import { dirname, join } from 'path'
 import { fileURLToPath } from 'url'
 
 import { VerificationBundle } from '#src/proto/tee-bundle.ts'
+import { validateGcpAttestationAndExtractKey } from '#src/server/utils/gcp-attestation.ts'
 import { verifyTeeBundle } from '#src/server/utils/tee-verification.ts'
 import {
 	ATTESTOR_JWT,
@@ -17,7 +18,6 @@ import {
 	ATTESTOR_JWT_IMAGE_DIGEST,
 	ATTESTOR_JWT_VALID_AT_MS
 } from '#src/tests/fixtures/attestor-jwt.ts'
-import { validateGcpAttestationAndExtractKey } from '#src/server/utils/gcp-attestation.ts'
 import { logger } from '#src/utils/logger.ts'
 
 const __filename = fileURLToPath(import.meta.url)
