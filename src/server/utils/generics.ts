@@ -96,6 +96,22 @@ function isPublicIpAddress(ip: string) {
 	return false
 }
 
+/**
+ * Match a host against a whitelist pattern. Patterns may be an exact
+ * hostname or a leading-wildcard form like `*.example.com`, which matches
+ * the apex and any subdomain depth. Comparison is case-insensitive.
+ */
+export function matchesHostPattern(pattern: string, host: string): boolean {
+	const p = pattern.toLowerCase()
+	const h = host.toLowerCase()
+	if(p.startsWith('*.')) {
+		const suffix = p.slice(2)
+		return h === suffix || h.endsWith('.' + suffix)
+	}
+
+	return p === h
+}
+
 function isPublicIpv4(address: Address4) {
 	return !(
 		address.isPrivate()
