@@ -8,6 +8,7 @@ import { ClaimTeeBundleResponse } from '#src/proto/api.ts'
 import type { CertificateInfo } from '#src/proto/tee-bundle.ts'
 import { VerificationBundle } from '#src/proto/tee-bundle.ts'
 import { substituteParamValues } from '#src/providers/http/index.ts'
+import { makeClaimAttestation } from '#src/server/tee/attestation-generate.ts'
 import { assertValidProviderTranscript } from '#src/server/utils/assert-valid-claim-request.ts'
 import { getAttestorAddress, niceParseJsonObject, signAsAttestor } from '#src/server/utils/generics.ts'
 import { verifyOprfMpcOutputs } from '#src/server/utils/tee-oprf-mpc-verification.ts'
@@ -122,7 +123,8 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 		resultSignature: await signAsAttestor(
 			ClaimTeeBundleResponse.encode(res).finish(),
 			client.metadata.signatureType
-		)
+		),
+		claimAttestation: makeClaimAttestation()
 	}
 
 	logger.info('TEE bundle claim processing completed')

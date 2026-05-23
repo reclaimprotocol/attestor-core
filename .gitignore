@@ -16,3 +16,5 @@ src/test.ts
 .cache
 envs
 out
+# deploy
+deploy/build.env

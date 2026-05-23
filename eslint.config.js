@@ -46,7 +46,7 @@ export default [
 			// Import rules
 			'no-relative-import-paths/no-relative-import-paths': [
 				'error',
-				{ allowSameFolder: false, rootDir: '' },
+				{ allowSameFolder: false, rootDir: 'src', prefix: '#src' },
 			],
 			'simple-import-sort/imports': 'error',
 

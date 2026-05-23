@@ -1,4 +1,5 @@
 import { type LoggerOptions, pino, stdTimeFunctions } from 'pino'
+import type { Writable } from 'stream'
 
 import type { LogLevel } from '#src/types/index.ts'
 import { getEnvVariable } from '#src/utils/env.ts'
@@ -10,6 +11,24 @@ const envLevel = getEnvVariable('LOG_LEVEL') as LogLevel
 export let logger = pino()
 
 makeLogger(false, envLevel)
+
+/**
+ * Replace the active logger with one that writes to the given destination
+ * stream. Used by the TEE bootstrap to pipe logs into GCP Cloud Logging.
+ * Subsequent `import { logger }` users see the new instance via the live
+ * binding.
+ */
+export function setLoggerDestination(
+	dest: Writable,
+	level?: LogLevel
+): void {
+	const pLogger = pino(
+		{ timestamp: stdTimeFunctions.isoTime },
+		dest
+	)
+	pLogger.level = level || envLevel || 'info'
+	logger = pLogger
+}
 
 /**
  * Creates a logger instance with optional redaction of PII.

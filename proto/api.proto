@@ -1,6 +1,8 @@
 syntax = "proto3";
 package reclaim_attestor;
 
+import "tee-bundle.proto";
+
 enum TranscriptMessageSenderType {
 	TRANSCRIPT_MESSAGE_SENDER_TYPE_UNKNOWN = 0;
 	TRANSCRIPT_MESSAGE_SENDER_TYPE_CLIENT = 1;
@@ -339,6 +341,12 @@ message ClaimTeeBundleResponse {
 		 * structure with empty "signatures" field
 		 */
 		bytes resultSignature = 3;
+		/**
+		 * Attestation from the TEE the attestor is running in,
+		 * binding the attestor's signing key to the enclave.
+		 * Empty when the attestor is not running in a TEE.
+		 */
+		teeproto.AttestationReport claimAttestation = 4;
 	}
 }
 
@@ -416,6 +424,12 @@ message ClaimTunnelResponse {
 		 * structure with empty "signatures" field
 		 */
 		bytes resultSignature = 3;
+		/**
+		 * Attestation from the TEE the attestor is running in,
+		 * binding the attestor's signing key to the enclave.
+		 * Empty when the attestor is not running in a TEE.
+		 */
+		teeproto.AttestationReport claimAttestation = 4;
 	}
 }
 

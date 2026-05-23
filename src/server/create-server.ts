@@ -1,5 +1,6 @@
 import type { IncomingMessage } from 'http'
 import { createServer as createHttpServer } from 'http'
+import { createServer as createHttpsServer } from 'https'
 import serveStatic from 'serve-static'
 import type { Duplex } from 'stream'
 import type { WebSocket } from 'ws'
@@ -7,6 +8,7 @@ import { WebSocketServer } from 'ws'
 
 import { API_SERVER_PORT, ATTESTOR_ADDRESS_PATHNAME, BROWSER_RPC_PATHNAME, WS_PATHNAME } from '#src/config/index.ts'
 import { AttestorServerSocket } from '#src/server/socket.ts'
+import { getActiveCertificate } from '#src/server/tee/cert-manager.ts'
 import { getAttestorAddress } from '#src/server/utils/generics.ts'
 import { addKeepAlive } from '#src/server/utils/keep-alive.ts'
 import type { BGPListener } from '#src/types/index.ts'
@@ -17,6 +19,8 @@ import { SelectedServiceSignatureType } from '#src/utils/signatures/index.ts'
 import { promisifySend } from '#src/utils/ws.ts'
 
 const PORT = +(getEnvVariable('PORT') || API_SERVER_PORT)
+const HTTPS_PORT = +(getEnvVariable('HTTPS_PORT') || 443)
+const ENCLAVE_MODE = getEnvVariable('ENCLAVE_MODE') === 'true'
 const DISABLE_BGP_CHECKS = getEnvVariable('DISABLE_BGP_CHECKS') === '1'
 
 const ATTESTOR_ADDRESS_JSON_RES = JSON.stringify({
@@ -29,8 +33,20 @@ const ATTESTOR_ADDRESS_JSON_RES = JSON.stringify({
  * creates a fileserver to serve the browser RPC client,
  * and listens on the given port.
  */
-export async function createServer(port = PORT) {
-	const http = createHttpServer()
+export async function createServer(port = ENCLAVE_MODE ? HTTPS_PORT : PORT) {
+	const http = ENCLAVE_MODE
+		? createHttpsServer({
+			SNICallback: (_servername, cb) => {
+				const cert = getActiveCertificate()
+				if(!cert) {
+					cb(new Error('tls certificate not bootstrapped'))
+					return
+				}
+
+				cb(null, cert.secureContext)
+			}
+		})
+		: createHttpServer()
 	const serveBrowserRpc = serveStatic(
 		'browser',
 		{
