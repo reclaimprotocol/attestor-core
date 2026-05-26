@@ -1,0 +1,36 @@
+name: Deploy Attestor to ECS (Production)
+
+on:
+  workflow_run:
+    workflows: ["Build & Publish Docker Image"]
+    branches:
+      - "main"
+    types:
+      - completed
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Dispatch deploy-production on attestor-deployment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.ATTESTOR_DEPLOYMENT_DISPATCH_TOKEN }}
+          script: |
+            const sha = context.payload.workflow_run.head_sha;
+            const headBranch = context.payload.workflow_run.head_branch;
+            console.log(`Build succeeded on branch=${headBranch}, sha=${sha}`);
+            console.log(`Dispatching deploy-production.yml on attestor-deployment...`);
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner: 'reclaimprotocol',
+              repo: 'attestor-deployment',
+              workflow_id: 'deploy-production.yml',
+              ref: 'main',
+              inputs: {
+                image_tag: `sha-${sha}`,
+              },
+            });
+
+            console.log(`Dispatched deploy-production.yml with image_tag=sha-${sha}`);
