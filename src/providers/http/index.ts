@@ -23,6 +23,7 @@ import type {
 	ProviderSecretParams,
 	RedactedOrHashedArraySlice
 } from '#src/types/index.ts'
+import { getEnvVariable } from '#src/utils/env.ts'
 import {
 	extractRequestBufferFromTranscript,
 	findIndexInUint8Array,
@@ -277,7 +278,12 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		const reqBuffer = extractRequestBufferFromTranscript(receipt)
-		if(clientVersion >= AttestorVersion.ATTESTOR_VERSION_3_1_0) {
+		if (
+			// 3.1.0 introduced a breaking change for request creation
+			// to prevent smuggling attacks
+			clientVersion >= AttestorVersion.ATTESTOR_VERSION_3_1_0
+			|| getEnvVariable('ALLOW_OLDER_INSECURE_PROOFS') !== '1'
+		) {
 			assertNoSmuggle(reqBuffer, params)
 		}
 
