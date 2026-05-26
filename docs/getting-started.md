@@ -8,6 +8,15 @@ Once you've installed the SDK (see main readme), you can start creating claims.
 
 ```ts
 import { createClaimOnAttestor } from '@reclaimprotocol/attestor-core'
+import { setCryptoImplementation } from '@reclaimprotocol/tls'
+import { webcryptoCrypto } from '@reclaimprotocol/tls/webcrypto'
+
+// there's a Pure JS implementation of the crypto functions used in the TLS layer.
+// That allows the attestor client to run in a pure JS environment (like JSC, or
+// react-native. 
+// Assuming you're on a modern browser, or a Javascript runtime, using the default
+// webcrypto implementation is better.
+setCryptoImplementation(webcryptoCrypto)
 
 const rslt = await createClaimOnAttestor({
 	name: 'http',
