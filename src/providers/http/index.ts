@@ -37,7 +37,7 @@ import {
 
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
 // maximum number of redaction characters to allow in URL
-const MAX_REDACTIONS_IN_PATH = 96
+const MAX_REDACTIONS_IN_PATH = 50
 const dateHeaderRegex = '[dD]ate: ((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (?:[0-3][0-9]) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?:[0-9]{4}) (?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2} GMT)'
 const dateDiff = 1000 * 60 * 10 // allow 10 min difference
 
@@ -278,7 +278,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		const reqBuffer = extractRequestBufferFromTranscript(receipt)
-		if (
+		if(
 			// 3.1.0 introduced a breaking change for request creation
 			// to prevent smuggling attacks
 			clientVersion >= AttestorVersion.ATTESTOR_VERSION_3_1_0
