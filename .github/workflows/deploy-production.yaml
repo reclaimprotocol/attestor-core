@@ -29,8 +29,8 @@ jobs:
               workflow_id: 'deploy-production.yml',
               ref: 'main',
               inputs: {
-                image_tag: `sha-${sha}`,
+                image_tag: `${sha}`,
               },
             });
 
-            console.log(`Dispatched deploy-production.yml with image_tag=sha-${sha}`);
+            console.log(`Dispatched deploy-production.yml with image_tag=${sha}`);
