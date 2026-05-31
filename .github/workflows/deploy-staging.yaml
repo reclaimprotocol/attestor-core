@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows: ["Build & Publish Docker Image"]
     branches:
+      - "main"
       - "release/staging*"
     types:
       - completed
@@ -29,8 +30,8 @@ jobs:
               workflow_id: 'deploy-staging.yml',
               ref: 'main',
               inputs: {
-                image_tag: `sha-${sha}`,
+                image_tag: `${sha}`,
               },
             });
 
-            console.log(`Dispatched deploy-staging.yml with image_tag=sha-${sha}`);
+            console.log(`Dispatched deploy-staging.yml with image_tag=${sha}`);
