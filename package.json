@@ -1,6 +1,6 @@
 {
   "name": "@reclaimprotocol/attestor-core",
-  "version": "5.0.5",
+  "version": "5.0.6",
   "description": "",
   "type": "module",
   "imports": {
@@ -21,7 +21,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && npm run run:tsc -- src/scripts/build-lib.ts",
+    "build": "tsc -p tsconfig.build.json && tsc-alias && npm run run:tsc -- src/scripts/build-lib.ts",
     "build:browser": "sh ./src/scripts/build-browser.sh",
     "run:tsc": "node --experimental-strip-types",
     "start": "npm run run:tsc -- src/scripts/start-server.ts",
@@ -131,6 +131,7 @@
     "json-schema-to-typescript": "^15.0.4",
     "ts-jest": "^29.4.6",
     "ts-proto": "^2.11.6",
+    "tsc-alias": "^1.8.17",
     "typechain": "^8.3.2",
     "typescript": "^5.9.3",
     "whatwg-url": "^14.2.0",
