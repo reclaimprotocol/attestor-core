@@ -45,7 +45,10 @@ const OK_HTTP_HEADER = 'HTTP/1.1 200'
 const MIN_INJECTION_STR
 	= 'GET / HTTP/1.1\r\nHost: a\r\nConnection: keep-alive\r\n\r\n'
 
-const MAX_REDACTIONS_IN_PATH = MIN_INJECTION_STR.length - 1
+const MAX_REDACTIONS_IN_PATH = +(
+	process.env.HTTP_MAX_REDACTIONS_IN_PATH
+	?? (MIN_INJECTION_STR.length - 1)
+)
 const dateHeaderRegex = '[dD]ate: ((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (?:[0-3][0-9]) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?:[0-9]{4}) (?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2} GMT)'
 const dateDiff = 1000 * 60 * 10 // allow 10 min difference
 
