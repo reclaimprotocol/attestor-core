@@ -182,6 +182,11 @@ async function extractPublicKeys(
 		const teekAttestationBytes = bundle.teekSigned.attestationReport.report
 		const teetAttestationBytes = bundle.teetSigned.attestationReport.report
 
+		// Env vars from each side's GCP attestation; populated only when that
+		// side attested via GCP. Used for cross-binding checks below.
+		let teekEnvVars: Record<string, string> = {}
+		let teetEnvVars: Record<string, string> = {}
+
 		// Validate TEE_K attestation based on type
 		if(teekAttestationType === 'gcp') {
 			const gcpResult = await validateGcpAttestationAndExtractKey(teekAttestationBytes, logger)
@@ -203,6 +208,7 @@ async function extractPublicKeys(
 				ethAddress: '0x' + Buffer.from(gcpResult.ethAddress).toString('hex'),
 				pcr0: gcpResult.pcr0 || 'gcp-no-digest'
 			}
+			teekEnvVars = gcpResult.envVars ?? {}
 		} else {
 			const nitroResult = await validateNitroAttestationAndExtractKey(teekAttestationBytes)
 
@@ -246,22 +252,53 @@ async function extractPublicKeys(
 				ethAddress: '0x' + Buffer.from(gcpResult.ethAddress).toString('hex'),
 				pcr0: gcpResult.pcr0 || 'gcp-no-digest'
 			}
+			teetEnvVars = gcpResult.envVars ?? {}
 
-			// Cross-validate: TEE_T must have EXPECTED_TEEK_PCR0 env var matching TEE_K's PCR0
-			if(!gcpResult.envVars?.EXPECTED_TEEK_PCR0) {
-				throw new Error('TEE_T GCP attestation missing required EXPECTED_TEEK_PCR0 environment variable')
+			// Cross-bind TEE_K and TEE_T attestations.
+			//
+			// V2 (current TEE deployment): both TEEs carry
+			// EXPECTED_PEER_IMAGE_DIGEST in their attestation env vars,
+			// each pointing at the other's image_digest. Symmetric check —
+			// requires both sides to attest GCP.
+			//
+			// V1 (legacy, still in production until everyone migrates):
+			// only TEE_T carries EXPECTED_TEEK_PCR0. One-way check; TEE_K
+			// may be Nitro or GCP.
+			const teetExpectsKV2 = teetEnvVars.EXPECTED_PEER_IMAGE_DIGEST
+			const teetExpectsKV1 = teetEnvVars.EXPECTED_TEEK_PCR0
+
+			if(teetExpectsKV2 !== undefined) {
+				if(teekAttestationType !== 'gcp') {
+					throw new Error('V2 symmetric cross-binding requires TEE_K to attest GCP (EXPECTED_PEER_IMAGE_DIGEST is set on TEE_T but TEE_K attested ' + teekAttestationType + ')')
+				}
+
+				const teekExpectsT = teekEnvVars.EXPECTED_PEER_IMAGE_DIGEST
+				if(teekExpectsT === undefined) {
+					throw new Error('TEE_K GCP attestation missing required EXPECTED_PEER_IMAGE_DIGEST environment variable (V2 symmetric cross-binding)')
+				}
+
+				logger.info(`V2 cross-binding: T->K expected=${teetExpectsKV2} actual=${teekKeyResult.pcr0}; K->T expected=${teekExpectsT} actual=${teetKeyResult.pcr0}`)
+
+				if(teetExpectsKV2 !== teekKeyResult.pcr0) {
+					throw new Error(`TEE cross-validation failed: TEE_T expects TEE_K image_digest "${teetExpectsKV2}" but got "${teekKeyResult.pcr0}"`)
+				}
+
+				if(teekExpectsT !== teetKeyResult.pcr0) {
+					throw new Error(`TEE cross-validation failed: TEE_K expects TEE_T image_digest "${teekExpectsT}" but got "${teetKeyResult.pcr0}"`)
+				}
+
+				logger.info('TEE V2 symmetric cross-validation successful')
+			} else if(teetExpectsKV1 !== undefined) {
+				logger.info(`V1 cross-binding: T->K expected=${teetExpectsKV1} actual=${teekKeyResult.pcr0}`)
+
+				if(teetExpectsKV1 !== teekKeyResult.pcr0) {
+					throw new Error(`TEE cross-validation failed: TEE_T expects TEE_K PCR0 "${teetExpectsKV1}" but got "${teekKeyResult.pcr0}"`)
+				}
+
+				logger.info('TEE V1 cross-validation successful: TEE_K PCR0 matches TEE_T expectation')
+			} else {
+				throw new Error('TEE_T GCP attestation missing cross-binding env var (expected EXPECTED_PEER_IMAGE_DIGEST for V2 or EXPECTED_TEEK_PCR0 for V1)')
 			}
-
-			const expectedPcr0 = gcpResult.envVars.EXPECTED_TEEK_PCR0
-			const actualPcr0 = teekKeyResult.pcr0
-
-			logger.info(`Cross-validating TEE_K PCR0: expected=${expectedPcr0}, actual=${actualPcr0}`)
-
-			if(expectedPcr0 !== actualPcr0) {
-				throw new Error(`TEE cross-validation failed: TEE_T expects TEE_K PCR0 "${expectedPcr0}" but got "${actualPcr0}"`)
-			}
-
-			logger.info('TEE cross-validation successful: TEE_K PCR0 matches TEE_T expectation')
 		} else {
 			const nitroResult = await validateNitroAttestationAndExtractKey(teetAttestationBytes)
 
