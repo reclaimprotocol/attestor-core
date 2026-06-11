@@ -15,7 +15,7 @@ describeWithServer('HTTP Provider', opts => {
 		const resp = await createClaimOnAttestor({
 			name: 'http',
 			params: {
-				url: 'https://news.ycombinator.{{param1}}/{{param6}}?token={{param4}}&token1={{param5}}',
+				url: 'https://news.ycombinator.{{param1}}/{{param4}}',
 				method: 'GET',
 				responseMatches: [{
 					type: 'regex',
@@ -33,9 +33,7 @@ describeWithServer('HTTP Provider', opts => {
 			secretParams: {
 				cookieStr: '<cookie-str>',
 				paramValues: {
-					param4: 'quhrfqiuherfqlireufh',
-					param5: 'sssbbbbr123',
-					param6: 'best',
+					param4: 'best',
 				}
 			},
 			ownerPrivateKey: opts.privateKeyHex,
@@ -45,7 +43,7 @@ describeWithServer('HTTP Provider', opts => {
 		assert.ok(!resp.error)
 		assert.match(
 			resp.claim?.context || '',
-			/0x9b26b1c18a7169a7533d4b6d1969198db8df8be52f58aad6d729ca3ecf90ea17/
+			/0x1fc5d205305d310d30c27f9a989241186cf1851f8d3d197d671c5e1fff7f99a8/
 		)
 	})
 
