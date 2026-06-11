@@ -32,7 +32,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 
 
 	// Initialize response
-	const res = ClaimTeeBundleResponse.create({ request: teeBundleRequest })
+	const res = ClaimTeeBundleResponse.create({})
 
 	// 1. Verify TEE bundle (attestations + signatures) - this includes timestamp validation
 	logger.info('Starting TEE bundle verification')

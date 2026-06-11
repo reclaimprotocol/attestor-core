@@ -391,7 +391,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		//remove asterisks to account for chunks in the middle of revealed strings
 		if(!secretParams) {
-			res = res.slice(bodyStart).replace(/(\*){3,}/g, '')
+			res = res.slice(bodyStart).replace(/\*{3,}/g, '')
 		}
 
 
