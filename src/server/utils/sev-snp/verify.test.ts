@@ -5,7 +5,7 @@ import test from 'node:test'
 
 import { X509Certificate } from 'node:crypto'
 
-import { assertSevSnpAllowed } from './allowlist.ts'
+import { assertSevSnpBaseAllowed } from './allowlist.ts'
 import { verifyNitroTpmDocument } from './nitrotpm.ts'
 import { verifySevReport } from './sev-report.ts'
 import {
@@ -114,18 +114,8 @@ test('GCP combined: end-to-end verifyCombinedSevSnp reproduces (app, base, nonce
 	assert.equal(r.nonces.length, 2)
 })
 
-test('allowlist: pins both captured app/base pairs and rejects unknown hashes', () => {
-	assert.doesNotThrow(() => assertSevSnpAllowed(
-		'snp-app:26d33fd8f9ac470f4f7de521e36ca8c708324342c45ea66c3160a61f2294986b',
-		'snp-base:edf6d8b9e7b6cf19acfd2788ee5c2d33867275deccbe14fbbc184f0e30628256'
-	))
-	assert.doesNotThrow(() => assertSevSnpAllowed(
-		'snp-app:8ab735abd0c0f07e490530805225dac8fac35620ad4f1ffcabfa2ffe06320baa',
-		'snp-base:f708520d03bc589b951fc1a17b32927c5da707341c23a0c886669f86f559fc7dd6ebdf32d4a2242732f33d9dcc345e53'
-	))
-	assert.throws(() => assertSevSnpAllowed('snp-app:' + 'de'.repeat(32), 'snp-base:' + 'ad'.repeat(32)), /app hash/)
-	assert.throws(() => assertSevSnpAllowed(
-		'snp-app:26d33fd8f9ac470f4f7de521e36ca8c708324342c45ea66c3160a61f2294986b',
-		'snp-base:' + 'ad'.repeat(32)
-	), /base hash/)
+test('allowlist: pins both per-cloud base hashes and rejects unknown ones', () => {
+	assert.doesNotThrow(() => assertSevSnpBaseAllowed('snp-base:edf6d8b9e7b6cf19acfd2788ee5c2d33867275deccbe14fbbc184f0e30628256'))
+	assert.doesNotThrow(() => assertSevSnpBaseAllowed('snp-base:f708520d03bc589b951fc1a17b32927c5da707341c23a0c886669f86f559fc7dd6ebdf32d4a2242732f33d9dcc345e53'))
+	assert.throws(() => assertSevSnpBaseAllowed('snp-base:' + 'ad'.repeat(32)), /base hash/)
 })

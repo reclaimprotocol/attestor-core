@@ -8,7 +8,7 @@ import type { SignedMessage } from '#src/proto/tee-bundle.ts'
 import { BodyType, KOutputPayload, TOutputPayload, VerificationBundle } from '#src/proto/tee-bundle.ts'
 import { validateGcpAttestationAndExtractKey } from '#src/server/utils/gcp-attestation.ts'
 import type { AddressExtractionResult } from '#src/server/utils/nitro-attestation.ts'
-import { assertSevSnpAllowed } from '#src/server/utils/sev-snp/allowlist.ts'
+import { assertSevSnpBaseAllowed } from '#src/server/utils/sev-snp/allowlist.ts'
 import { verifyCombinedSevSnp } from '#src/server/utils/sev-snp/verify.ts'
 import type { Logger } from '#src/types/general.ts'
 import { AttestorError } from '#src/utils/error.ts'
@@ -145,8 +145,9 @@ function validateBundleCompleteness(bundle: VerificationBundle): void {
 }
 
 /**
- * Verifies one side's combined SEV-SNP attestation and pins its app + base
- * against the allowlist (the SEV-SNP substitute for CS peer image_digest binding).
+ * Verifies one side's combined SEV-SNP attestation and pins its base UKI against
+ * the allowlist. The app bundle digest is not pinned here — it is returned as
+ * pcr0 and published into the claim context for the consumer to verify.
  */
 async function verifySevSnpSide(
 	attestationBytes: Uint8Array,
@@ -158,7 +159,7 @@ async function verifySevSnpSide(
 		throw new Error(`SEV-SNP attestation wrong TEE type, expected ${expectedTeeType}, got ${r.teeType}`)
 	}
 
-	assertSevSnpAllowed(r.app, r.base)
+	assertSevSnpBaseAllowed(r.base)
 	logger.info(`${expectedTeeType} SEV-SNP attestation verified: app=${r.app} base=${r.base}`)
 	return { teeType: r.teeType, ethAddress: r.ethAddress, pcr0: r.app }
 }
