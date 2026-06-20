@@ -6,7 +6,7 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
-import { UInt32Value } from "./google/protobuf/wrappers";
+import { UInt32Value } from "./google/protobuf/wrappers.ts";
 
 export const protobufPackage = "sevsnp";
 
@@ -18,15 +18,15 @@ export interface Report {
   /** Should be 2 for revision 1.55, and 3 for revision 1.56 */
   version: number;
   guestSvn: number;
-  policy: number;
+  policy: bigint;
   /** Should be 16 bytes long */
   familyId: Uint8Array;
   /** Should be 16 bytes long */
   imageId: Uint8Array;
   vmpl: number;
   signatureAlgo: number;
-  currentTcb: number;
-  platformInfo: number;
+  currentTcb: bigint;
+  platformInfo: bigint;
   /** AuthorKeyEn, MaskChipKey, SigningKey */
   signerInfo: number;
   /** Should be 64 bytes long */
@@ -43,10 +43,10 @@ export interface Report {
   reportId: Uint8Array;
   /** Should be 32 bytes long */
   reportIdMa: Uint8Array;
-  reportedTcb: number;
+  reportedTcb: bigint;
   /** Should be 64 bytes long */
   chipId: Uint8Array;
-  committedTcb: number;
+  committedTcb: bigint;
   /**
    * Each build, minor, major triple should be packed together in a uint32
    * packed together at 7:0, 15:8, 23:16 respectively
@@ -57,13 +57,13 @@ export interface Report {
   committedBuild: number;
   committedMinor: number;
   committedMajor: number;
-  launchTcb: number;
+  launchTcb: bigint;
   /** Should be 512 bytes long */
   signature: Uint8Array;
   /** The cpuid(1).eax & 0x0fff0fff representation of family/model/stepping */
   cpuid1eaxFms: number;
-  launchMitVector: number;
-  currentMitVector: number;
+  launchMitVector: bigint;
+  currentMitVector: bigint;
 }
 
 export interface CertificateChain {
@@ -179,13 +179,13 @@ function createBaseReport(): Report {
   return {
     version: 0,
     guestSvn: 0,
-    policy: 0,
+    policy: 0n,
     familyId: new Uint8Array(0),
     imageId: new Uint8Array(0),
     vmpl: 0,
     signatureAlgo: 0,
-    currentTcb: 0,
-    platformInfo: 0,
+    currentTcb: 0n,
+    platformInfo: 0n,
     signerInfo: 0,
     reportData: new Uint8Array(0),
     measurement: new Uint8Array(0),
@@ -194,20 +194,20 @@ function createBaseReport(): Report {
     authorKeyDigest: new Uint8Array(0),
     reportId: new Uint8Array(0),
     reportIdMa: new Uint8Array(0),
-    reportedTcb: 0,
+    reportedTcb: 0n,
     chipId: new Uint8Array(0),
-    committedTcb: 0,
+    committedTcb: 0n,
     currentBuild: 0,
     currentMinor: 0,
     currentMajor: 0,
     committedBuild: 0,
     committedMinor: 0,
     committedMajor: 0,
-    launchTcb: 0,
+    launchTcb: 0n,
     signature: new Uint8Array(0),
     cpuid1eaxFms: 0,
-    launchMitVector: 0,
-    currentMitVector: 0,
+    launchMitVector: 0n,
+    currentMitVector: 0n,
   };
 }
 
@@ -219,7 +219,10 @@ export const Report: MessageFns<Report> = {
     if (message.guestSvn !== 0) {
       writer.uint32(16).uint32(message.guestSvn);
     }
-    if (message.policy !== 0) {
+    if (message.policy !== 0n) {
+      if (BigInt.asUintN(64, message.policy) !== message.policy) {
+        throw new globalThis.Error("value provided for field message.policy of type uint64 too large");
+      }
       writer.uint32(24).uint64(message.policy);
     }
     if (message.familyId.length !== 0) {
@@ -234,10 +237,16 @@ export const Report: MessageFns<Report> = {
     if (message.signatureAlgo !== 0) {
       writer.uint32(56).uint32(message.signatureAlgo);
     }
-    if (message.currentTcb !== 0) {
+    if (message.currentTcb !== 0n) {
+      if (BigInt.asUintN(64, message.currentTcb) !== message.currentTcb) {
+        throw new globalThis.Error("value provided for field message.currentTcb of type uint64 too large");
+      }
       writer.uint32(64).uint64(message.currentTcb);
     }
-    if (message.platformInfo !== 0) {
+    if (message.platformInfo !== 0n) {
+      if (BigInt.asUintN(64, message.platformInfo) !== message.platformInfo) {
+        throw new globalThis.Error("value provided for field message.platformInfo of type uint64 too large");
+      }
       writer.uint32(72).uint64(message.platformInfo);
     }
     if (message.signerInfo !== 0) {
@@ -264,13 +273,19 @@ export const Report: MessageFns<Report> = {
     if (message.reportIdMa.length !== 0) {
       writer.uint32(138).bytes(message.reportIdMa);
     }
-    if (message.reportedTcb !== 0) {
+    if (message.reportedTcb !== 0n) {
+      if (BigInt.asUintN(64, message.reportedTcb) !== message.reportedTcb) {
+        throw new globalThis.Error("value provided for field message.reportedTcb of type uint64 too large");
+      }
       writer.uint32(144).uint64(message.reportedTcb);
     }
     if (message.chipId.length !== 0) {
       writer.uint32(154).bytes(message.chipId);
     }
-    if (message.committedTcb !== 0) {
+    if (message.committedTcb !== 0n) {
+      if (BigInt.asUintN(64, message.committedTcb) !== message.committedTcb) {
+        throw new globalThis.Error("value provided for field message.committedTcb of type uint64 too large");
+      }
       writer.uint32(160).uint64(message.committedTcb);
     }
     if (message.currentBuild !== 0) {
@@ -291,7 +306,10 @@ export const Report: MessageFns<Report> = {
     if (message.committedMajor !== 0) {
       writer.uint32(208).uint32(message.committedMajor);
     }
-    if (message.launchTcb !== 0) {
+    if (message.launchTcb !== 0n) {
+      if (BigInt.asUintN(64, message.launchTcb) !== message.launchTcb) {
+        throw new globalThis.Error("value provided for field message.launchTcb of type uint64 too large");
+      }
       writer.uint32(216).uint64(message.launchTcb);
     }
     if (message.signature.length !== 0) {
@@ -300,10 +318,16 @@ export const Report: MessageFns<Report> = {
     if (message.cpuid1eaxFms !== 0) {
       writer.uint32(232).uint32(message.cpuid1eaxFms);
     }
-    if (message.launchMitVector !== 0) {
+    if (message.launchMitVector !== 0n) {
+      if (BigInt.asUintN(64, message.launchMitVector) !== message.launchMitVector) {
+        throw new globalThis.Error("value provided for field message.launchMitVector of type uint64 too large");
+      }
       writer.uint32(240).uint64(message.launchMitVector);
     }
-    if (message.currentMitVector !== 0) {
+    if (message.currentMitVector !== 0n) {
+      if (BigInt.asUintN(64, message.currentMitVector) !== message.currentMitVector) {
+        throw new globalThis.Error("value provided for field message.currentMitVector of type uint64 too large");
+      }
       writer.uint32(248).uint64(message.currentMitVector);
     }
     return writer;
@@ -337,7 +361,7 @@ export const Report: MessageFns<Report> = {
             break;
           }
 
-          message.policy = longToNumber(reader.uint64());
+          message.policy = reader.uint64() as bigint;
           continue;
         }
         case 4: {
@@ -377,7 +401,7 @@ export const Report: MessageFns<Report> = {
             break;
           }
 
-          message.currentTcb = longToNumber(reader.uint64());
+          message.currentTcb = reader.uint64() as bigint;
           continue;
         }
         case 9: {
@@ -385,7 +409,7 @@ export const Report: MessageFns<Report> = {
             break;
           }
 
-          message.platformInfo = longToNumber(reader.uint64());
+          message.platformInfo = reader.uint64() as bigint;
           continue;
         }
         case 10: {
@@ -457,7 +481,7 @@ export const Report: MessageFns<Report> = {
             break;
           }
 
-          message.reportedTcb = longToNumber(reader.uint64());
+          message.reportedTcb = reader.uint64() as bigint;
           continue;
         }
         case 19: {
@@ -473,7 +497,7 @@ export const Report: MessageFns<Report> = {
             break;
           }
 
-          message.committedTcb = longToNumber(reader.uint64());
+          message.committedTcb = reader.uint64() as bigint;
           continue;
         }
         case 21: {
@@ -529,7 +553,7 @@ export const Report: MessageFns<Report> = {
             break;
           }
 
-          message.launchTcb = longToNumber(reader.uint64());
+          message.launchTcb = reader.uint64() as bigint;
           continue;
         }
         case 28: {
@@ -553,7 +577,7 @@ export const Report: MessageFns<Report> = {
             break;
           }
 
-          message.launchMitVector = longToNumber(reader.uint64());
+          message.launchMitVector = reader.uint64() as bigint;
           continue;
         }
         case 31: {
@@ -561,7 +585,7 @@ export const Report: MessageFns<Report> = {
             break;
           }
 
-          message.currentMitVector = longToNumber(reader.uint64());
+          message.currentMitVector = reader.uint64() as bigint;
           continue;
         }
       }
@@ -581,7 +605,7 @@ export const Report: MessageFns<Report> = {
         : isSet(object.guest_svn)
         ? globalThis.Number(object.guest_svn)
         : 0,
-      policy: isSet(object.policy) ? globalThis.Number(object.policy) : 0,
+      policy: isSet(object.policy) ? BigInt(object.policy) : 0n,
       familyId: isSet(object.familyId)
         ? bytesFromBase64(object.familyId)
         : isSet(object.family_id)
@@ -599,15 +623,15 @@ export const Report: MessageFns<Report> = {
         ? globalThis.Number(object.signature_algo)
         : 0,
       currentTcb: isSet(object.currentTcb)
-        ? globalThis.Number(object.currentTcb)
+        ? BigInt(object.currentTcb)
         : isSet(object.current_tcb)
-        ? globalThis.Number(object.current_tcb)
-        : 0,
+        ? BigInt(object.current_tcb)
+        : 0n,
       platformInfo: isSet(object.platformInfo)
-        ? globalThis.Number(object.platformInfo)
+        ? BigInt(object.platformInfo)
         : isSet(object.platform_info)
-        ? globalThis.Number(object.platform_info)
-        : 0,
+        ? BigInt(object.platform_info)
+        : 0n,
       signerInfo: isSet(object.signerInfo)
         ? globalThis.Number(object.signerInfo)
         : isSet(object.signer_info)
@@ -645,20 +669,20 @@ export const Report: MessageFns<Report> = {
         ? bytesFromBase64(object.report_id_ma)
         : new Uint8Array(0),
       reportedTcb: isSet(object.reportedTcb)
-        ? globalThis.Number(object.reportedTcb)
+        ? BigInt(object.reportedTcb)
         : isSet(object.reported_tcb)
-        ? globalThis.Number(object.reported_tcb)
-        : 0,
+        ? BigInt(object.reported_tcb)
+        : 0n,
       chipId: isSet(object.chipId)
         ? bytesFromBase64(object.chipId)
         : isSet(object.chip_id)
         ? bytesFromBase64(object.chip_id)
         : new Uint8Array(0),
       committedTcb: isSet(object.committedTcb)
-        ? globalThis.Number(object.committedTcb)
+        ? BigInt(object.committedTcb)
         : isSet(object.committed_tcb)
-        ? globalThis.Number(object.committed_tcb)
-        : 0,
+        ? BigInt(object.committed_tcb)
+        : 0n,
       currentBuild: isSet(object.currentBuild)
         ? globalThis.Number(object.currentBuild)
         : isSet(object.current_build)
@@ -690,10 +714,10 @@ export const Report: MessageFns<Report> = {
         ? globalThis.Number(object.committed_major)
         : 0,
       launchTcb: isSet(object.launchTcb)
-        ? globalThis.Number(object.launchTcb)
+        ? BigInt(object.launchTcb)
         : isSet(object.launch_tcb)
-        ? globalThis.Number(object.launch_tcb)
-        : 0,
+        ? BigInt(object.launch_tcb)
+        : 0n,
       signature: isSet(object.signature) ? bytesFromBase64(object.signature) : new Uint8Array(0),
       cpuid1eaxFms: isSet(object.cpuid1eaxFms)
         ? globalThis.Number(object.cpuid1eaxFms)
@@ -701,15 +725,15 @@ export const Report: MessageFns<Report> = {
         ? globalThis.Number(object.cpuid1eax_fms)
         : 0,
       launchMitVector: isSet(object.launchMitVector)
-        ? globalThis.Number(object.launchMitVector)
+        ? BigInt(object.launchMitVector)
         : isSet(object.launch_mit_vector)
-        ? globalThis.Number(object.launch_mit_vector)
-        : 0,
+        ? BigInt(object.launch_mit_vector)
+        : 0n,
       currentMitVector: isSet(object.currentMitVector)
-        ? globalThis.Number(object.currentMitVector)
+        ? BigInt(object.currentMitVector)
         : isSet(object.current_mit_vector)
-        ? globalThis.Number(object.current_mit_vector)
-        : 0,
+        ? BigInt(object.current_mit_vector)
+        : 0n,
     };
   },
 
@@ -721,8 +745,8 @@ export const Report: MessageFns<Report> = {
     if (message.guestSvn !== 0) {
       obj.guestSvn = Math.round(message.guestSvn);
     }
-    if (message.policy !== 0) {
-      obj.policy = Math.round(message.policy);
+    if (message.policy !== 0n) {
+      obj.policy = message.policy.toString();
     }
     if (message.familyId.length !== 0) {
       obj.familyId = base64FromBytes(message.familyId);
@@ -736,11 +760,11 @@ export const Report: MessageFns<Report> = {
     if (message.signatureAlgo !== 0) {
       obj.signatureAlgo = Math.round(message.signatureAlgo);
     }
-    if (message.currentTcb !== 0) {
-      obj.currentTcb = Math.round(message.currentTcb);
+    if (message.currentTcb !== 0n) {
+      obj.currentTcb = message.currentTcb.toString();
     }
-    if (message.platformInfo !== 0) {
-      obj.platformInfo = Math.round(message.platformInfo);
+    if (message.platformInfo !== 0n) {
+      obj.platformInfo = message.platformInfo.toString();
     }
     if (message.signerInfo !== 0) {
       obj.signerInfo = Math.round(message.signerInfo);
@@ -766,14 +790,14 @@ export const Report: MessageFns<Report> = {
     if (message.reportIdMa.length !== 0) {
       obj.reportIdMa = base64FromBytes(message.reportIdMa);
     }
-    if (message.reportedTcb !== 0) {
-      obj.reportedTcb = Math.round(message.reportedTcb);
+    if (message.reportedTcb !== 0n) {
+      obj.reportedTcb = message.reportedTcb.toString();
     }
     if (message.chipId.length !== 0) {
       obj.chipId = base64FromBytes(message.chipId);
     }
-    if (message.committedTcb !== 0) {
-      obj.committedTcb = Math.round(message.committedTcb);
+    if (message.committedTcb !== 0n) {
+      obj.committedTcb = message.committedTcb.toString();
     }
     if (message.currentBuild !== 0) {
       obj.currentBuild = Math.round(message.currentBuild);
@@ -793,8 +817,8 @@ export const Report: MessageFns<Report> = {
     if (message.committedMajor !== 0) {
       obj.committedMajor = Math.round(message.committedMajor);
     }
-    if (message.launchTcb !== 0) {
-      obj.launchTcb = Math.round(message.launchTcb);
+    if (message.launchTcb !== 0n) {
+      obj.launchTcb = message.launchTcb.toString();
     }
     if (message.signature.length !== 0) {
       obj.signature = base64FromBytes(message.signature);
@@ -802,11 +826,11 @@ export const Report: MessageFns<Report> = {
     if (message.cpuid1eaxFms !== 0) {
       obj.cpuid1eaxFms = Math.round(message.cpuid1eaxFms);
     }
-    if (message.launchMitVector !== 0) {
-      obj.launchMitVector = Math.round(message.launchMitVector);
+    if (message.launchMitVector !== 0n) {
+      obj.launchMitVector = message.launchMitVector.toString();
     }
-    if (message.currentMitVector !== 0) {
-      obj.currentMitVector = Math.round(message.currentMitVector);
+    if (message.currentMitVector !== 0n) {
+      obj.currentMitVector = message.currentMitVector.toString();
     }
     return obj;
   },
@@ -818,13 +842,13 @@ export const Report: MessageFns<Report> = {
     const message = createBaseReport();
     message.version = object.version ?? 0;
     message.guestSvn = object.guestSvn ?? 0;
-    message.policy = object.policy ?? 0;
+    message.policy = object.policy ?? 0n;
     message.familyId = object.familyId ?? new Uint8Array(0);
     message.imageId = object.imageId ?? new Uint8Array(0);
     message.vmpl = object.vmpl ?? 0;
     message.signatureAlgo = object.signatureAlgo ?? 0;
-    message.currentTcb = object.currentTcb ?? 0;
-    message.platformInfo = object.platformInfo ?? 0;
+    message.currentTcb = object.currentTcb ?? 0n;
+    message.platformInfo = object.platformInfo ?? 0n;
     message.signerInfo = object.signerInfo ?? 0;
     message.reportData = object.reportData ?? new Uint8Array(0);
     message.measurement = object.measurement ?? new Uint8Array(0);
@@ -833,20 +857,20 @@ export const Report: MessageFns<Report> = {
     message.authorKeyDigest = object.authorKeyDigest ?? new Uint8Array(0);
     message.reportId = object.reportId ?? new Uint8Array(0);
     message.reportIdMa = object.reportIdMa ?? new Uint8Array(0);
-    message.reportedTcb = object.reportedTcb ?? 0;
+    message.reportedTcb = object.reportedTcb ?? 0n;
     message.chipId = object.chipId ?? new Uint8Array(0);
-    message.committedTcb = object.committedTcb ?? 0;
+    message.committedTcb = object.committedTcb ?? 0n;
     message.currentBuild = object.currentBuild ?? 0;
     message.currentMinor = object.currentMinor ?? 0;
     message.currentMajor = object.currentMajor ?? 0;
     message.committedBuild = object.committedBuild ?? 0;
     message.committedMinor = object.committedMinor ?? 0;
     message.committedMajor = object.committedMajor ?? 0;
-    message.launchTcb = object.launchTcb ?? 0;
+    message.launchTcb = object.launchTcb ?? 0n;
     message.signature = object.signature ?? new Uint8Array(0);
     message.cpuid1eaxFms = object.cpuid1eaxFms ?? 0;
-    message.launchMitVector = object.launchMitVector ?? 0;
-    message.currentMitVector = object.currentMitVector ?? 0;
+    message.launchMitVector = object.launchMitVector ?? 0n;
+    message.currentMitVector = object.currentMitVector ?? 0n;
     return message;
   },
 };
@@ -1342,24 +1366,13 @@ function base64FromBytes(arr: Uint8Array): string {
   }
 }
 
-type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
+type Builtin = Date | Function | Uint8Array | string | number | boolean | bigint | undefined;
 
 export type DeepPartial<T> = T extends Builtin ? T
   : T extends globalThis.Array<infer U> ? globalThis.Array<DeepPartial<U>>
   : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
   : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
   : Partial<T>;
-
-function longToNumber(int64: { toString(): string }): number {
-  const num = globalThis.Number(int64.toString());
-  if (num > globalThis.Number.MAX_SAFE_INTEGER) {
-    throw new globalThis.Error("Value is larger than Number.MAX_SAFE_INTEGER");
-  }
-  if (num < globalThis.Number.MIN_SAFE_INTEGER) {
-    throw new globalThis.Error("Value is smaller than Number.MIN_SAFE_INTEGER");
-  }
-  return num;
-}
 
 function isObject(value: any): boolean {
   return typeof value === "object" && value !== null;

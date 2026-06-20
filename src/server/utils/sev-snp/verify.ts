@@ -9,6 +9,9 @@
 
 import { createHash } from 'node:crypto'
 
+import { verifyNitroTpmDocument } from './nitrotpm.ts'
+import { verifySevReport } from './sev-report.ts'
+
 export const SEV_TAG_GCP = 0x01
 export const SEV_TAG_AWS = 0x02
 export const SNP_APP_PREFIX = 'snp-app:'
@@ -104,4 +107,59 @@ export function extractTeeKeyFromNonces(
 	}
 
 	throw new Error('no tee_[kt]_public_key nonce in SEV-SNP attestation')
+}
+
+// AWS leg: SEV report binds sha512(bound); NitroTPM doc's user_data binds the
+// same; PCR8 proves the app hash (SHA-384 bank); PCR11 is the base.
+async function verifyAwsLeg(
+	env: SevSnpEnvelope,
+	bound: Buffer,
+	now: Date
+): Promise<{ app: string, base: string }> {
+	if(!env.sev || !env.nitrotpm) {
+		throw new Error('AWS SEV-SNP envelope missing sev report or nitrotpm doc')
+	}
+
+	const bind = createHash('sha512').update(bound).digest()
+	verifySevReport(env.sev, bind, now)
+
+	const { pcr8, pcr11, userData } = await verifyNitroTpmDocument(env.nitrotpm, now)
+	if(!userData.equals(bind)) {
+		throw new Error('NitroTPM user_data does not bind the attestation')
+	}
+
+	if(!pcr8.equals(expectedPCR8(env.app, 'sha384'))) {
+		throw new Error('PCR 8 does not match the claimed app hash')
+	}
+
+	return appBaseIdentity(env.app, pcr11)
+}
+
+/**
+ * Verifies a claim-path combined SEV-SNP attestation end to end and returns the
+ * tee type, eth signing key, app/base identities, and the presentable nonces.
+ * `now` defaults to the real clock; tests may pass a time in the leaf window.
+ */
+export async function verifyCombinedSevSnp(
+	att: Uint8Array,
+	now: Date = new Date()
+): Promise<SevSnpResult> {
+	const { tag, env } = await parseSevSnpEnvelope(att)
+	if(!env.nonces || env.nonces.length === 0) {
+		throw new Error('SEV-SNP attestation carries no nonces (not a claim attestation)')
+	}
+
+	const bound = snpNonceCommitment(env.nonces)
+
+	let identity: { app: string, base: string }
+	if(tag === SEV_TAG_AWS) {
+		identity = await verifyAwsLeg(env, bound, now)
+	} else if(tag === SEV_TAG_GCP) {
+		throw new Error('SEV-SNP GCP leg not implemented yet (Phase 2)')
+	} else {
+		throw new Error(`unknown SEV-SNP cloud tag 0x${tag.toString(16)}`)
+	}
+
+	const { teeType, ethAddress } = extractTeeKeyFromNonces(env.nonces)
+	return { teeType, ethAddress, app: identity.app, base: identity.base, nonces: env.nonces }
 }

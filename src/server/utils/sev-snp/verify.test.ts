@@ -6,6 +6,7 @@ import test from 'node:test'
 import { X509Certificate } from 'node:crypto'
 
 import { verifyNitroTpmDocument } from './nitrotpm.ts'
+import { verifySevReport } from './sev-report.ts'
 import {
 	expectedPCR8,
 	extractTeeKeyFromNonces,
@@ -13,6 +14,7 @@ import {
 	SEV_TAG_AWS,
 	SEV_TAG_GCP,
 	snpNonceCommitment,
+	verifyCombinedSevSnp,
 } from './verify.ts'
 
 const fixturesDir = new URL('./fixtures/', import.meta.url)
@@ -75,4 +77,28 @@ test('AWS NitroTPM doc: COSE_Sign1 + chain verify, binding, PCR8/PCR11', async()
 
 	// PCR 8 proves the claimed cross-cloud app hash
 	assert.ok(pcr8.equals(expectedPCR8(env.app, 'sha384')), 'PCR8 == expectedPCR8(app, sha384)')
+})
+
+test('AWS SEV report: AMD VLEK chain + ECDSA-P384 + report_data binding', async() => {
+	const att = loadFixture('aws_combined.b64')
+	const { env } = await parseSevSnpEnvelope(att)
+	const bound = snpNonceCommitment(env.nonces!)
+	const expectedRD = createHash('sha512').update(bound).digest() // 64 bytes
+	// throws on any signature / chain / binding failure
+	verifySevReport(env.sev!, expectedRD)
+})
+
+test('AWS combined: end-to-end verifyCombinedSevSnp reproduces (app, base, nonces)', async() => {
+	const att = loadFixture('aws_combined.b64')
+	const { env } = await parseSevSnpEnvelope(att)
+	const now = await nitroLeafMidValidity(env.nitrotpm!)
+	const r = await verifyCombinedSevSnp(att, now)
+	assert.equal(r.teeType, 'tee_t')
+	assert.equal(r.ethAddress, '0xc905fc05cb972f468e6fa2ae8b064f9c5b671c82')
+	assert.equal(r.app, 'snp-app:8ab735abd0c0f07e490530805225dac8fac35620ad4f1ffcabfa2ffe06320baa')
+	assert.equal(
+		r.base,
+		'snp-base:f708520d03bc589b951fc1a17b32927c5da707341c23a0c886669f86f559fc7dd6ebdf32d4a2242732f33d9dcc345e53'
+	)
+	assert.equal(r.nonces.length, 2)
 })

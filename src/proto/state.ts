@@ -263,9 +263,9 @@ export function hashAlgoToJSON(object: HashAlgo): string {
 export interface GCEInstanceInfo {
   zone: string;
   projectId: string;
-  projectNumber: number;
+  projectNumber: bigint;
   instanceName: string;
-  instanceId: number;
+  instanceId: bigint;
 }
 
 /** The platform/firmware state for this instance */
@@ -452,7 +452,7 @@ export interface GMESState {
 }
 
 function createBaseGCEInstanceInfo(): GCEInstanceInfo {
-  return { zone: "", projectId: "", projectNumber: 0, instanceName: "", instanceId: 0 };
+  return { zone: "", projectId: "", projectNumber: 0n, instanceName: "", instanceId: 0n };
 }
 
 export const GCEInstanceInfo: MessageFns<GCEInstanceInfo> = {
@@ -463,13 +463,19 @@ export const GCEInstanceInfo: MessageFns<GCEInstanceInfo> = {
     if (message.projectId !== "") {
       writer.uint32(18).string(message.projectId);
     }
-    if (message.projectNumber !== 0) {
+    if (message.projectNumber !== 0n) {
+      if (BigInt.asUintN(64, message.projectNumber) !== message.projectNumber) {
+        throw new globalThis.Error("value provided for field message.projectNumber of type uint64 too large");
+      }
       writer.uint32(24).uint64(message.projectNumber);
     }
     if (message.instanceName !== "") {
       writer.uint32(34).string(message.instanceName);
     }
-    if (message.instanceId !== 0) {
+    if (message.instanceId !== 0n) {
+      if (BigInt.asUintN(64, message.instanceId) !== message.instanceId) {
+        throw new globalThis.Error("value provided for field message.instanceId of type uint64 too large");
+      }
       writer.uint32(40).uint64(message.instanceId);
     }
     return writer;
@@ -503,7 +509,7 @@ export const GCEInstanceInfo: MessageFns<GCEInstanceInfo> = {
             break;
           }
 
-          message.projectNumber = longToNumber(reader.uint64());
+          message.projectNumber = reader.uint64() as bigint;
           continue;
         }
         case 4: {
@@ -519,7 +525,7 @@ export const GCEInstanceInfo: MessageFns<GCEInstanceInfo> = {
             break;
           }
 
-          message.instanceId = longToNumber(reader.uint64());
+          message.instanceId = reader.uint64() as bigint;
           continue;
         }
       }
@@ -540,20 +546,20 @@ export const GCEInstanceInfo: MessageFns<GCEInstanceInfo> = {
         ? globalThis.String(object.project_id)
         : "",
       projectNumber: isSet(object.projectNumber)
-        ? globalThis.Number(object.projectNumber)
+        ? BigInt(object.projectNumber)
         : isSet(object.project_number)
-        ? globalThis.Number(object.project_number)
-        : 0,
+        ? BigInt(object.project_number)
+        : 0n,
       instanceName: isSet(object.instanceName)
         ? globalThis.String(object.instanceName)
         : isSet(object.instance_name)
         ? globalThis.String(object.instance_name)
         : "",
       instanceId: isSet(object.instanceId)
-        ? globalThis.Number(object.instanceId)
+        ? BigInt(object.instanceId)
         : isSet(object.instance_id)
-        ? globalThis.Number(object.instance_id)
-        : 0,
+        ? BigInt(object.instance_id)
+        : 0n,
     };
   },
 
@@ -565,14 +571,14 @@ export const GCEInstanceInfo: MessageFns<GCEInstanceInfo> = {
     if (message.projectId !== "") {
       obj.projectId = message.projectId;
     }
-    if (message.projectNumber !== 0) {
-      obj.projectNumber = Math.round(message.projectNumber);
+    if (message.projectNumber !== 0n) {
+      obj.projectNumber = message.projectNumber.toString();
     }
     if (message.instanceName !== "") {
       obj.instanceName = message.instanceName;
     }
-    if (message.instanceId !== 0) {
-      obj.instanceId = Math.round(message.instanceId);
+    if (message.instanceId !== 0n) {
+      obj.instanceId = message.instanceId.toString();
     }
     return obj;
   },
@@ -584,9 +590,9 @@ export const GCEInstanceInfo: MessageFns<GCEInstanceInfo> = {
     const message = createBaseGCEInstanceInfo();
     message.zone = object.zone ?? "";
     message.projectId = object.projectId ?? "";
-    message.projectNumber = object.projectNumber ?? 0;
+    message.projectNumber = object.projectNumber ?? 0n;
     message.instanceName = object.instanceName ?? "";
-    message.instanceId = object.instanceId ?? 0;
+    message.instanceId = object.instanceId ?? 0n;
     return message;
   },
 };
@@ -1869,24 +1875,13 @@ function base64FromBytes(arr: Uint8Array): string {
   }
 }
 
-type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
+type Builtin = Date | Function | Uint8Array | string | number | boolean | bigint | undefined;
 
 export type DeepPartial<T> = T extends Builtin ? T
   : T extends globalThis.Array<infer U> ? globalThis.Array<DeepPartial<U>>
   : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
   : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
   : Partial<T>;
-
-function longToNumber(int64: { toString(): string }): number {
-  const num = globalThis.Number(int64.toString());
-  if (num > globalThis.Number.MAX_SAFE_INTEGER) {
-    throw new globalThis.Error("Value is larger than Number.MAX_SAFE_INTEGER");
-  }
-  if (num < globalThis.Number.MIN_SAFE_INTEGER) {
-    throw new globalThis.Error("Value is smaller than Number.MIN_SAFE_INTEGER");
-  }
-  return num;
-}
 
 function isSet(value: any): boolean {
   return value !== null && value !== undefined;

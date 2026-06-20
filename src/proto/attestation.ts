@@ -6,7 +6,7 @@
 
 /* eslint-disable */
 import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
-import { GMESState } from "./state";
+import { GMESState } from "./state.ts";
 
 export const protobufPackage = "confidential_space";
 
@@ -299,7 +299,7 @@ export interface HostACOSState {
   /** The TDX CPU PIID. */
   cpuPiid: Uint8Array;
   /** Number of warm resets since the last power cycle. */
-  warmResetCount: number;
+  warmResetCount: bigint;
 }
 
 function createBaseGpuInfo(): GpuInfo {
@@ -2265,7 +2265,7 @@ export const HostAttestation: MessageFns<HostAttestation> = {
 };
 
 function createBaseHostACOSState(): HostACOSState {
-  return { gmes: undefined, cpuPiid: new Uint8Array(0), warmResetCount: 0 };
+  return { gmes: undefined, cpuPiid: new Uint8Array(0), warmResetCount: 0n };
 }
 
 export const HostACOSState: MessageFns<HostACOSState> = {
@@ -2276,7 +2276,10 @@ export const HostACOSState: MessageFns<HostACOSState> = {
     if (message.cpuPiid.length !== 0) {
       writer.uint32(18).bytes(message.cpuPiid);
     }
-    if (message.warmResetCount !== 0) {
+    if (message.warmResetCount !== 0n) {
+      if (BigInt.asIntN(64, message.warmResetCount) !== message.warmResetCount) {
+        throw new globalThis.Error("value provided for field message.warmResetCount of type int64 too large");
+      }
       writer.uint32(24).int64(message.warmResetCount);
     }
     return writer;
@@ -2310,7 +2313,7 @@ export const HostACOSState: MessageFns<HostACOSState> = {
             break;
           }
 
-          message.warmResetCount = longToNumber(reader.int64());
+          message.warmResetCount = reader.int64() as bigint;
           continue;
         }
       }
@@ -2331,10 +2334,10 @@ export const HostACOSState: MessageFns<HostACOSState> = {
         ? bytesFromBase64(object.cpu_piid)
         : new Uint8Array(0),
       warmResetCount: isSet(object.warmResetCount)
-        ? globalThis.Number(object.warmResetCount)
+        ? BigInt(object.warmResetCount)
         : isSet(object.warm_reset_count)
-        ? globalThis.Number(object.warm_reset_count)
-        : 0,
+        ? BigInt(object.warm_reset_count)
+        : 0n,
     };
   },
 
@@ -2346,8 +2349,8 @@ export const HostACOSState: MessageFns<HostACOSState> = {
     if (message.cpuPiid.length !== 0) {
       obj.cpuPiid = base64FromBytes(message.cpuPiid);
     }
-    if (message.warmResetCount !== 0) {
-      obj.warmResetCount = Math.round(message.warmResetCount);
+    if (message.warmResetCount !== 0n) {
+      obj.warmResetCount = message.warmResetCount.toString();
     }
     return obj;
   },
@@ -2359,7 +2362,7 @@ export const HostACOSState: MessageFns<HostACOSState> = {
     const message = createBaseHostACOSState();
     message.gmes = (object.gmes !== undefined && object.gmes !== null) ? GMESState.fromPartial(object.gmes) : undefined;
     message.cpuPiid = object.cpuPiid ?? new Uint8Array(0);
-    message.warmResetCount = object.warmResetCount ?? 0;
+    message.warmResetCount = object.warmResetCount ?? 0n;
     return message;
   },
 };
@@ -2389,24 +2392,13 @@ function base64FromBytes(arr: Uint8Array): string {
   }
 }
 
-type Builtin = Date | Function | Uint8Array | string | number | boolean | undefined;
+type Builtin = Date | Function | Uint8Array | string | number | boolean | bigint | undefined;
 
 export type DeepPartial<T> = T extends Builtin ? T
   : T extends globalThis.Array<infer U> ? globalThis.Array<DeepPartial<U>>
   : T extends ReadonlyArray<infer U> ? ReadonlyArray<DeepPartial<U>>
   : T extends {} ? { [K in keyof T]?: DeepPartial<T[K]> }
   : Partial<T>;
-
-function longToNumber(int64: { toString(): string }): number {
-  const num = globalThis.Number(int64.toString());
-  if (num > globalThis.Number.MAX_SAFE_INTEGER) {
-    throw new globalThis.Error("Value is larger than Number.MAX_SAFE_INTEGER");
-  }
-  if (num < globalThis.Number.MIN_SAFE_INTEGER) {
-    throw new globalThis.Error("Value is smaller than Number.MIN_SAFE_INTEGER");
-  }
-  return num;
-}
 
 function isObject(value: any): boolean {
   return typeof value === "object" && value !== null;
