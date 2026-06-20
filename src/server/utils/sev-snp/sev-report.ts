@@ -5,7 +5,7 @@
  * VLEK/VCEK whose cert chains to the pinned AMD Milan ARK, and check report_data.
  */
 
-import { X509Certificate, verify as nodeVerify } from 'node:crypto'
+import { verify as nodeVerify,X509Certificate } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 
 import { Attestation, type Report } from '#src/proto/sevsnp.ts'

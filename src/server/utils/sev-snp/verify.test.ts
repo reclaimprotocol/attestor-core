@@ -1,13 +1,12 @@
 import assert from 'node:assert'
 import { createHash } from 'node:crypto'
+import { X509Certificate } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
-import { X509Certificate } from 'node:crypto'
-
-import { assertSevSnpBaseAllowed } from './allowlist.ts'
-import { verifyNitroTpmDocument } from './nitrotpm.ts'
-import { verifySevReport } from './sev-report.ts'
+import { assertSevSnpBaseAllowed } from '#src/server/utils/sev-snp/allowlist.ts'
+import { verifyNitroTpmDocument } from '#src/server/utils/sev-snp/nitrotpm.ts'
+import { verifySevReport } from '#src/server/utils/sev-snp/sev-report.ts'
 import {
 	expectedPCR8,
 	extractTeeKeyFromNonces,
@@ -16,7 +15,7 @@ import {
 	SEV_TAG_GCP,
 	snpNonceCommitment,
 	verifyCombinedSevSnp,
-} from './verify.ts'
+} from '#src/server/utils/sev-snp/verify.ts'
 
 const fixturesDir = new URL('./fixtures/', import.meta.url)
 

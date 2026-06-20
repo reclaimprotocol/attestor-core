@@ -9,9 +9,9 @@
 
 import { createHash } from 'node:crypto'
 
-import { verifyGcpLeg } from './gcp.ts'
-import { verifyNitroTpmDocument } from './nitrotpm.ts'
-import { verifySevReport } from './sev-report.ts'
+import { verifyGcpLeg } from '#src/server/utils/sev-snp/gcp.ts'
+import { verifyNitroTpmDocument } from '#src/server/utils/sev-snp/nitrotpm.ts'
+import { verifySevReport } from '#src/server/utils/sev-snp/sev-report.ts'
 
 export const SEV_TAG_GCP = 0x01
 export const SEV_TAG_AWS = 0x02
@@ -48,7 +48,7 @@ export async function parseSevSnpEnvelope(
 
 	const { decode } = await import('cbor-x')
 	const env = decode(Buffer.from(att.subarray(1))) as SevSnpEnvelope
-	if(!env || !env.app || env.app.length === 0) {
+	if(!env?.app || env.app.length === 0) {
 		throw new Error('SEV-SNP envelope missing app hash')
 	}
 

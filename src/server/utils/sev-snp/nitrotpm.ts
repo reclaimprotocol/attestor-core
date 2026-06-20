@@ -7,7 +7,7 @@
  * hardware binding.
  */
 
-import { X509Certificate, verify as nodeVerify } from 'node:crypto'
+import { verify as nodeVerify,X509Certificate } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 
 const NITRO_ROOT_PEM = readFileSync(

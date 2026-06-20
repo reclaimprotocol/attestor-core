@@ -10,7 +10,7 @@
  * with or without the snp-base: prefix).
  */
 
-import { SNP_BASE_PREFIX } from './verify.ts'
+import { SNP_BASE_PREFIX } from '#src/server/utils/sev-snp/verify.ts'
 
 // Per-cloud base UKI (snp-base:<hex(PCR11)>). GCP = SHA-256, AWS = SHA-384.
 const BAKED_BASES = [
