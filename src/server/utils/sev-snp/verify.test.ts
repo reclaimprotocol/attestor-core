@@ -102,3 +102,13 @@ test('AWS combined: end-to-end verifyCombinedSevSnp reproduces (app, base, nonce
 	)
 	assert.equal(r.nonces.length, 2)
 })
+
+test('GCP combined: end-to-end verifyCombinedSevSnp reproduces (app, base, nonces)', async() => {
+	const att = loadFixture('gcp_combined.b64')
+	const r = await verifyCombinedSevSnp(att)
+	assert.equal(r.teeType, 'tee_k')
+	assert.equal(r.ethAddress, '0x0820030535a5822278c789cbccc20739ac92a561')
+	assert.equal(r.app, 'snp-app:26d33fd8f9ac470f4f7de521e36ca8c708324342c45ea66c3160a61f2294986b')
+	assert.equal(r.base, 'snp-base:edf6d8b9e7b6cf19acfd2788ee5c2d33867275deccbe14fbbc184f0e30628256')
+	assert.equal(r.nonces.length, 2)
+})

@@ -9,6 +9,7 @@
 
 import { createHash } from 'node:crypto'
 
+import { verifyGcpLeg } from './gcp.ts'
 import { verifyNitroTpmDocument } from './nitrotpm.ts'
 import { verifySevReport } from './sev-report.ts'
 
@@ -155,7 +156,7 @@ export async function verifyCombinedSevSnp(
 	if(tag === SEV_TAG_AWS) {
 		identity = await verifyAwsLeg(env, bound, now)
 	} else if(tag === SEV_TAG_GCP) {
-		throw new Error('SEV-SNP GCP leg not implemented yet (Phase 2)')
+		identity = verifyGcpLeg(env, bound, now)
 	} else {
 		throw new Error(`unknown SEV-SNP cloud tag 0x${tag.toString(16)}`)
 	}
