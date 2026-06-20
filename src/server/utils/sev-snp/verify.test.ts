@@ -115,6 +115,6 @@ test('GCP combined: end-to-end verifyCombinedSevSnp reproduces (app, base, nonce
 
 test('allowlist: pins both per-cloud base hashes and rejects unknown ones', () => {
 	assert.doesNotThrow(() => assertSevSnpBaseAllowed('snp-base:edf6d8b9e7b6cf19acfd2788ee5c2d33867275deccbe14fbbc184f0e30628256'))
-	assert.doesNotThrow(() => assertSevSnpBaseAllowed('snp-base:f708520d03bc589b951fc1a17b32927c5da707341c23a0c886669f86f559fc7dd6ebdf32d4a2242732f33d9dcc345e53'))
+	assert.doesNotThrow(() => assertSevSnpBaseAllowed('snp-base:d06cfa5ea35d76c5273cbeed99cc0cf6672e7b53b1f70e1a343e9ca052313dfa2b3056e6f78182c33bd43a0ff6127a33'))
 	assert.throws(() => assertSevSnpBaseAllowed('snp-base:' + 'ad'.repeat(32)), /base hash/)
 })
