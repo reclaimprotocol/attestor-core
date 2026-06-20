@@ -1,12 +1,18 @@
 import assert from 'node:assert'
+import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
+import { X509Certificate } from 'node:crypto'
+
+import { verifyNitroTpmDocument } from './nitrotpm.ts'
 import {
+	expectedPCR8,
 	extractTeeKeyFromNonces,
 	parseSevSnpEnvelope,
 	SEV_TAG_AWS,
 	SEV_TAG_GCP,
+	snpNonceCommitment,
 } from './verify.ts'
 
 const fixturesDir = new URL('./fixtures/', import.meta.url)
@@ -14,6 +20,17 @@ const fixturesDir = new URL('./fixtures/', import.meta.url)
 function loadFixture(name: string): Uint8Array {
 	const b64 = readFileSync(new URL(name, fixturesDir), 'utf8').trim()
 	return Buffer.from(b64, 'base64')
+}
+
+// The NitroTPM leaf cert is only valid ~3h; a committed fixture's window is in
+// the past. Verify the crypto as-of the leaf's own window (freshness is a
+// production "now" concern, separate from signature/chain correctness).
+async function nitroLeafMidValidity(docBytes: Uint8Array): Promise<Date> {
+	const { decode } = await import('cbor-x')
+	const cose = decode(Buffer.from(docBytes)) as unknown[]
+	const doc = decode(Buffer.from(cose[2] as Uint8Array)) as Record<string, unknown>
+	const leaf = new X509Certificate(Buffer.from(doc.certificate as Uint8Array))
+	return new Date((new Date(leaf.validFrom).getTime() + new Date(leaf.validTo).getTime()) / 2)
 }
 
 test('AWS fixture: envelope parses, nonces yield tee_t key', async() => {
@@ -37,4 +54,25 @@ test('GCP fixture: envelope parses, nonces yield tee_k key', async() => {
 	const { teeType, ethAddress } = extractTeeKeyFromNonces(env.nonces!)
 	assert.equal(teeType, 'tee_k')
 	assert.equal(ethAddress, '0x0820030535a5822278c789cbccc20739ac92a561')
+})
+
+test('AWS NitroTPM doc: COSE_Sign1 + chain verify, binding, PCR8/PCR11', async() => {
+	const att = loadFixture('aws_combined.b64')
+	const { env } = await parseSevSnpEnvelope(att)
+	const validTime = await nitroLeafMidValidity(env.nitrotpm!)
+	const { pcr8, pcr11, userData } = await verifyNitroTpmDocument(env.nitrotpm!, validTime)
+
+	// user_data binds sha512(nonceCommitment)
+	const bound = snpNonceCommitment(env.nonces!)
+	const expectedUD = createHash('sha512').update(bound).digest()
+	assert.ok(userData.equals(expectedUD), 'user_data binds the nonce commitment')
+
+	// PCR 11 is the per-cloud base (96-hex SHA-384 bank)
+	assert.equal(
+		pcr11.toString('hex'),
+		'f708520d03bc589b951fc1a17b32927c5da707341c23a0c886669f86f559fc7dd6ebdf32d4a2242732f33d9dcc345e53'
+	)
+
+	// PCR 8 proves the claimed cross-cloud app hash
+	assert.ok(pcr8.equals(expectedPCR8(env.app, 'sha384')), 'PCR8 == expectedPCR8(app, sha384)')
 })
