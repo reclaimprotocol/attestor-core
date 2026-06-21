@@ -1,0 +1,110 @@
+// Copyright 2022 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+import "google/protobuf/wrappers.proto";
+
+// Package sevsnp represents an SEV-SNP attestation report and its certificate
+// chain.
+package sevsnp;
+
+option go_package = "github.com/google/go-sev-guest/proto/sevsnp";
+
+// Report represents an SEV-SNP ATTESTATION_REPORT, specified in SEV SNP API
+//  documentation https://www.amd.com/system/files/TechDocs/56860.pdf
+message Report {
+  uint32 version = 1;  // Should be 2 for revision 1.55, and 3 for revision 1.56
+  uint32 guest_svn = 2;
+  uint64 policy = 3;
+  bytes family_id = 4;  // Should be 16 bytes long
+  bytes image_id = 5;   // Should be 16 bytes long
+  uint32 vmpl = 6;
+  uint32 signature_algo = 7;
+  uint64 current_tcb = 8;
+  uint64 platform_info = 9;
+  uint32 signer_info = 10;  // AuthorKeyEn, MaskChipKey, SigningKey
+  bytes report_data = 11;        // Should be 64 bytes long
+  bytes measurement = 12;        // Should be 48 bytes long
+  bytes host_data = 13;          // Should be 32 bytes long
+  bytes id_key_digest = 14;      // Should be 48 bytes long
+  bytes author_key_digest = 15;  // Should be 48 bytes long
+  bytes report_id = 16;          // Should be 32 bytes long
+  bytes report_id_ma = 17;       // Should be 32 bytes long
+  uint64 reported_tcb = 18;
+  bytes chip_id = 19;  // Should be 64 bytes long
+  uint64 committed_tcb = 20;
+  // Each build, minor, major triple should be packed together in a uint32
+  // packed together at 7:0, 15:8, 23:16 respectively
+  uint32 current_build = 21;
+  uint32 current_minor = 22;
+  uint32 current_major = 23;
+  uint32 committed_build = 24;
+  uint32 committed_minor = 25;
+  uint32 committed_major = 26;
+  uint64 launch_tcb = 27;
+  bytes signature = 28;  // Should be 512 bytes long
+
+  uint32 cpuid1eax_fms = 29;  // The cpuid(1).eax & 0x0fff0fff representation of family/model/stepping
+  uint64 launch_mit_vector = 30;
+  uint64 current_mit_vector = 31;
+}
+
+message CertificateChain {
+  // The versioned chip endorsement key's certificate for the
+  // key that signed this report.
+  bytes vcek_cert = 1;
+
+  // The versioned loaded endorsement key's certificate for the
+  // key that signed this report.
+  bytes vlek_cert = 6;
+
+  // The AMD SEV or AMD SEV-VLEK certificate that signed the V?EK cert.
+  bytes ask_cert = 2;
+
+  // The AMD Root key certificate (signs the ASK cert).
+  bytes ark_cert = 3;
+
+  // A certificate the host may inject to endorse the measurement of the
+  // firmware.
+  bytes firmware_cert = 4 [deprecated = true];
+
+  // Non-standard certificates the host may inject.
+  map<string, bytes> extras = 7;
+}
+
+// The CPUID[EAX=1] version information includes product info as described in
+// the AMD KDS specification. The product name, model, and stepping values are
+// important for determining the required parameters to KDS when requesting the
+// endorsement key's certificate.
+message SevProduct {
+  enum SevProductName {
+    SEV_PRODUCT_UNKNOWN = 0;
+    SEV_PRODUCT_MILAN = 1;
+    SEV_PRODUCT_GENOA = 2;
+    SEV_PRODUCT_TURIN = 3;
+  }
+
+  SevProductName name = 1;
+  uint32 stepping = 2 [deprecated = true];  // Must be a 4-bit number
+  google.protobuf.UInt32Value machine_stepping = 3;
+}
+
+message Attestation {
+  Report report = 1;
+
+  CertificateChain certificate_chain = 2;
+
+  SevProduct product = 3;
+}

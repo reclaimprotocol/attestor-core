@@ -8,7 +8,8 @@ import type { SignedMessage } from '#src/proto/tee-bundle.ts'
 import { BodyType, KOutputPayload, TOutputPayload, VerificationBundle } from '#src/proto/tee-bundle.ts'
 import { validateGcpAttestationAndExtractKey } from '#src/server/utils/gcp-attestation.ts'
 import type { AddressExtractionResult } from '#src/server/utils/nitro-attestation.ts'
-import { validateNitroAttestationAndExtractKey } from '#src/server/utils/nitro-attestation.ts'
+import { assertSevSnpBaseAllowed } from '#src/server/utils/sev-snp/allowlist.ts'
+import { verifyCombinedSevSnp } from '#src/server/utils/sev-snp/verify.ts'
 import type { Logger } from '#src/types/general.ts'
 import { AttestorError } from '#src/utils/error.ts'
 import { SIGNATURES } from '#src/utils/signatures/index.ts'
@@ -144,7 +145,28 @@ function validateBundleCompleteness(bundle: VerificationBundle): void {
 }
 
 /**
- * Extracts public keys from either Nitro attestations or embedded keys (standalone mode)
+ * Verifies one side's combined SEV-SNP attestation and pins its base UKI against
+ * the allowlist. The app bundle digest is not pinned here — it is returned as
+ * pcr0 and published into the claim context for the consumer to verify.
+ */
+async function verifySevSnpSide(
+	attestationBytes: Uint8Array,
+	expectedTeeType: 'tee_k' | 'tee_t',
+	logger: Logger
+): Promise<AddressExtractionResult> {
+	const r = await verifyCombinedSevSnp(attestationBytes)
+	if(r.teeType !== expectedTeeType) {
+		throw new Error(`SEV-SNP attestation wrong TEE type, expected ${expectedTeeType}, got ${r.teeType}`)
+	}
+
+	assertSevSnpBaseAllowed(r.base)
+	logger.info(`${expectedTeeType} SEV-SNP attestation verified: app=${r.app} base=${r.base}`)
+	return { teeType: r.teeType, ethAddress: r.ethAddress, pcr0: r.app }
+}
+
+/**
+ * Extracts public keys from attestations (GCP Confidential Space or SEV-SNP) or
+ * embedded keys (standalone mode)
  */
 async function extractPublicKeys(
 	bundle: VerificationBundle,
@@ -209,26 +231,10 @@ async function extractPublicKeys(
 				pcr0: gcpResult.pcr0 || 'gcp-no-digest'
 			}
 			teekEnvVars = gcpResult.envVars ?? {}
+		} else if(teekAttestationType === 'sev-snp') {
+			teekKeyResult = await verifySevSnpSide(teekAttestationBytes, 'tee_k', logger)
 		} else {
-			const nitroResult = await validateNitroAttestationAndExtractKey(teekAttestationBytes)
-
-			if(!nitroResult.isValid) {
-				throw new Error(`TEE_K Nitro attestation validation failed: ${nitroResult.errors.join(', ')}`)
-			}
-
-			if(!nitroResult.ethAddress) {
-				throw new Error('TEE_K Nitro attestation validation failed: no address')
-			}
-
-			if(nitroResult.userDataType !== 'tee_k') {
-				throw new Error(`TEE_K Nitro attestation validation failed: wrong TEE type, expected tee_k, got ${nitroResult.userDataType}`)
-			}
-
-			teekKeyResult = {
-				teeType: nitroResult.userDataType,
-				ethAddress: nitroResult.ethAddress,
-				pcr0: nitroResult.pcr0
-			}
+			throw new Error(`TEE_K unsupported attestation type: ${teekAttestationType}`)
 		}
 
 		// Validate TEE_T attestation based on type
@@ -299,26 +305,10 @@ async function extractPublicKeys(
 			} else {
 				throw new Error('TEE_T GCP attestation missing cross-binding env var (expected EXPECTED_PEER_IMAGE_DIGEST for V2 or EXPECTED_TEEK_PCR0 for V1)')
 			}
+		} else if(teetAttestationType === 'sev-snp') {
+			teetKeyResult = await verifySevSnpSide(teetAttestationBytes, 'tee_t', logger)
 		} else {
-			const nitroResult = await validateNitroAttestationAndExtractKey(teetAttestationBytes)
-
-			if(!nitroResult.isValid) {
-				throw new Error(`TEE_T Nitro attestation validation failed: ${nitroResult.errors.join(', ')}`)
-			}
-
-			if(!nitroResult.ethAddress) {
-				throw new Error('TEE_T Nitro attestation validation failed: no address')
-			}
-
-			if(nitroResult.userDataType !== 'tee_t') {
-				throw new Error(`TEE_T Nitro attestation validation failed: wrong TEE type, expected tee_t, got ${nitroResult.userDataType}`)
-			}
-
-			teetKeyResult = {
-				teeType: nitroResult.userDataType,
-				ethAddress: nitroResult.ethAddress,
-				pcr0: nitroResult.pcr0
-			}
+			throw new Error(`TEE_T unsupported attestation type: ${teetAttestationType}`)
 		}
 
 		logger.info('Attestations validated successfully')
