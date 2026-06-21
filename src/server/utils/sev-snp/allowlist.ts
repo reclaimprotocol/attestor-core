@@ -14,8 +14,8 @@ import { SNP_BASE_PREFIX } from '#src/server/utils/sev-snp/verify.ts'
 
 // Per-cloud base UKI (snp-base:<hex(PCR11)>). GCP = SHA-256, AWS = SHA-384.
 const BAKED_BASES = [
-	'snp-base:edf6d8b9e7b6cf19acfd2788ee5c2d33867275deccbe14fbbc184f0e30628256', // GCP
-	'snp-base:d06cfa5ea35d76c5273cbeed99cc0cf6672e7b53b1f70e1a343e9ca052313dfa2b3056e6f78182c33bd43a0ff6127a33', // AWS (pinned base)
+	'snp-base:e51ea77d7a1a7b435e1141e1f8de1cf3cbbabf9602cad6e060b80c4029f36ff6', // GCP
+	'snp-base:4832908152fc6619b45bdfe6cddb3399c73101cb323983f10923c6c871b19cd92cd08c6d54064840e108566f4d84f6d7', // AWS (pinned base)
 ]
 
 function buildBaseSet(): Set<string> {

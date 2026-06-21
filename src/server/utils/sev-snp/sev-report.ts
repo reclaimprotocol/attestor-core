@@ -15,8 +15,8 @@ const REPORT_SIZE = 0x4A0
 const REPORT_VERSION3 = 3
 
 // go-sev-guest embedded AMD Milan bundles: VLEK = ASVK+ARK, VCEK = ASK+ARK.
-const VLEK_BUNDLE_PEM = readFileSync(new URL('./certs/ask_ark_milan_vlek.pem', import.meta.url))
-const VCEK_BUNDLE_PEM = readFileSync(new URL('./certs/ask_ark_milan_vcek.pem', import.meta.url))
+const VLEK_BUNDLE_PEM = readFileSync('./cert/sev-snp/ask_ark_milan_vlek.pem')
+const VCEK_BUNDLE_PEM = readFileSync('./cert/sev-snp/ask_ark_milan_vcek.pem')
 
 function parsePemBundle(pem: Buffer): X509Certificate[] {
 	const blocks = pem.toString('utf8')

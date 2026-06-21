@@ -17,10 +17,10 @@ import {
 	verifyCombinedSevSnp,
 } from '#src/server/utils/sev-snp/verify.ts'
 
-const fixturesDir = new URL('./fixtures/', import.meta.url)
+const fixturesDir = './fixtures/sev-snp/'
 
 function loadFixture(name: string): Uint8Array {
-	const b64 = readFileSync(new URL(name, fixturesDir), 'utf8').trim()
+	const b64 = readFileSync(fixturesDir + name, 'utf8').trim()
 	return Buffer.from(b64, 'base64')
 }
 
@@ -114,7 +114,7 @@ test('GCP combined: end-to-end verifyCombinedSevSnp reproduces (app, base, nonce
 })
 
 test('allowlist: pins both per-cloud base hashes and rejects unknown ones', () => {
-	assert.doesNotThrow(() => assertSevSnpBaseAllowed('snp-base:edf6d8b9e7b6cf19acfd2788ee5c2d33867275deccbe14fbbc184f0e30628256'))
-	assert.doesNotThrow(() => assertSevSnpBaseAllowed('snp-base:d06cfa5ea35d76c5273cbeed99cc0cf6672e7b53b1f70e1a343e9ca052313dfa2b3056e6f78182c33bd43a0ff6127a33'))
+	assert.doesNotThrow(() => assertSevSnpBaseAllowed('snp-base:e51ea77d7a1a7b435e1141e1f8de1cf3cbbabf9602cad6e060b80c4029f36ff6'))
+	assert.doesNotThrow(() => assertSevSnpBaseAllowed('snp-base:4832908152fc6619b45bdfe6cddb3399c73101cb323983f10923c6c871b19cd92cd08c6d54064840e108566f4d84f6d7'))
 	assert.throws(() => assertSevSnpBaseAllowed('snp-base:' + 'ad'.repeat(32)), /base hash/)
 })

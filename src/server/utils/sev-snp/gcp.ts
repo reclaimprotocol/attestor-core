@@ -14,8 +14,8 @@ import type { Quote } from '#src/proto/tpm.ts'
 import { verifySevReport } from '#src/server/utils/sev-snp/sev-report.ts'
 import { appBaseIdentity, expectedPCR8, type SevSnpEnvelope } from '#src/server/utils/sev-snp/verify.ts'
 
-const GCP_VTPM_ROOT_DER = readFileSync(new URL('./certs/gcp_vtpm_ca_root.crt', import.meta.url))
-const GCP_VTPM_INTERMEDIATE_DER = readFileSync(new URL('./certs/gcp_vtpm_ca_intermediate.crt', import.meta.url))
+const GCP_VTPM_ROOT_DER = readFileSync('./cert/sev-snp/gcp_vtpm_ca_root.crt')
+const GCP_VTPM_INTERMEDIATE_DER = readFileSync('./cert/sev-snp/gcp_vtpm_ca_intermediate.crt')
 
 const TPM_GENERATED = 0xff544347
 const TPM_ST_ATTEST_QUOTE = 0x8018

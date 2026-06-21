@@ -10,9 +10,7 @@
 import { verify as nodeVerify,X509Certificate } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 
-const NITRO_ROOT_PEM = readFileSync(
-	new URL('./certs/aws_nitro_root.pem', import.meta.url)
-)
+const NITRO_ROOT_PEM = readFileSync('./cert/sev-snp/aws_nitro_root.pem')
 
 export interface NitroTpmResult {
 	pcr8: Buffer
