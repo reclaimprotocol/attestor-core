@@ -8,7 +8,36 @@
 import { verify as nodeVerify,X509Certificate } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 
+import { AsnConvert } from '@peculiar/asn1-schema'
+import { Certificate } from '@peculiar/asn1-x509'
+import { X509Certificate as PeculiarCert } from '@peculiar/x509'
+
 import { Attestation, type Report } from '#src/proto/sevsnp.ts'
+
+// assertKDSLeafFormat enforces the AMD KDS cert-format invariants on the
+// VLEK/VCEK leaf — the checks go-sev-guest's validateKDSCertificateProductNonspecific
+// makes. The leaf is attacker-supplied (unlike the fingerprint-pinned ARK/ASK),
+// so its format is constrained: X.509 v3, signed by the AMD root key with
+// RSASSA-PSS/SHA-384, carrying an ECDSA P-384 public key.
+function assertKDSLeafFormat(der: Uint8Array): void {
+	const cert = new PeculiarCert(Buffer.from(der).toString('base64'))
+
+	const sig = cert.signatureAlgorithm as { name: string, hash?: { name: string } }
+	if(sig.name !== 'RSA-PSS' || sig.hash?.name !== 'SHA-384') {
+		throw new Error(`SEV: leaf cert signed with ${sig.name}/${sig.hash?.name}, want RSASSA-PSS/SHA-384`)
+	}
+
+	const key = cert.publicKey.algorithm as { name: string, namedCurve?: string }
+	if(key.name !== 'ECDSA' || key.namedCurve !== 'P-384') {
+		throw new Error(`SEV: leaf cert key is ${key.name}/${key.namedCurve}, want ECDSA P-384`)
+	}
+
+	// tbsCertificate.version is 0-indexed: 2 == X.509 v3.
+	const version = AsnConvert.parse(Buffer.from(der), Certificate).tbsCertificate.version
+	if(version !== 2) {
+		throw new Error(`SEV: leaf cert is X.509 version ${version + 1}, want v3`)
+	}
+}
 
 const SIGNATURE_OFFSET = 0x2A0
 const REPORT_SIZE = 0x4A0
@@ -133,15 +162,35 @@ export function verifySevReport(
 		throw new Error('SEV: attestation missing report or certificate chain')
 	}
 
-	const vlek = chain.vlekCert?.length ? Buffer.from(chain.vlekCert) : undefined
-	const vcek = chain.vcekCert?.length ? Buffer.from(chain.vcekCert) : undefined
-	const signerDer = vlek ?? vcek
-	if(!signerDer) {
-		throw new Error('SEV: certificate chain has neither VLEK nor VCEK')
+	// Guest policy + VMPL: the report signature/chain prove genuine AMD hardware
+	// but NOT that the guest is non-debuggable or at the highest privilege. A
+	// DEBUG-policy guest lets the host decrypt/tamper its memory; reject it, and
+	// require VMPL 0. (Mirrors assertSnpReportSafe in the Go verifier.)
+	if((report.policy & (1n << 19n)) !== 0n) {
+		throw new Error('SEV: guest policy permits DEBUG (host can decrypt guest memory)')
 	}
 
+	if(report.vmpl !== 0) {
+		throw new Error(`SEV: report VMPL=${report.vmpl}, require 0`)
+	}
+
+	// Choose the signer cert by the report's own SignerInfo.SigningKey (0=VCEK,
+	// 1=VLEK), not by which cert field happens to be present — otherwise an
+	// attacker could attach the other key type. Then chain it to the matching
+	// pinned AMD bundle.
+	const signingKey = (Number(report.signerInfo) >> 2) & 0x7
+	const wantVlek = signingKey === 1
+	const vlek = chain.vlekCert?.length ? Buffer.from(chain.vlekCert) : undefined
+	const vcek = chain.vcekCert?.length ? Buffer.from(chain.vcekCert) : undefined
+	const signerDer = wantVlek ? vlek : vcek
+	if(!signerDer) {
+		throw new Error(`SEV: report declares ${wantVlek ? 'VLEK' : 'VCEK'} signer but that cert is absent`)
+	}
+
+	assertKDSLeafFormat(signerDer)
 	const signer = new X509Certificate(signerDer)
-	const bundle = parsePemBundle(vlek ? VLEK_BUNDLE_PEM : VCEK_BUNDLE_PEM)
+
+	const bundle = parsePemBundle(wantVlek ? VLEK_BUNDLE_PEM : VCEK_BUNDLE_PEM)
 	verifyChainToAmdRoot(signer, bundle, now)
 
 	const signed = reportSignedComponent(report)
