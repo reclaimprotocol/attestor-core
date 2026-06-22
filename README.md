@@ -36,7 +36,7 @@ Read a longer brief [here](/docs/problem-statement.md).
 
 This repository contains **Typescript** implementation of the attestor server & the SDK to interact with it. The SDK is compatible with the browser & NodeJS. However, to run the SDK on React Native/Mobile, refer to our [React Native guide](/docs/browser-rpc.md).
 
-Note: if you're looking to build apps on Reclaim, we'd recommend you to use the [Reclaim SDK](https://docs.reclaimprotocol.org/) instead. This repository is intended for developers looking to contribute to the core protocol.
+Note: if you're looking to build apps on Reclaim, we'd recommend you to use the [Reclaim SDK](https://docs.reclaimprotocol.org/) instead. This repository is intended for developers looking to contribute to the core protocol
 
 ## Install
 
