@@ -29,6 +29,7 @@ import {
 	findIndexInUint8Array,
 	getHttpRequestDataFromTranscript,
 	logger,
+	makeHttpResponseParser,
 	REDACTION_CHAR,
 	REDACTION_CHAR_CODE,
 	strToUint8Array,
@@ -553,34 +554,14 @@ function shouldRevealChunkFraming(version: AttestorVersion) {
 	return version >= AttestorVersion.ATTESTOR_VERSION_3_2_0
 }
 
-// decode an HTTP/1.1 chunked body; chunk-size lines must be revealed.
-// redaction asterisks inside chunk data are length-preserving, so the
-// declared sizes still hold and are copied through verbatim
+// dechunk a revealed body by reusing the parser: wrap it in a minimal
+// (already-validated) header block. streamEnded() skipped to tolerate trailing bytes
 function dechunkResponseBody(body: string) {
-	let out = ''
-	let i = 0
-	while(i < body.length) {
-		const lineEnd = body.indexOf('\r\n', i)
-		if(lineEnd === -1) {
-			break
-		}
-
-		const sizeStr = body.slice(i, lineEnd).split(';')[0].trim()
-		const size = Number.parseInt(sizeStr, 16)
-		if(Number.isNaN(size)) {
-			throw new Error(`Invalid chunk size "${sizeStr}" while dechunking response`)
-		}
-
-		i = lineEnd + 2
-		if(size === 0) {
-			break
-		}
-
-		out += body.slice(i, i + size)
-		i += size + 2
-	}
-
-	return out
+	const parser = makeHttpResponseParser()
+	parser.onChunk(
+		strToUint8Array('HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n' + body)
+	)
+	return uint8ArrayToStr(parser.res.body ?? new Uint8Array())
 }
 
 function getHostPort(params: ProviderParams<'http'>, secretParams: ProviderSecretParams<'http'>) {
