@@ -28,7 +28,7 @@ export const DNS_SERVERS = [
 // 10m
 export const MAX_CLAIM_TIMESTAMP_DIFF_S = 10 * 60
 
-export const CURRENT_ATTESTOR_VERSION = AttestorVersion.ATTESTOR_VERSION_3_1_0
+export const CURRENT_ATTESTOR_VERSION = AttestorVersion.ATTESTOR_VERSION_3_2_0
 
 export const DEFAULT_METADATA: InitRequest = {
 	signatureType: ServiceSignatureType.SERVICE_SIGNATURE_TYPE_ETH,

@@ -1,4 +1,4 @@
-import { areUint8ArraysEqual, concatenateUint8Arrays } from '@reclaimprotocol/tls'
+import { areUint8ArraysEqual, AUTH_TAG_BYTE_LENGTH, concatenateUint8Arrays, SUPPORTED_CIPHER_SUITE_MAP } from '@reclaimprotocol/tls'
 import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 
 import type {
@@ -457,7 +457,15 @@ export async function decryptTranscript(
 			plaintextLength = plaintext.length
 		} else {
 			plaintext = content
-			plaintextLength = plaintext.length
+			// ciphertext = explicit-nonce + plaintext + auth-tag; strip both so the
+			// reconstructed redacted length matches the true plaintext length.
+			// TLS1.2 AES-GCM prepends an 8-byte explicit nonce; TLS1.3 and
+			// ChaCha20-Poly1305 have none
+			const { cipher } = SUPPORTED_CIPHER_SUITE_MAP[cipherSuite]
+			const explicitNonceLength = tlsVersion !== 'TLS1_3' && cipher.includes('GCM')
+				? 8
+				: 0
+			plaintextLength = content.length - explicitNonceLength - AUTH_TAG_BYTE_LENGTH
 		}
 
 		decryptedTranscript.push({
