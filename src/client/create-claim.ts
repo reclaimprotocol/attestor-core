@@ -29,6 +29,7 @@ import {
 	makeDefaultOPRFOperator,
 	makeHttpResponseParser,
 	preparePacketsForReveal,
+	REDACTION_CHAR_CODE,
 	redactSlices,
 	uint8ArrayToStr,
 	unixTimestampSeconds
@@ -512,9 +513,25 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 
 			revealedPackets.push(...packets.filter(p => p.sender === 'server'))
 		} else {
-			for(const {
-				block, redactedPlaintext, overshotToprfFromPrevBlock, toprfs, oprfRawMarkers
-			} of serverPacketsToReveal) {
+			const revealByBlock = new Map(
+				serverPacketsToReveal.map(r => [r.block, r])
+			)
+			// walk every server block in order: revealed blocks are proven via
+			// zk, fully-redacted blocks get an asterisk placeholder so the local
+			// receipt stays byte-aligned for chunked dechunking
+			for(const sb of serverBlocks) {
+				const reveal = revealByBlock.get(sb)
+				if(!reveal) {
+					revealedPackets.push({
+						sender: 'server',
+						message: new Uint8Array(sb.plaintext.length).fill(REDACTION_CHAR_CODE)
+					})
+					continue
+				}
+
+				const {
+					block, redactedPlaintext, overshotToprfFromPrevBlock, toprfs, oprfRawMarkers
+				} = reveal
 				setRevealOfMessage(block.message, {
 					type: 'zk',
 					redactedPlaintext,

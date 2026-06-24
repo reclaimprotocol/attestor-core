@@ -29,6 +29,7 @@ import {
 	findIndexInUint8Array,
 	getHttpRequestDataFromTranscript,
 	logger,
+	makeHttpResponseParser,
 	REDACTION_CHAR,
 	REDACTION_CHAR_CODE,
 	strToUint8Array,
@@ -207,6 +208,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			throw new Error('Failed to find response body')
 		}
 
+		const revealFraming = shouldRevealChunkFraming(ctx.version)
+
 		const reveals: RedactedOrHashedArraySlice[] = [
 			{ fromIndex: 0, toIndex: headerEndIndex }
 		]
@@ -230,12 +233,17 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			reveals.push(res.headerIndices['date'])
 		}
 
+		//reveal transfer-encoding header so the verifier can dechunk the body
+		if(revealFraming && res.headerIndices['transfer-encoding']) {
+			reveals.push(res.headerIndices['transfer-encoding'])
+		}
+
 		const body = uint8ArrayToBinaryStr(res.body)
 
 		const redactions: RedactedOrHashedArraySlice[] = []
 		for(const rs of params.responseRedactions || []) {
 			const processor = processRedactionRequest(
-				body, rs, bodyStartIdx, res.chunks
+				body, rs, bodyStartIdx, res.chunks, revealFraming
 			)
 			for(const { reveal, redactions: reds } of processor) {
 				reveals.push(reveal)
@@ -243,7 +251,21 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			}
 		}
 
-		reveals.sort((a, b) => a.toIndex - b.toIndex)
+		//reveal all chunk framing (size lines + terminator) so the verifier
+		//can dechunk; chunk data stays redacted unless a redaction reveals it
+		if(revealFraming && res.chunks?.length) {
+			let prev = res.headerEndIdx + 4
+			for(const chunk of res.chunks) {
+				reveals.push({ fromIndex: prev, toIndex: chunk.fromIndex })
+				prev = chunk.toIndex
+			}
+
+			reveals.push({ fromIndex: prev, toIndex: response.length })
+		}
+
+		//reveals can overlap (e.g. a redaction reveal spanning chunk framing),
+		//so redact the complement of their union
+		reveals.sort((a, b) => a.fromIndex - b.fromIndex)
 
 		if(reveals.length > 1) {
 			let currentIndex = 0
@@ -252,10 +274,12 @@ const HTTP_PROVIDER: Provider<'http'> = {
 					redactions.push({ fromIndex: currentIndex, toIndex: r.fromIndex })
 				}
 
-				currentIndex = r.toIndex
+				currentIndex = Math.max(currentIndex, r.toIndex)
 			}
 
-			redactions.push({ fromIndex: currentIndex, toIndex: response.length })
+			if(currentIndex < response.length) {
+				redactions.push({ fromIndex: currentIndex, toIndex: response.length })
+			}
 		}
 
 		for(const r of reveals) {
@@ -321,11 +345,17 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			throw new Error(`Connection header must be "close", got "${connectionHeader}"`)
 		}
 
-		const serverBlocks = receipt
+		const allServerBlocks = receipt
 			.filter(s => s.sender === 'server')
 			.map((r) => r.message)
-			// filter out fully redacted blocks
-			.filter(b => !b.every(b => b === REDACTION_CHAR_CODE))
+		// drop leading fully-redacted (handshake) blocks so the response starts
+		// at the status line, but keep redacted body records so chunked byte
+		// alignment is preserved for dechunking
+		const firstRealIdx = allServerBlocks
+			.findIndex(b => !b.every(x => x === REDACTION_CHAR_CODE))
+		const serverBlocks = firstRealIdx === -1
+			? []
+			: allServerBlocks.slice(firstRealIdx)
 		const response = concatArrays(...serverBlocks)
 
 		let res: string
@@ -389,11 +419,18 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 
-		//remove asterisks to account for chunks in the middle of revealed strings
-		if(!secretParams) {
+		if(shouldRevealChunkFraming(clientVersion)) {
+			//dechunk the body so matches see contiguous content; redaction
+			//asterisks are preserved as boundaries between revealed slices
+			const headersStr = res.slice(0, bodyStart)
+			res = /transfer-encoding:\s*chunked/i.test(headersStr)
+				? headersStr + dechunkResponseBody(res.slice(bodyStart))
+				: res
+		} else if(!secretParams) {
+			//legacy clients redact chunk framing; collapse asterisk runs so
+			//matches can span the redacted framing
 			res = res.slice(bodyStart).replace(/\*{3,}/g, '')
 		}
-
 
 		for(const { type, value, invert } of params.responseMatches || []) {
 			const inv = Boolean(invert) // explicitly cast to boolean
@@ -510,6 +547,23 @@ function shouldRevealCrlf({ version }: ProviderCtx) {
 	return version >= AttestorVersion.ATTESTOR_VERSION_2_0_1
 }
 
+// revealing chunk framing (instead of redacting it) + dechunking on the
+// verifier is a breaking change; older clients still redact framing and rely
+// on the asterisk-collapse matching path
+function shouldRevealChunkFraming(version: AttestorVersion) {
+	return version >= AttestorVersion.ATTESTOR_VERSION_3_2_0
+}
+
+// dechunk a revealed body by reusing the parser: wrap it in a minimal
+// (already-validated) header block. streamEnded() skipped to tolerate trailing bytes
+function dechunkResponseBody(body: string) {
+	const parser = makeHttpResponseParser()
+	parser.onChunk(
+		strToUint8Array('HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n' + body)
+	)
+	return uint8ArrayToStr(parser.res.body ?? new Uint8Array())
+}
+
 function getHostPort(params: ProviderParams<'http'>, secretParams: ProviderSecretParams<'http'>) {
 	const { host } = new URL(getURL(params, secretParams))
 	if(!host) {
@@ -550,6 +604,7 @@ function* processRedactionRequest(
 	rs: HTTPResponseRedaction,
 	bodyStartIdx: number,
 	resChunks: ArraySlice[] | undefined,
+	revealFraming: boolean,
 ): Generator<RedactionItem> {
 	let element = body
 	let elementIdx = 0
@@ -665,7 +720,6 @@ function* processRedactionRequest(
 
 	function* addRedaction(
 		hash: RedactedOrHashedArraySlice['hash'] | null = rs.hash,
-		_resChunks = resChunks
 	): Generator<RedactionItem> {
 		if(elementIdx < 0 || !elementLength) {
 			return
@@ -673,14 +727,12 @@ function* processRedactionRequest(
 
 		const reveal = getReveal(elementIdx, elementLength, hash || undefined)
 
-		yield {
-			reveal,
-			redactions: getRedactionsForChunkHeaders(
-				reveal.fromIndex,
-				reveal.toIndex,
-				_resChunks
-			)
-		}
+		// new clients leave chunk framing revealed (verifier dechunks); older
+		// clients redact the framing inside a reveal that spans chunks
+		const redactions = revealFraming
+			? []
+			: getRedactionsForChunkHeaders(reveal.fromIndex, reveal.toIndex, resChunks)
+		yield { reveal, redactions }
 	}
 
 	function getReveal(

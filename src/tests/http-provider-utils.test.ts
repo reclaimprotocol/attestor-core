@@ -4,6 +4,7 @@ import assert from 'assert'
 import { deserialize, serialize } from 'v8'
 
 import { CURRENT_ATTESTOR_VERSION, PROVIDER_CTX } from '#src/config/index.ts'
+import { AttestorVersion } from '#src/proto/api.ts'
 import httpProvider from '#src/providers/http/index.ts'
 import {
 	extractHTMLElement, extractHTMLElements,
@@ -15,7 +16,7 @@ import { providers } from '#src/providers/index.ts'
 import { assertValidateProviderParams } from '#src/server/utils/validation.ts'
 import { TEST_RES_CHUNKED_PARTIAL_BODY } from '#src/tests/utils.ts'
 import type { ProviderParams, Transcript } from '#src/types/index.ts'
-import { getBlocksToReveal, getProviderValue, hashProviderParams, logger, strToUint8Array, uint8ArrayToStr } from '#src/utils/index.ts'
+import { getBlocksToReveal, getProviderValue, hashProviderParams, logger, redactSlices, strToUint8Array, uint8ArrayToStr } from '#src/utils/index.ts'
 
 const ctx = PROVIDER_CTX
 
@@ -174,57 +175,138 @@ describe('HTTP Provider Utils tests', () => {
 		regexp.test('a'.repeat(31) + '\x00')
 	})
 
-	it('should hide chunked parts from response', () => {
+	it('reveals chunk framing + transfer-encoding so the body can be dechunked', () => {
 		const provider = httpProvider
 		const simpleChunk = Buffer.from('HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n9\r\nchunk 1, \r\n7\r\nchunk 2\r\n0\r\n')
 
-		if(provider.getResponseRedactions) {
-			const redactions = provider.getResponseRedactions({
-				response: simpleChunk,
-				params: {
-					method: 'GET',
-					url: 'https://test.com',
-					'responseMatches': [
+		const redactions = provider.getResponseRedactions!({
+			response: simpleChunk,
+			params: {
+				method: 'GET',
+				url: 'https://test.com',
+				responseMatches: [],
+				responseRedactions: [{ regex: 'chunk 1, chunk 2' }],
+			},
+			logger,
+			ctx
+		})
+		const redacted = uint8ArrayToStr(redactSlices(simpleChunk, redactions))
 
-					],
-					'responseRedactions': [
-						{
-							'regex': 'chunk 1, chunk 2'
-						}
-					],
-				},
-				logger,
-				ctx
-			})
-			assert.deepEqual(redactions, [
-				{
-					'fromIndex': 15,
-					'toIndex': 88,
-				},
-				{
-					'fromIndex': 92,
-					'toIndex': 95
-				},
-				{
-					'fromIndex': 104,
-					'toIndex': 109
-				},
-				{
-					'fromIndex': 116,
-					'toIndex': 121
-				}
-			])
+		// chunk framing + transfer-encoding header are revealed verbatim
+		assert.ok(redacted.includes('Transfer-Encoding: chunked'))
+		assert.ok(redacted.includes('9\r\nchunk 1, \r\n7\r\nchunk 2\r\n0\r\n'))
+		// other headers stay redacted
+		assert.ok(!redacted.includes('Content-Type'))
+		assert.ok(!redacted.includes('Connection'))
+	})
 
-			let start = 0
-			let str = ''
-			for(const red of redactions) {
-				str += simpleChunk.subarray(start, red.fromIndex)
-				start = red.toIndex
-			}
-
-			assert.equal(str, 'HTTP/1.1 200 OK\r\n\r\nchunk 1, chunk 2')
+	it('responseMatches spanning a chunk boundary pass identically on client and attestor', async() => {
+		const simpleChunk = Buffer.from('HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n9\r\nchunk 1, \r\n7\r\nchunk 2\r\n0\r\n')
+		const params: ProviderParams<'http'> = {
+			url: 'https://xargs.org/',
+			method: 'GET',
+			responseMatches: [{ type: 'regex', value: 'chunk 1, chunk 2' }],
+			responseRedactions: [{ regex: 'chunk 1, chunk 2' }],
 		}
 
+		const redactions = getResponseRedactions!({ response: simpleChunk, params, logger, ctx })
+		const redactedResponse = redactSlices(simpleChunk, redactions)
+
+		// reuse the shared receipt's client request blocks, swap the server
+		// response for our redacted chunked one
+		const clone = cloneObject(transcript)
+		const respIdx = clone.findIndex(b => b.sender === 'server' && uint8ArrayToStr(b.message).startsWith('HTTP/1.1'))
+		const receipt: Transcript<Uint8Array> = [
+			...clone.slice(0, respIdx),
+			{ sender: 'server', message: redactedResponse }
+		]
+
+		// attestor path (no secretParams)
+		await assertValidProviderReceipt({
+			receipt,
+			clientVersion: CURRENT_ATTESTOR_VERSION,
+			params,
+			logger,
+			ctx,
+		})
+
+		// client path (secretParams present) -- must behave the same
+		await assertValidProviderReceipt({
+			receipt,
+			clientVersion: CURRENT_ATTESTOR_VERSION,
+			params: { ...params, secretParams: { cookieStr: '<cookie-str>' } } as ProviderParams<'http'>,
+			logger,
+			ctx,
+		})
+	})
+
+	it('keeps fully-redacted body records so large chunks stay byte-aligned', async() => {
+		// chunk 1's redacted data lands in its own TLS record; chunk 2 holds the
+		// revealed match target. dropping the all-asterisk record (the old
+		// behaviour) would misalign the dechunker and lose the match
+		const head = 'HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n'
+		const full = Buffer.from(head + '1a\r\n' + 'X'.repeat(26) + '\r\n6\r\nneedle\r\n0\r\n')
+		const params: ProviderParams<'http'> = {
+			url: 'https://xargs.org/',
+			method: 'GET',
+			responseMatches: [{ type: 'regex', value: 'needle' }],
+			responseRedactions: [{ regex: 'needle' }],
+		}
+
+		const redacted = redactSlices(full, getResponseRedactions!({ response: full, params, logger, ctx }))
+
+		// split so chunk 1's redacted data (26 bytes) is its own fully-redacted block
+		const dataStart = (head + '1a\r\n').length
+		const dataEnd = dataStart + 26
+		const clone = cloneObject(transcript)
+		const respIdx = clone.findIndex(b => b.sender === 'server' && uint8ArrayToStr(b.message).startsWith('HTTP/1.1'))
+		const receipt: Transcript<Uint8Array> = [
+			...clone.slice(0, respIdx),
+			{ sender: 'server', message: redacted.slice(0, dataStart) },
+			{ sender: 'server', message: redacted.slice(dataStart, dataEnd) },
+			{ sender: 'server', message: redacted.slice(dataEnd) },
+		]
+
+		assert.ok(receipt[respIdx + 1].message.every(b => b === 42), 'middle block must be fully redacted')
+
+		await assertValidProviderReceipt({
+			receipt,
+			clientVersion: CURRENT_ATTESTOR_VERSION,
+			params,
+			logger,
+			ctx,
+		})
+	})
+
+	it('legacy clients (< 3.2.0) still match across chunks via the redact path', async() => {
+		const legacyCtx = { version: AttestorVersion.ATTESTOR_VERSION_3_1_0 }
+		const simpleChunk = Buffer.from('HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n9\r\nchunk 1, \r\n7\r\nchunk 2\r\n0\r\n')
+		const params: ProviderParams<'http'> = {
+			url: 'https://xargs.org/',
+			method: 'GET',
+			responseMatches: [{ type: 'regex', value: 'chunk 1, chunk 2' }],
+			responseRedactions: [{ regex: 'chunk 1, chunk 2' }],
+		}
+
+		// legacy reveal: chunk framing is redacted (asterisks), not revealed
+		const redacted = redactSlices(simpleChunk, getResponseRedactions!({ response: simpleChunk, params, logger, ctx: legacyCtx }))
+		assert.ok(uint8ArrayToStr(redacted).includes('*'), 'framing should be redacted for legacy clients')
+
+		const clone = cloneObject(transcript)
+		const respIdx = clone.findIndex(b => b.sender === 'server' && uint8ArrayToStr(b.message).startsWith('HTTP/1.1'))
+		const receipt: Transcript<Uint8Array> = [
+			...clone.slice(0, respIdx),
+			{ sender: 'server', message: redacted }
+		]
+
+		// attestor uses the asterisk-collapse path for the legacy clientVersion
+		await assertValidProviderReceipt({
+			receipt,
+			clientVersion: AttestorVersion.ATTESTOR_VERSION_3_1_0,
+			params,
+			logger,
+			ctx: legacyCtx,
+		})
 	})
 
 	it.skip('should redact non-ASCII chars via regex', () => {
@@ -476,31 +558,18 @@ describe('HTTP Provider Utils tests', () => {
 				logger,
 				ctx,
 			})
+			// gaps vs. the legacy snapshot are the now-revealed transfer-encoding
+			// header (94-120) and chunk-size framing lines (4294-4300, 35451-35459,
+			// 64086+); the rest of the redactions are unchanged
 			assert.deepEqual(redactions, [
-				{
-					'fromIndex': 15,
-					'toIndex': 17
-				},
-				{
-					'fromIndex': 52,
-					'toIndex': 4290,
-				},
-				{
-					'fromIndex': 4294,
-					'toIndex': 4760
-				},
-				{
-					'fromIndex': 4820,
-					'toIndex': 53268
-				},
-				{
-					'fromIndex': 53507,
-					'toIndex': 58705
-				},
-				{
-					'fromIndex': 58723,
-					'toIndex': 64093
-				}
+				{ fromIndex: 15, toIndex: 17 },
+				{ fromIndex: 52, toIndex: 94 },
+				{ fromIndex: 120, toIndex: 4290 },
+				{ fromIndex: 4300, toIndex: 4760 },
+				{ fromIndex: 4820, toIndex: 35451 },
+				{ fromIndex: 35459, toIndex: 53268 },
+				{ fromIndex: 53507, toIndex: 58705 },
+				{ fromIndex: 58723, toIndex: 64086 }
 			])
 		}
 
