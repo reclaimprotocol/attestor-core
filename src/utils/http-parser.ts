@@ -143,7 +143,25 @@ export function makeHttpResponseParser() {
 						// if chunk size is 0, we're done
 						if(!chunkSize) {
 							res.complete = true
-							continue
+							// A revealed TEE transcript can carry bytes after the
+							// terminating chunk (e.g. a TLS close_notify record that
+							// leaked into the response stream). Tolerate them ONLY if
+							// they are redaction placeholders — any revealed byte past
+							// stream end is a smuggling attempt and must still throw.
+							let tail = remaining
+							if(tail.length >= HTTP_HEADER_LINE_END.length
+								&& tail[0] === HTTP_HEADER_LINE_END[0]
+								&& tail[1] === HTTP_HEADER_LINE_END[1]) {
+								tail = tail.slice(HTTP_HEADER_LINE_END.length)
+							}
+
+							for(const b of tail) {
+								if(b !== REDACTION_CHAR_CODE) {
+									throw new Error('got more data after response was complete')
+								}
+							}
+
+							break
 						}
 
 						res.chunks?.push({
