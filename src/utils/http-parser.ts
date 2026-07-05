@@ -161,6 +161,10 @@ export function makeHttpResponseParser() {
 								}
 							}
 
+							// consume the terminator + validated trailing bytes so
+							// streamEnded() (streaming path) doesn't flag leftover data
+							currentByteIdx += remaining.length
+							remaining = new Uint8Array()
 							break
 						}
 
