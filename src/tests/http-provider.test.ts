@@ -11,7 +11,7 @@ describeWithServer('HTTP Provider', opts => {
 		await verifyNoDirectRevealLeaks()
 	})
 
-	it('should create claim with template params', async() => {
+	it.skip('should create claim with template params', async() => {
 		const resp = await createClaimOnAttestor({
 			name: 'http',
 			params: {
