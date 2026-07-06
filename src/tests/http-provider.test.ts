@@ -40,7 +40,6 @@ describeWithServer('HTTP Provider', opts => {
 			client: opts.client,
 			zkEngine: 'gnark'
 		})
-		console.log('ERROOOOOR' + resp.error?.message)
 		assert.ok(!resp.error)
 		assert.match(
 			resp.claim?.context || '',
