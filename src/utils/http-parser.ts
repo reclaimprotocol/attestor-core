@@ -6,38 +6,38 @@ import { findIndexInUint8Array, uint8ArrayToStr } from '#src/utils/generics.ts'
 import { REDACTION_CHAR_CODE } from '#src/utils/redactions.ts'
 
 export type HttpRequest = {
-    method: string
-    url: string
-    protocol: string
-    headers: IncomingHttpHeaders
-    body?: Uint8Array
+	method: string
+	url: string
+	protocol: string
+	headers: IncomingHttpHeaders
+	body?: Uint8Array
 }
 
 export type HttpResponse = {
-    statusCode: number
-    statusMessage: string
-    headers: IncomingHttpHeaders
-    body: Uint8Array
-    headersComplete: boolean
-    complete: boolean
+	statusCode: number
+	statusMessage: string
+	headers: IncomingHttpHeaders
+	body: Uint8Array
+	headersComplete: boolean
+	complete: boolean
 
-    /**
-     * Index of the first byte of the status line
-     */
-    statusLineEndIndex?: number
-    /**
-     * Index of the first byte of the body
-     * in the complete response
-     */
-    bodyStartIndex?: number
-    /**
-     * If using chunked transfer encoding,
-     * this will be set & contain indices of each
-     * chunk in the complete response
-     */
-    chunks?: ArraySlice[]
+	/**
+	 * Index of the first byte of the status line
+	 */
+	statusLineEndIndex?: number
+	/**
+	 * Index of the first byte of the body
+	 * in the complete response
+	 */
+	bodyStartIndex?: number
+	/**
+	 * If using chunked transfer encoding,
+	 * this will be set & contain indices of each
+	 * chunk in the complete response
+	 */
+	chunks?: ArraySlice[]
 
-    headerIndices: Map<string, ArraySlice>
+	headerIndices: Map<string, ArraySlice>
 	/**
 	 * index of separator \r\n\r\n between headers and body
 	 */
@@ -58,7 +58,7 @@ export function makeHttpResponseParser() {
 		body: new Uint8Array(),
 		complete: false,
 		headersComplete: false,
-		headerIndices:new Map<string, ArraySlice>(),
+		headerIndices: new Map<string, ArraySlice>(),
 		headerEndIdx: 0
 	}
 
@@ -70,9 +70,9 @@ export function makeHttpResponseParser() {
 	return {
 		res,
 		/**
-         * Parse the next chunk of data
-         * @param data the data to parse
-         */
+		 * Parse the next chunk of data
+		 * @param data the data to parse
+		 */
 		onChunk(data: Uint8Array) {
 			// concatenate the remaining data from the last chunk
 			remaining = concatenateUint8Arrays([remaining, data])
@@ -110,8 +110,8 @@ export function makeHttpResponseParser() {
 						const [key, value] = line.split(': ')
 						res.headers[key.toLowerCase()] = value
 						res.headerIndices[key.toLowerCase()] = {
-							fromIndex:currentByteIdx - line.length - HTTP_HEADER_LINE_END.length,
-							toIndex:currentByteIdx - HTTP_HEADER_LINE_END.length
+							fromIndex: currentByteIdx - line.length - HTTP_HEADER_LINE_END.length,
+							toIndex: currentByteIdx - HTTP_HEADER_LINE_END.length
 						}
 					} else {
 						throw new Error('got more data after response was complete')
@@ -143,29 +143,7 @@ export function makeHttpResponseParser() {
 						// if chunk size is 0, we're done
 						if(!chunkSize) {
 							res.complete = true
-							// A revealed TEE transcript can carry bytes after the
-							// terminating chunk (e.g. a TLS close_notify record that
-							// leaked into the response stream). Tolerate them ONLY if
-							// they are redaction placeholders — any revealed byte past
-							// stream end is a smuggling attempt and must still throw.
-							let tail = remaining
-							if(tail.length >= HTTP_HEADER_LINE_END.length
-								&& tail[0] === HTTP_HEADER_LINE_END[0]
-								&& tail[1] === HTTP_HEADER_LINE_END[1]) {
-								tail = tail.slice(HTTP_HEADER_LINE_END.length)
-							}
-
-							for(const b of tail) {
-								if(b !== REDACTION_CHAR_CODE) {
-									throw new Error('got more data after response was complete')
-								}
-							}
-
-							// consume the terminator + validated trailing bytes so
-							// streamEnded() (streaming path) doesn't flag leftover data
-							currentByteIdx += remaining.length
-							remaining = new Uint8Array()
-							break
+							continue
 						}
 
 						res.chunks?.push({
@@ -188,9 +166,9 @@ export function makeHttpResponseParser() {
 			}
 		},
 		/**
-         * Call to prevent further parsing; indicating the end of the request
-         * Checks that the response is valid & complete, otherwise throws an error
-         */
+		 * Call to prevent further parsing; indicating the end of the request
+		 * Checks that the response is valid & complete, otherwise throws an error
+		 */
 		streamEnded() {
 			if(!res.headersComplete) {
 				throw new Error('stream ended before headers were complete')

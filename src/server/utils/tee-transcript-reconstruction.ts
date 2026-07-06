@@ -6,7 +6,7 @@ import type { CertificateInfo } from '#src/proto/tee-bundle.ts'
 import type { TeeBundleData } from '#src/server/utils/tee-verification.ts'
 import type { Logger } from '#src/types/general.ts'
 import { AttestorError } from '#src/utils/error.ts'
-import { REDACTION_CHAR_CODE } from '#src/utils/index.ts'
+import { makeHttpResponseParser, REDACTION_CHAR_CODE, strToUint8Array, uint8ArrayToStr } from '#src/utils/index.ts'
 
 // Types specific to transcript reconstruction
 export interface TeeTranscriptData {
@@ -133,14 +133,8 @@ async function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger
 	// Apply response redaction ranges to the reconstructed response
 	let processedResponse = applyResponseRedactionRanges(reconstructedResponse, kOutputPayload.responseRedactionRanges, logger)
 
-	// Apply OPRF replacements BEFORE trimming leading asterisks
-	if(oprfResults && oprfResults.length > 0) {
-		logger.info(`Applying ${oprfResults.length} OPRF replacements before trimming`)
-		const { replaceOprfRanges } = await import('#src/server/utils/tee-oprf-verification.ts')
-		processedResponse = replaceOprfRanges(processedResponse, oprfResults, logger)
-	}
-
-	// Count leading asterisks
+	// Trim leading (NewSessionTicket) and trailing (close_notify/alert) asterisks
+	// BEFORE OPRF/dechunk so downstream positions are stable.
 	let leadingAsterisks = 0
 	for(const element of processedResponse) {
 		if(element === REDACTION_CHAR_CODE) {
@@ -150,7 +144,6 @@ async function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger
 		}
 	}
 
-	// Count trailing asterisks (may contain undesired data like alerts)
 	let trailingAsterisks = 0
 	for(let i = processedResponse.length - 1; i >= leadingAsterisks; i--) {
 		if(processedResponse[i] === REDACTION_CHAR_CODE) {
@@ -160,10 +153,136 @@ async function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger
 		}
 	}
 
-	const finalLength = processedResponse.length - leadingAsterisks - trailingAsterisks
-	logger.info(`After processing: ${processedResponse.length} bytes, ${leadingAsterisks} leading and ${trailingAsterisks} trailing asterisks trimmed, final: ${finalLength} bytes`)
+	processedResponse = processedResponse.slice(leadingAsterisks, processedResponse.length - trailingAsterisks)
 
-	return processedResponse.slice(leadingAsterisks, processedResponse.length - trailingAsterisks)
+	// OPRF positions are in pre-trim coords; shift them into trimmed coords.
+	let oprf = oprfResults?.map(r => ({ ...r, position: r.position - leadingAsterisks }))
+
+	// TEE flow, new clients: chunk framing is revealed, so dechunk the body HERE —
+	// BEFORE the length-changing OPRF replacement. If we replaced first, the inserted
+	// hashes (longer than the matched bytes) would shift every subsequent chunk-size
+	// offset and the verifier's dechunk would desync ("got more data after response
+	// was complete"). Non-TEE / legacy flows leave framing in place and dechunk inside
+	// the http provider using the same parser.
+	const dechunked = dechunkRevealedResponse(processedResponse, oprf, logger)
+	processedResponse = dechunked.response
+	oprf = dechunked.oprfResults
+
+	// Apply OPRF replacements on the now-contiguous body (length growth is harmless).
+	if(oprf && oprf.length > 0) {
+		logger.info(`Applying ${oprf.length} OPRF replacements`)
+		const { replaceOprfRanges } = await import('#src/server/utils/tee-oprf-verification.ts')
+		processedResponse = replaceOprfRanges(processedResponse, oprf, logger)
+	}
+
+	logger.info(`After processing: ${processedResponse.length} bytes (${leadingAsterisks} leading, ${trailingAsterisks} trailing asterisks trimmed)`)
+	return processedResponse
+}
+
+// Synthetic header the http provider prepends when dechunking a revealed body.
+const DECHUNK_SYNTH_HEADER = 'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n'
+
+/**
+ * TEE flow only: when chunk framing is revealed (new clients), dechunk the response
+ * body up-front and remap OPRF positions into the dechunked body, so the subsequent
+ * length-changing OPRF replacement can't desync chunk-size offsets. The
+ * `transfer-encoding: chunked` token is blanked so the http provider does not dechunk
+ * a second time. Returns the input unchanged when framing isn't revealed (legacy) or
+ * the response isn't chunked — those are dechunked inside the provider instead.
+ */
+function dechunkRevealedResponse(
+	response: Uint8Array,
+	oprfResults: Array<{ position: number, length: number, output: Uint8Array }> | undefined,
+	logger: Logger
+): { response: Uint8Array, oprfResults?: Array<{ position: number, length: number, output: Uint8Array }> } {
+	const headerEnd = findHeaderEnd(response)
+	if(headerEnd < 0) {
+		return { response, oprfResults }
+	}
+
+	const bodyStart = headerEnd + 4
+	const headersStr = uint8ArrayToStr(response.slice(0, headerEnd))
+	if(!/transfer-encoding:\s*chunked/i.test(headersStr)) {
+		return { response, oprfResults }
+	}
+
+	// Dechunk via the same synthetic-header parse the http provider uses, so chunk
+	// detection is identical. res.chunks positions are offset by the synthetic prefix.
+	const parser = makeHttpResponseParser()
+	parser.onChunk(strToUint8Array(DECHUNK_SYNTH_HEADER))
+	parser.onChunk(response.slice(bodyStart))
+	const chunks = parser.res.chunks
+	if(!chunks || chunks.length === 0) {
+		return { response, oprfResults }
+	}
+
+	const dechunkedBody = parser.res.body ?? new Uint8Array()
+
+	// Blank the transfer-encoding token so the provider's dechunk is skipped.
+	const headerRegion = response.slice(0, bodyStart)
+	const teMatch = /transfer-encoding:\s*chunked/i.exec(uint8ArrayToStr(headerRegion))
+	if(teMatch) {
+		for(let i = teMatch.index; i < teMatch.index + teMatch[0].length; i++) {
+			headerRegion[i] = 0x78 // 'x'
+		}
+	}
+
+	const dechunkedResponse = new Uint8Array(headerRegion.length + dechunkedBody.length)
+	dechunkedResponse.set(headerRegion, 0)
+	dechunkedResponse.set(dechunkedBody, headerRegion.length)
+
+	const synthLen = DECHUNK_SYNTH_HEADER.length
+	const remapped = oprfResults?.map(r => ({
+		...r,
+		position: chunkedToDechunkedPos(r.position, bodyStart, synthLen, chunks)
+	}))
+
+	logger.info(`TEE dechunk before OPRF: ${response.length} -> ${dechunkedResponse.length} bytes, ${chunks.length} chunks`)
+	return { response: dechunkedResponse, oprfResults: remapped }
+}
+
+// Index of the "\r\n\r\n" header/body separator, or -1.
+function findHeaderEnd(response: Uint8Array): number {
+	for(let i = 0; i + 3 < response.length; i++) {
+		if(response[i] === 0x0d && response[i + 1] === 0x0a
+			&& response[i + 2] === 0x0d && response[i + 3] === 0x0a) {
+			return i
+		}
+	}
+
+	return -1
+}
+
+// Map a position in the original (chunked) response to its position in the dechunked
+// response. `chunks` are in synthetic-prefixed coords (fromIndex/toIndex point to chunk
+// DATA), so subtract `synthLen` to get body-relative offsets.
+function chunkedToDechunkedPos(
+	pos: number,
+	bodyStart: number,
+	synthLen: number,
+	chunks: Array<{ fromIndex: number, toIndex: number }>
+): number {
+	if(pos < bodyStart) {
+		return pos
+	}
+
+	const bodyOff = pos - bodyStart
+	let acc = 0
+	for(const c of chunks) {
+		const cf = c.fromIndex - synthLen
+		const ct = c.toIndex - synthLen
+		if(bodyOff >= cf && bodyOff < ct) {
+			return bodyStart + acc + (bodyOff - cf)
+		}
+
+		if(bodyOff === ct) {
+			return bodyStart + acc + (ct - cf)
+		}
+
+		acc += ct - cf
+	}
+
+	return bodyStart + acc
 }
 
 // Removed legacy packet-based extraction functions since we now use consolidated streams
