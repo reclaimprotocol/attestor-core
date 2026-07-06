@@ -15,7 +15,7 @@ describeWithServer('HTTP Provider', opts => {
 		const resp = await createClaimOnAttestor({
 			name: 'http',
 			params: {
-				url: 'https://news.ycombinator.com/{{param4}}',
+				url: 'https://news.ycombinator.com/best',
 				method: 'GET',
 				responseMatches: [{
 					type: 'regex',
@@ -32,9 +32,7 @@ describeWithServer('HTTP Provider', opts => {
 			},
 			secretParams: {
 				cookieStr: '<cookie-str>',
-				paramValues: {
-					param4: 'best',
-				}
+				paramValues: {}
 			},
 			ownerPrivateKey: opts.privateKeyHex,
 			client: opts.client,
