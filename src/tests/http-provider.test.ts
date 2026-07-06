@@ -15,7 +15,7 @@ describeWithServer('HTTP Provider', opts => {
 		const resp = await createClaimOnAttestor({
 			name: 'http',
 			params: {
-				url: 'https://news.ycombinator.{{param1}}/{{param4}}',
+				url: 'https://news.ycombinator.com/{{param4}}',
 				method: 'GET',
 				responseMatches: [{
 					type: 'regex',
@@ -40,6 +40,7 @@ describeWithServer('HTTP Provider', opts => {
 			client: opts.client,
 			zkEngine: 'gnark'
 		})
+		console.log('ERROOOOOR' + resp.error?.message)
 		assert.ok(!resp.error)
 		assert.match(
 			resp.claim?.context || '',
@@ -66,7 +67,7 @@ describeWithServer('HTTP Provider', opts => {
 						hash: 'oprf'
 					}
 				],
-				paramValues:{ domain:'Example Domain' }
+				paramValues: { domain: 'Example Domain' }
 			},
 			secretParams: {
 				cookieStr: '<cookie-str>'
