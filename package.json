@@ -105,11 +105,13 @@
     "parse5": "^8.0.0",
     "parse5-htmlparser2-tree-adapter": "^8.0.0",
     "pino": "^9.14.0",
-    "re2": "^1.24.0",
     "serve-static": "^1.16.3",
     "snarkjs": "^0.7.6",
     "ws": "^8.20.0",
     "xpath": "^0.0.34"
+  },
+  "optionalDependencies": {
+    "re2": "*"
   },
   "devDependencies": {
     "@adiwajshing/eslint-config": "github:adiwajshing/eslint-config",
@@ -134,6 +136,7 @@
     "tsc-alias": "^1.8.17",
     "typechain": "^8.3.2",
     "typescript": "^5.9.3",
+    "re2": "^1.24.0",
     "whatwg-url": "^14.2.0",
     "yaml": "^2.8.3"
   },

@@ -17,7 +17,6 @@ import {
 import { JSONPath } from 'jsonpath-plus'
 import { parse } from 'parse5'
 import { adapter as htmlAdapter, } from 'parse5-htmlparser2-tree-adapter'
-import RE2 from 're2'
 import xpath from 'xpath'
 
 import type { ArraySlice, CompleteTLSPacket, ProviderParams, RedactedOrHashedArraySlice, Transcript } from '#src/types/index.ts'
@@ -322,8 +321,18 @@ export function parseHttpResponse(buff: Uint8Array) {
 	return parser.res
 }
 
+let RE2: typeof RegExp
+
+import('re2')
+	.then(m => { RE2 = m.default })
+	.catch(() => {})
+
 export function makeRegex(str: string) {
-	return RE2(str, 'sgiu')
+	if(RE2) {
+		return RE2(str, 'sgiu')
+	}
+
+	return new RegExp(str, 'sgiu')
 }
 
 const TEMPLATE_START_CHARCODE = '{'.charCodeAt(0)

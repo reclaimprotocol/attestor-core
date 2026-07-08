@@ -1,9 +1,17 @@
 import assert from 'node:assert'
 import { describe, it } from 'node:test'
 
+import { makeRegex } from '#src/providers/http/utils.ts'
 import { getPublicAddresses, matchesHostPattern } from '#src/server/utils/generics.ts'
 
 describe('Misc Tests', () => {
+
+	it('should use re2', () => {
+		const re2 = makeRegex('abcd')
+		assert(re2.exec('abcd'))
+		assert.equal(re2.constructor.name, 'RE2')
+	})
+
 	it('should allow public IP access', async () => {
 		const allowed = await getPublicAddresses('www.google.com')
 		assert.ok(allowed.length)
