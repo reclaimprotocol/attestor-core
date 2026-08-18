@@ -7,6 +7,13 @@
     "#src/*.ts": "./src/*.ts",
     "#src/*.js": "./lib/*.js"
   },
+  "repository": {
+		"type": "git",
+		"url": "https://github.com/reclaimprotocol/attestor-core"
+	},
+  "publishConfig": {
+		"access": "public"
+	},
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
