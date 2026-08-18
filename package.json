@@ -1,6 +1,6 @@
 {
   "name": "@reclaimprotocol/attestor-core",
-  "version": "5.0.7",
+  "version": "5.1.0",
   "description": "",
   "type": "module",
   "imports": {
