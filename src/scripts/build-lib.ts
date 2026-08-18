@@ -30,7 +30,6 @@ await esbuild.build({
 		'koffi',
 		'p-queue',
 		'parse5',
-		'parse5-htmlparser2-tree-adapter',
 		'pino',
 		're2',
 		'serve-static',
