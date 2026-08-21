@@ -1,6 +1,6 @@
 {
   "name": "@reclaimprotocol/attestor-core",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "description": "",
   "type": "module",
   "imports": {
@@ -30,7 +30,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && tsc-alias && npm run run:tsc -- src/scripts/build-lib.ts",
     "build:browser": "sh ./src/scripts/build-browser.sh",
-    "prepack": "npm run build:browser",
+    "prepack": "npm run download:zk-files && npm run build:browser",
     "run:tsc": "node --experimental-strip-types",
     "start": "npm run run:tsc -- src/scripts/start-server.ts",
     "prepare": "npm run build",
