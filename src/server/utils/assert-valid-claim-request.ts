@@ -412,9 +412,12 @@ export async function decryptTranscript(
 
 			// Process oprf-raw markers: compute OPRF server-side and replace with nullifier
 			if(result.oprfRawMarkers?.length) {
+				const applicationPlaintextLength = tlsVersion === 'TLS1_3'
+					? plaintext.length - 1
+					: plaintext.length
 				const { markersThisPacket, pendingMarker } = separateOprfRawMarkers(
 					result.oprfRawMarkers,
-					plaintext.length,
+					applicationPlaintextLength,
 					() => transcript.findIndex((t, j) => t.sender === sender && j > i),
 					decryptedTranscript.length,
 					logger
@@ -424,7 +427,10 @@ export async function decryptTranscript(
 				if(pendingMarker) {
 					// Copy partial data from plaintext
 					pendingMarker.pending.partialData.set(
-						plaintext.slice(pendingMarker.pending.dataLocation.fromIndex)
+						plaintext.slice(
+							pendingMarker.pending.dataLocation.fromIndex,
+							applicationPlaintextLength
+						)
 					)
 					pendingOprfRaw[pendingMarker.nextIdx] = pendingMarker.pending
 				}
