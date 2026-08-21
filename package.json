@@ -8,12 +8,12 @@
     "#src/*.js": "./lib/*.js"
   },
   "repository": {
-		"type": "git",
-		"url": "https://github.com/reclaimprotocol/attestor-core"
-	},
+    "type": "git",
+    "url": "https://github.com/reclaimprotocol/attestor-core"
+  },
   "publishConfig": {
-		"access": "public"
-	},
+    "access": "public"
+  },
   "exports": {
     ".": {
       "types": "./lib/index.d.ts",
@@ -30,6 +30,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && tsc-alias && npm run run:tsc -- src/scripts/build-lib.ts",
     "build:browser": "sh ./src/scripts/build-browser.sh",
+    "prepack": "npm run build:browser",
     "run:tsc": "node --experimental-strip-types",
     "start": "npm run run:tsc -- src/scripts/start-server.ts",
     "prepare": "npm run build",
