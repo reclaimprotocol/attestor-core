@@ -530,14 +530,16 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 				}
 
 				const {
-					block, redactedPlaintext, overshotToprfFromPrevBlock, toprfs, oprfRawMarkers
+					block, redactedPlaintext, overshotToprfFromPrevBlock,
+					overshotOprfRawFromPrevBlock, toprfs, oprfRawMarkers
 				} = reveal
 				setRevealOfMessage(block.message, {
 					type: 'zk',
 					redactedPlaintext,
 					toprfs,
 					oprfRawMarkers,
-					overshotToprfFromPrevBlock
+					overshotToprfFromPrevBlock,
+					overshotOprfRawFromPrevBlock
 				})
 				revealedPackets.push(
 					{ sender: 'server', message: redactedPlaintext }

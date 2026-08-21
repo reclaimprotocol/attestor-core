@@ -204,6 +204,30 @@ describeWithServer('Claim Creation', opts => {
 			// OPRF cross-packet validation is done server-side
 		})
 
+		it('should create claim with OPRF raw spread across multiple packets', async() => {
+			const user = 'abcd_test_user'
+			const result = await createClaimOnAttestor({
+				name: 'http',
+				params: {
+					url: claimUrl + '?splitDataAcrossPackets=true',
+					method: 'GET',
+					responseRedactions: [
+						{ regex: 'emailAddress\":\"(?<test>[a-z_]+)@', hash: 'oprf-raw' }
+					],
+					responseMatches: [{ type: 'contains', value: '' }]
+				},
+				secretParams: {
+					authorisationHeader: `Bearer ${user}`
+				},
+				ownerPrivateKey: opts.privateKeyHex,
+				client,
+				zkEngine: 'stwo',
+			})
+
+			assert.ok(!result.error)
+			assert.ok(result.claim)
+		})
+
 		it('should produce the same hash for the same input', async() => {
 
 			let hash: Uint8Array | undefined
