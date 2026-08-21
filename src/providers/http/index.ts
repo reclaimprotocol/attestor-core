@@ -233,6 +233,11 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			reveals.push(res.headerIndices['date'])
 		}
 
+		//reveal content-type so the verifier can decode the response body charset
+		if(res.headerIndices['content-type']) {
+			reveals.push(res.headerIndices['content-type'])
+		}
+
 		//reveal transfer-encoding header so the verifier can dechunk the body
 		if(revealFraming && res.headerIndices['transfer-encoding']) {
 			reveals.push(res.headerIndices['transfer-encoding'])
@@ -358,21 +363,34 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			: allServerBlocks.slice(firstRealIdx)
 		const response = concatArrays(...serverBlocks)
 
-		let res: string
-		res = uint8ArrayToStr(response)
+		let bodyStart: number
+		if(shouldRevealCrlf(ctx)) {
+			const responseAfterStatus = response.slice(OK_HTTP_HEADER.length)
+			const separatorIdx = findIndexInUint8Array(
+				responseAfterStatus,
+				strToUint8Array('\r\n\r\n'),
+			)
+			if(separatorIdx === -1) {
+				throw new Error('Response body start not found')
+			}
 
+			bodyStart = OK_HTTP_HEADER.length + separatorIdx + 4
+		} else {
+			bodyStart = OK_HTTP_HEADER.length
+		}
+		const headersText = uint8ArrayToStr(response.slice(0, bodyStart))
 		const okRegex = makeRegex('^HTTP\\/1.1 2\\d{2}')
-		const matchRes = okRegex.exec(res)
+		const matchRes = okRegex.exec(headersText)
 		if(!matchRes) {
 			const statusRegex = makeRegex('^HTTP\\/1.1 (\\d{3})')
-			const matchRes = statusRegex.exec(res)
+			const matchRes = statusRegex.exec(headersText)
 			if(matchRes && matchRes.length > 1) {
 				throw new Error(`Provider returned error ${matchRes[1]}`)
 			}
 
-			let lineEnd = res.indexOf('*')
+			let lineEnd = headersText.indexOf('*')
 			if(lineEnd === -1) {
-				lineEnd = res.indexOf('\n')
+				lineEnd = headersText.indexOf('\n')
 			}
 
 			if(lineEnd === -1) {
@@ -380,19 +398,33 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			}
 
 			throw new Error(
-				`Response did not start with \"HTTP/1.1 2XX\" got "${res.slice(0, lineEnd)}"`
+				`Response did not start with \"HTTP/1.1 2XX\" got "${headersText.slice(0, lineEnd)}"`
 			)
 		}
 
-		let bodyStart: number
-		if(shouldRevealCrlf(ctx)) {
-			bodyStart = res.indexOf('\r\n\r\n', OK_HTTP_HEADER.length) + 4
-			if(bodyStart < 4) {
-				throw new Error('Response body start not found')
-			}
-		} else {
-			bodyStart = OK_HTTP_HEADER.length
+		const paramBody = params.body instanceof Uint8Array
+			? params.body
+			: strToUint8Array(params.body || '')
+
+		if(paramBody.length > 0 && !matchRedactedStrings(paramBody, req.body)) {
+			throw new Error('request body mismatch')
 		}
+
+
+		let body: Uint8Array = response.slice(bodyStart)
+		if(shouldRevealChunkFraming(clientVersion)) {
+			//dechunk the body so matches see contiguous content; redaction
+			//asterisks are preserved as boundaries between revealed slices
+			if(/transfer-encoding:\s*chunked/i.test(headersText)) {
+				body = dechunkResponseBody(body)
+			}
+		}
+
+		const charset = shouldRevealCrlf(ctx)
+			? getResponseBodyCharset(headersText)
+			: undefined
+		const bodyText = decodeResponseBody(body, charset)
+		let res = headersText + bodyText
 
 		//validate server Date header if present
 		const dateHeader = makeRegex(dateHeaderRegex).exec(res)
@@ -409,24 +441,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			}
 		}
 
-
-		const paramBody = params.body instanceof Uint8Array
-			? params.body
-			: strToUint8Array(params.body || '')
-
-		if(paramBody.length > 0 && !matchRedactedStrings(paramBody, req.body)) {
-			throw new Error('request body mismatch')
-		}
-
-
-		if(shouldRevealChunkFraming(clientVersion)) {
-			//dechunk the body so matches see contiguous content; redaction
-			//asterisks are preserved as boundaries between revealed slices
-			const headersStr = res.slice(0, bodyStart)
-			res = /transfer-encoding:\s*chunked/i.test(headersStr)
-				? headersStr + dechunkResponseBody(res.slice(bodyStart))
-				: res
-		} else if(!secretParams) {
+		if(!shouldRevealChunkFraming(clientVersion) && !secretParams) {
 			//legacy clients redact chunk framing; collapse asterisk runs so
 			//matches can span the redacted framing
 			res = res.slice(bodyStart).replace(/\*{3,}/g, '')
@@ -554,14 +569,45 @@ function shouldRevealChunkFraming(version: AttestorVersion) {
 	return version >= AttestorVersion.ATTESTOR_VERSION_3_2_0
 }
 
-// dechunk a revealed body by reusing the parser: wrap it in a minimal
-// (already-validated) header block. streamEnded() skipped to tolerate trailing bytes
-function dechunkResponseBody(body: string) {
+function getResponseBodyCharset(headers: string) {
+	const contentType = /(?:^|[\r\n*])content-type\s*:\s*([^*\r\n]*)/i
+		.exec(headers)?.[1]
+	if(typeof contentType === 'undefined') {
+		return undefined
+	}
+
+	const charsetMatch = /(?:^|;)\s*charset\s*=\s*(?:"((?:[^"\\]|\\.)*)"|([^;\s]*))/i
+		.exec(contentType)
+	if(!charsetMatch) {
+		return undefined
+	}
+
+	const charset = charsetMatch[1]?.replace(/\\(.)/g, '$1') ?? charsetMatch[2]
+	return charset.trim() || undefined
+}
+
+function decodeResponseBody(body: Uint8Array, charset: string | undefined) {
+	try {
+		return new TextDecoder(charset ?? 'utf-8').decode(body)
+	} catch(error) {
+		if(charset) {
+			throw new Error(`Unsupported response charset "${charset}"`, { cause: error })
+		}
+
+		throw error
+	}
+}
+
+// dechunk a revealed body by reusing the byte-oriented parser: wrap it in a
+// minimal (already-validated) header block. streamEnded() is skipped to
+// tolerate trailing bytes.
+function dechunkResponseBody(body: Uint8Array) {
 	const parser = makeHttpResponseParser()
-	parser.onChunk(
-		strToUint8Array('HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n' + body)
-	)
-	return uint8ArrayToStr(parser.res.body ?? new Uint8Array())
+	parser.onChunk(concatenateUint8Arrays([
+		strToUint8Array('HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n'),
+		body,
+	]))
+	return parser.res.body ?? new Uint8Array()
 }
 
 function getHostPort(params: ProviderParams<'http'>, secretParams: ProviderSecretParams<'http'>) {

@@ -192,11 +192,11 @@ describe('HTTP Provider Utils tests', () => {
 		})
 		const redacted = uint8ArrayToStr(redactSlices(simpleChunk, redactions))
 
-		// chunk framing + transfer-encoding header are revealed verbatim
+		// content-type, chunk framing, and transfer-encoding are revealed verbatim
+		assert.ok(redacted.includes('Content-Type: text/plain'))
 		assert.ok(redacted.includes('Transfer-Encoding: chunked'))
 		assert.ok(redacted.includes('9\r\nchunk 1, \r\n7\r\nchunk 2\r\n0\r\n'))
 		// other headers stay redacted
-		assert.ok(!redacted.includes('Content-Type'))
 		assert.ok(!redacted.includes('Connection'))
 	})
 
@@ -309,6 +309,195 @@ describe('HTTP Provider Utils tests', () => {
 		})
 	})
 
+	it('matches ISO-8859-1 response text with contains', async() => {
+		const body = Buffer.from([0x53, 0x65, 0xf1, 0x6f, 0x72])
+		const params = charsetMatchParams('contains', 'Señor')
+		const { receipt } = getReceiptForResponse(
+			responseWithBody(body, 'text/plain; charset=ISO-8859-1'),
+			params,
+		)
+
+		await assertValidProviderReceipt({
+			receipt,
+			clientVersion: CURRENT_ATTESTOR_VERSION,
+			params,
+			logger,
+			ctx,
+		})
+	})
+
+	it('matches ISO-8859-1 response text with regex', async() => {
+		const body = Buffer.from([0x53, 0x65, 0xf1, 0x6f, 0x72])
+		const params = charsetMatchParams('regex', 'Señor')
+		const { receipt } = getReceiptForResponse(
+			responseWithBody(body, 'text/plain; charset=ISO-8859-1'),
+			params,
+		)
+
+		await assertValidProviderReceipt({
+			receipt,
+			clientVersion: CURRENT_ATTESTOR_VERSION,
+			params,
+			logger,
+			ctx,
+		})
+	})
+
+	it('extracts named regex groups from decoded ISO-8859-1 text', async() => {
+		const body = Buffer.from([0x53, 0x65, 0xf1, 0x6f, 0x72])
+		const params = charsetMatchParams('regex', '(?<name>Señor)')
+		const { receipt } = getReceiptForResponse(
+			responseWithBody(body, 'text/plain; charset=ISO-8859-1'),
+			params,
+		)
+
+		const result = await assertValidProviderReceipt({
+			receipt,
+			clientVersion: CURRENT_ATTESTOR_VERSION,
+			params,
+			logger,
+			ctx,
+		})
+
+		assert.equal(result!.extractedParameters.name, 'Señor')
+	})
+
+	it('dechunks ISO-8859-1 bytes before response matching', async() => {
+		const body = Buffer.from([0x53, 0x65, 0xf1, 0x6f, 0x72])
+		const response = Buffer.concat([
+			Buffer.from(
+				'HTTP/1.1 200 OK\r\n'
+				+ 'Content-Type: text/plain; charset=ISO-8859-1\r\n'
+				+ 'Transfer-Encoding: chunked\r\n'
+				+ 'X-Unrelated: secret\r\n\r\n'
+			),
+			Buffer.from('2\r\n'),
+			body.subarray(0, 2),
+			Buffer.from('\r\n3\r\n'),
+			body.subarray(2),
+			Buffer.from('\r\n0\r\n'),
+		])
+		const params = charsetMatchParams('contains', 'Señor')
+		const { receipt } = getReceiptForResponse(response, params)
+
+		await assertValidProviderReceipt({
+			receipt,
+			clientVersion: CURRENT_ATTESTOR_VERSION,
+			params,
+			logger,
+			ctx,
+		})
+	})
+
+	it('preserves response matching for valid UTF-8', async() => {
+		const body = Buffer.from('Señor', 'utf8')
+		const params: ProviderParams<'http'> = {
+			url: 'https://xargs.org/',
+			method: 'GET',
+			responseMatches: [{ type: 'contains', value: 'Señor' }],
+			responseRedactions: [{ regex: 'SeÃ±or' }],
+		}
+		const { receipt } = getReceiptForResponse(
+			responseWithBody(body, 'text/plain; charset=UTF-8'),
+			params,
+		)
+
+		await assertValidProviderReceipt({
+			receipt,
+			clientVersion: CURRENT_ATTESTOR_VERSION,
+			params,
+			logger,
+			ctx,
+		})
+	})
+
+	it('uses UTF-8 when the header Content-Type has no charset', async() => {
+		const body = Buffer.from(
+			'Content-Type: text/plain; charset=not-a-charset Señor',
+			'utf8',
+		)
+		const params: ProviderParams<'http'> = {
+			url: 'https://xargs.org/',
+			method: 'GET',
+			responseMatches: [{ type: 'regex', value: 'Señor' }],
+			responseRedactions: [{
+				regex: 'Content-Type: text/plain; charset=not-a-charset SeÃ±or'
+			}],
+		}
+		const { receipt } = getReceiptForResponse(
+			responseWithBody(body, 'text/plain'),
+			params,
+		)
+
+		await assertValidProviderReceipt({
+			receipt,
+			clientVersion: CURRENT_ATTESTOR_VERSION,
+			params,
+			logger,
+			ctx,
+		})
+	})
+
+	it('reveals the complete Content-Type value and no unrelated headers', () => {
+		const body = Buffer.from([0x53, 0x65, 0xf1, 0x6f, 0x72])
+		const params = charsetMatchParams('contains', 'Señor')
+		const { redactedResponse } = getReceiptForResponse(
+			responseWithBody(
+				body,
+				'text/plain; charset=ISO-8859-1',
+				['X-Unrelated: keep-secret'],
+			),
+			params,
+		)
+		const redactedText = Buffer.from(redactedResponse).toString('latin1')
+
+		assert.ok(redactedText.includes('Content-Type: text/plain; charset=ISO-8859-1'))
+		assert.ok(!redactedText.includes('X-Unrelated'))
+	})
+
+	it('preserves selectively hidden body bytes as asterisks while decoding', async() => {
+		const body = Buffer.from([0x78, 0x53, 0x65, 0xf1, 0x6f, 0x72])
+		const params = charsetMatchParams('contains', '*Señor')
+		const { receipt, redactedResponse } = getReceiptForResponse(
+			responseWithBody(body, 'text/plain; charset=ISO-8859-1'),
+			params,
+		)
+
+		assert.equal(redactedResponse[redactedResponse.length - body.length], '*'.charCodeAt(0))
+		await assertValidProviderReceipt({
+			receipt,
+			clientVersion: CURRENT_ATTESTOR_VERSION,
+			params,
+			logger,
+			ctx,
+		})
+	})
+
+	it('rejects an unsupported declared response charset', async() => {
+		const body = Buffer.from('needle')
+		const params: ProviderParams<'http'> = {
+			url: 'https://xargs.org/',
+			method: 'GET',
+			responseMatches: [{ type: 'contains', value: 'needle' }],
+			responseRedactions: [{ regex: 'needle' }],
+		}
+		const { receipt } = getReceiptForResponse(
+			responseWithBody(body, 'text/plain; charset=not-a-charset'),
+			params,
+		)
+
+		await assert.rejects(
+			async() => assertValidProviderReceipt({
+				receipt,
+				clientVersion: CURRENT_ATTESTOR_VERSION,
+				params,
+				logger,
+				ctx,
+			}),
+			/Unsupported response charset "not-a-charset"/
+		)
+	})
+
 	it.skip('should redact non-ASCII chars via regex', () => {
 		const provider = httpProvider
 		const text = '秘密の情報' // some non-ASCII text
@@ -363,6 +552,10 @@ describe('HTTP Provider Utils tests', () => {
 		assert.deepEqual(redactions, [
 			{
 				'fromIndex': 15,
+				'toIndex': 17,
+			},
+			{
+				'fromIndex': 41,
 				'toIndex': 81,
 			},
 			{
@@ -414,7 +607,7 @@ describe('HTTP Provider Utils tests', () => {
 			start = red.toIndex
 		}
 
-		assert.equal(str, 'HTTP/1.1 200 OK\r\n\r\n262728272829293031')
+		assert.equal(str, 'HTTP/1.1 200 OKContent-Type: text/plain\r\n\r\n262728272829293031')
 	})
 
 	it('should perform complex redactions 2', () => {
@@ -443,6 +636,10 @@ describe('HTTP Provider Utils tests', () => {
 			assert.deepEqual(redactions, [
 				{
 					'fromIndex': 15,
+					'toIndex': 17,
+				},
+				{
+					'fromIndex': 41,
 					'toIndex': 80,
 				},
 				{
@@ -470,7 +667,7 @@ describe('HTTP Provider Utils tests', () => {
 				start = red.toIndex
 			}
 
-			assert.equal(str, 'HTTP/1.1 200 OK\r\n\r\n262728')
+			assert.equal(str, 'HTTP/1.1 200 OKContent-Type: text/plain\r\n\r\n262728')
 		}
 
 	})
@@ -499,6 +696,10 @@ describe('HTTP Provider Utils tests', () => {
 			assert.deepEqual(redactions, [
 				{
 					'fromIndex': 15,
+					'toIndex': 17,
+				},
+				{
+					'fromIndex': 41,
 					'toIndex': 81,
 				},
 				{
@@ -526,7 +727,7 @@ describe('HTTP Provider Utils tests', () => {
 				start = red.toIndex
 			}
 
-			assert.equal(str, 'HTTP/1.1 200 OK\r\n\r\n"age":"26""age":"27""age":"29"')
+			assert.equal(str, 'HTTP/1.1 200 OKContent-Type: text/plain\r\n\r\n"age":"26""age":"27""age":"29"')
 		}
 	})
 
@@ -558,12 +759,13 @@ describe('HTTP Provider Utils tests', () => {
 				logger,
 				ctx,
 			})
-			// gaps vs. the legacy snapshot are the now-revealed transfer-encoding
-			// header (94-120) and chunk-size framing lines (4294-4300, 35451-35459,
-			// 64086+); the rest of the redactions are unchanged
+			// gaps vs. the legacy snapshot are the now-revealed content-type header
+			// (54-92), transfer-encoding header (94-120), and chunk-size framing
+			// lines (4294-4300, 35451-35459, 64086+)
 			assert.deepEqual(redactions, [
 				{ fromIndex: 15, toIndex: 17 },
-				{ fromIndex: 52, toIndex: 94 },
+				{ fromIndex: 52, toIndex: 54 },
+				{ fromIndex: 92, toIndex: 94 },
 				{ fromIndex: 120, toIndex: 4290 },
 				{ fromIndex: 4300, toIndex: 4760 },
 				{ fromIndex: 4820, toIndex: 35451 },
@@ -1419,6 +1621,54 @@ Content-Type: text/html; charset=utf-8\r
 			return uint8ArrayToStr((req.data as Uint8Array).slice(req.redactions[index].fromIndex, req.redactions[index].toIndex))
 		}
 	})
+
+	function charsetMatchParams(
+		type: 'contains' | 'regex',
+		value: string,
+	): ProviderParams<'http'> {
+		return {
+			url: 'https://xargs.org/',
+			method: 'GET',
+			responseMatches: [{ type, value }],
+			responseRedactions: [{ regex: 'Señor' }],
+		}
+	}
+
+	function responseWithBody(
+		body: Uint8Array,
+		contentType: string,
+		extraHeaders: string[] = [],
+	) {
+		const headers = Buffer.from([
+			'HTTP/1.1 200 OK',
+			`Content-Type: ${contentType}`,
+			`Content-Length: ${body.length}`,
+			...extraHeaders,
+			'',
+			'',
+		].join('\r\n'))
+
+		return Buffer.concat([headers, body])
+	}
+
+	function getReceiptForResponse(
+		response: Uint8Array,
+		params: ProviderParams<'http'>,
+	) {
+		const redactions = getResponseRedactions!({ response, params, logger, ctx })
+		const redactedResponse = redactSlices(response, redactions)
+		const clone = cloneObject(transcript)
+		const responseIndex = clone.findIndex(
+			block => block.sender === 'server'
+				&& uint8ArrayToStr(block.message).startsWith('HTTP/1.1')
+		)
+		const receipt: Transcript<Uint8Array> = [
+			...clone.slice(0, responseIndex),
+			{ sender: 'server', message: redactedResponse },
+		]
+
+		return { receipt, redactedResponse }
+	}
 
 	async function getRedactedStr(
 		plaintext: Uint8Array,
