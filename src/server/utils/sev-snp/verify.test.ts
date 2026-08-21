@@ -8,9 +8,11 @@ import { assertSevSnpBaseAllowed } from '#src/server/utils/sev-snp/allowlist.ts'
 import { verifyNitroTpmDocument } from '#src/server/utils/sev-snp/nitrotpm.ts'
 import { verifySevReport } from '#src/server/utils/sev-snp/sev-report.ts'
 import {
+	awsCombinedV2ReportData,
 	expectedPCR8,
 	extractTeeKeyFromNonces,
 	parseSevSnpEnvelope,
+	requireAwsAttestationV2,
 	SEV_TAG_AWS,
 	SEV_TAG_GCP,
 	snpNonceCommitment,
@@ -103,6 +105,57 @@ test('AWS combined: end-to-end verifyCombinedSevSnp reproduces (app, base, nonce
 	assert.equal(r.nonces.length, 2)
 })
 
+test('AWS v2 commitment binds the caller, app hash, and exact NitroTPM document', () => {
+	const bound = Buffer.from('bound')
+	const app = Buffer.alloc(32, 0x42)
+	const doc = Buffer.from('signed NitroTPM document')
+	const expected = awsCombinedV2ReportData(bound, app, doc)
+
+	assert.notDeepEqual(awsCombinedV2ReportData(Buffer.from('other'), app, doc), expected)
+	assert.notDeepEqual(awsCombinedV2ReportData(bound, Buffer.alloc(32, 0x43), doc), expected)
+	assert.notDeepEqual(awsCombinedV2ReportData(bound, app, Buffer.from('other')), expected)
+})
+
+test('AWS v2 policy rejects a legacy envelope', async() => {
+	const att = loadFixture('aws_combined.b64')
+	const { env } = await parseSevSnpEnvelope(att)
+	const now = await nitroLeafMidValidity(env.nitrotpm!)
+	const prior = process.env.SNP_AWS_ATTESTATION_V2_REQUIRED
+	process.env.SNP_AWS_ATTESTATION_V2_REQUIRED = '1'
+	try {
+		await assert.rejects(verifyCombinedSevSnp(att, now), /no same-guest v2 proof/)
+	} finally {
+		if(prior === undefined) {
+			delete process.env.SNP_AWS_ATTESTATION_V2_REQUIRED
+		} else {
+			process.env.SNP_AWS_ATTESTATION_V2_REQUIRED = prior
+		}
+	}
+})
+
+test('AWS expansion rejects an invalid sev2 report when legacy sev is valid', async() => {
+	const legacy = loadFixture('aws_combined.b64')
+	const { tag, env } = await parseSevSnpEnvelope(legacy)
+	const { encode } = await import('cbor-x')
+	const expanded = Buffer.concat([
+		Buffer.from([tag]),
+		Buffer.from(encode({ ...env, sev2: env.sev })),
+	])
+	const now = await nitroLeafMidValidity(env.nitrotpm!)
+	await assert.rejects(
+		verifyCombinedSevSnp(expanded, now),
+		/report_data does not match expected binding/
+	)
+})
+
+test('AWS v2 policy fails secure on configuration typos', () => {
+	assert.equal(requireAwsAttestationV2(undefined), false)
+	assert.equal(requireAwsAttestationV2('0'), false)
+	assert.equal(requireAwsAttestationV2('1'), true)
+	assert.equal(requireAwsAttestationV2('true'), true)
+	assert.equal(requireAwsAttestationV2('typo'), true)
+})
+
 test('GCP combined: end-to-end verifyCombinedSevSnp reproduces (app, base, nonces)', async() => {
 	const att = loadFixture('gcp_combined.b64')
 	const r = await verifyCombinedSevSnp(att)
@@ -116,5 +169,7 @@ test('GCP combined: end-to-end verifyCombinedSevSnp reproduces (app, base, nonce
 test('allowlist: pins both per-cloud base hashes and rejects unknown ones', () => {
 	assert.doesNotThrow(() => assertSevSnpBaseAllowed('snp-base:e51ea77d7a1a7b435e1141e1f8de1cf3cbbabf9602cad6e060b80c4029f36ff6'))
 	assert.doesNotThrow(() => assertSevSnpBaseAllowed('snp-base:4832908152fc6619b45bdfe6cddb3399c73101cb323983f10923c6c871b19cd92cd08c6d54064840e108566f4d84f6d7'))
+	assert.doesNotThrow(() => assertSevSnpBaseAllowed('snp-base:848bc6bf294c76d2002ee313d8994a1601fa4ed478a017d0b3cc7a50a30bfc11'))
+	assert.doesNotThrow(() => assertSevSnpBaseAllowed('snp-base:5451db58f0e355b07a81c4b7f0675cc1f2c27d91e82f564837ab92afd2b32c68f190486995677b5162cd7c6f1cade1b5'))
 	assert.throws(() => assertSevSnpBaseAllowed('snp-base:' + 'ad'.repeat(32)), /base hash/)
 })
