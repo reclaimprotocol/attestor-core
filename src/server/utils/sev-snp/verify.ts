@@ -18,6 +18,8 @@ export const SEV_TAG_AWS = 0x02
 export const SNP_APP_PREFIX = 'snp-app:'
 export const SNP_BASE_PREFIX = 'snp-base:'
 
+const AWS_V2_DOMAIN = Buffer.from('reclaim/aws-combined-attestation/v2\0', 'utf8')
+
 // Two-tier code identity PCRs: 8 = app bundle (loader-measured), 11 = base UKI.
 export const APP_PCR = 8
 export const BASE_PCR = 11
@@ -27,6 +29,7 @@ export interface SevSnpEnvelope {
 	tpm?: Uint8Array // GCP: go-tpm-tools Attestation proto
 	nitrotpm?: Uint8Array // AWS: NitroTPM COSE_Sign1 document
 	sev?: Uint8Array // AWS + GCP: go-sev-guest Attestation proto
+	sev2?: Uint8Array // AWS: same-guest report bound to the exact NitroTPM document
 	nonces?: string[]
 }
 
@@ -73,6 +76,32 @@ export function snpNonceCommitment(nonces: string[]): Buffer {
 	return h.digest()
 }
 
+/** Commits the AMD report to the exact NitroTPM evidence from the same broker. */
+export function awsCombinedV2ReportData(
+	bound: Uint8Array,
+	appHash: Uint8Array,
+	nitroTpm: Uint8Array
+): Buffer {
+	const h = createHash('sha512')
+	const len8 = Buffer.alloc(8)
+	h.update(AWS_V2_DOMAIN)
+	for(const field of [bound, appHash, nitroTpm]) {
+		len8.writeBigUInt64BE(BigInt(field.length))
+		h.update(len8)
+		h.update(field)
+	}
+
+	return h.digest()
+}
+
+/** Only an absent value or an explicit 0 keeps the AWS expansion path active. */
+export function requireAwsAttestationV2(
+	value: string | undefined = process.env.SNP_AWS_ATTESTATION_V2_REQUIRED
+): boolean {
+	const normalized = value?.trim() ?? ''
+	return normalized !== '' && normalized !== '0'
+}
+
 /**
  * expectedPCR8: the value the loader produces by extending a pristine (all-zero)
  * PCR 8 once with alg(appHash), i.e. alg(0^algSize || alg(appHash)). GCP uses the
@@ -110,23 +139,30 @@ export function extractTeeKeyFromNonces(
 	throw new Error('no tee_[kt]_public_key nonce in SEV-SNP attestation')
 }
 
-// AWS leg: SEV report binds sha512(bound); NitroTPM doc's user_data binds the
-// same; PCR8 proves the app hash (SHA-384 bank); PCR11 is the base.
+// AWS expansion keeps the legacy caller-bound report and adds sev2. The sev2
+// report binds the exact NitroTPM document, app hash, and caller value.
 async function verifyAwsLeg(
 	env: SevSnpEnvelope,
 	bound: Buffer,
 	now: Date
 ): Promise<{ app: string, base: string }> {
-	if(!env.sev || !env.nitrotpm) {
-		throw new Error('AWS SEV-SNP envelope missing sev report or nitrotpm doc')
+	if(!env.nitrotpm || (!env.sev && !env.sev2)) {
+		throw new Error('AWS SEV-SNP envelope missing SEV report or NitroTPM document')
 	}
 
 	const bind = createHash('sha512').update(bound).digest()
-	verifySevReport(env.sev, bind, now)
-
 	const { pcr8, pcr11, userData } = await verifyNitroTpmDocument(env.nitrotpm, now)
 	if(!userData.equals(bind)) {
 		throw new Error('NitroTPM user_data does not bind the attestation')
+	}
+	if(env.sev) {
+		verifySevReport(env.sev, bind, now)
+	}
+	if(env.sev2) {
+		const v2 = awsCombinedV2ReportData(bound, env.app, env.nitrotpm)
+		verifySevReport(env.sev2, v2, now)
+	} else if(requireAwsAttestationV2()) {
+		throw new Error('AWS combined attestation has no same-guest v2 proof')
 	}
 
 	if(!pcr8.equals(expectedPCR8(env.app, 'sha384'))) {
