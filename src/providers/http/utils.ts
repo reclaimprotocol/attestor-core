@@ -22,6 +22,7 @@ import xpath from 'xpath'
 import type { ArraySlice, CompleteTLSPacket, ProviderParams, RedactedOrHashedArraySlice, Transcript } from '#src/types/index.ts'
 import type { HttpRequest, HttpResponse } from '#src/utils/index.ts'
 import { extractRequestBufferFromTranscript, getHttpRequestDataFromTranscript, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from '#src/utils/index.ts'
+import { logger } from '#src/utils/logger.ts'
 
 export type JSONIndex = {
 	start: number
@@ -325,14 +326,16 @@ let RE2: typeof RegExp
 
 import('re2')
 	.then(m => { RE2 = m.default })
-	.catch(() => {})
+	.catch(err => {
+		logger.warn({ err }, 'Failed to load RE2; falling back to native RegExp')
+	})
 
 export function makeRegex(str: string) {
 	if(RE2) {
 		return RE2(str, 'sgiu')
 	}
 
-	return new RegExp(str, 'sgiu')
+	return new RegExp(str, 'sgi')
 }
 
 const TEMPLATE_START_CHARCODE = '{'.charCodeAt(0)
