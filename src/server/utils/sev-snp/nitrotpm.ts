@@ -15,6 +15,7 @@ const NITRO_ROOT_PEM = readFileSync('./cert/sev-snp/aws_nitro_root.pem')
 export interface NitroTpmResult {
 	pcr8: Buffer
 	pcr11: Buffer
+	pcrs: Map<number, Buffer>
 	userData: Buffer
 }
 
@@ -122,5 +123,16 @@ export async function verifyNitroTpmDocument(
 		throw new Error('NitroTPM: COSE_Sign1 ES384 signature invalid')
 	}
 
-	return { pcr8, pcr11, userData }
+	const pcrs = new Map<number, Buffer>()
+	if(doc.nitrotpm_pcrs instanceof Map) {
+		for(const [index, value] of doc.nitrotpm_pcrs.entries()) {
+			pcrs.set(Number(index), Buffer.from(value as Uint8Array))
+		}
+	} else {
+		for(const [index, value] of Object.entries(doc.nitrotpm_pcrs as Record<string, Uint8Array>)) {
+			pcrs.set(Number(index), Buffer.from(value))
+		}
+	}
+
+	return { pcr8, pcr11, pcrs, userData }
 }

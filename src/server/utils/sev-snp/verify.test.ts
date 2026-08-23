@@ -13,9 +13,11 @@ import {
 	extractTeeKeyFromNonces,
 	parseSevSnpEnvelope,
 	requireAwsAttestationV2,
+	SECURE_BOOT_TAG_GCP,
 	SEV_TAG_AWS,
 	SEV_TAG_GCP,
 	snpNonceCommitment,
+	verifyCombinedSecureBoot,
 	verifyCombinedSevSnp,
 } from '#src/server/utils/sev-snp/verify.ts'
 
@@ -164,6 +166,12 @@ test('GCP combined: end-to-end verifyCombinedSevSnp reproduces (app, base, nonce
 	assert.equal(r.app, 'snp-app:26d33fd8f9ac470f4f7de521e36ca8c708324342c45ea66c3160a61f2294986b')
 	assert.equal(r.base, 'snp-base:edf6d8b9e7b6cf19acfd2788ee5c2d33867275deccbe14fbbc184f0e30628256')
 	assert.equal(r.nonces.length, 2)
+})
+
+test('Secure Boot adds an event-log gate to otherwise valid SEV2 evidence', async() => {
+	const legacy = loadFixture('gcp_combined.b64')
+	const secure = Buffer.concat([Buffer.from([SECURE_BOOT_TAG_GCP]), Buffer.from(legacy).subarray(1)])
+	await assert.rejects(verifyCombinedSecureBoot(secure), /no event log/)
 })
 
 test('allowlist: pins both per-cloud base hashes and rejects unknown ones', () => {
