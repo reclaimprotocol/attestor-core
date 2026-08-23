@@ -217,7 +217,8 @@ export async function verifyCombinedSecureBoot(
 	att: Uint8Array,
 	now: Date = new Date()
 ): Promise<SevSnpResult> {
-	const { tag, env } = await parseSevSnpEnvelope(att)
+	const secureAtt = secureBootAttestationFromCompatibleWire(att)
+	const { tag, env } = await parseSevSnpEnvelope(secureAtt)
 	if(!env.nonces || env.nonces.length === 0) {
 		throw new Error('Secure Boot attestation carries no nonces (not a claim attestation)')
 	}
@@ -237,7 +238,7 @@ export async function verifyCombinedSecureBoot(
 
 	// Run the unchanged public SEV2 verifier as the prerequisite. Translating
 	// only the tag makes future SEV2 checks automatically apply here as well.
-	const legacyEvidence = Buffer.concat([Buffer.from([legacyTag]), Buffer.from(att).subarray(1)])
+	const legacyEvidence = Buffer.concat([Buffer.from([legacyTag]), secureAtt.subarray(1)])
 	const prerequisite = await verifyCombinedSevSnp(legacyEvidence, now)
 
 	// Recover the already-authenticated PCR map for the additive event-log gate.
@@ -250,4 +251,25 @@ export async function verifyCombinedSecureBoot(
 	}
 	verifySecureBootEventLog(identity.eventLog, identity.pcrs, bank)
 	return prerequisite
+}
+
+/**
+ * Restores the distinct Secure Boot tag on legacy-compatible client evidence.
+ * Call this only when an authenticated protocol value requires Secure Boot;
+ * the legacy tag alone is intentionally not a generation signal.
+ */
+export function secureBootAttestationFromCompatibleWire(att: Uint8Array): Buffer {
+	if(att.length === 0) {
+		throw new Error('empty SNP attestation')
+	}
+
+	const out = Buffer.from(att)
+	if(out[0] === SEV_TAG_GCP) {
+		out[0] = SECURE_BOOT_TAG_GCP
+	} else if(out[0] === SEV_TAG_AWS) {
+		out[0] = SECURE_BOOT_TAG_AWS
+	} else if(out[0] !== SECURE_BOOT_TAG_GCP && out[0] !== SECURE_BOOT_TAG_AWS) {
+		throw new Error(`unknown SNP attestation tag 0x${out[0].toString(16)}`)
+	}
+	return out
 }
