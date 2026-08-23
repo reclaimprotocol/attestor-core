@@ -106,7 +106,7 @@ function pcrDigest(pcrs: Record<number, Uint8Array>, hash: string): Buffer {
 
 // Verify the AK-signed quote, its nonce, and that the provided PCRs match the
 // signed digest; return PCR 8 / PCR 11.
-function verifyQuote(q: Quote, akPub: KeyObject, nonce: Buffer): { pcr8: Buffer, pcr11: Buffer } {
+function verifyQuote(q: Quote, akPub: KeyObject, nonce: Buffer): { pcrs: Map<number, Buffer>, pcr8: Buffer, pcr11: Buffer } {
 	const { r, s, hash } = parseEcdsaSig(Buffer.from(q.rawSig))
 	const fieldSize = akPub.asymmetricKeyDetails?.namedCurve === 'secp384r1' ? 48 : 32
 	const p1363 = Buffer.concat([padBE(r, fieldSize), padBE(s, fieldSize)])
@@ -131,7 +131,11 @@ function verifyQuote(q: Quote, akPub: KeyObject, nonce: Buffer): { pcr8: Buffer,
 		throw new Error('GCP quote missing PCR 8 / PCR 11')
 	}
 
-	return { pcr8: Buffer.from(pcr8), pcr11: Buffer.from(pcr11) }
+	return {
+		pcrs: new Map(Object.entries(pcrs).map(([index, value]) => [Number(index), Buffer.from(value)])),
+		pcr8: Buffer.from(pcr8),
+		pcr11: Buffer.from(pcr11),
+	}
 }
 
 // Walk AK cert -> issuer -> ... -> the pinned Google vTPM root.
@@ -177,7 +181,7 @@ export function verifyGcpLeg(
 	env: SevSnpEnvelope,
 	bound: Buffer,
 	now: Date
-): { app: string, base: string } {
+): { app: string, base: string, pcrs: Map<number, Buffer>, eventLog: Buffer } {
 	if(!env.tpm) {
 		throw new Error('GCP SEV-SNP envelope missing go-tpm-tools attestation')
 	}
@@ -199,10 +203,10 @@ export function verifyGcpLeg(
 		throw new Error('GCP attestation has no SHA-256 vTPM quote')
 	}
 
-	const { pcr8, pcr11 } = verifyQuote(quote, akCert.publicKey, nonce)
+	const { pcrs, pcr8, pcr11 } = verifyQuote(quote, akCert.publicKey, nonce)
 	if(!pcr8.equals(expectedPCR8(env.app, 'sha256'))) {
 		throw new Error('PCR 8 does not match the claimed app hash')
 	}
 
-	return appBaseIdentity(env.app, pcr11)
+	return { ...appBaseIdentity(env.app, pcr11), pcrs, eventLog: Buffer.from(att.eventLog) }
 }

@@ -9,7 +9,7 @@ import { BodyType, KOutputPayload, TOutputPayload, VerificationBundle } from '#s
 import { validateGcpAttestationAndExtractKey } from '#src/server/utils/gcp-attestation.ts'
 import type { AddressExtractionResult } from '#src/server/utils/nitro-attestation.ts'
 import { assertSevSnpBaseAllowed } from '#src/server/utils/sev-snp/allowlist.ts'
-import { verifyCombinedSevSnp } from '#src/server/utils/sev-snp/verify.ts'
+import { verifyCombinedSecureBoot, verifyCombinedSevSnp } from '#src/server/utils/sev-snp/verify.ts'
 import type { Logger } from '#src/types/general.ts'
 import { AttestorError } from '#src/utils/error.ts'
 import { SIGNATURES } from '#src/utils/signatures/index.ts'
@@ -164,6 +164,21 @@ async function verifySevSnpSide(
 	return { teeType: r.teeType, ethAddress: r.ethAddress, pcr0: r.app }
 }
 
+/** Secure Boot keeps the SEV2 checks but replaces the PCR 11 allowlist with R. */
+async function verifySecureBootSide(
+	attestationBytes: Uint8Array,
+	expectedTeeType: 'tee_k' | 'tee_t',
+	logger: Logger
+): Promise<AddressExtractionResult> {
+	const r = await verifyCombinedSecureBoot(attestationBytes)
+	if(r.teeType !== expectedTeeType) {
+		throw new Error(`Secure Boot attestation wrong TEE type, expected ${expectedTeeType}, got ${r.teeType}`)
+	}
+
+	logger.info(`${expectedTeeType} Secure Boot attestation verified: app=${r.app}`)
+	return { teeType: r.teeType, ethAddress: r.ethAddress, pcr0: r.app }
+}
+
 /**
  * Extracts public keys from attestations (GCP Confidential Space or SEV-SNP) or
  * embedded keys (standalone mode)
@@ -233,6 +248,8 @@ async function extractPublicKeys(
 			teekEnvVars = gcpResult.envVars ?? {}
 		} else if(teekAttestationType === 'sev-snp') {
 			teekKeyResult = await verifySevSnpSide(teekAttestationBytes, 'tee_k', logger)
+		} else if(teekAttestationType === 'secure-boot') {
+			teekKeyResult = await verifySecureBootSide(teekAttestationBytes, 'tee_k', logger)
 		} else {
 			throw new Error(`TEE_K unsupported attestation type: ${teekAttestationType}`)
 		}
@@ -307,6 +324,8 @@ async function extractPublicKeys(
 			}
 		} else if(teetAttestationType === 'sev-snp') {
 			teetKeyResult = await verifySevSnpSide(teetAttestationBytes, 'tee_t', logger)
+		} else if(teetAttestationType === 'secure-boot') {
+			teetKeyResult = await verifySecureBootSide(teetAttestationBytes, 'tee_t', logger)
 		} else {
 			throw new Error(`TEE_T unsupported attestation type: ${teetAttestationType}`)
 		}

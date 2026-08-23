@@ -11,10 +11,13 @@ import { createHash } from 'node:crypto'
 
 import { verifyGcpLeg } from '#src/server/utils/sev-snp/gcp.ts'
 import { verifyNitroTpmDocument } from '#src/server/utils/sev-snp/nitrotpm.ts'
+import { verifySecureBootEventLog } from '#src/server/utils/sev-snp/secure-boot.ts'
 import { verifySevReport } from '#src/server/utils/sev-snp/sev-report.ts'
 
 export const SEV_TAG_GCP = 0x01
 export const SEV_TAG_AWS = 0x02
+export const SECURE_BOOT_TAG_GCP = 0x03
+export const SECURE_BOOT_TAG_AWS = 0x04
 export const SNP_APP_PREFIX = 'snp-app:'
 export const SNP_BASE_PREFIX = 'snp-base:'
 
@@ -30,6 +33,7 @@ export interface SevSnpEnvelope {
 	nitrotpm?: Uint8Array // AWS: NitroTPM COSE_Sign1 document
 	sev?: Uint8Array // AWS + GCP: go-sev-guest Attestation proto
 	sev2?: Uint8Array // AWS: same-guest report bound to the exact NitroTPM document
+	eventlog?: Uint8Array // AWS Secure Boot: raw, uncompressed TCG firmware event log
 	nonces?: string[]
 }
 
@@ -145,13 +149,13 @@ async function verifyAwsLeg(
 	env: SevSnpEnvelope,
 	bound: Buffer,
 	now: Date
-): Promise<{ app: string, base: string }> {
+): Promise<{ app: string, base: string, pcrs: Map<number, Buffer>, eventLog: Buffer }> {
 	if(!env.nitrotpm || (!env.sev && !env.sev2)) {
 		throw new Error('AWS SEV-SNP envelope missing SEV report or NitroTPM document')
 	}
 
 	const bind = createHash('sha512').update(bound).digest()
-	const { pcr8, pcr11, userData } = await verifyNitroTpmDocument(env.nitrotpm, now)
+	const { pcr8, pcr11, pcrs, userData } = await verifyNitroTpmDocument(env.nitrotpm, now)
 	if(!userData.equals(bind)) {
 		throw new Error('NitroTPM user_data does not bind the attestation')
 	}
@@ -169,7 +173,11 @@ async function verifyAwsLeg(
 		throw new Error('PCR 8 does not match the claimed app hash')
 	}
 
-	return appBaseIdentity(env.app, pcr11)
+	return {
+		...appBaseIdentity(env.app, pcr11),
+		pcrs,
+		eventLog: Buffer.from(env.eventlog ?? []),
+	}
 }
 
 /**
@@ -199,4 +207,47 @@ export async function verifyCombinedSevSnp(
 
 	const { teeType, ethAddress } = extractTeeKeyFromNonces(env.nonces)
 	return { teeType, ethAddress, app: identity.app, base: identity.base, nonces: env.nonces }
+}
+
+/**
+ * Verifies the additive Secure Boot claim format. The cloud-specific leg is
+ * unchanged from SEV2; only after it succeeds do we replay PCR 4/7/11 and pin R.
+ */
+export async function verifyCombinedSecureBoot(
+	att: Uint8Array,
+	now: Date = new Date()
+): Promise<SevSnpResult> {
+	const { tag, env } = await parseSevSnpEnvelope(att)
+	if(!env.nonces || env.nonces.length === 0) {
+		throw new Error('Secure Boot attestation carries no nonces (not a claim attestation)')
+	}
+
+	let identity: { app: string, base: string, pcrs: Map<number, Buffer>, eventLog: Buffer }
+	let bank: 'sha256' | 'sha384'
+	let legacyTag: number
+	if(tag === SECURE_BOOT_TAG_AWS) {
+		legacyTag = SEV_TAG_AWS
+		bank = 'sha384'
+	} else if(tag === SECURE_BOOT_TAG_GCP) {
+		legacyTag = SEV_TAG_GCP
+		bank = 'sha256'
+	} else {
+		throw new Error(`unknown Secure Boot cloud tag 0x${tag.toString(16)}`)
+	}
+
+	// Run the unchanged public SEV2 verifier as the prerequisite. Translating
+	// only the tag makes future SEV2 checks automatically apply here as well.
+	const legacyEvidence = Buffer.concat([Buffer.from([legacyTag]), Buffer.from(att).subarray(1)])
+	const prerequisite = await verifyCombinedSevSnp(legacyEvidence, now)
+
+	// Recover the already-authenticated PCR map for the additive event-log gate.
+	// This repeats the cloud leg, but does not create another trust path.
+	const bound = snpNonceCommitment(env.nonces)
+	if(tag === SECURE_BOOT_TAG_AWS) {
+		identity = await verifyAwsLeg(env, bound, now)
+	} else {
+		identity = verifyGcpLeg(env, bound, now)
+	}
+	verifySecureBootEventLog(identity.eventLog, identity.pcrs, bank)
+	return prerequisite
 }
