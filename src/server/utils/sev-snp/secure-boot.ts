@@ -17,7 +17,7 @@ const TPM_ALG_SHA256 = 0x000b
 const TPM_ALG_SHA384 = 0x000c
 
 // EFI GUIDs use little-endian encoding for the first three fields.
-const EFI_CERT_X509_GUID = 'a159c0a594e4a74a87b5ab155c2bf072'
+const EFI_CERT_X509_GUID = 'a159c0a5e494a74a87b5ab155c2bf072'
 const EFI_CERT_SHA256_GUID = '2616c4c14c509240aca941f936934328'
 
 const RELEASE_SPKI = Buffer.from(createPublicKey(

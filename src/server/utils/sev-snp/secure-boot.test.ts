@@ -32,7 +32,9 @@ function variable(name: string, value: Buffer): Buffer {
 }
 
 function x509SignatureList(cert: Buffer): Buffer {
-	const x509Guid = Buffer.from('a159c0a594e4a74a87b5ab155c2bf072', 'hex')
+	// EFI_CERT_X509_GUID a5c059a1-94e4-4aa7-87b5-ab155c2bf072,
+	// with the first three GUID fields encoded little-endian on disk.
+	const x509Guid = Buffer.from('a159c0a5e494a74a87b5ab155c2bf072', 'hex')
 	const signatureSize = 16 + cert.length
 	return Buffer.concat([
 		x509Guid,
