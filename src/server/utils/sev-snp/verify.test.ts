@@ -1,6 +1,5 @@
 import assert from 'node:assert'
-import { createHash } from 'node:crypto'
-import { X509Certificate } from 'node:crypto'
+import { createHash, X509Certificate } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 
@@ -14,6 +13,7 @@ import {
 	parseSevSnpEnvelope,
 	requireAwsAttestationV2,
 	SECURE_BOOT_TAG_GCP,
+	secureBootAttestationFromCompatibleWire,
 	SEV_TAG_AWS,
 	SEV_TAG_GCP,
 	snpNonceCommitment,
@@ -172,6 +172,14 @@ test('Secure Boot adds an event-log gate to otherwise valid SEV2 evidence', asyn
 	const legacy = loadFixture('gcp_combined.b64')
 	const secure = Buffer.concat([Buffer.from([SECURE_BOOT_TAG_GCP]), Buffer.from(legacy).subarray(1)])
 	await assert.rejects(verifyCombinedSecureBoot(secure), /no event log/)
+})
+
+test('signed Secure Boot mode accepts the legacy-compatible outer tag', async() => {
+	const legacy = loadFixture('gcp_combined.b64')
+	const restored = secureBootAttestationFromCompatibleWire(legacy)
+	assert.equal(restored[0], SECURE_BOOT_TAG_GCP)
+	assert.equal(legacy[0], SEV_TAG_GCP, 'conversion must not mutate client evidence')
+	await assert.rejects(verifyCombinedSecureBoot(legacy), /no event log/)
 })
 
 test('allowlist: pins both per-cloud base hashes and rejects unknown ones', () => {

@@ -46,21 +46,28 @@ export async function verifyTeeBundle(
 
 	// Validate required components are present
 	validateBundleCompleteness(bundle)
-
-	// Extract public keys (from attestations or embedded keys)
-	const { teekKeyResult, teetKeyResult } = await extractPublicKeys(bundle, logger)
-
-	// Verify TEE signatures using extracted public keys
-	await verifyTeeSignatures(bundle, teekKeyResult!, teetKeyResult!, logger)
-
-	// Ensure signed messages are present
 	if(!bundle.teekSigned || !bundle.teetSigned) {
 		throw new AttestorError('ERROR_INVALID_CLAIM', 'Missing TEE signed messages')
 	}
 
-	// Parse TEE payloads
+	// Parse the signed payloads before selecting an attestation verifier. The
+	// generation marker is not trusted until the signatures are checked below,
+	// but selecting a stricter verifier from untrusted input is safe.
 	const kOutputPayload = parseKOutputPayload(bundle.teekSigned)
 	const tOutputPayload = parseTOutputPayload(bundle.teetSigned)
+
+	// Extract public keys (from attestations or embedded keys)
+	const { teekKeyResult, teetKeyResult } = await extractPublicKeys(
+		bundle,
+		kOutputPayload.attestationType,
+		tOutputPayload.attestationType,
+		logger
+	)
+
+	// Verify TEE signatures using extracted public keys
+	await verifyTeeSignatures(bundle, teekKeyResult!, teetKeyResult!, logger)
+
+	validateSignedAttestationTypes(bundle, kOutputPayload, tOutputPayload)
 
 	// Validate timestamps
 	validateTimestamps(kOutputPayload, tOutputPayload, logger)
@@ -179,12 +186,50 @@ async function verifySecureBootSide(
 	return { teeType: r.teeType, ethAddress: r.ethAddress, pcr0: r.app }
 }
 
+export function resolveSignedAttestationType(signedType: string, reportType: string): string {
+	const resolved = signedType || reportType
+	const compatible = resolved === 'gcp'
+		? reportType === 'gcp'
+		: resolved === 'sev-snp'
+			? reportType === 'sev-snp'
+			: resolved === 'secure-boot'
+				? reportType === 'sev-snp' || reportType === 'secure-boot'
+				: false
+	if(!compatible) {
+		throw new Error(`signed attestation generation ${resolved} is incompatible with report type ${reportType}`)
+	}
+	return resolved
+}
+
+function validateSignedAttestationTypes(
+	bundle: VerificationBundle,
+	kPayload: KOutputPayload,
+	tPayload: TOutputPayload
+): void {
+	const kReport = bundle.teekSigned?.attestationReport
+	const tReport = bundle.teetSigned?.attestationReport
+	if(!kReport && !tReport) {
+		return
+	}
+	if(!kReport || !tReport) {
+		throw new Error('TEE attestation reports must either both be present or both be absent')
+	}
+
+	const kType = resolveSignedAttestationType(kPayload.attestationType, kReport.type)
+	const tType = resolveSignedAttestationType(tPayload.attestationType, tReport.type)
+	if(kType !== tType) {
+		throw new Error(`TEE signed attestation generations differ: tee_k=${kType}, tee_t=${tType}`)
+	}
+}
+
 /**
  * Extracts public keys from attestations (GCP Confidential Space or SEV-SNP) or
  * embedded keys (standalone mode)
  */
 async function extractPublicKeys(
 	bundle: VerificationBundle,
+	teekSignedAttestationType: string,
+	teetSignedAttestationType: string,
 	logger: Logger
 ): Promise<{
 	teekKeyResult?: AddressExtractionResult
@@ -210,11 +255,13 @@ async function extractPublicKeys(
 			throw new Error('TEE_T embedded attestation report missing')
 		}
 
-		const teekAttestationType = bundle.teekSigned.attestationReport.type || 'nitro'
-		const teetAttestationType = bundle.teetSigned.attestationReport.type || 'nitro'
+		const teekReportType = bundle.teekSigned.attestationReport.type || 'nitro'
+		const teetReportType = bundle.teetSigned.attestationReport.type || 'nitro'
+		const teekAttestationType = resolveSignedAttestationType(teekSignedAttestationType, teekReportType)
+		const teetAttestationType = resolveSignedAttestationType(teetSignedAttestationType, teetReportType)
 
-		logger.info(`TEE_K attestation type: ${teekAttestationType}`)
-		logger.info(`TEE_T attestation type: ${teetAttestationType}`)
+		logger.info(`TEE_K attestation type: signed=${teekAttestationType} report=${teekReportType}`)
+		logger.info(`TEE_T attestation type: signed=${teetAttestationType} report=${teetReportType}`)
 
 		const teekAttestationBytes = bundle.teekSigned.attestationReport.report
 		const teetAttestationBytes = bundle.teetSigned.attestationReport.report
