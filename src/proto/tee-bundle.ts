@@ -218,6 +218,7 @@ export interface TLS12CBCTOutput {
   responseRecordsSha256: Uint8Array;
   responseRedactionRanges: ResponseRedactionRange[];
   plaintextRecordLengths: number[];
+  closeNotify: boolean;
 }
 
 /** Attestation report with structured data */
@@ -1688,6 +1689,7 @@ function createBaseTLS12CBCTOutput(): TLS12CBCTOutput {
     responseRecordsSha256: new Uint8Array(0),
     responseRedactionRanges: [],
     plaintextRecordLengths: [],
+    closeNotify: false,
   };
 }
 
@@ -1710,6 +1712,9 @@ export const TLS12CBCTOutput: MessageFns<TLS12CBCTOutput> = {
       writer.uint32(v);
     }
     writer.join();
+    if (message.closeNotify !== false) {
+      writer.uint32(48).bool(message.closeNotify);
+    }
     return writer;
   },
 
@@ -1770,6 +1775,14 @@ export const TLS12CBCTOutput: MessageFns<TLS12CBCTOutput> = {
 
           break;
         }
+        case 6: {
+          if (tag !== 48) {
+            break;
+          }
+
+          message.closeNotify = reader.bool();
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1802,6 +1815,11 @@ export const TLS12CBCTOutput: MessageFns<TLS12CBCTOutput> = {
         : globalThis.Array.isArray(object?.plaintext_record_lengths)
         ? object.plaintext_record_lengths.map((e: any) => globalThis.Number(e))
         : [],
+      closeNotify: isSet(object.closeNotify)
+        ? globalThis.Boolean(object.closeNotify)
+        : isSet(object.close_notify)
+        ? globalThis.Boolean(object.close_notify)
+        : false,
     };
   },
 
@@ -1822,6 +1840,9 @@ export const TLS12CBCTOutput: MessageFns<TLS12CBCTOutput> = {
     if (message.plaintextRecordLengths?.length) {
       obj.plaintextRecordLengths = message.plaintextRecordLengths.map((e) => Math.round(e));
     }
+    if (message.closeNotify !== false) {
+      obj.closeNotify = message.closeNotify;
+    }
     return obj;
   },
 
@@ -1838,6 +1859,7 @@ export const TLS12CBCTOutput: MessageFns<TLS12CBCTOutput> = {
     message.responseRedactionRanges =
       object.responseRedactionRanges?.map((e) => ResponseRedactionRange.fromPartial(e)) || [];
     message.plaintextRecordLengths = object.plaintextRecordLengths?.map((e) => e) || [];
+    message.closeNotify = object.closeNotify ?? false;
     return message;
   },
 };

@@ -25,9 +25,10 @@ export function verifyOprfMpcOutputs(
 ): OprfVerificationResult[] {
 	const kOutputs = kPayload.oprfOutputs || []
 	const tOutputs = tPayload.oprfOutputs || []
-	const responseLength = tPayload.tls12Cbc?.authenticatedRedactedResponse.length ||
-		tPayload.consolidatedResponseCiphertext.length
-	if(kOutputs.length > MAX_TEE_OPRF_MPC_OUTPUTS || tOutputs.length > MAX_TEE_OPRF_MPC_OUTPUTS) {
+	const isTls12Cbc = tPayload.tls12Cbc !== undefined
+	const responseLength = tPayload.tls12Cbc?.authenticatedRedactedResponse.length ?? 0
+	if(isTls12Cbc &&
+		(kOutputs.length > MAX_TEE_OPRF_MPC_OUTPUTS || tOutputs.length > MAX_TEE_OPRF_MPC_OUTPUTS)) {
 		throw new AttestorError(
 			'ERROR_INVALID_CLAIM',
 			`Too many OPRF MPC outputs: maximum is ${MAX_TEE_OPRF_MPC_OUTPUTS}`
@@ -91,21 +92,24 @@ export function verifyOprfMpcOutputs(
 			)
 		}
 
-		if(kOut.tlsStart > responseLength || kOut.tlsLength > responseLength - kOut.tlsStart) {
+		if(isTls12Cbc &&
+			(kOut.tlsStart > responseLength || kOut.tlsLength > responseLength - kOut.tlsStart)) {
 			throw new AttestorError(
 				'ERROR_INVALID_CLAIM',
 				`OPRF MPC range at index ${i} exceeds authenticated response length ${responseLength}`
 			)
 		}
 
-		const rangeEnd = kOut.tlsStart + kOut.tlsLength
-		for(const previous of results) {
-			const previousEnd = previous.position + previous.length
-			if(kOut.tlsStart < previousEnd && rangeEnd > previous.position) {
-				throw new AttestorError(
-					'ERROR_INVALID_CLAIM',
-					`OPRF MPC ranges overlap: [${previous.position}:${previousEnd}] and [${kOut.tlsStart}:${rangeEnd}]`
-				)
+		if(isTls12Cbc) {
+			const rangeEnd = kOut.tlsStart + kOut.tlsLength
+			for(const previous of results) {
+				const previousEnd = previous.position + previous.length
+				if(kOut.tlsStart < previousEnd && rangeEnd > previous.position) {
+					throw new AttestorError(
+						'ERROR_INVALID_CLAIM',
+						`OPRF MPC ranges overlap: [${previous.position}:${previousEnd}] and [${kOut.tlsStart}:${rangeEnd}]`
+					)
+				}
 			}
 		}
 

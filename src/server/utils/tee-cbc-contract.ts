@@ -16,9 +16,9 @@ const TLS12_CBC_BINDING_SIZE = 32
 const TLS12_CBC_DIGEST_SIZE = 32
 const TLS12_MAX_PLAINTEXT = 16_384
 const TLS12_MAX_RECORDS = 500
-const MAX_HTTP_REQUEST_SIZE = 1 << 20
 const MAX_REQUEST_REDACTIONS = 1_000
 const MAX_RESPONSE_REDACTIONS = 1_000
+const REDACTION_CHAR_CODE = 42
 
 const TLS12_CBC_CIPHER_SUITES = new Set([
 	0xc009,
@@ -94,7 +94,7 @@ function validateTls12CbcContract(
 	}
 
 	if(kContract.authenticatedRedactedRequest.length === 0 ||
-		kContract.authenticatedRedactedRequest.length > MAX_HTTP_REQUEST_SIZE) {
+		kContract.authenticatedRedactedRequest.length > TLS12_MAX_PLAINTEXT) {
 		throw invalidClaim('Invalid TLS 1.2 CBC authenticated request length')
 	}
 
@@ -115,6 +115,193 @@ function validateTls12CbcContract(
 
 	validateResponseRanges(tContract.responseRedactionRanges, responseLength)
 	validatePlaintextRecordLengths(tContract.plaintextRecordLengths, responseLength)
+	validateTls12CbcHttpResponseFraming(
+		tContract.authenticatedRedactedResponse,
+		tContract.responseRedactionRanges,
+		tContract.closeNotify,
+	)
+}
+
+function validateTls12CbcHttpResponseFraming(
+	response: Uint8Array,
+	ranges: ResponseRedactionRange[],
+	closeNotify: boolean,
+): void {
+	const visible = new Uint8Array(response)
+	const redacted = new Uint8Array(response.length)
+	for(const range of ranges) {
+		visible.fill(REDACTION_CHAR_CODE, range.start, range.start + range.length)
+		redacted.fill(1, range.start, range.start + range.length)
+	}
+
+	const headerEnd = findSequence(visible, [13, 10, 13, 10], 0)
+	if(headerEnd < 0) {
+		throw invalidClaim('TLS 1.2 CBC response has incomplete HTTP headers')
+	}
+
+	const headerLines = bytesToAscii(visible.slice(0, headerEnd)).split('\r\n')
+	if(!/^HTTP\/1\.[01] [1-5][0-9][0-9](?: .*)?$/.test(headerLines[0] || '')) {
+		throw invalidClaim('TLS 1.2 CBC response has an invalid HTTP status line')
+	}
+	if(hasRedactedByte(redacted, 0, headerLines[0].length + 2)) {
+		throw invalidClaim('TLS 1.2 CBC response redacts HTTP status framing')
+	}
+
+	const contentLengths: string[] = []
+	const transferEncodings: string[] = []
+	let lineStart = headerLines[0].length + 2
+	for(const line of headerLines.slice(1)) {
+		const separator = line.indexOf(':')
+		if(separator <= 0) {
+			throw invalidClaim('TLS 1.2 CBC response has an invalid HTTP header')
+		}
+		const name = line.slice(0, separator).toLowerCase()
+		if(!/^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/.test(name)) {
+			throw invalidClaim('TLS 1.2 CBC response has an invalid HTTP header name')
+		}
+		let valueStart = separator + 1
+		while(valueStart < line.length && (line[valueStart] === ' ' || line[valueStart] === '\t')) {
+			valueStart++
+		}
+		const lineEnd = lineStart + line.length
+		if(hasRedactedByte(redacted, lineStart, lineStart + valueStart) ||
+			hasRedactedByte(redacted, lineEnd, lineEnd + 2)) {
+			throw invalidClaim('TLS 1.2 CBC response redacts HTTP header structure')
+		}
+		const value = line.slice(valueStart)
+		if(name === 'content-length') {
+			if(hasRedactedByte(redacted, lineStart, lineEnd)) {
+				throw invalidClaim('TLS 1.2 CBC response redacts a framing header')
+			}
+			contentLengths.push(value)
+		} else if(name === 'transfer-encoding') {
+			if(hasRedactedByte(redacted, lineStart, lineEnd)) {
+				throw invalidClaim('TLS 1.2 CBC response redacts a framing header')
+			}
+			transferEncodings.push(value)
+		}
+		lineStart = lineEnd + 2
+	}
+	if(hasRedactedByte(redacted, headerEnd + 2, headerEnd + 4)) {
+		throw invalidClaim('TLS 1.2 CBC response redacts the HTTP header terminator')
+	}
+
+	if(contentLengths.length > 1 || transferEncodings.length > 1 ||
+		(contentLengths.length > 0 && transferEncodings.length > 0)) {
+		throw invalidClaim('TLS 1.2 CBC response has ambiguous HTTP framing')
+	}
+
+	const bodyStart = headerEnd + 4
+	if(transferEncodings.length === 1) {
+		const codings = transferEncodings[0].split(',').map(value => value.trim().toLowerCase())
+		if(codings.some(value => value.length === 0)) {
+			throw invalidClaim('TLS 1.2 CBC response has an invalid Transfer-Encoding')
+		}
+		const chunkedIndex = codings.indexOf('chunked')
+		if(chunkedIndex >= 0) {
+			if(chunkedIndex !== codings.length - 1) {
+				throw invalidClaim('TLS 1.2 CBC response has invalid Transfer-Encoding order')
+			}
+			validateCompleteChunkedBody(visible, bodyStart)
+			return
+		}
+		if(!closeNotify) {
+			throw invalidClaim('TLS 1.2 CBC close-delimited response is missing authenticated close_notify')
+		}
+		return
+	}
+
+	if(contentLengths.length === 1) {
+		const value = contentLengths[0]
+		if(!/^[0-9]+$/.test(value)) {
+			throw invalidClaim('TLS 1.2 CBC response has an invalid Content-Length')
+		}
+		const contentLength = Number(value)
+		if(!Number.isSafeInteger(contentLength) || bodyStart + contentLength !== visible.length) {
+			throw invalidClaim('TLS 1.2 CBC response does not match its Content-Length')
+		}
+		return
+	}
+
+	if(!closeNotify) {
+		throw invalidClaim('TLS 1.2 CBC close-delimited response is missing authenticated close_notify')
+	}
+}
+
+function validateCompleteChunkedBody(response: Uint8Array, bodyStart: number): void {
+	let offset = bodyStart
+	for(;;) {
+		const lineEnd = findSequence(response, [13, 10], offset)
+		if(lineEnd < 0) {
+			throw invalidClaim('TLS 1.2 CBC chunked response has an incomplete size line')
+		}
+		const sizeLine = bytesToAscii(response.slice(offset, lineEnd))
+		const separator = sizeLine.indexOf(';')
+		const sizeText = (separator < 0 ? sizeLine : sizeLine.slice(0, separator)).trim()
+		if(!/^[0-9a-fA-F]+$/.test(sizeText)) {
+			throw invalidClaim('TLS 1.2 CBC chunked response has an invalid chunk size')
+		}
+		const chunkSize = Number.parseInt(sizeText, 16)
+		if(!Number.isSafeInteger(chunkSize)) {
+			throw invalidClaim('TLS 1.2 CBC chunked response has an invalid chunk size')
+		}
+		offset = lineEnd + 2
+
+		if(chunkSize === 0) {
+			for(;;) {
+				const trailerStart = offset
+				const trailerEnd = findSequence(response, [13, 10], offset)
+				if(trailerEnd < 0) {
+					throw invalidClaim('TLS 1.2 CBC chunked response has incomplete trailers')
+				}
+				offset = trailerEnd + 2
+				if(trailerEnd === trailerStart) {
+					if(offset !== response.length) {
+						throw invalidClaim('TLS 1.2 CBC chunked response has trailing bytes')
+					}
+					return
+				}
+			}
+		}
+
+		if(chunkSize > response.length - offset - 2) {
+			throw invalidClaim('TLS 1.2 CBC chunked response body is truncated')
+		}
+		offset += chunkSize
+		if(offset + 2 > response.length || response[offset] !== 13 || response[offset + 1] !== 10) {
+			throw invalidClaim('TLS 1.2 CBC chunked response is missing a data terminator')
+		}
+		offset += 2
+	}
+}
+
+function findSequence(data: Uint8Array, sequence: number[], start: number): number {
+	outer: for(let index = start; index <= data.length - sequence.length; index++) {
+		for(let offset = 0; offset < sequence.length; offset++) {
+			if(data[index + offset] !== sequence[offset]) {
+				continue outer
+			}
+		}
+		return index
+	}
+	return -1
+}
+
+function bytesToAscii(data: Uint8Array): string {
+	let result = ''
+	for(const value of data) {
+		result += String.fromCharCode(value)
+	}
+	return result
+}
+
+function hasRedactedByte(mask: Uint8Array, start: number, end: number): boolean {
+	for(let index = start; index < end; index++) {
+		if(mask[index] !== 0) {
+			return true
+		}
+	}
+	return false
 }
 
 function validateBinding(binding: TLS12CBCSessionBinding | undefined, owner: string): void {

@@ -179,7 +179,7 @@ async function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger
 	// offset and the verifier's dechunk would desync ("got more data after response
 	// was complete"). Non-TEE / legacy flows leave framing in place and dechunk inside
 	// the http provider using the same parser.
-	const dechunked = dechunkRevealedResponse(processedResponse, oprf, logger)
+	const dechunked = dechunkRevealedResponse(processedResponse, oprf, logger, isTls12Cbc)
 	processedResponse = dechunked.response
 	oprf = dechunked.oprfResults
 
@@ -208,7 +208,8 @@ const DECHUNK_SYNTH_HEADER = 'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\
 function dechunkRevealedResponse(
 	response: Uint8Array,
 	oprfResults: Array<{ position: number, length: number, output: Uint8Array }> | undefined,
-	logger: Logger
+	logger: Logger,
+	strictOprfRanges: boolean,
 ): { response: Uint8Array, oprfResults?: Array<{ position: number, length: number, output: Uint8Array }> } {
 	const headerEnd = findHeaderEnd(response)
 	if(headerEnd < 0) {
@@ -221,17 +222,35 @@ function dechunkRevealedResponse(
 		return { response, oprfResults }
 	}
 
-	// Dechunk via the same synthetic-header parse the http provider uses, so chunk
-	// detection is identical. res.chunks positions are offset by the synthetic prefix.
-	const parser = makeHttpResponseParser()
-	parser.onChunk(strToUint8Array(DECHUNK_SYNTH_HEADER))
-	parser.onChunk(response.slice(bodyStart))
-	const chunks = parser.res.chunks
-	if(!chunks || chunks.length === 0) {
-		return { response, oprfResults }
-	}
+	let dechunkedBody: Uint8Array
+	let remapped: Array<{ position: number, length: number, output: Uint8Array }> | undefined
+	let chunkCount: number
+	if(strictOprfRanges) {
+		// CBC framing was authenticated and validated before reconstruction. Parse
+		// trailers here because the legacy HTTP parser deliberately stops at the
+		// zero chunk and rejects non-empty trailer lines.
+		const parsed = dechunkCompleteCbcBody(response, bodyStart)
+		dechunkedBody = parsed.body
+		chunkCount = parsed.chunks.length
+		remapped = oprfResults?.map(r => remapCbcChunkedOprfRange(r, bodyStart, parsed.chunks))
+	} else {
+		// Preserve the exact pre-CBC parser and coordinate mapping.
+		const parser = makeHttpResponseParser()
+		parser.onChunk(strToUint8Array(DECHUNK_SYNTH_HEADER))
+		parser.onChunk(response.slice(bodyStart))
+		const chunks = parser.res.chunks
+		if(!chunks || chunks.length === 0) {
+			return { response, oprfResults }
+		}
 
-	const dechunkedBody = parser.res.body ?? new Uint8Array()
+		dechunkedBody = parser.res.body ?? new Uint8Array()
+		chunkCount = chunks.length
+		const synthLen = DECHUNK_SYNTH_HEADER.length
+		remapped = oprfResults?.map(r => ({
+			...r,
+			position: chunkedToDechunkedPos(r.position, bodyStart, synthLen, chunks),
+		}))
+	}
 
 	// Blank the transfer-encoding token so the provider's dechunk is skipped.
 	const headerRegion = response.slice(0, bodyStart)
@@ -246,10 +265,7 @@ function dechunkRevealedResponse(
 	dechunkedResponse.set(headerRegion, 0)
 	dechunkedResponse.set(dechunkedBody, headerRegion.length)
 
-	const synthLen = DECHUNK_SYNTH_HEADER.length
-	const remapped = oprfResults?.map(r => remapChunkedOprfRange(r, bodyStart, synthLen, chunks))
-
-	logger.info(`TEE dechunk before OPRF: ${response.length} -> ${dechunkedResponse.length} bytes, ${chunks.length} chunks`)
+	logger.info(`TEE dechunk before OPRF: ${response.length} -> ${dechunkedResponse.length} bytes, ${chunkCount} chunks`)
 	return { response: dechunkedResponse, oprfResults: remapped }
 }
 
@@ -268,10 +284,9 @@ function findHeaderEnd(response: Uint8Array): number {
 // Map a position in the original (chunked) response to its position in the dechunked
 // response. `chunks` are in synthetic-prefixed coords (fromIndex/toIndex point to chunk
 // DATA), so subtract `synthLen` to get body-relative offsets.
-function remapChunkedOprfRange(
+function remapCbcChunkedOprfRange(
 	range: { position: number, length: number, output: Uint8Array },
 	bodyStart: number,
-	synthLen: number,
 	chunks: Array<{ fromIndex: number, toIndex: number }>
 ): { position: number, length: number, output: Uint8Array } {
 	const rangeEnd = range.position + range.length
@@ -282,26 +297,122 @@ function remapChunkedOprfRange(
 		return range
 	}
 
-	const bodyOff = range.position - bodyStart
-	const bodyEnd = rangeEnd - bodyStart
 	let acc = 0
 	for(const c of chunks) {
-		const cf = c.fromIndex - synthLen
-		const ct = c.toIndex - synthLen
-		if(bodyOff >= cf && bodyEnd <= ct) {
+		if(range.position >= c.fromIndex && rangeEnd <= c.toIndex) {
 			return {
 				...range,
-				position: bodyStart + acc + (bodyOff - cf),
+				position: bodyStart + acc + (range.position - c.fromIndex),
 			}
 		}
 
-		acc += ct - cf
+		acc += c.toIndex - c.fromIndex
 	}
 
 	throw new AttestorError(
 		'ERROR_INVALID_CLAIM',
 		`OPRF range [${range.position}:${rangeEnd}] is not wholly contained in HTTP chunk data`
 	)
+}
+
+function dechunkCompleteCbcBody(
+	response: Uint8Array,
+	bodyStart: number,
+): { body: Uint8Array, chunks: Array<{ fromIndex: number, toIndex: number }> } {
+	const bodyParts: Uint8Array[] = []
+	const chunks: Array<{ fromIndex: number, toIndex: number }> = []
+	let offset = bodyStart
+	for(;;) {
+		const lineEnd = findCrlf(response, offset)
+		if(lineEnd < 0) {
+			throw new AttestorError('ERROR_INVALID_CLAIM', 'CBC chunk size line is incomplete during reconstruction')
+		}
+		const sizeLine = uint8ArrayToStr(response.slice(offset, lineEnd))
+		const extension = sizeLine.indexOf(';')
+		const sizeText = (extension < 0 ? sizeLine : sizeLine.slice(0, extension)).trim()
+		if(!/^[0-9a-fA-F]+$/.test(sizeText)) {
+			throw new AttestorError('ERROR_INVALID_CLAIM', 'CBC chunk size is invalid during reconstruction')
+		}
+		const size = Number.parseInt(sizeText, 16)
+		offset = lineEnd + 2
+
+		if(size === 0) {
+			for(;;) {
+				const trailerEnd = findCrlf(response, offset)
+				if(trailerEnd < 0) {
+					throw new AttestorError('ERROR_INVALID_CLAIM', 'CBC chunk trailers are incomplete during reconstruction')
+				}
+				const trailerStart = offset
+				offset = trailerEnd + 2
+				if(trailerEnd === trailerStart) {
+					if(offset !== response.length) {
+						throw new AttestorError('ERROR_INVALID_CLAIM', 'CBC chunked response has trailing bytes during reconstruction')
+					}
+					return { body: concatenateParts(bodyParts), chunks }
+				}
+			}
+		}
+
+		const dataEnd = offset + size
+		if(dataEnd + 2 > response.length || response[dataEnd] !== 13 || response[dataEnd + 1] !== 10) {
+			throw new AttestorError('ERROR_INVALID_CLAIM', 'CBC chunk data is incomplete during reconstruction')
+		}
+		chunks.push({ fromIndex: offset, toIndex: dataEnd })
+		bodyParts.push(response.slice(offset, dataEnd))
+		offset = dataEnd + 2
+	}
+}
+
+function findCrlf(response: Uint8Array, start: number): number {
+	for(let index = start; index + 1 < response.length; index++) {
+		if(response[index] === 13 && response[index + 1] === 10) {
+			return index
+		}
+	}
+	return -1
+}
+
+function concatenateParts(parts: Uint8Array[]): Uint8Array {
+	const length = parts.reduce((total, part) => total + part.length, 0)
+	const result = new Uint8Array(length)
+	let offset = 0
+	for(const part of parts) {
+		result.set(part, offset)
+		offset += part.length
+	}
+	return result
+}
+
+// Keep the pre-CBC position mapping byte-for-byte equivalent. Legacy bundles
+// historically allowed positions at chunk boundaries and beyond the last
+// parsed chunk; tightening those rules would reject previously valid claims.
+function chunkedToDechunkedPos(
+	pos: number,
+	bodyStart: number,
+	synthLen: number,
+	chunks: Array<{ fromIndex: number, toIndex: number }>
+): number {
+	if(pos < bodyStart) {
+		return pos
+	}
+
+	const bodyOff = pos - bodyStart
+	let acc = 0
+	for(const c of chunks) {
+		const cf = c.fromIndex - synthLen
+		const ct = c.toIndex - synthLen
+		if(bodyOff >= cf && bodyOff < ct) {
+			return bodyStart + acc + (bodyOff - cf)
+		}
+
+		if(bodyOff === ct) {
+			return bodyStart + acc + (ct - cf)
+		}
+
+		acc += ct - cf
+	}
+
+	return bodyStart + acc
 }
 
 // Removed legacy packet-based extraction functions since we now use consolidated streams

@@ -16,12 +16,6 @@ import type { Logger } from '#src/types/general.ts'
 import { AttestorError } from '#src/utils/error.ts'
 import { SIGNATURES } from '#src/utils/signatures/index.ts'
 
-// Both transcript bodies can carry up to 500 TLS plaintext records. Ten MiB
-// leaves room for protobuf metadata over the 8,192,000-byte record limit.
-export const MAX_TEE_SIGNED_BODY_SIZE = 10 * 1024 * 1024
-// A legacy bundle can contain one maximum response in each signed body.
-export const MAX_TEE_VERIFICATION_BUNDLE_SIZE = 24 * 1024 * 1024
-
 // Types specific to TEE verification
 export interface TeeBundleData {
 	teekSigned: SignedMessage
@@ -50,9 +44,6 @@ export async function verifyTeeBundle(
 	bundleBytes: Uint8Array,
 	logger: Logger
 ): Promise<TeeBundleData> {
-	if(bundleBytes.length > MAX_TEE_VERIFICATION_BUNDLE_SIZE) {
-		throw new AttestorError('ERROR_INVALID_CLAIM', 'TEE verification bundle exceeds the maximum size')
-	}
 	// Parse the verification bundle protobuf
 	const bundle = parseVerificationBundle(bundleBytes)
 
@@ -157,11 +148,6 @@ function validateBundleCompleteness(bundle: VerificationBundle): void {
 
 	if(!bundle.teetSigned.body || bundle.teetSigned.body.length === 0) {
 		throw new Error('Invalid TEE_T signed message: empty body')
-	}
-
-	if(bundle.teekSigned.body.length > MAX_TEE_SIGNED_BODY_SIZE ||
-		bundle.teetSigned.body.length > MAX_TEE_SIGNED_BODY_SIZE) {
-		throw new AttestorError('ERROR_INVALID_CLAIM', 'TEE signed body exceeds the maximum size')
 	}
 
 	if(!bundle.teekSigned.signature || bundle.teekSigned.signature.length === 0) {

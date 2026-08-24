@@ -328,7 +328,7 @@ function validateTlsCertificate(
  * Validates OPRF results have no overlapping ranges and combines them
  * SECURITY: Prevents position collisions between ZK and OPRF MPC results
  */
-export function validateAndCombineOprfResults(
+function validateAndCombineOprfResults(
 	zkOprfResults: OprfVerificationResult[],
 	oprfMpcResults: OprfVerificationResult[],
 	logger: Logger
@@ -341,20 +341,41 @@ export function validateAndCombineOprfResults(
 
 	logger.info(`Combined ${zkOprfResults.length} ZK OPRF + ${oprfMpcResults.length} OPRF MPC results`)
 
-	const sorted = allOprfResults
-		.map((result, index) => ({ result, source: index < zkOprfResults.length ? 'zk' : 'mpc' }))
-		.sort((a, b) => a.result.position - b.result.position)
-	for(let i = 1; i < sorted.length; i++) {
-		const previous = sorted[i - 1]
-		const current = sorted[i]
-		const previousEnd = previous.result.position + previous.result.length
-		if(current.result.position < previousEnd) {
-			throw new AttestorError(
-				'ERROR_INVALID_CLAIM',
-				`Overlapping OPRF ranges: [${previous.result.position}:${previousEnd}] (${previous.source}) and ` +
-				`[${current.result.position}:${current.result.position + current.result.length}] (${current.source})`
-			)
+	// Preserve the split-AEAD behavior: exact ZK/MPC duplicates are accepted,
+	// while partial overlaps are rejected. CBC forbids ZK OPRF data and checks
+	// overlap among its MPC ranges before this function is called.
+	const seen: Record<number, { length: number, source: string }> = {}
+	for(const result of zkOprfResults) {
+		seen[result.position] = { length: result.length, source: 'zk' }
+	}
+
+	for(const result of oprfMpcResults) {
+		const existing = seen[result.position]
+		if(existing) {
+			if(existing.length !== result.length) {
+				throw new AttestorError(
+					'ERROR_INVALID_CLAIM',
+					`OPRF range conflict at position ${result.position}: ZK length ${existing.length} vs MPC length ${result.length}`
+				)
+			}
+
+			logger.warn(`Duplicate OPRF range at position ${result.position} from both ZK and MPC - using MPC result`)
 		}
+
+		for(const [pos, data] of Object.entries(seen)) {
+			const position = Number(pos)
+			const existingEnd = position + data.length
+			const newEnd = result.position + result.length
+			const overlaps = (result.position < existingEnd && newEnd > position) && result.position !== position
+			if(overlaps) {
+				throw new AttestorError(
+					'ERROR_INVALID_CLAIM',
+					`Overlapping OPRF ranges: [${position}:${existingEnd}] (${data.source}) and [${result.position}:${newEnd}] (mpc)`
+				)
+			}
+		}
+
+		seen[result.position] = { length: result.length, source: 'mpc' }
 	}
 
 	return allOprfResults

@@ -18,16 +18,10 @@ import {
 	TOutputPayload,
 	VerificationBundle,
 } from '#src/proto/tee-bundle.ts'
-import { validateAndCombineOprfResults } from '#src/server/handlers/claimTeeBundle.ts'
 import { validateTeeTranscriptContract } from '#src/server/utils/tee-cbc-contract.ts'
 import { MAX_TEE_OPRF_MPC_OUTPUTS, verifyOprfMpcOutputs } from '#src/server/utils/tee-oprf-mpc-verification.ts'
 import { reconstructTlsTranscript } from '#src/server/utils/tee-transcript-reconstruction.ts'
-import {
-	MAX_TEE_SIGNED_BODY_SIZE,
-	MAX_TEE_VERIFICATION_BUNDLE_SIZE,
-	type TeeBundleData,
-	verifyTeeBundle,
-} from '#src/server/utils/tee-verification.ts'
+import { type TeeBundleData, verifyTeeBundle } from '#src/server/utils/tee-verification.ts'
 import { logger } from '#src/utils/logger.ts'
 import { ETH_SIGNATURE_PROVIDER } from '#src/utils/signatures/eth.ts'
 
@@ -61,8 +55,8 @@ describe('TEE TLS 1.2 CBC contract', () => {
 		const contract = makeCbcContract(
 			encoder.encode('GET /signed HTTP/1.1\r\n\r\n'),
 			encoder.encode('HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK'),
-			0,
-			0,
+			99,
+			99,
 		)
 		const teekWallet = Wallet.createRandom()
 		const teetWallet = Wallet.createRandom()
@@ -153,7 +147,12 @@ describe('TEE TLS 1.2 CBC contract', () => {
 			0xc024, 0xc028, 0x002f, 0x0035, 0x003c, 0x003d,
 		]
 		for(const cipherSuite of suites) {
-			const contract = makeCbcContract(encoder.encode('request'), encoder.encode('response'), 99, 99)
+			const contract = makeCbcContract(
+				encoder.encode('request'),
+				encoder.encode('HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK'),
+				99,
+				99,
+			)
 			contract.kPayload.tls12Cbc!.binding!.cipherSuite = cipherSuite
 			contract.tPayload.tls12Cbc!.binding!.cipherSuite = cipherSuite
 			assert.equal(
@@ -161,6 +160,154 @@ describe('TEE TLS 1.2 CBC contract', () => {
 				'tls12-cbc',
 			)
 		}
+	})
+
+	it('caps CBC requests at one TLS plaintext record', () => {
+		const response = encoder.encode('HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK')
+		const maximum = makeCbcContract(new Uint8Array(16_384), response, 99_999, 99_999)
+		assert.equal(validateTeeTranscriptContract(maximum.bundle, maximum.kPayload, maximum.tPayload), 'tls12-cbc')
+
+		const oversized = makeCbcContract(new Uint8Array(16_385), response, 99_999, 99_999)
+		assert.throws(
+			() => validateTeeTranscriptContract(oversized.bundle, oversized.kPayload, oversized.tPayload),
+			/authenticated request length/,
+		)
+	})
+
+	it('requires complete CBC Content-Length and chunked responses', () => {
+		const request = encoder.encode('request')
+		const validResponses = [
+			'HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK',
+			'HTTP/1.1 200 OK\r\nContent-Length: 02\r\n\r\nOK',
+			'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nOK\r\n0\r\n\r\n',
+			'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2;hidden=VALUE\r\nOK\r\n0\r\nX-Trailer: value\r\n\r\n',
+		]
+		for(const response of validResponses) {
+			const contract = makeCbcContract(request, encoder.encode(response), 99, 99)
+			assert.equal(validateTeeTranscriptContract(contract.bundle, contract.kPayload, contract.tPayload), 'tls12-cbc')
+		}
+
+		const responseWithHiddenMetadata = encoder.encode(
+			'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2;hidden=VALUE\r\nOK\r\n0\r\nX-Trailer: value\r\n\r\n',
+		)
+		const hiddenMetadata = makeCbcContract(request, responseWithHiddenMetadata, 99, 99)
+		hiddenMetadata.tPayload.tls12Cbc!.responseRedactionRanges = [
+			{ start: findBytes(responseWithHiddenMetadata, encoder.encode('hidden=VALUE')), length: 'hidden=VALUE'.length },
+			{ start: findBytes(responseWithHiddenMetadata, encoder.encode('X-Trailer: value')), length: 'X-Trailer: value'.length },
+		]
+		assert.equal(
+			validateTeeTranscriptContract(hiddenMetadata.bundle, hiddenMetadata.kPayload, hiddenMetadata.tPayload),
+			'tls12-cbc',
+		)
+
+		const responseWithHiddenHeader = encoder.encode(
+			'HTTP/1.1 200 OK\r\nX-Secret: TOKEN\r\nContent-Length: 2\r\n\r\nOK',
+		)
+		const hiddenHeader = makeCbcContract(request, responseWithHiddenHeader, 99, 99)
+		hiddenHeader.tPayload.tls12Cbc!.responseRedactionRanges = [{
+			start: findBytes(responseWithHiddenHeader, encoder.encode('TOKEN')),
+			length: 'TOKEN'.length,
+		}]
+		assert.equal(
+			validateTeeTranscriptContract(hiddenHeader.bundle, hiddenHeader.kPayload, hiddenHeader.tPayload),
+			'tls12-cbc',
+		)
+
+		const invalidResponses = [
+			'HTTP/1.1 200 OK\r\nContent-Length: 3\r\n\r\nOK',
+			'HTTP/1.1 200 OK\r\nContent-Length: 2 \r\n\r\nOK',
+			'HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOKextra',
+			'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nOK\r\n',
+			'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nOK\r\n0\r\n',
+			'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n2\r\nOK\r\n0\r\n\r\nextra',
+		]
+		for(const response of invalidResponses) {
+			const contract = makeCbcContract(request, encoder.encode(response), 99, 99)
+			assert.throws(
+				() => validateTeeTranscriptContract(contract.bundle, contract.kPayload, contract.tPayload),
+				/TLS 1\.2 CBC/,
+			)
+		}
+
+		const hiddenFraming = makeCbcContract(
+			request,
+			encoder.encode('HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK'),
+			99,
+			99,
+		)
+		hiddenFraming.tPayload.tls12Cbc!.responseRedactionRanges = [{
+			start: findBytes(hiddenFraming.tPayload.tls12Cbc!.authenticatedRedactedResponse, encoder.encode('Content-Length')),
+			length: 'Content-Length'.length,
+		}]
+		hiddenFraming.tPayload.tls12Cbc!.closeNotify = true
+		assert.throws(
+			() => validateTeeTranscriptContract(hiddenFraming.bundle, hiddenFraming.kPayload, hiddenFraming.tPayload),
+			/redacts HTTP header structure/,
+		)
+
+		const hiddenTransferEncoding = makeCbcContract(
+			request,
+			encoder.encode('HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n1\r\nA\r\n0\r\n\r\n'),
+			99,
+			99,
+		)
+		hiddenTransferEncoding.tPayload.tls12Cbc!.responseRedactionRanges = [{
+			start: findBytes(
+				hiddenTransferEncoding.tPayload.tls12Cbc!.authenticatedRedactedResponse,
+				encoder.encode('chunked'),
+			),
+			length: 'chunked'.length,
+		}]
+		hiddenTransferEncoding.tPayload.tls12Cbc!.closeNotify = true
+		assert.throws(
+			() => validateTeeTranscriptContract(
+				hiddenTransferEncoding.bundle,
+				hiddenTransferEncoding.kPayload,
+				hiddenTransferEncoding.tPayload,
+			),
+			/redacts a framing header/,
+		)
+
+		const emptyTransferCoding = makeCbcContract(
+			request,
+			encoder.encode('HTTP/1.1 200 OK\r\nTransfer-Encoding: gzip,\r\n\r\nOK'),
+			99,
+			99,
+		)
+		emptyTransferCoding.tPayload.tls12Cbc!.closeNotify = true
+		assert.throws(
+			() => validateTeeTranscriptContract(
+				emptyTransferCoding.bundle,
+				emptyTransferCoding.kPayload,
+				emptyTransferCoding.tPayload,
+			),
+			/invalid Transfer-Encoding/,
+		)
+	})
+
+	it('requires signed close_notify only for close-delimited CBC responses', () => {
+		const contract = makeCbcContract(
+			encoder.encode('request'),
+			encoder.encode('HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\nOK'),
+			99,
+			99,
+		)
+		assert.throws(
+			() => validateTeeTranscriptContract(contract.bundle, contract.kPayload, contract.tPayload),
+			/missing authenticated close_notify/,
+		)
+
+		contract.tPayload.tls12Cbc!.closeNotify = true
+		assert.equal(validateTeeTranscriptContract(contract.bundle, contract.kPayload, contract.tPayload), 'tls12-cbc')
+	})
+
+	it('round-trips the additive CBC close_notify field', () => {
+		const withClose = TLS12CBCTOutput.create({ closeNotify: true })
+		const decoded = TLS12CBCTOutput.decode(TLS12CBCTOutput.encode(withClose).finish())
+		assert.equal(decoded.closeNotify, true)
+
+		const oldEncoding = new Uint8Array()
+		assert.equal(TLS12CBCTOutput.decode(oldEncoding).closeNotify, false)
 	})
 
 	it('rejects legacy ZK TOPRF data for CBC', () => {
@@ -238,6 +385,45 @@ describe('TEE TLS 1.2 CBC contract', () => {
 		)
 	})
 
+	it('keeps the pre-CBC OPRF MPC count behavior unchanged', () => {
+		const makeLegacyOutput = (position: number) => OPRFOutput.create({
+			tlsStart: position,
+			tlsLength: 1,
+			hashOutput: new Uint8Array(32).fill(position + 1),
+		})
+		const count = MAX_TEE_OPRF_MPC_OUTPUTS + 1
+		const kOutputs = Array.from({ length: count }, (_, index) => makeLegacyOutput(index))
+		const tOutputs = kOutputs.map(output => OPRFOutput.create({
+			...output,
+			hashOutput: new Uint8Array(output.hashOutput),
+		}))
+		const kPayload = KOutputPayload.create({ oprfOutputs: kOutputs })
+		const tPayload = TOutputPayload.create({
+			oprfOutputs: tOutputs,
+			consolidatedResponseCiphertext: new Uint8Array(count),
+		})
+
+		assert.equal(verifyOprfMpcOutputs(kPayload, tPayload, logger).length, count)
+	})
+
+	it('reconstructs CBC chunk trailers without treating them as chunk sizes', async() => {
+		const response = encoder.encode(
+			'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n' +
+			'2;hidden=VALUE\r\nOK\r\n0\r\nX-Trailer: value\r\n\r\n',
+		)
+		const contract = makeCbcContract(encoder.encode('request'), response, 99, 999)
+		assert.equal(validateTeeTranscriptContract(contract.bundle, contract.kPayload, contract.tPayload), 'tls12-cbc')
+
+		const transcript = await reconstructTlsTranscript(
+			makeBundleData(contract.kPayload, contract.tPayload, 'tls12-cbc'),
+			logger,
+		)
+		const reconstructed = decoder.decode(transcript.reconstructedResponse)
+		assert.ok(reconstructed.endsWith('\r\n\r\nOK'))
+		assert.ok(!reconstructed.includes('hidden=VALUE'))
+		assert.ok(!reconstructed.includes('X-Trailer'))
+	})
+
 	it('rejects OPRF ranges over chunk framing', async() => {
 		const header = 'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n'
 		const response = encoder.encode(`${header}3\r\nabc\r\n5\r\ndefgh\r\n0\r\n\r\n`)
@@ -255,45 +441,6 @@ describe('TEE TLS 1.2 CBC contract', () => {
 		await assert.rejects(
 			reconstructTlsTranscript(makeBundleData(contract.kPayload, contract.tPayload, 'tls12-cbc'), logger, verified),
 			/not wholly contained in HTTP chunk data/,
-		)
-	})
-
-	it('rejects overlapping OPRF sources before reconstruction', () => {
-		assert.throws(
-			() => validateAndCombineOprfResults(
-				[{ position: 4, length: 2, output: new Uint8Array(32) }],
-				[{ position: 4, length: 2, output: new Uint8Array(32), isMPC: true }],
-				logger,
-			),
-			/Overlapping OPRF ranges/,
-		)
-	})
-
-	it('rejects oversized TEE verification bundles before protobuf decoding', async() => {
-		await assert.rejects(
-			verifyTeeBundle(new Uint8Array(MAX_TEE_VERIFICATION_BUNDLE_SIZE + 1), logger),
-			/exceeds the maximum size/,
-		)
-	})
-
-	it('rejects oversized signed bodies before nested protobuf decoding', async() => {
-		const bundle = VerificationBundle.create({
-			teekSigned: SignedMessage.create({
-				bodyType: BodyType.BODY_TYPE_K_OUTPUT,
-				body: new Uint8Array(MAX_TEE_SIGNED_BODY_SIZE + 1),
-				ethAddress: new Uint8Array([1]),
-				signature: new Uint8Array([1]),
-			}),
-			teetSigned: SignedMessage.create({
-				bodyType: BodyType.BODY_TYPE_T_OUTPUT,
-				body: new Uint8Array([1]),
-				ethAddress: new Uint8Array([1]),
-				signature: new Uint8Array([1]),
-			}),
-		})
-		await assert.rejects(
-			verifyTeeBundle(VerificationBundle.encode(bundle).finish(), logger),
-			/signed body exceeds the maximum size/,
 		)
 	})
 
@@ -321,6 +468,103 @@ describe('TEE TLS 1.2 CBC contract', () => {
 		)
 		assert.deepEqual(transcript.revealedRequest, request)
 		assert.deepEqual(transcript.reconstructedResponse, response)
+	})
+
+	it('preserves pre-CBC chunk-boundary OPRF coordinate mapping', async() => {
+		const header = 'HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n'
+		const response = encoder.encode(`${header}3\r\nabc\r\n3\r\ndef\r\n0\r\n\r\n`)
+		const keystream = new Uint8Array(response.length)
+		const kPayload = KOutputPayload.create({
+			redactedRequest: encoder.encode('GET /legacy HTTP/1.1\r\n\r\n'),
+			consolidatedResponseKeystream: keystream,
+			certificateInfo: testCertificate(),
+			sessionId: 'legacy-chunk-session',
+		})
+		const tPayload = TOutputPayload.create({
+			consolidatedResponseCiphertext: response,
+			sessionId: 'legacy-chunk-session',
+		})
+		const firstChunkStart = findBytes(response, encoder.encode('abc'))
+		const output = new Uint8Array(32).fill(8)
+
+		const transcript = await reconstructTlsTranscript(
+			makeBundleData(kPayload, tPayload, 'split-aead'),
+			logger,
+			[{ position: firstChunkStart + 3, length: 3, output, isMPC: true }],
+		)
+		assert.ok(decoder.decode(transcript.reconstructedResponse).endsWith(`\r\n\r\nabc${bs58.encode(output)}`))
+	})
+
+	it('accepts an encoded pre-CBC standalone bundle', async() => {
+		const timestampMs = Date.now()
+		const kPayload = KOutputPayload.create({
+			redactedRequest: encoder.encode('GET /legacy HTTP/1.1\r\n\r\n'),
+			consolidatedResponseKeystream: new Uint8Array([1, 2]),
+			certificateInfo: testCertificate(),
+			timestampMs,
+			sessionId: 'pre-cbc-session',
+		})
+		const tPayload = TOutputPayload.create({
+			consolidatedResponseCiphertext: new Uint8Array([3, 4]),
+			timestampMs,
+			sessionId: 'pre-cbc-session',
+		})
+		const teekWallet = Wallet.createRandom()
+		const teetWallet = Wallet.createRandom()
+		const kBody = KOutputPayload.encode(kPayload).finish()
+		const tBody = TOutputPayload.encode(tPayload).finish()
+		const bundle = VerificationBundle.create({
+			teekSigned: SignedMessage.create({
+				bodyType: BodyType.BODY_TYPE_K_OUTPUT,
+				body: kBody,
+				ethAddress: encoder.encode(teekWallet.address),
+				signature: await ETH_SIGNATURE_PROVIDER.sign(kBody, teekWallet.privateKey),
+			}),
+			teetSigned: SignedMessage.create({
+				bodyType: BodyType.BODY_TYPE_T_OUTPUT,
+				body: tBody,
+				ethAddress: encoder.encode(teetWallet.address),
+				signature: await ETH_SIGNATURE_PROVIDER.sign(tBody, teetWallet.privateKey),
+			}),
+		})
+
+		const previousStandalone = process.env.TEE_STANDALONE
+		process.env.TEE_STANDALONE = 'true'
+		try {
+			const verified = await verifyTeeBundle(VerificationBundle.encode(bundle).finish(), logger)
+			assert.equal(verified.protocolMode, 'split-aead')
+			assert.equal(verified.teeSessionId, 'pre-cbc-session')
+		} finally {
+			if(previousStandalone === undefined) {
+				delete process.env.TEE_STANDALONE
+			} else {
+				process.env.TEE_STANDALONE = previousStandalone
+			}
+		}
+	})
+
+	it('decodes and re-encodes pre-CBC protobuf bytes exactly', () => {
+		// Generated with the pre-CBC codec from attestor-core HEAD^.
+		const kWire = new Uint8Array(Buffer.from(
+			'0a03474554120f080110011a0973656e7369746976651a030102032a040802100130c0c4073a066c6567616379',
+			'hex',
+		))
+		const tWire = new Uint8Array(Buffer.from(
+			'0a0304050612010918c0c40722066c6567616379',
+			'hex',
+		))
+		const bundleWire = new Uint8Array(Buffer.from(
+			'0a370801122d0a03474554120f080110011a0973656e7369746976651a030102032a040802100130c0c4073a066c65676163791a0108220107121e080212140a0304050612010918c0c40722066c65676163791a010b22010a',
+			'hex',
+		))
+
+		const kPayload = KOutputPayload.decode(kWire)
+		const tPayload = TOutputPayload.decode(tWire)
+		assert.equal(kPayload.tls12Cbc, undefined)
+		assert.equal(tPayload.tls12Cbc, undefined)
+		assert.deepEqual(KOutputPayload.encode(kPayload).finish(), kWire)
+		assert.deepEqual(TOutputPayload.encode(tPayload).finish(), tWire)
+		assert.deepEqual(VerificationBundle.encode(VerificationBundle.decode(bundleWire)).finish(), bundleWire)
 	})
 })
 

@@ -105,6 +105,7 @@ message TLS12CBCTOutput {
   bytes response_records_sha256 = 3;
   repeated ResponseRedactionRange response_redaction_ranges = 4;
   repeated uint32 plaintext_record_lengths = 5;
+  bool close_notify = 6;
 }
 
 // Attestation report with structured data
