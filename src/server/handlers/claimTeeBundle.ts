@@ -341,7 +341,9 @@ function validateAndCombineOprfResults(
 
 	logger.info(`Combined ${zkOprfResults.length} ZK OPRF + ${oprfMpcResults.length} OPRF MPC results`)
 
-	// Check for overlapping ranges (position collision detection)
+	// Preserve the split-AEAD behavior: exact ZK/MPC duplicates are accepted,
+	// while partial overlaps are rejected. CBC forbids ZK OPRF data and checks
+	// overlap among its MPC ranges before this function is called.
 	const seen: Record<number, { length: number, source: string }> = {}
 	for(const result of zkOprfResults) {
 		seen[result.position] = { length: result.length, source: 'zk' }
@@ -350,7 +352,6 @@ function validateAndCombineOprfResults(
 	for(const result of oprfMpcResults) {
 		const existing = seen[result.position]
 		if(existing) {
-			// Exact duplicate at same position - verify they match
 			if(existing.length !== result.length) {
 				throw new AttestorError(
 					'ERROR_INVALID_CLAIM',
@@ -361,7 +362,6 @@ function validateAndCombineOprfResults(
 			logger.warn(`Duplicate OPRF range at position ${result.position} from both ZK and MPC - using MPC result`)
 		}
 
-		// Check for overlapping (but not identical) ranges
 		for(const [pos, data] of Object.entries(seen)) {
 			const position = Number(pos)
 			const existingEnd = position + data.length

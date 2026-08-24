@@ -10,6 +10,8 @@ import { validateGcpAttestationAndExtractKey } from '#src/server/utils/gcp-attes
 import type { AddressExtractionResult } from '#src/server/utils/nitro-attestation.ts'
 import { assertSevSnpBaseAllowed } from '#src/server/utils/sev-snp/allowlist.ts'
 import { verifyCombinedSecureBoot, verifyCombinedSevSnp } from '#src/server/utils/sev-snp/verify.ts'
+import type { TeeProtocolMode } from '#src/server/utils/tee-cbc-contract.ts'
+import { validateTeeTranscriptContract } from '#src/server/utils/tee-cbc-contract.ts'
 import type { Logger } from '#src/types/general.ts'
 import { AttestorError } from '#src/utils/error.ts'
 import { SIGNATURES } from '#src/utils/signatures/index.ts'
@@ -23,6 +25,7 @@ export interface TeeBundleData {
 	teekPcr0: string
 	teetPcr0: string
 	teeSessionId: string
+	protocolMode: TeeProtocolMode
 }
 
 export interface TeeSignatureVerificationResult {
@@ -69,6 +72,10 @@ export async function verifyTeeBundle(
 
 	validateSignedAttestationTypes(bundle, kOutputPayload, tOutputPayload)
 
+	// Select and validate one complete signed transcript contract. This runs
+	// only after both TEE signatures have been verified.
+	const protocolMode = validateTeeTranscriptContract(bundle, kOutputPayload, tOutputPayload)
+
 	// Validate timestamps
 	validateTimestamps(kOutputPayload, tOutputPayload, logger)
 
@@ -85,6 +92,7 @@ export async function verifyTeeBundle(
 		teekPcr0: teekKeyResult!.pcr0,
 		teetPcr0: teetKeyResult!.pcr0,
 		teeSessionId,
+		protocolMode,
 	}
 }
 
@@ -536,15 +544,6 @@ function parseKOutputPayload(signedMessage: SignedMessage): KOutputPayload {
 	// Use actual protobuf decoding
 	const payload = KOutputPayload.decode(signedMessage.body)
 
-	// Validate required fields
-	if(!payload.redactedRequest) {
-		throw new Error('Missing redacted request in TEE_K payload')
-	}
-
-	if(!payload.consolidatedResponseKeystream || payload.consolidatedResponseKeystream.length === 0) {
-		throw new Error('Missing consolidated response keystream in TEE_K payload')
-	}
-
 	if(!payload.certificateInfo) {
 		throw new Error('Missing certificate info in TEE_K payload')
 	}
@@ -559,12 +558,6 @@ function parseKOutputPayload(signedMessage: SignedMessage): KOutputPayload {
 function parseTOutputPayload(signedMessage: SignedMessage): TOutputPayload {
 	// Use actual protobuf decoding
 	const payload = TOutputPayload.decode(signedMessage.body)
-
-	// Validate required fields
-	if(!payload.consolidatedResponseCiphertext || payload.consolidatedResponseCiphertext.length === 0) {
-		throw new Error('Missing consolidated response ciphertext in TEE_T payload')
-	}
-
 
 	return payload
 }
