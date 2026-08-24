@@ -10,9 +10,17 @@ import { validateGcpAttestationAndExtractKey } from '#src/server/utils/gcp-attes
 import type { AddressExtractionResult } from '#src/server/utils/nitro-attestation.ts'
 import { assertSevSnpBaseAllowed } from '#src/server/utils/sev-snp/allowlist.ts'
 import { verifyCombinedSecureBoot, verifyCombinedSevSnp } from '#src/server/utils/sev-snp/verify.ts'
+import type { TeeProtocolMode } from '#src/server/utils/tee-cbc-contract.ts'
+import { validateTeeTranscriptContract } from '#src/server/utils/tee-cbc-contract.ts'
 import type { Logger } from '#src/types/general.ts'
 import { AttestorError } from '#src/utils/error.ts'
 import { SIGNATURES } from '#src/utils/signatures/index.ts'
+
+// Both transcript bodies can carry up to 500 TLS plaintext records. Ten MiB
+// leaves room for protobuf metadata over the 8,192,000-byte record limit.
+export const MAX_TEE_SIGNED_BODY_SIZE = 10 * 1024 * 1024
+// A legacy bundle can contain one maximum response in each signed body.
+export const MAX_TEE_VERIFICATION_BUNDLE_SIZE = 24 * 1024 * 1024
 
 // Types specific to TEE verification
 export interface TeeBundleData {
@@ -23,6 +31,7 @@ export interface TeeBundleData {
 	teekPcr0: string
 	teetPcr0: string
 	teeSessionId: string
+	protocolMode: TeeProtocolMode
 }
 
 export interface TeeSignatureVerificationResult {
@@ -41,6 +50,9 @@ export async function verifyTeeBundle(
 	bundleBytes: Uint8Array,
 	logger: Logger
 ): Promise<TeeBundleData> {
+	if(bundleBytes.length > MAX_TEE_VERIFICATION_BUNDLE_SIZE) {
+		throw new AttestorError('ERROR_INVALID_CLAIM', 'TEE verification bundle exceeds the maximum size')
+	}
 	// Parse the verification bundle protobuf
 	const bundle = parseVerificationBundle(bundleBytes)
 
@@ -69,6 +81,10 @@ export async function verifyTeeBundle(
 
 	validateSignedAttestationTypes(bundle, kOutputPayload, tOutputPayload)
 
+	// Select and validate one complete signed transcript contract. This runs
+	// only after both TEE signatures have been verified.
+	const protocolMode = validateTeeTranscriptContract(bundle, kOutputPayload, tOutputPayload)
+
 	// Validate timestamps
 	validateTimestamps(kOutputPayload, tOutputPayload, logger)
 
@@ -85,6 +101,7 @@ export async function verifyTeeBundle(
 		teekPcr0: teekKeyResult!.pcr0,
 		teetPcr0: teetKeyResult!.pcr0,
 		teeSessionId,
+		protocolMode,
 	}
 }
 
@@ -140,6 +157,11 @@ function validateBundleCompleteness(bundle: VerificationBundle): void {
 
 	if(!bundle.teetSigned.body || bundle.teetSigned.body.length === 0) {
 		throw new Error('Invalid TEE_T signed message: empty body')
+	}
+
+	if(bundle.teekSigned.body.length > MAX_TEE_SIGNED_BODY_SIZE ||
+		bundle.teetSigned.body.length > MAX_TEE_SIGNED_BODY_SIZE) {
+		throw new AttestorError('ERROR_INVALID_CLAIM', 'TEE signed body exceeds the maximum size')
 	}
 
 	if(!bundle.teekSigned.signature || bundle.teekSigned.signature.length === 0) {
@@ -536,15 +558,6 @@ function parseKOutputPayload(signedMessage: SignedMessage): KOutputPayload {
 	// Use actual protobuf decoding
 	const payload = KOutputPayload.decode(signedMessage.body)
 
-	// Validate required fields
-	if(!payload.redactedRequest) {
-		throw new Error('Missing redacted request in TEE_K payload')
-	}
-
-	if(!payload.consolidatedResponseKeystream || payload.consolidatedResponseKeystream.length === 0) {
-		throw new Error('Missing consolidated response keystream in TEE_K payload')
-	}
-
 	if(!payload.certificateInfo) {
 		throw new Error('Missing certificate info in TEE_K payload')
 	}
@@ -559,12 +572,6 @@ function parseKOutputPayload(signedMessage: SignedMessage): KOutputPayload {
 function parseTOutputPayload(signedMessage: SignedMessage): TOutputPayload {
 	// Use actual protobuf decoding
 	const payload = TOutputPayload.decode(signedMessage.body)
-
-	// Validate required fields
-	if(!payload.consolidatedResponseCiphertext || payload.consolidatedResponseCiphertext.length === 0) {
-		throw new Error('Missing consolidated response ciphertext in TEE_T payload')
-	}
-
 
 	return payload
 }

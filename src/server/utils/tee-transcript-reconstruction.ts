@@ -61,20 +61,27 @@ export async function reconstructTlsTranscript(
  * Reconstructs the original request by applying proof stream to redacted request
  */
 function reconstructRequest(bundleData: TeeBundleData, logger: Logger): Uint8Array {
-	const { kOutputPayload } = bundleData
+	const { kOutputPayload, protocolMode } = bundleData
+	const cbcContract = kOutputPayload.tls12Cbc
+	const redactedRequest = protocolMode === 'tls12-cbc'
+		? cbcContract!.authenticatedRedactedRequest
+		: kOutputPayload.redactedRequest
+	const requestRedactionRanges = protocolMode === 'tls12-cbc'
+		? cbcContract!.requestRedactionRanges
+		: kOutputPayload.requestRedactionRanges
 
-	if(!kOutputPayload.requestRedactionRanges || kOutputPayload.requestRedactionRanges.length === 0) {
+	if(requestRedactionRanges.length === 0) {
 		logger.warn('No request redaction ranges - using redacted request as-is')
-		return kOutputPayload.redactedRequest
+		return redactedRequest
 	}
 
 	// Create a copy of the redacted request
-	const revealedRequest = new Uint8Array(kOutputPayload.redactedRequest)
+	const revealedRequest = new Uint8Array(redactedRequest)
 
 	// Create pretty display: show revealed proof data, but keep other sensitive data as '*'
 	const prettyRequest = new Uint8Array(revealedRequest)
 
-	for(const range of kOutputPayload.requestRedactionRanges) {
+	for(const range of requestRedactionRanges) {
 		// Keep non-proof sensitive data as '*' for display
 		if(!range.type.includes('proof')) {
 			const start = range.start
@@ -98,62 +105,70 @@ async function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger
 	length: number
 	output: Uint8Array
 }>): Promise<Uint8Array> {
-	const { kOutputPayload, tOutputPayload } = bundleData
+	const { kOutputPayload, tOutputPayload, protocolMode } = bundleData
+	const isTls12Cbc = protocolMode === 'tls12-cbc'
+	let reconstructedResponse: Uint8Array
+	let responseRedactionRanges: Array<{ start: number, length: number }>
 
-	// Get consolidated data from both TEEs
-	const consolidatedKeystream = kOutputPayload.consolidatedResponseKeystream
-	const consolidatedCiphertext = tOutputPayload.consolidatedResponseCiphertext
+	if(isTls12Cbc) {
+		reconstructedResponse = new Uint8Array(tOutputPayload.tls12Cbc!.authenticatedRedactedResponse)
+		responseRedactionRanges = tOutputPayload.tls12Cbc!.responseRedactionRanges
+	} else {
+		const consolidatedKeystream = kOutputPayload.consolidatedResponseKeystream
+		const consolidatedCiphertext = tOutputPayload.consolidatedResponseCiphertext
 
-	if(!consolidatedKeystream || consolidatedKeystream.length === 0) {
-		throw new AttestorError('ERROR_INVALID_CLAIM', 'No consolidated response keystream available')
+		if(consolidatedKeystream.length === 0) {
+			throw new AttestorError('ERROR_INVALID_CLAIM', 'No consolidated response keystream available')
+		}
+
+		if(consolidatedCiphertext.length === 0) {
+			throw new AttestorError('ERROR_INVALID_CLAIM', 'No consolidated response ciphertext available')
+		}
+
+		if(consolidatedKeystream.length !== consolidatedCiphertext.length) {
+			logger.warn('Keystream and ciphertext length mismatch', {
+				keystreamLength: consolidatedKeystream.length,
+				ciphertextLength: consolidatedCiphertext.length
+			})
+		}
+
+		const minLength = Math.min(consolidatedKeystream.length, consolidatedCiphertext.length)
+		reconstructedResponse = new Uint8Array(minLength)
+		for(let i = 0; i < minLength; i++) {
+			reconstructedResponse[i] = consolidatedKeystream[i] ^ consolidatedCiphertext[i]
+		}
+		responseRedactionRanges = kOutputPayload.responseRedactionRanges
 	}
 
-	if(!consolidatedCiphertext || consolidatedCiphertext.length === 0) {
-		throw new AttestorError('ERROR_INVALID_CLAIM', 'No consolidated response ciphertext available')
-	}
+	logger.info(`Reconstructed response: ${reconstructedResponse.length} bytes, ${responseRedactionRanges.length} redaction ranges`)
 
-	// Verify lengths match
-	if(consolidatedKeystream.length !== consolidatedCiphertext.length) {
-		logger.warn('Keystream and ciphertext length mismatch', {
-			keystreamLength: consolidatedKeystream.length,
-			ciphertextLength: consolidatedCiphertext.length
-		})
-	}
-
-	// XOR to get plaintext (keystream XOR ciphertext = plaintext)
-	const minLength = Math.min(consolidatedKeystream.length, consolidatedCiphertext.length)
-	const reconstructedResponse = new Uint8Array(minLength)
-
-	for(let i = 0; i < minLength; i++) {
-		reconstructedResponse[i] = consolidatedKeystream[i] ^ consolidatedCiphertext[i]
-	}
-
-	logger.info(`Reconstructed response: ${reconstructedResponse.length} bytes, ${kOutputPayload.responseRedactionRanges?.length || 0} redaction ranges`)
-
-	// Apply response redaction ranges to the reconstructed response
-	let processedResponse = applyResponseRedactionRanges(reconstructedResponse, kOutputPayload.responseRedactionRanges, logger)
+	// CBC carries authenticated redacted plaintext directly. Split AEAD first
+	// reconstructs plaintext by XOR. Both modes then use their signed ranges.
+	let processedResponse = applyResponseRedactionRanges(reconstructedResponse, responseRedactionRanges, logger)
 
 	// Trim leading (NewSessionTicket) and trailing (close_notify/alert) asterisks
 	// BEFORE OPRF/dechunk so downstream positions are stable.
 	let leadingAsterisks = 0
-	for(const element of processedResponse) {
-		if(element === REDACTION_CHAR_CODE) {
-			leadingAsterisks++
-		} else {
-			break
-		}
-	}
-
 	let trailingAsterisks = 0
-	for(let i = processedResponse.length - 1; i >= leadingAsterisks; i--) {
-		if(processedResponse[i] === REDACTION_CHAR_CODE) {
-			trailingAsterisks++
-		} else {
-			break
+	if(!isTls12Cbc) {
+		for(const element of processedResponse) {
+			if(element === REDACTION_CHAR_CODE) {
+				leadingAsterisks++
+			} else {
+				break
+			}
 		}
-	}
 
-	processedResponse = processedResponse.slice(leadingAsterisks, processedResponse.length - trailingAsterisks)
+		for(let i = processedResponse.length - 1; i >= leadingAsterisks; i--) {
+			if(processedResponse[i] === REDACTION_CHAR_CODE) {
+				trailingAsterisks++
+			} else {
+				break
+			}
+		}
+
+		processedResponse = processedResponse.slice(leadingAsterisks, processedResponse.length - trailingAsterisks)
+	}
 
 	// OPRF positions are in pre-trim coords; shift them into trimmed coords.
 	let oprf = oprfResults?.map(r => ({ ...r, position: r.position - leadingAsterisks }))
@@ -232,10 +247,7 @@ function dechunkRevealedResponse(
 	dechunkedResponse.set(dechunkedBody, headerRegion.length)
 
 	const synthLen = DECHUNK_SYNTH_HEADER.length
-	const remapped = oprfResults?.map(r => ({
-		...r,
-		position: chunkedToDechunkedPos(r.position, bodyStart, synthLen, chunks)
-	}))
+	const remapped = oprfResults?.map(r => remapChunkedOprfRange(r, bodyStart, synthLen, chunks))
 
 	logger.info(`TEE dechunk before OPRF: ${response.length} -> ${dechunkedResponse.length} bytes, ${chunks.length} chunks`)
 	return { response: dechunkedResponse, oprfResults: remapped }
@@ -256,33 +268,40 @@ function findHeaderEnd(response: Uint8Array): number {
 // Map a position in the original (chunked) response to its position in the dechunked
 // response. `chunks` are in synthetic-prefixed coords (fromIndex/toIndex point to chunk
 // DATA), so subtract `synthLen` to get body-relative offsets.
-function chunkedToDechunkedPos(
-	pos: number,
+function remapChunkedOprfRange(
+	range: { position: number, length: number, output: Uint8Array },
 	bodyStart: number,
 	synthLen: number,
 	chunks: Array<{ fromIndex: number, toIndex: number }>
-): number {
-	if(pos < bodyStart) {
-		return pos
+): { position: number, length: number, output: Uint8Array } {
+	const rangeEnd = range.position + range.length
+	if(range.position < bodyStart) {
+		if(rangeEnd > bodyStart) {
+			throw new AttestorError('ERROR_INVALID_CLAIM', 'OPRF range crosses the HTTP header boundary')
+		}
+		return range
 	}
 
-	const bodyOff = pos - bodyStart
+	const bodyOff = range.position - bodyStart
+	const bodyEnd = rangeEnd - bodyStart
 	let acc = 0
 	for(const c of chunks) {
 		const cf = c.fromIndex - synthLen
 		const ct = c.toIndex - synthLen
-		if(bodyOff >= cf && bodyOff < ct) {
-			return bodyStart + acc + (bodyOff - cf)
-		}
-
-		if(bodyOff === ct) {
-			return bodyStart + acc + (ct - cf)
+		if(bodyOff >= cf && bodyEnd <= ct) {
+			return {
+				...range,
+				position: bodyStart + acc + (bodyOff - cf),
+			}
 		}
 
 		acc += ct - cf
 	}
 
-	return bodyStart + acc
+	throw new AttestorError(
+		'ERROR_INVALID_CLAIM',
+		`OPRF range [${range.position}:${rangeEnd}] is not wholly contained in HTTP chunk data`
+	)
 }
 
 // Removed legacy packet-based extraction functions since we now use consolidated streams

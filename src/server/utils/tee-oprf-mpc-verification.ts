@@ -12,6 +12,8 @@ import type { OprfVerificationResult } from '#src/server/utils/tee-oprf-verifica
 import type { Logger } from '#src/types/general.ts'
 import { AttestorError } from '#src/utils/error.ts'
 
+export const MAX_TEE_OPRF_MPC_OUTPUTS = 20
+
 /**
  * Verifies OPRF MPC outputs from TEE_K and TEE_T match
  * Returns verified outputs for transcript replacement (same format as ZK OPRF)
@@ -23,6 +25,14 @@ export function verifyOprfMpcOutputs(
 ): OprfVerificationResult[] {
 	const kOutputs = kPayload.oprfOutputs || []
 	const tOutputs = tPayload.oprfOutputs || []
+	const responseLength = tPayload.tls12Cbc?.authenticatedRedactedResponse.length ||
+		tPayload.consolidatedResponseCiphertext.length
+	if(kOutputs.length > MAX_TEE_OPRF_MPC_OUTPUTS || tOutputs.length > MAX_TEE_OPRF_MPC_OUTPUTS) {
+		throw new AttestorError(
+			'ERROR_INVALID_CLAIM',
+			`Too many OPRF MPC outputs: maximum is ${MAX_TEE_OPRF_MPC_OUTPUTS}`
+		)
+	}
 
 	// Empty is valid - no OPRF MPC was requested
 	if(kOutputs.length === 0 && tOutputs.length === 0) {
@@ -79,6 +89,24 @@ export function verifyOprfMpcOutputs(
 				`TEE_K [${kOut.tlsStart}:${kOut.tlsStart + kOut.tlsLength}] vs ` +
 				`TEE_T [${tOut.tlsStart}:${tOut.tlsStart + tOut.tlsLength}]`
 			)
+		}
+
+		if(kOut.tlsStart > responseLength || kOut.tlsLength > responseLength - kOut.tlsStart) {
+			throw new AttestorError(
+				'ERROR_INVALID_CLAIM',
+				`OPRF MPC range at index ${i} exceeds authenticated response length ${responseLength}`
+			)
+		}
+
+		const rangeEnd = kOut.tlsStart + kOut.tlsLength
+		for(const previous of results) {
+			const previousEnd = previous.position + previous.length
+			if(kOut.tlsStart < previousEnd && rangeEnd > previous.position) {
+				throw new AttestorError(
+					'ERROR_INVALID_CLAIM',
+					`OPRF MPC ranges overlap: [${previous.position}:${previousEnd}] and [${kOut.tlsStart}:${rangeEnd}]`
+				)
+			}
 		}
 
 		// Verify hash outputs match (hash = SHA256(CMAC), so this implies CMAC matched too)

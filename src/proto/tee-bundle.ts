@@ -9,6 +9,54 @@ import { BinaryReader, BinaryWriter } from "@bufbuild/protobuf/wire";
 
 export const protobufPackage = "teeproto";
 
+export const TLS12CBCRecordMode = {
+  TLS12_CBC_RECORD_MODE_UNSPECIFIED: 0,
+  TLS12_CBC_RECORD_MODE_MAC_THEN_ENCRYPT: 1,
+  TLS12_CBC_RECORD_MODE_ENCRYPT_THEN_MAC: 2,
+  UNRECOGNIZED: -1,
+} as const;
+
+export type TLS12CBCRecordMode = typeof TLS12CBCRecordMode[keyof typeof TLS12CBCRecordMode];
+
+export namespace TLS12CBCRecordMode {
+  export type TLS12_CBC_RECORD_MODE_UNSPECIFIED = typeof TLS12CBCRecordMode.TLS12_CBC_RECORD_MODE_UNSPECIFIED;
+  export type TLS12_CBC_RECORD_MODE_MAC_THEN_ENCRYPT = typeof TLS12CBCRecordMode.TLS12_CBC_RECORD_MODE_MAC_THEN_ENCRYPT;
+  export type TLS12_CBC_RECORD_MODE_ENCRYPT_THEN_MAC = typeof TLS12CBCRecordMode.TLS12_CBC_RECORD_MODE_ENCRYPT_THEN_MAC;
+  export type UNRECOGNIZED = typeof TLS12CBCRecordMode.UNRECOGNIZED;
+}
+
+export function tLS12CBCRecordModeFromJSON(object: any): TLS12CBCRecordMode {
+  switch (object) {
+    case 0:
+    case "TLS12_CBC_RECORD_MODE_UNSPECIFIED":
+      return TLS12CBCRecordMode.TLS12_CBC_RECORD_MODE_UNSPECIFIED;
+    case 1:
+    case "TLS12_CBC_RECORD_MODE_MAC_THEN_ENCRYPT":
+      return TLS12CBCRecordMode.TLS12_CBC_RECORD_MODE_MAC_THEN_ENCRYPT;
+    case 2:
+    case "TLS12_CBC_RECORD_MODE_ENCRYPT_THEN_MAC":
+      return TLS12CBCRecordMode.TLS12_CBC_RECORD_MODE_ENCRYPT_THEN_MAC;
+    case -1:
+    case "UNRECOGNIZED":
+    default:
+      return TLS12CBCRecordMode.UNRECOGNIZED;
+  }
+}
+
+export function tLS12CBCRecordModeToJSON(object: TLS12CBCRecordMode): string {
+  switch (object) {
+    case TLS12CBCRecordMode.TLS12_CBC_RECORD_MODE_UNSPECIFIED:
+      return "TLS12_CBC_RECORD_MODE_UNSPECIFIED";
+    case TLS12CBCRecordMode.TLS12_CBC_RECORD_MODE_MAC_THEN_ENCRYPT:
+      return "TLS12_CBC_RECORD_MODE_MAC_THEN_ENCRYPT";
+    case TLS12CBCRecordMode.TLS12_CBC_RECORD_MODE_ENCRYPT_THEN_MAC:
+      return "TLS12_CBC_RECORD_MODE_ENCRYPT_THEN_MAC";
+    case TLS12CBCRecordMode.UNRECOGNIZED:
+    default:
+      return "UNRECOGNIZED";
+  }
+}
+
 /** Signature wrapper used everywhere */
 export const BodyType = {
   BODY_TYPE_UNSPECIFIED: 0,
@@ -71,6 +119,14 @@ export interface ResponseRedactionRange {
   length: number;
 }
 
+export interface TLS12CBCSessionBinding {
+  contractVersion: number;
+  cipherSuite: number;
+  recordMode: TLS12CBCRecordMode;
+  extendedMasterSecret: boolean;
+  sessionBinding: Uint8Array;
+}
+
 export interface SignedRedactedDecryptionStream {
   redactedStream: Uint8Array;
   seqNum: number;
@@ -130,6 +186,7 @@ export interface KOutputPayload {
   oprfOutputs: OPRFOutput[];
   /** Signed TEE attestation generation */
   attestationType: string;
+  tls12Cbc: TLS12CBCKOutput | undefined;
 }
 
 export interface TOutputPayload {
@@ -145,6 +202,22 @@ export interface TOutputPayload {
   oprfOutputs: OPRFOutput[];
   /** Signed TEE attestation generation */
   attestationType: string;
+  tls12Cbc: TLS12CBCTOutput | undefined;
+}
+
+export interface TLS12CBCKOutput {
+  binding: TLS12CBCSessionBinding | undefined;
+  authenticatedRedactedRequest: Uint8Array;
+  requestRecordsSha256: Uint8Array;
+  requestRedactionRanges: RequestRedactionRange[];
+}
+
+export interface TLS12CBCTOutput {
+  binding: TLS12CBCSessionBinding | undefined;
+  authenticatedRedactedResponse: Uint8Array;
+  responseRecordsSha256: Uint8Array;
+  responseRedactionRanges: ResponseRedactionRange[];
+  plaintextRecordLengths: number[];
 }
 
 /** Attestation report with structured data */
@@ -355,6 +428,156 @@ export const ResponseRedactionRange: MessageFns<ResponseRedactionRange> = {
     const message = createBaseResponseRedactionRange();
     message.start = object.start ?? 0;
     message.length = object.length ?? 0;
+    return message;
+  },
+};
+
+function createBaseTLS12CBCSessionBinding(): TLS12CBCSessionBinding {
+  return {
+    contractVersion: 0,
+    cipherSuite: 0,
+    recordMode: 0,
+    extendedMasterSecret: false,
+    sessionBinding: new Uint8Array(0),
+  };
+}
+
+export const TLS12CBCSessionBinding: MessageFns<TLS12CBCSessionBinding> = {
+  encode(message: TLS12CBCSessionBinding, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.contractVersion !== 0) {
+      writer.uint32(8).uint32(message.contractVersion);
+    }
+    if (message.cipherSuite !== 0) {
+      writer.uint32(16).uint32(message.cipherSuite);
+    }
+    if (message.recordMode !== 0) {
+      writer.uint32(24).int32(message.recordMode);
+    }
+    if (message.extendedMasterSecret !== false) {
+      writer.uint32(32).bool(message.extendedMasterSecret);
+    }
+    if (message.sessionBinding.length !== 0) {
+      writer.uint32(42).bytes(message.sessionBinding);
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): TLS12CBCSessionBinding {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseTLS12CBCSessionBinding();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 8) {
+            break;
+          }
+
+          message.contractVersion = reader.uint32();
+          continue;
+        }
+        case 2: {
+          if (tag !== 16) {
+            break;
+          }
+
+          message.cipherSuite = reader.uint32();
+          continue;
+        }
+        case 3: {
+          if (tag !== 24) {
+            break;
+          }
+
+          message.recordMode = reader.int32() as any;
+          continue;
+        }
+        case 4: {
+          if (tag !== 32) {
+            break;
+          }
+
+          message.extendedMasterSecret = reader.bool();
+          continue;
+        }
+        case 5: {
+          if (tag !== 42) {
+            break;
+          }
+
+          message.sessionBinding = reader.bytes();
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): TLS12CBCSessionBinding {
+    return {
+      contractVersion: isSet(object.contractVersion)
+        ? globalThis.Number(object.contractVersion)
+        : isSet(object.contract_version)
+        ? globalThis.Number(object.contract_version)
+        : 0,
+      cipherSuite: isSet(object.cipherSuite)
+        ? globalThis.Number(object.cipherSuite)
+        : isSet(object.cipher_suite)
+        ? globalThis.Number(object.cipher_suite)
+        : 0,
+      recordMode: isSet(object.recordMode)
+        ? tLS12CBCRecordModeFromJSON(object.recordMode)
+        : isSet(object.record_mode)
+        ? tLS12CBCRecordModeFromJSON(object.record_mode)
+        : 0,
+      extendedMasterSecret: isSet(object.extendedMasterSecret)
+        ? globalThis.Boolean(object.extendedMasterSecret)
+        : isSet(object.extended_master_secret)
+        ? globalThis.Boolean(object.extended_master_secret)
+        : false,
+      sessionBinding: isSet(object.sessionBinding)
+        ? bytesFromBase64(object.sessionBinding)
+        : isSet(object.session_binding)
+        ? bytesFromBase64(object.session_binding)
+        : new Uint8Array(0),
+    };
+  },
+
+  toJSON(message: TLS12CBCSessionBinding): unknown {
+    const obj: any = {};
+    if (message.contractVersion !== 0) {
+      obj.contractVersion = Math.round(message.contractVersion);
+    }
+    if (message.cipherSuite !== 0) {
+      obj.cipherSuite = Math.round(message.cipherSuite);
+    }
+    if (message.recordMode !== 0) {
+      obj.recordMode = tLS12CBCRecordModeToJSON(message.recordMode);
+    }
+    if (message.extendedMasterSecret !== false) {
+      obj.extendedMasterSecret = message.extendedMasterSecret;
+    }
+    if (message.sessionBinding.length !== 0) {
+      obj.sessionBinding = base64FromBytes(message.sessionBinding);
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<TLS12CBCSessionBinding>): TLS12CBCSessionBinding {
+    return TLS12CBCSessionBinding.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<TLS12CBCSessionBinding>): TLS12CBCSessionBinding {
+    const message = createBaseTLS12CBCSessionBinding();
+    message.contractVersion = object.contractVersion ?? 0;
+    message.cipherSuite = object.cipherSuite ?? 0;
+    message.recordMode = object.recordMode ?? 0;
+    message.extendedMasterSecret = object.extendedMasterSecret ?? false;
+    message.sessionBinding = object.sessionBinding ?? new Uint8Array(0);
     return message;
   },
 };
@@ -886,6 +1109,7 @@ function createBaseKOutputPayload(): KOutputPayload {
     sessionId: "",
     oprfOutputs: [],
     attestationType: "",
+    tls12Cbc: undefined,
   };
 }
 
@@ -917,6 +1141,9 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
     }
     if (message.attestationType !== "") {
       writer.uint32(90).string(message.attestationType);
+    }
+    if (message.tls12Cbc !== undefined) {
+      TLS12CBCKOutput.encode(message.tls12Cbc, writer.uint32(98).fork()).join();
     }
     return writer;
   },
@@ -1000,6 +1227,14 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
           message.attestationType = reader.string();
           continue;
         }
+        case 12: {
+          if (tag !== 98) {
+            break;
+          }
+
+          message.tls12Cbc = TLS12CBCKOutput.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1056,6 +1291,11 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
         : isSet(object.attestation_type)
         ? globalThis.String(object.attestation_type)
         : "",
+      tls12Cbc: isSet(object.tls12Cbc)
+        ? TLS12CBCKOutput.fromJSON(object.tls12Cbc)
+        : isSet(object.tls12_cbc)
+        ? TLS12CBCKOutput.fromJSON(object.tls12_cbc)
+        : undefined,
     };
   },
 
@@ -1088,6 +1328,9 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
     if (message.attestationType !== "") {
       obj.attestationType = message.attestationType;
     }
+    if (message.tls12Cbc !== undefined) {
+      obj.tls12Cbc = TLS12CBCKOutput.toJSON(message.tls12Cbc);
+    }
     return obj;
   },
 
@@ -1109,6 +1352,9 @@ export const KOutputPayload: MessageFns<KOutputPayload> = {
     message.sessionId = object.sessionId ?? "";
     message.oprfOutputs = object.oprfOutputs?.map((e) => OPRFOutput.fromPartial(e)) || [];
     message.attestationType = object.attestationType ?? "";
+    message.tls12Cbc = (object.tls12Cbc !== undefined && object.tls12Cbc !== null)
+      ? TLS12CBCKOutput.fromPartial(object.tls12Cbc)
+      : undefined;
     return message;
   },
 };
@@ -1121,6 +1367,7 @@ function createBaseTOutputPayload(): TOutputPayload {
     sessionId: "",
     oprfOutputs: [],
     attestationType: "",
+    tls12Cbc: undefined,
   };
 }
 
@@ -1143,6 +1390,9 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
     }
     if (message.attestationType !== "") {
       writer.uint32(90).string(message.attestationType);
+    }
+    if (message.tls12Cbc !== undefined) {
+      TLS12CBCTOutput.encode(message.tls12Cbc, writer.uint32(98).fork()).join();
     }
     return writer;
   },
@@ -1202,6 +1452,14 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
           message.attestationType = reader.string();
           continue;
         }
+        case 12: {
+          if (tag !== 98) {
+            break;
+          }
+
+          message.tls12Cbc = TLS12CBCTOutput.decode(reader, reader.uint32());
+          continue;
+        }
       }
       if ((tag & 7) === 4 || tag === 0) {
         break;
@@ -1243,6 +1501,11 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
         : isSet(object.attestation_type)
         ? globalThis.String(object.attestation_type)
         : "",
+      tls12Cbc: isSet(object.tls12Cbc)
+        ? TLS12CBCTOutput.fromJSON(object.tls12Cbc)
+        : isSet(object.tls12_cbc)
+        ? TLS12CBCTOutput.fromJSON(object.tls12_cbc)
+        : undefined,
     };
   },
 
@@ -1266,6 +1529,9 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
     if (message.attestationType !== "") {
       obj.attestationType = message.attestationType;
     }
+    if (message.tls12Cbc !== undefined) {
+      obj.tls12Cbc = TLS12CBCTOutput.toJSON(message.tls12Cbc);
+    }
     return obj;
   },
 
@@ -1280,6 +1546,298 @@ export const TOutputPayload: MessageFns<TOutputPayload> = {
     message.sessionId = object.sessionId ?? "";
     message.oprfOutputs = object.oprfOutputs?.map((e) => OPRFOutput.fromPartial(e)) || [];
     message.attestationType = object.attestationType ?? "";
+    message.tls12Cbc = (object.tls12Cbc !== undefined && object.tls12Cbc !== null)
+      ? TLS12CBCTOutput.fromPartial(object.tls12Cbc)
+      : undefined;
+    return message;
+  },
+};
+
+function createBaseTLS12CBCKOutput(): TLS12CBCKOutput {
+  return {
+    binding: undefined,
+    authenticatedRedactedRequest: new Uint8Array(0),
+    requestRecordsSha256: new Uint8Array(0),
+    requestRedactionRanges: [],
+  };
+}
+
+export const TLS12CBCKOutput: MessageFns<TLS12CBCKOutput> = {
+  encode(message: TLS12CBCKOutput, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.binding !== undefined) {
+      TLS12CBCSessionBinding.encode(message.binding, writer.uint32(10).fork()).join();
+    }
+    if (message.authenticatedRedactedRequest.length !== 0) {
+      writer.uint32(18).bytes(message.authenticatedRedactedRequest);
+    }
+    if (message.requestRecordsSha256.length !== 0) {
+      writer.uint32(26).bytes(message.requestRecordsSha256);
+    }
+    for (const v of message.requestRedactionRanges) {
+      RequestRedactionRange.encode(v!, writer.uint32(34).fork()).join();
+    }
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): TLS12CBCKOutput {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseTLS12CBCKOutput();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.binding = TLS12CBCSessionBinding.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.authenticatedRedactedRequest = reader.bytes();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.requestRecordsSha256 = reader.bytes();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.requestRedactionRanges.push(RequestRedactionRange.decode(reader, reader.uint32()));
+          continue;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): TLS12CBCKOutput {
+    return {
+      binding: isSet(object.binding) ? TLS12CBCSessionBinding.fromJSON(object.binding) : undefined,
+      authenticatedRedactedRequest: isSet(object.authenticatedRedactedRequest)
+        ? bytesFromBase64(object.authenticatedRedactedRequest)
+        : isSet(object.authenticated_redacted_request)
+        ? bytesFromBase64(object.authenticated_redacted_request)
+        : new Uint8Array(0),
+      requestRecordsSha256: isSet(object.requestRecordsSha256)
+        ? bytesFromBase64(object.requestRecordsSha256)
+        : isSet(object.request_records_sha256)
+        ? bytesFromBase64(object.request_records_sha256)
+        : new Uint8Array(0),
+      requestRedactionRanges: globalThis.Array.isArray(object?.requestRedactionRanges)
+        ? object.requestRedactionRanges.map((e: any) => RequestRedactionRange.fromJSON(e))
+        : globalThis.Array.isArray(object?.request_redaction_ranges)
+        ? object.request_redaction_ranges.map((e: any) => RequestRedactionRange.fromJSON(e))
+        : [],
+    };
+  },
+
+  toJSON(message: TLS12CBCKOutput): unknown {
+    const obj: any = {};
+    if (message.binding !== undefined) {
+      obj.binding = TLS12CBCSessionBinding.toJSON(message.binding);
+    }
+    if (message.authenticatedRedactedRequest.length !== 0) {
+      obj.authenticatedRedactedRequest = base64FromBytes(message.authenticatedRedactedRequest);
+    }
+    if (message.requestRecordsSha256.length !== 0) {
+      obj.requestRecordsSha256 = base64FromBytes(message.requestRecordsSha256);
+    }
+    if (message.requestRedactionRanges?.length) {
+      obj.requestRedactionRanges = message.requestRedactionRanges.map((e) => RequestRedactionRange.toJSON(e));
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<TLS12CBCKOutput>): TLS12CBCKOutput {
+    return TLS12CBCKOutput.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<TLS12CBCKOutput>): TLS12CBCKOutput {
+    const message = createBaseTLS12CBCKOutput();
+    message.binding = (object.binding !== undefined && object.binding !== null)
+      ? TLS12CBCSessionBinding.fromPartial(object.binding)
+      : undefined;
+    message.authenticatedRedactedRequest = object.authenticatedRedactedRequest ?? new Uint8Array(0);
+    message.requestRecordsSha256 = object.requestRecordsSha256 ?? new Uint8Array(0);
+    message.requestRedactionRanges = object.requestRedactionRanges?.map((e) => RequestRedactionRange.fromPartial(e)) ||
+      [];
+    return message;
+  },
+};
+
+function createBaseTLS12CBCTOutput(): TLS12CBCTOutput {
+  return {
+    binding: undefined,
+    authenticatedRedactedResponse: new Uint8Array(0),
+    responseRecordsSha256: new Uint8Array(0),
+    responseRedactionRanges: [],
+    plaintextRecordLengths: [],
+  };
+}
+
+export const TLS12CBCTOutput: MessageFns<TLS12CBCTOutput> = {
+  encode(message: TLS12CBCTOutput, writer: BinaryWriter = new BinaryWriter()): BinaryWriter {
+    if (message.binding !== undefined) {
+      TLS12CBCSessionBinding.encode(message.binding, writer.uint32(10).fork()).join();
+    }
+    if (message.authenticatedRedactedResponse.length !== 0) {
+      writer.uint32(18).bytes(message.authenticatedRedactedResponse);
+    }
+    if (message.responseRecordsSha256.length !== 0) {
+      writer.uint32(26).bytes(message.responseRecordsSha256);
+    }
+    for (const v of message.responseRedactionRanges) {
+      ResponseRedactionRange.encode(v!, writer.uint32(34).fork()).join();
+    }
+    writer.uint32(42).fork();
+    for (const v of message.plaintextRecordLengths) {
+      writer.uint32(v);
+    }
+    writer.join();
+    return writer;
+  },
+
+  decode(input: BinaryReader | Uint8Array, length?: number): TLS12CBCTOutput {
+    const reader = input instanceof BinaryReader ? input : new BinaryReader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message = createBaseTLS12CBCTOutput();
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1: {
+          if (tag !== 10) {
+            break;
+          }
+
+          message.binding = TLS12CBCSessionBinding.decode(reader, reader.uint32());
+          continue;
+        }
+        case 2: {
+          if (tag !== 18) {
+            break;
+          }
+
+          message.authenticatedRedactedResponse = reader.bytes();
+          continue;
+        }
+        case 3: {
+          if (tag !== 26) {
+            break;
+          }
+
+          message.responseRecordsSha256 = reader.bytes();
+          continue;
+        }
+        case 4: {
+          if (tag !== 34) {
+            break;
+          }
+
+          message.responseRedactionRanges.push(ResponseRedactionRange.decode(reader, reader.uint32()));
+          continue;
+        }
+        case 5: {
+          if (tag === 40) {
+            message.plaintextRecordLengths.push(reader.uint32());
+
+            continue;
+          }
+
+          if (tag === 42) {
+            const end2 = reader.uint32() + reader.pos;
+            while (reader.pos < end2) {
+              message.plaintextRecordLengths.push(reader.uint32());
+            }
+
+            continue;
+          }
+
+          break;
+        }
+      }
+      if ((tag & 7) === 4 || tag === 0) {
+        break;
+      }
+      reader.skip(tag & 7);
+    }
+    return message;
+  },
+
+  fromJSON(object: any): TLS12CBCTOutput {
+    return {
+      binding: isSet(object.binding) ? TLS12CBCSessionBinding.fromJSON(object.binding) : undefined,
+      authenticatedRedactedResponse: isSet(object.authenticatedRedactedResponse)
+        ? bytesFromBase64(object.authenticatedRedactedResponse)
+        : isSet(object.authenticated_redacted_response)
+        ? bytesFromBase64(object.authenticated_redacted_response)
+        : new Uint8Array(0),
+      responseRecordsSha256: isSet(object.responseRecordsSha256)
+        ? bytesFromBase64(object.responseRecordsSha256)
+        : isSet(object.response_records_sha256)
+        ? bytesFromBase64(object.response_records_sha256)
+        : new Uint8Array(0),
+      responseRedactionRanges: globalThis.Array.isArray(object?.responseRedactionRanges)
+        ? object.responseRedactionRanges.map((e: any) => ResponseRedactionRange.fromJSON(e))
+        : globalThis.Array.isArray(object?.response_redaction_ranges)
+        ? object.response_redaction_ranges.map((e: any) => ResponseRedactionRange.fromJSON(e))
+        : [],
+      plaintextRecordLengths: globalThis.Array.isArray(object?.plaintextRecordLengths)
+        ? object.plaintextRecordLengths.map((e: any) => globalThis.Number(e))
+        : globalThis.Array.isArray(object?.plaintext_record_lengths)
+        ? object.plaintext_record_lengths.map((e: any) => globalThis.Number(e))
+        : [],
+    };
+  },
+
+  toJSON(message: TLS12CBCTOutput): unknown {
+    const obj: any = {};
+    if (message.binding !== undefined) {
+      obj.binding = TLS12CBCSessionBinding.toJSON(message.binding);
+    }
+    if (message.authenticatedRedactedResponse.length !== 0) {
+      obj.authenticatedRedactedResponse = base64FromBytes(message.authenticatedRedactedResponse);
+    }
+    if (message.responseRecordsSha256.length !== 0) {
+      obj.responseRecordsSha256 = base64FromBytes(message.responseRecordsSha256);
+    }
+    if (message.responseRedactionRanges?.length) {
+      obj.responseRedactionRanges = message.responseRedactionRanges.map((e) => ResponseRedactionRange.toJSON(e));
+    }
+    if (message.plaintextRecordLengths?.length) {
+      obj.plaintextRecordLengths = message.plaintextRecordLengths.map((e) => Math.round(e));
+    }
+    return obj;
+  },
+
+  create(base?: DeepPartial<TLS12CBCTOutput>): TLS12CBCTOutput {
+    return TLS12CBCTOutput.fromPartial(base ?? {});
+  },
+  fromPartial(object: DeepPartial<TLS12CBCTOutput>): TLS12CBCTOutput {
+    const message = createBaseTLS12CBCTOutput();
+    message.binding = (object.binding !== undefined && object.binding !== null)
+      ? TLS12CBCSessionBinding.fromPartial(object.binding)
+      : undefined;
+    message.authenticatedRedactedResponse = object.authenticatedRedactedResponse ?? new Uint8Array(0);
+    message.responseRecordsSha256 = object.responseRecordsSha256 ?? new Uint8Array(0);
+    message.responseRedactionRanges =
+      object.responseRedactionRanges?.map((e) => ResponseRedactionRange.fromPartial(e)) || [];
+    message.plaintextRecordLengths = object.plaintextRecordLengths?.map((e) => e) || [];
     return message;
   },
 };
