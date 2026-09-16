@@ -3,6 +3,8 @@
  */
 
 import type { CertificateInfo } from '#src/proto/tee-bundle.ts'
+import { detectResponseCharset } from '#src/providers/http/response-charset.ts'
+import { parseHttpResponse } from '#src/providers/http/utils.ts'
 import type { TeeBundleData } from '#src/server/utils/tee-verification.ts'
 import type { Logger } from '#src/types/general.ts'
 import { AttestorError } from '#src/utils/error.ts'
@@ -13,6 +15,7 @@ export interface TeeTranscriptData {
 	revealedRequest: Uint8Array
 	reconstructedResponse: Uint8Array
 	certificateInfo?: CertificateInfo
+	authenticatedResponseCharset?: string
 	responseTrimOffset?: number // Number of leading asterisks trimmed from response
 }
 
@@ -34,7 +37,7 @@ export async function reconstructTlsTranscript(
 		const revealedRequest = reconstructRequest(bundleData, logger)
 
 		// 2. Reconstruct response using consolidated keystream and ciphertext
-		const reconstructedResponse = await reconstructConsolidatedResponse(bundleData, logger, oprfResults)
+		const { response: reconstructedResponse, authenticatedResponseCharset } = await reconstructConsolidatedResponse(bundleData, logger, oprfResults)
 
 		// 3. Extract certificate info from TEE_K payload
 		const certificateInfo = bundleData.kOutputPayload.certificateInfo
@@ -48,7 +51,8 @@ export async function reconstructTlsTranscript(
 		return {
 			revealedRequest,
 			reconstructedResponse,
-			certificateInfo
+			certificateInfo,
+			authenticatedResponseCharset
 		}
 
 	} catch(error) {
@@ -104,7 +108,7 @@ async function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger
 	position: number
 	length: number
 	output: Uint8Array
-}>): Promise<Uint8Array> {
+}>): Promise<{ response: Uint8Array, authenticatedResponseCharset?: string }> {
 	const { kOutputPayload, tOutputPayload, protocolMode } = bundleData
 	const isTls12Cbc = protocolMode === 'tls12-cbc'
 	let reconstructedResponse: Uint8Array
@@ -139,6 +143,8 @@ async function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger
 		}
 		responseRedactionRanges = kOutputPayload.responseRedactionRanges
 	}
+
+	const authenticatedResponseCharset = charsetFromAuthenticatedPrefix(reconstructedResponse, responseRedactionRanges, oprfResults)
 
 	logger.info(`Reconstructed response: ${reconstructedResponse.length} bytes, ${responseRedactionRanges.length} redaction ranges`)
 
@@ -191,7 +197,7 @@ async function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger
 	}
 
 	logger.info(`After processing: ${processedResponse.length} bytes (${leadingAsterisks} leading, ${trailingAsterisks} trailing asterisks trimmed)`)
-	return processedResponse
+	return { response: processedResponse, authenticatedResponseCharset }
 }
 
 // Synthetic header the http provider prepends when dechunking a revealed body.
@@ -500,4 +506,49 @@ function consolidateRedactionRanges(
 
 	consolidated.push(current)
 	return consolidated
+}
+
+/** Use only original bytes before the first signed redaction or replacement.
+ * Called after TEE signature verification and before trimming/dechunking/OPRF.
+ * No client-supplied charset or inspection of replacement asterisks is used.
+ */
+export function charsetFromAuthenticatedPrefix(
+	response: Uint8Array,
+	redactions: Array<{ start: number, length: number }>,
+	replacements: Array<{ position: number, length: number }> = [],
+) {
+	let publicEnd = response.length
+	for(const { start, length } of redactions) {
+		if(!Number.isSafeInteger(start) || !Number.isSafeInteger(length) || start < 0 || length < 0 || start + length > response.length) { return undefined }
+		if(length) { publicEnd = Math.min(publicEnd, start) }
+	}
+	for(const { position, length } of replacements) {
+		if(!Number.isSafeInteger(position) || !Number.isSafeInteger(length) || position < 0 || length < 0 || position + length > response.length) { return undefined }
+		publicEnd = Math.min(publicEnd, position)
+	}
+	// Never infer a response start by trimming hidden bytes.
+	if(!new TextDecoder().decode(response.subarray(0, Math.min(publicEnd, 9))).startsWith('HTTP/1.1 ')) { return undefined }
+	try {
+		const parsed = parseHttpResponse(response)
+		const bodyStart = parsed.bodyStartIndex ?? response.length
+		if(bodyStart < 4 || publicEnd < bodyStart) { return undefined }
+		// Complete original headers establish absence/precedence of Content-Type.
+		const headerText = new TextDecoder().decode(response.subarray(0, bodyStart))
+		const types = [...headerText.matchAll(/(?:^|\r\n)content-type:[ \t]*([^\r\n]*)/ig)]
+		if(types.length !== 1) { return undefined }
+		let publicBodyLength = Math.min(parsed.body.length, publicEnd - bodyStart)
+		if(parsed.chunks?.length) {
+			publicBodyLength = 0
+			for(const chunk of parsed.chunks) {
+				if(chunk.fromIndex >= publicEnd) { break }
+				publicBodyLength += Math.max(0, Math.min(chunk.toIndex, publicEnd) - chunk.fromIndex)
+				if(chunk.toIndex >= publicEnd) { break }
+			}
+		}
+		if(publicBodyLength < Math.min(3, parsed.body.length)) { return undefined }
+		return detectResponseCharset(parsed.body.subarray(0, publicBodyLength), types[0][1], publicBodyLength === parsed.body.length)
+	} catch {
+		// Incomplete framing/unsupported evidence keeps the established policy.
+		return undefined
+	}
 }

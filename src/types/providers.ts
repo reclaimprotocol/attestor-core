@@ -35,6 +35,8 @@ export type ProviderField<Params, SecretParams, T> = T | ((params: Params, secre
 
 export type ProviderCtx = {
   version: AttestorVersion
+  /** Server-derived from original authenticated bytes, never claim parameters. */
+  authenticatedResponseCharset?: string
 }
 
 type GetResponseRedactionsOpts<P> = {

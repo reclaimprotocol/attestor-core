@@ -83,7 +83,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 		client.metadata,
 		data,
 		logger,
-		{ version: client.metadata.clientVersion },
+		{ version: client.metadata.clientVersion, authenticatedResponseCharset: transcriptData.authenticatedResponseCharset },
 		transcriptData.certificateInfo
 	)
 
