@@ -421,7 +421,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		const charset = shouldRevealCrlf(ctx)
-			? getResponseBodyCharset(headersText)
+			? (ctx.authenticatedResponseCharset ?? getResponseBodyCharset(headersText))
 			: undefined
 		const bodyText = decodeResponseBody(body, charset)
 		let res = headersText + bodyText
@@ -569,6 +569,10 @@ function shouldRevealChunkFraming(version: AttestorVersion) {
 	return version >= AttestorVersion.ATTESTOR_VERSION_3_2_0
 }
 
+// Receipt bodies contain claimant-selected redactions and OPRF replacements.
+// They cannot prove original BOM, declaration precedence, or HTML context.
+// Keep the established header/default policy until document charset selection
+// is independently authenticated against the original response.
 function getResponseBodyCharset(headers: string) {
 	const contentType = /(?:^|[\r\n*])content-type\s*:\s*([^*\r\n]*)/i
 		.exec(headers)?.[1]
