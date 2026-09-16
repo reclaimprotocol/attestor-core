@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { it } from 'node:test'
 
 import { CURRENT_ATTESTOR_VERSION, PROVIDER_CTX } from '#src/config/index.ts'
+import { AttestorVersion } from '#src/proto/api.ts'
 import { KOutputPayload, SignedMessage, TOutputPayload } from '#src/proto/tee-bundle.ts'
 import httpProvider from '#src/providers/http/index.ts'
 import { charsetFromAuthenticatedPrefix, reconstructTlsTranscript } from '#src/server/utils/tee-transcript-reconstruction.ts'
@@ -146,4 +147,47 @@ it('does not treat parser-truncated hidden chunks as a fully public body', () =>
 	const bytes = Buffer.concat([Buffer.from('HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nTransfer-Encoding: Chunked\r\n\r\n'), Buffer.from(xml.length.toString(16) + '\r\n'), xml, Buffer.from('\r\n********************\r\n0\r\n\r\n')])
 	const start = bytes.indexOf('********************')
 	assert.equal(charsetFromAuthenticatedPrefix(bytes, [{ start, length: 20 }]), undefined)
+})
+
+
+for(const header of [
+	'X-Test: transfer-encoding: chunked',
+	'Transfer-Encoding: chunkedgarbage',
+	'Transfer-Encoding: gzip, chunked',
+	'Transfer-Encoding: chunked\r\nContent-Length: 0',
+	'Transfer-Encoding: chunked\r\nTransfer-Encoding: identity',
+	'Transfer-Encoding: chunked\r\nContent-Encoding: gzip',
+]) {
+	it(`does not authorize a charset under ambiguous framing: ${header}`, () => {
+		const body = Buffer.from('<meta charset=windows-1251>')
+		const bytes = Buffer.concat([Buffer.from(`HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n${header}\r\n\r\n${body.length.toString(16)}\r\n`), body, Buffer.from('\r\n0\r\n\r\n')])
+		assert.equal(charsetFromAuthenticatedPrefix(bytes, []), undefined)
+	})
+}
+
+it('does not authorize a charset from unequal AEAD shares', async() => {
+	const prefix = Buffer.from('HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n<?xml encoding="windows-1251"?><p>public</p>')
+	const bytes = Buffer.concat([prefix, Buffer.from('<meta charset=utf-8>')])
+	const bundle = { teekSigned: SignedMessage.create({}), teetSigned: SignedMessage.create({}), kOutputPayload: KOutputPayload.create({ redactedRequest: Buffer.from('GET / HTTP/1.1\r\n\r\n'), consolidatedResponseKeystream: new Uint8Array(prefix.length) }), tOutputPayload: TOutputPayload.create({ consolidatedResponseCiphertext: bytes }), teekPcr0: 'test-k', teetPcr0: 'test-t', teeSessionId: 'test', protocolMode: 'split-aead' as const }
+	const result = await reconstructTlsTranscript(bundle, logger)
+	assert.equal(result.authenticatedResponseCharset, undefined)
+})
+
+for(const label of ['&#160;windows-1251&#160;', '&nbsp;windows-1251&nbsp;', '\vwindows-1251\v', '&nbsp;x-user-defined&nbsp;']) {
+	it(`does not accept non-ASCII label whitespace: ${label}`, () => {
+		assert.equal(charsetFromAuthenticatedPrefix(response(Buffer.from(`<meta charset="${label}"><p>${name}</p>`)), []), 'utf-8')
+	})
+}
+
+
+it('does not apply a document charset to legacy status-relative body offsets', async() => {
+	const bytes = response(Buffer.concat([Buffer.from([0xff, 0xfe]), Buffer.from('<p>Привет</p>', 'utf16le')]))
+	const charset = charsetFromAuthenticatedPrefix(bytes, [])
+	assert.equal(charset, 'utf-16le')
+	const wrongText = new TextDecoder(charset).decode(bytes.subarray('HTTP/1.1 200'.length))
+	const receipt: Transcript<Uint8Array> = [{ sender: 'client', message: Buffer.from('GET / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n') }, { sender: 'server', message: bytes }]
+	for(const version of [AttestorVersion.ATTESTOR_VERSION_1_0_0, AttestorVersion.ATTESTOR_VERSION_2_0_0]) {
+		const params: ProviderParams<'http'> = { url: 'https://example.com/', method: 'GET', responseMatches: [{ type: 'contains', value: wrongText }] }
+		await assert.rejects(async() => httpProvider.assertValidProviderReceipt({ receipt, params, logger, ctx: { version, authenticatedResponseCharset: charset }, clientVersion: version }))
+	}
 })

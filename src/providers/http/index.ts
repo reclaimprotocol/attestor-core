@@ -420,9 +420,9 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			}
 		}
 
-		const charset = ctx.authenticatedResponseCharset ?? (shouldRevealCrlf(ctx)
-			? getResponseBodyCharset(headersText)
-			: undefined)
+		const charset = shouldRevealCrlf(ctx)
+			? (ctx.authenticatedResponseCharset ?? getResponseBodyCharset(headersText))
+			: undefined
 		const bodyText = decodeResponseBody(body, charset)
 		let res = headersText + bodyText
 

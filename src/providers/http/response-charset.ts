@@ -59,7 +59,7 @@ function supportedCharset(label?: string) {
 		return undefined
 	}
 	// WHATWG meta declarations map this legacy label to Windows-1252.
-	if(label.trim().toLowerCase() === 'x-user-defined') {
+	if(label.replace(/^[ \t\n\r\f]+|[ \t\n\r\f]+$/g, '').toLowerCase() === 'x-user-defined') {
 		return 'x-user-defined'
 	}
 	try {

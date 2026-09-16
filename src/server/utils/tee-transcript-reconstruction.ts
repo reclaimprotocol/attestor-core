@@ -4,7 +4,6 @@
 
 import type { CertificateInfo } from '#src/proto/tee-bundle.ts'
 import { detectResponseCharset } from '#src/providers/http/response-charset.ts'
-import { parseHttpResponse } from '#src/providers/http/utils.ts'
 import type { TeeBundleData } from '#src/server/utils/tee-verification.ts'
 import type { Logger } from '#src/types/general.ts'
 import { AttestorError } from '#src/utils/error.ts'
@@ -144,7 +143,10 @@ async function reconstructConsolidatedResponse(bundleData: TeeBundleData, logger
 		responseRedactionRanges = kOutputPayload.responseRedactionRanges
 	}
 
-	const authenticatedResponseCharset = charsetFromAuthenticatedPrefix(reconstructedResponse, responseRedactionRanges, oprfResults, isTls12Cbc)
+	// A truncated XOR transcript cannot establish absence of later declarations.
+	const completeShares = isTls12Cbc || kOutputPayload.consolidatedResponseKeystream.length === tOutputPayload.consolidatedResponseCiphertext.length
+	const authenticatedResponseCharset = completeShares
+		? charsetFromAuthenticatedPrefix(reconstructedResponse, responseRedactionRanges, oprfResults, isTls12Cbc) : undefined
 
 	logger.info(`Reconstructed response: ${reconstructedResponse.length} bytes, ${responseRedactionRanges.length} redaction ranges`)
 
@@ -532,11 +534,21 @@ export function charsetFromAuthenticatedPrefix(
 		if(headerEnd < 0 || publicEnd < bodyStart) { return undefined }
 		// Complete original headers establish absence/precedence of Content-Type.
 		const headerText = new TextDecoder().decode(response.subarray(0, bodyStart))
-		const types = [...headerText.matchAll(/(?:^|\r\n)content-type:[ \t]*([^\r\n]*)/ig)]
-		if(types.length !== 1) { return undefined }
-		const chunked = CHUNKED_ENCODING.test(headerText)
-		const parsed = chunked ? parseReconstructionChunks(response, bodyStart, strictChunkFraming) : parseHttpResponse(response)
-		if(!parsed) { return undefined }
+		const headers = parseCharsetEvidenceHeaders(headerText)
+		if(!headers) { return undefined }
+		// Legacy reconstruction uses a permissive regex. A new override is
+		// allowed only when that interpretation agrees with strict HTTP fields.
+		if(CHUNKED_ENCODING.test(headerText) !== headers.chunked) { return undefined }
+		let parsed: { body: Uint8Array, chunks?: Array<{ fromIndex: number, toIndex: number }> }
+		if(headers.chunked) {
+			parsed = dechunkCompleteCbcBody(response, bodyStart)
+			const reconstructed = parseReconstructionChunks(response, bodyStart, strictChunkFraming)
+			if(reconstructed?.body.length !== parsed.body.length || !parsed.body.every((byte, i) => byte === reconstructed.body[i])) { return undefined }
+		} else {
+			const body = response.subarray(bodyStart)
+			if(headers.contentLength !== undefined && headers.contentLength !== body.length) { return undefined }
+			parsed = { body }
+		}
 		let publicBodyLength = Math.min(parsed.body.length, publicEnd - bodyStart)
 		if(parsed.chunks?.length) {
 			publicBodyLength = 0
@@ -547,9 +559,36 @@ export function charsetFromAuthenticatedPrefix(
 			}
 		}
 		if(publicBodyLength < Math.min(3, parsed.body.length)) { return undefined }
-		return detectResponseCharset(parsed.body.subarray(0, publicBodyLength), types[0][1], publicEnd === response.length && publicBodyLength === parsed.body.length)
+		return detectResponseCharset(parsed.body.subarray(0, publicBodyLength), headers.contentType, publicEnd === response.length && publicBodyLength === parsed.body.length)
 	} catch {
 		// Incomplete framing/unsupported evidence keeps the established policy.
 		return undefined
 	}
+}
+
+// Conservative framing authorization for a new document-charset override.
+// Unsupported/ambiguous HTTP syntax stays on the established legacy policy.
+function parseCharsetEvidenceHeaders(text: string) {
+	const lines = text.split('\r\n')
+	if(!/^HTTP\/1\.1 [0-9]{3} [^\r\n]*$/.test(lines.shift() ?? '')) { return undefined }
+	const fields = new Map<string, string[]>()
+	for(const line of lines) {
+		if(!line) { continue }
+		const match = /^([!#$%&'*+.^_`|~0-9A-Za-z-]+):[ \t]*([^\r\n]*)$/.exec(line)
+		if(!match) { return undefined }
+		const key = match[1].toLowerCase()
+		fields.set(key, [...(fields.get(key) ?? []), match[2].trim()])
+	}
+	const contentTypes = fields.get('content-type') ?? []
+	if(contentTypes.length !== 1) { return undefined }
+	const encodings = fields.get('content-encoding') ?? []
+	if(encodings.length && (encodings.length !== 1 || encodings[0].toLowerCase() !== 'identity')) { return undefined }
+	const transfer = fields.get('transfer-encoding') ?? []
+	if(transfer.length && (transfer.length !== 1 || transfer[0].toLowerCase() !== 'chunked')) { return undefined }
+	const lengths = fields.get('content-length') ?? []
+	if(lengths.length > 1 || (transfer.length && lengths.length)) { return undefined }
+	if(lengths.length && !/^[0-9]+$/.test(lengths[0])) { return undefined }
+	const contentLength = lengths.length ? Number(lengths[0]) : undefined
+	if(contentLength !== undefined && !Number.isSafeInteger(contentLength)) { return undefined }
+	return { contentType: contentTypes[0], chunked: !!transfer.length, contentLength }
 }
