@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { it } from 'node:test'
 
 import { CURRENT_ATTESTOR_VERSION, PROVIDER_CTX } from '#src/config/index.ts'
@@ -13,13 +14,13 @@ const wrongName = new TextDecoder('windows-1251').decode(Buffer.from(name))
 function response(body: Uint8Array) {
 	return Buffer.concat([Buffer.from(`HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: ${body.length}\r\n\r\n`), body])
 }
-function verify(bytes: Uint8Array, value: string, redactions?: { start: number, length: number }[], replacements?: { position: number, length: number }[]) {
+function verify(bytes: Uint8Array, value: string, redactions?: { start: number, length: number }[], replacements?: { position: number, length: number }[], verifiedCharset?: string) {
 	const receipt: Transcript<Uint8Array> = [
 		{ sender: 'client', message: Buffer.from('GET / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n') },
 		{ sender: 'server', message: bytes },
 	]
 	const params: ProviderParams<'http'> = { url: 'https://example.com/', method: 'GET', responseMatches: [{ type: 'contains', value }] }
-	return httpProvider.assertValidProviderReceipt({ receipt, params, logger, ctx: { ...PROVIDER_CTX, authenticatedResponseCharset: redactions ? charsetFromAuthenticatedPrefix(bytes, redactions, replacements) : undefined }, clientVersion: CURRENT_ATTESTOR_VERSION })
+	return httpProvider.assertValidProviderReceipt({ receipt, params, logger, ctx: { ...PROVIDER_CTX, authenticatedResponseCharset: verifiedCharset ?? (redactions ? charsetFromAuthenticatedPrefix(bytes, redactions, replacements) : undefined) }, clientVersion: CURRENT_ATTESTOR_VERSION })
 }
 
 it('does not let a hidden UTF-8 BOM select a different document charset', async() => {
@@ -102,4 +103,47 @@ it('derives TEE charset before reconstruction transformations using signed range
 	kOutputPayload.responseRedactionRanges.push({ start: bytes.indexOf('<meta'), length: 1 })
 	const hiddenPrefix = await reconstructTlsTranscript(bundle, logger)
 	assert.equal(hiddenPrefix.authenticatedResponseCharset, undefined)
+})
+
+
+for(const transferHeader of ['Transfer-Encoding: chunked', 'Transfer-Encoding: Chunked', 'Transfer-Encoding:chunked', 'tRaNsFeR-EnCoDiNg:\tChUnKeD']) {
+	for(const mode of ['split-aead', 'tls12-cbc'] as const) {
+		it(`preserves BOM precedence through ${transferHeader} (${mode})`, async() => {
+			const body = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(`<meta charset=windows-1251><p>${name}</p>`)])
+			// Split inside the BOM to exercise raw-to-dechunked coordinates.
+			const parts = [body.subarray(0, 1), body.subarray(1, 2), body.subarray(2)]
+			const bytes = Buffer.concat([Buffer.from(`HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n${transferHeader}\r\n\r\n`), ...parts.flatMap(part => [Buffer.from(part.length.toString(16) + '\r\n'), part, Buffer.from('\r\n')]), Buffer.from('0\r\n\r\n')])
+			const kOutputPayload = KOutputPayload.create({ redactedRequest: Buffer.from('GET / HTTP/1.1\r\n\r\n'), consolidatedResponseKeystream: new Uint8Array(bytes.length), tls12Cbc: mode === 'tls12-cbc' ? { authenticatedRedactedRequest: Buffer.from('GET / HTTP/1.1\r\n\r\n') } : undefined })
+			const tOutputPayload = TOutputPayload.create({ consolidatedResponseCiphertext: bytes, tls12Cbc: mode === 'tls12-cbc' ? { authenticatedRedactedResponse: bytes } : undefined })
+			const bundle = { teekSigned: SignedMessage.create({}), teetSigned: SignedMessage.create({}), kOutputPayload, tOutputPayload, teekPcr0: 'test-k', teetPcr0: 'test-t', teeSessionId: 'test', protocolMode: mode }
+			const reconstructed = await reconstructTlsTranscript(bundle, logger)
+			assert.equal(reconstructed.authenticatedResponseCharset, 'utf-8')
+			await verify(reconstructed.reconstructedResponse, name, undefined, undefined, reconstructed.authenticatedResponseCharset)
+			await assert.rejects(async() => verify(reconstructed.reconstructedResponse, wrongName, undefined, undefined, reconstructed.authenticatedResponseCharset))
+			const bodyStart = bytes.indexOf('\r\n\r\n') + 4
+			const firstDataByte = bodyStart + 3
+			assert.equal(charsetFromAuthenticatedPrefix(bytes, [{ start: firstDataByte, length: 1 }]), undefined)
+		})
+	}
+}
+
+
+// Generated with reclaim-tee GetResponseRedactions at 4dc36db, using
+// <html><head><meta charset=windows-1251></head><body><span>Привет</span></body></html>
+// and XPath //span/text(). These are known coverage limits, not successful claims.
+const goReceipts: { cbc: boolean, response: string, redactions: { start: number, length: number }[], match: string }[] = JSON.parse(readFileSync(new URL('./fixtures/go-charset-prefix-limits.json', import.meta.url), 'utf8'))
+for(const fixture of goReceipts) {
+	it(`documents actual Go receipt prefix limits (cbc=${fixture.cbc})`, async() => {
+		const bytes = Buffer.from(fixture.response, 'base64')
+		assert.equal(charsetFromAuthenticatedPrefix(bytes, fixture.redactions), undefined)
+		await assert.rejects(async() => verify(bytes, fixture.match, fixture.redactions))
+	})
+}
+
+
+it('does not treat parser-truncated hidden chunks as a fully public body', () => {
+	const xml = Buffer.from('<?xml encoding="windows-1251"?>')
+	const bytes = Buffer.concat([Buffer.from('HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nTransfer-Encoding: Chunked\r\n\r\n'), Buffer.from(xml.length.toString(16) + '\r\n'), xml, Buffer.from('\r\n********************\r\n0\r\n\r\n')])
+	const start = bytes.indexOf('********************')
+	assert.equal(charsetFromAuthenticatedPrefix(bytes, [{ start, length: 20 }]), undefined)
 })
