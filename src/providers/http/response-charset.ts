@@ -18,7 +18,7 @@ export function detectResponseCharset(body: Uint8Array, contentType?: string) {
 			return charset
 		}
 	}
-	const fromHeader = supportedCharset(headerLabel)
+	const fromHeader = supportedCharset(htmlHeaderCharset(contentType))
 	if(fromHeader) {
 		return fromHeader
 	}
@@ -113,7 +113,7 @@ function scanMeta(raw: string) {
 				tokenizer.state = TokenizerMode.SCRIPT_DATA
 			} else if(['title', 'textarea'].includes(token.tagName)) {
 				tokenizer.state = TokenizerMode.RCDATA
-			} else if(['style', 'xmp', 'iframe', 'noembed', 'noframes'].includes(token.tagName)) {
+			} else if(['style', 'xmp', 'iframe', 'noembed', 'noframes', 'noscript'].includes(token.tagName)) {
 				tokenizer.state = TokenizerMode.RAWTEXT
 			} else if(token.tagName === 'plaintext') {
 				tokenizer.state = TokenizerMode.PLAINTEXT
@@ -195,4 +195,69 @@ function scanXml(raw: string) {
 		}
 	}
 	return undefined
+}
+
+// Match Go's MIME parameter validation for HTML: a malformed parameter or
+// conflicting duplicate invalidates the header charset and allows fallback.
+function htmlHeaderCharset(contentType: string) {
+	const tail = contentType.slice(contentType.indexOf(';') < 0 ? contentType.length : contentType.indexOf(';'))
+	let rest = tail
+	const params = new Map<string, string>()
+	const token = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+/
+	while(rest.trim()) {
+		rest = rest.trimStart()
+		if(!rest.startsWith(';')) { return undefined }
+		rest = rest.slice(1).trimStart()
+		if(!rest) { break }
+		const key = token.exec(rest)?.[0]
+		if(!key) { return undefined }
+		rest = rest.slice(key.length).trimStart()
+		if(!rest.startsWith('=')) { return undefined }
+		rest = rest.slice(1).trimStart()
+		let value = ''
+		if(rest.startsWith('"')) {
+			let pos = 1
+			for(; pos < rest.length && rest[pos] !== '"'; pos++) {
+				if(rest[pos] === '\\' && '()<>@,;:\\"/[]?='.includes(rest[pos + 1] ?? '\0')) {
+					pos++
+					if(pos === rest.length) { return undefined }
+				}
+				if(rest[pos] === '\r' || rest[pos] === '\n') { return undefined }
+				value += rest[pos]
+			}
+			if(pos === rest.length) { return undefined }
+			rest = rest.slice(pos + 1)
+		} else {
+			const match = token.exec(rest)?.[0]
+			if(!match) { return undefined }
+			value = match
+			rest = rest.slice(value.length)
+		}
+		const name = key.toLowerCase()
+		if(params.has(name) && params.get(name) !== value) { return undefined }
+		params.set(name, value)
+	}
+	const decodePercent = (value: string) => {
+		if(/%(?![0-9a-f]{2})/i.test(value)) { return undefined }
+		return value.replace(/%([0-9a-f]{2})/ig, (_, hex: string) => String.fromCharCode(parseInt(hex, 16)))
+	}
+	const decodeExtended = (value: string) => {
+		const match = /^(?:utf-8|us-ascii)'[^']*'(.*)$/i.exec(value)
+		return match ? decodePercent(match[1]) : undefined
+	}
+	// Go's MIME parser supports RFC 2231 extended and continued parameters.
+	const single = params.get('charset*')
+	if(single !== undefined) {
+		return decodeExtended(single) ?? params.get('charset')
+	}
+	let continued = ''
+	let hasContinuation = false
+	for(let index = 0; ; index++) {
+		const plain = params.get(`charset*${index}`)
+		const encoded = params.get(`charset*${index}*`)
+		if(plain === undefined && encoded === undefined) { break }
+		hasContinuation = true
+		continued += plain ?? (index === 0 ? decodeExtended(encoded!) : decodePercent(encoded!)) ?? ''
+	}
+	return hasContinuation ? continued : params.get('charset')
 }

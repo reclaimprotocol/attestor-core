@@ -571,8 +571,17 @@ function shouldRevealChunkFraming(version: AttestorVersion) {
 }
 
 function getResponseContentType(headers: string) {
-	return /(?:^|[\r\n*])content-type\s*:\s*([^*\r\n]*)/i
-		.exec(headers)?.[1]
+	const value = /(?:^|[\r\n*])content-type\s*:\s*([^\r\n]*)/i.exec(headers)?.[1]
+	if(value === undefined) { return undefined }
+	// AEAD receipts can mask the line ending. A single '*' is also valid
+	// MIME parameter syntax (charset* and charset*0*), so retain those.
+	let quoted = false
+	for(let i = 0; i < value.length; i++) {
+		if(quoted && value[i] === '\\') { i++; continue }
+		if(value[i] === '"') { quoted = !quoted }
+		if(!quoted && value.startsWith('**', i)) { return value.slice(0, i) }
+	}
+	return value
 }
 
 function decodeResponseBody(body: Uint8Array, charset: string | undefined) {

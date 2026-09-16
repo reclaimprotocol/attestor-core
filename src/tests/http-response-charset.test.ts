@@ -64,3 +64,11 @@ describe('HTML charset selection', () => {
 		assert.throws(() => detectResponseCharset(Buffer.from([0xff]), 'text/html'), /Cannot determine HTML response charset/)
 	})
 })
+
+it('does not infer UTF-16 from a generic less-than byte pair', () => {
+	for(const markup of ['<!doctype html><p>ASCII</p>', '<html><p>ASCII</p></html>', '<meta charset=utf-16>']) {
+		const littleEndian = Buffer.from(markup, 'utf16le')
+		assert.equal(detectResponseCharset(littleEndian, 'text/html'), 'utf-8')
+		assert.equal(detectResponseCharset(Buffer.from(littleEndian).swap16(), 'text/html'), 'utf-8')
+	}
+})

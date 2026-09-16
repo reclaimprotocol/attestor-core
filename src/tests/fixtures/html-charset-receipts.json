@@ -1,5 +1,549 @@
 [
   {
+    "name": "extended-header/chunked=false/cbc=false",
+    "contentType": "text/html; charset*=utf-8''windows-1251",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldCo9dXRmLTgnJ3dpbmRvd3MtMTI1MSoqKioqKioqKioqKioqKioqKioqDQoNCioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKtHq4Ov88fzq4CoqKioqKio=",
+    "match": "Скальська"
+  },
+  {
+    "name": "extended-header/chunked=false/cbc=true",
+    "contentType": "text/html; charset*=utf-8''windows-1251",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldCo9dXRmLTgnJ3dpbmRvd3MtMTI1MQ0KQ29udGVudC1MZW5ndGg6IDQ5DQoNCioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKtHq4Ov88fzq4CoqKioqKio=",
+    "match": "Скальська"
+  },
+  {
+    "name": "extended-header/chunked=true/cbc=false",
+    "contentType": "text/html; charset*=utf-8''windows-1251",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldCo9dXRmLTgnJ3dpbmRvd3MtMTI1MSoqVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KKioNCjE2DQoqKioqKioqKioqKioqKioqKioqKioqDQoxOQ0KKioqKioqKioq0erg6/zx/OrgKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
+    "name": "extended-header/chunked=true/cbc=true",
+    "contentType": "text/html; charset*=utf-8''windows-1251",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldCo9dXRmLTgnJ3dpbmRvd3MtMTI1MQ0KVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KKioNCjE2DQoqKioqKioqKioqKioqKioqKioqKioqDQoxOQ0KKioqKioqKioq0erg6/zx/OrgKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
+    "name": "continued-header/chunked=false/cbc=false",
+    "contentType": "text/html; charset*0*=utf-8''windows%2D; charset*1=1251",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldCowKj11dGYtOCcnd2luZG93cyUyRDsgY2hhcnNldCoxPTEyNTEqKioqKioqKioqKioqKioqKioqKg0KDQoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKirR6uDr/PH86uAqKioqKioq",
+    "match": "Скальська"
+  },
+  {
+    "name": "continued-header/chunked=false/cbc=true",
+    "contentType": "text/html; charset*0*=utf-8''windows%2D; charset*1=1251",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldCowKj11dGYtOCcnd2luZG93cyUyRDsgY2hhcnNldCoxPTEyNTENCkNvbnRlbnQtTGVuZ3RoOiA0OQ0KDQoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKirR6uDr/PH86uAqKioqKioq",
+    "match": "Скальська"
+  },
+  {
+    "name": "continued-header/chunked=true/cbc=false",
+    "contentType": "text/html; charset*0*=utf-8''windows%2D; charset*1=1251",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldCowKj11dGYtOCcnd2luZG93cyUyRDsgY2hhcnNldCoxPTEyNTEqKlRyYW5zZmVyLUVuY29kaW5nOiBjaHVua2VkDQoNCjINCioqDQoxNg0KKioqKioqKioqKioqKioqKioqKioqKg0KMTkNCioqKioqKioqKtHq4Ov88fzq4CoqKioqKioNCjANCg0K",
+    "match": "Скальська"
+  },
+  {
+    "name": "continued-header/chunked=true/cbc=true",
+    "contentType": "text/html; charset*0*=utf-8''windows%2D; charset*1=1251",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldCowKj11dGYtOCcnd2luZG93cyUyRDsgY2hhcnNldCoxPTEyNTENClRyYW5zZmVyLUVuY29kaW5nOiBjaHVua2VkDQoNCjINCioqDQoxNg0KKioqKioqKioqKioqKioqKioqKioqKg0KMTkNCioqKioqKioqKtHq4Ov88fzq4CoqKioqKioNCjANCg0K",
+    "match": "Скальська"
+  },
+  {
+    "name": "extended-precedence/chunked=false/cbc=false",
+    "contentType": "text/html; charset=windows-1252; charset*=us-ascii'en'windows-1251",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD13aW5kb3dzLTEyNTI7IGNoYXJzZXQqPXVzLWFzY2lpJ2VuJ3dpbmRvd3MtMTI1MSoqKioqKioqKioqKioqKioqKioqDQoNCioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKtHq4Ov88fzq4CoqKioqKio=",
+    "match": "Скальська"
+  },
+  {
+    "name": "extended-precedence/chunked=false/cbc=true",
+    "contentType": "text/html; charset=windows-1252; charset*=us-ascii'en'windows-1251",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD13aW5kb3dzLTEyNTI7IGNoYXJzZXQqPXVzLWFzY2lpJ2VuJ3dpbmRvd3MtMTI1MQ0KQ29udGVudC1MZW5ndGg6IDQ5DQoNCioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKtHq4Ov88fzq4CoqKioqKio=",
+    "match": "Скальська"
+  },
+  {
+    "name": "extended-precedence/chunked=true/cbc=false",
+    "contentType": "text/html; charset=windows-1252; charset*=us-ascii'en'windows-1251",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD13aW5kb3dzLTEyNTI7IGNoYXJzZXQqPXVzLWFzY2lpJ2VuJ3dpbmRvd3MtMTI1MSoqVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KKioNCjE2DQoqKioqKioqKioqKioqKioqKioqKioqDQoxOQ0KKioqKioqKioq0erg6/zx/OrgKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
+    "name": "extended-precedence/chunked=true/cbc=true",
+    "contentType": "text/html; charset=windows-1252; charset*=us-ascii'en'windows-1251",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD13aW5kb3dzLTEyNTI7IGNoYXJzZXQqPXVzLWFzY2lpJ2VuJ3dpbmRvd3MtMTI1MQ0KVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KKioNCjE2DQoqKioqKioqKioqKioqKioqKioqKioqDQoxOQ0KKioqKioqKioq0erg6/zx/OrgKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
+    "name": "invalid-extended-header/chunked=false/cbc=false",
+    "contentType": "text/html; charset*=utf-8''windows%ZZ1252",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldCo9dXRmLTgnJ3dpbmRvd3MlWloxMjUyKioqKioqKioqKioqKioqKioqKioNCg0KPG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+KioqKioq0erg6/zx/OrgKioqKioqKg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "invalid-extended-header/chunked=false/cbc=true",
+    "contentType": "text/html; charset*=utf-8''windows%ZZ1252",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldCo9dXRmLTgnJ3dpbmRvd3MlWloxMjUyDQpDb250ZW50LUxlbmd0aDogNDkNCg0KPG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+KioqKioq0erg6/zx/OrgKioqKioqKg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "invalid-extended-header/chunked=true/cbc=false",
+    "contentType": "text/html; charset*=utf-8''windows%ZZ1252",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldCo9dXRmLTgnJ3dpbmRvd3MlWloxMjUyKipUcmFuc2Zlci1FbmNvZGluZzogY2h1bmtlZA0KDQoyDQo8bQ0KMTYNCmV0YSBjaGFyc2V0PXdpbmRvd3MtMTINCjE5DQo1MT4qKioqKirR6uDr/PH86uAqKioqKioqDQowDQoNCg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "invalid-extended-header/chunked=true/cbc=true",
+    "contentType": "text/html; charset*=utf-8''windows%ZZ1252",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldCo9dXRmLTgnJ3dpbmRvd3MlWloxMjUyDQpUcmFuc2Zlci1FbmNvZGluZzogY2h1bmtlZA0KDQoyDQo8bQ0KMTYNCmV0YSBjaGFyc2V0PXdpbmRvd3MtMTINCjE5DQo1MT4qKioqKirR6uDr/PH86uAqKioqKioqDQowDQoNCg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "escaped-token-header/chunked=false/cbc=false",
+    "contentType": "text/html; charset=\"windows\\-1252\"",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD0id2luZG93c1wtMTI1MiIqKioqKioqKioqKioqKioqKioqKg0KDQo8bWV0YSBjaGFyc2V0PXdpbmRvd3MtMTI1MT4qKioqKirR6uDr/PH86uAqKioqKioq",
+    "match": "Скальська"
+  },
+  {
+    "name": "escaped-token-header/chunked=false/cbc=true",
+    "contentType": "text/html; charset=\"windows\\-1252\"",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD0id2luZG93c1wtMTI1MiINCkNvbnRlbnQtTGVuZ3RoOiA0OQ0KDQo8bWV0YSBjaGFyc2V0PXdpbmRvd3MtMTI1MT4qKioqKirR6uDr/PH86uAqKioqKioq",
+    "match": "Скальська"
+  },
+  {
+    "name": "escaped-token-header/chunked=true/cbc=false",
+    "contentType": "text/html; charset=\"windows\\-1252\"",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD0id2luZG93c1wtMTI1MiIqKlRyYW5zZmVyLUVuY29kaW5nOiBjaHVua2VkDQoNCjINCjxtDQoxNg0KZXRhIGNoYXJzZXQ9d2luZG93cy0xMg0KMTkNCjUxPioqKioqKtHq4Ov88fzq4CoqKioqKioNCjANCg0K",
+    "match": "Скальська"
+  },
+  {
+    "name": "escaped-token-header/chunked=true/cbc=true",
+    "contentType": "text/html; charset=\"windows\\-1252\"",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD0id2luZG93c1wtMTI1MiINClRyYW5zZmVyLUVuY29kaW5nOiBjaHVua2VkDQoNCjINCjxtDQoxNg0KZXRhIGNoYXJzZXQ9d2luZG93cy0xMg0KMTkNCjUxPioqKioqKtHq4Ov88fzq4CoqKioqKioNCjANCg0K",
+    "match": "Скальська"
+  },
+  {
+    "name": "unknown-entity-private/chunked=false/cbc=false",
+    "contentType": "text/html",
+    "charset": "utf-8",
+    "originalBody": "PG1ldGEgaHR0cC1lcXVpdj0nQ29udGVudC1UeXBlJyBjb250ZW50PSd0ZXh0L2h0bWw7ICZQUklWQVRFY2hhcnNldD11dGYtOCc+PHNwYW4+VEFSR0VUPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbCoqKioqKioqKioqKioqKioqKioqDQoNCjxtZXRhIGh0dHAtZXF1aXY9J0NvbnRlbnQtVHlwZScgY29udGVudD0nKioqKioqKioqKioqKioqKioqKmNoYXJzZXQ9dXRmLTgnPioqKioqKlRBUkdFVCoqKioqKio=",
+    "match": "TARGET"
+  },
+  {
+    "name": "unknown-entity-private/chunked=false/cbc=true",
+    "contentType": "text/html",
+    "charset": "utf-8",
+    "originalBody": "PG1ldGEgaHR0cC1lcXVpdj0nQ29udGVudC1UeXBlJyBjb250ZW50PSd0ZXh0L2h0bWw7ICZQUklWQVRFY2hhcnNldD11dGYtOCc+PHNwYW4+VEFSR0VUPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbA0KQ29udGVudC1MZW5ndGg6IDk0DQoNCjxtZXRhIGh0dHAtZXF1aXY9J0NvbnRlbnQtVHlwZScgY29udGVudD0nKioqKioqKioqKioqKioqKioqKmNoYXJzZXQ9dXRmLTgnPioqKioqKlRBUkdFVCoqKioqKio=",
+    "match": "TARGET"
+  },
+  {
+    "name": "unknown-entity-private/chunked=true/cbc=false",
+    "contentType": "text/html",
+    "charset": "utf-8",
+    "originalBody": "PG1ldGEgaHR0cC1lcXVpdj0nQ29udGVudC1UeXBlJyBjb250ZW50PSd0ZXh0L2h0bWw7ICZQUklWQVRFY2hhcnNldD11dGYtOCc+PHNwYW4+VEFSR0VUPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbCoqVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KPG0NCjJkDQpldGEgaHR0cC1lcXVpdj0nQ29udGVudC1UeXBlJyBjb250ZW50PScqKioqKioNCjJmDQoqKioqKioqKioqKioqY2hhcnNldD11dGYtOCc+KioqKioqVEFSR0VUKioqKioqKg0KMA0KDQo=",
+    "match": "TARGET"
+  },
+  {
+    "name": "unknown-entity-private/chunked=true/cbc=true",
+    "contentType": "text/html",
+    "charset": "utf-8",
+    "originalBody": "PG1ldGEgaHR0cC1lcXVpdj0nQ29udGVudC1UeXBlJyBjb250ZW50PSd0ZXh0L2h0bWw7ICZQUklWQVRFY2hhcnNldD11dGYtOCc+PHNwYW4+VEFSR0VUPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbA0KVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KPG0NCjJkDQpldGEgaHR0cC1lcXVpdj0nQ29udGVudC1UeXBlJyBjb250ZW50PScqKioqKioNCjJmDQoqKioqKioqKioqKioqY2hhcnNldD11dGYtOCc+KioqKioqVEFSR0VUKioqKioqKg0KMA0KDQo=",
+    "match": "TARGET"
+  },
+  {
+    "name": "partial-entity-private/chunked=false/cbc=false",
+    "contentType": "text/html",
+    "charset": "utf-8",
+    "originalBody": "PG1ldGEgaHR0cC1lcXVpdj0nQ29udGVudC1UeXBlJyBjb250ZW50PSd0ZXh0L2h0bWw7ICYjMzJQUklWQVRFY2hhcnNldD11dGYtOCc+PHNwYW4+VEFSR0VUPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbCoqKioqKioqKioqKioqKioqKioqDQoNCjxtZXRhIGh0dHAtZXF1aXY9J0NvbnRlbnQtVHlwZScgY29udGVudD0nKioqKioqKioqKioqKioqKioqKioqKmNoYXJzZXQ9dXRmLTgnPioqKioqKlRBUkdFVCoqKioqKio=",
+    "match": "TARGET"
+  },
+  {
+    "name": "partial-entity-private/chunked=false/cbc=true",
+    "contentType": "text/html",
+    "charset": "utf-8",
+    "originalBody": "PG1ldGEgaHR0cC1lcXVpdj0nQ29udGVudC1UeXBlJyBjb250ZW50PSd0ZXh0L2h0bWw7ICYjMzJQUklWQVRFY2hhcnNldD11dGYtOCc+PHNwYW4+VEFSR0VUPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbA0KQ29udGVudC1MZW5ndGg6IDk3DQoNCjxtZXRhIGh0dHAtZXF1aXY9J0NvbnRlbnQtVHlwZScgY29udGVudD0nKioqKioqKioqKioqKioqKioqKioqKmNoYXJzZXQ9dXRmLTgnPioqKioqKlRBUkdFVCoqKioqKio=",
+    "match": "TARGET"
+  },
+  {
+    "name": "partial-entity-private/chunked=true/cbc=false",
+    "contentType": "text/html",
+    "charset": "utf-8",
+    "originalBody": "PG1ldGEgaHR0cC1lcXVpdj0nQ29udGVudC1UeXBlJyBjb250ZW50PSd0ZXh0L2h0bWw7ICYjMzJQUklWQVRFY2hhcnNldD11dGYtOCc+PHNwYW4+VEFSR0VUPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbCoqVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KPG0NCjJlDQpldGEgaHR0cC1lcXVpdj0nQ29udGVudC1UeXBlJyBjb250ZW50PScqKioqKioqDQozMQ0KKioqKioqKioqKioqKioqY2hhcnNldD11dGYtOCc+KioqKioqVEFSR0VUKioqKioqKg0KMA0KDQo=",
+    "match": "TARGET"
+  },
+  {
+    "name": "partial-entity-private/chunked=true/cbc=true",
+    "contentType": "text/html",
+    "charset": "utf-8",
+    "originalBody": "PG1ldGEgaHR0cC1lcXVpdj0nQ29udGVudC1UeXBlJyBjb250ZW50PSd0ZXh0L2h0bWw7ICYjMzJQUklWQVRFY2hhcnNldD11dGYtOCc+PHNwYW4+VEFSR0VUPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbA0KVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KPG0NCjJlDQpldGEgaHR0cC1lcXVpdj0nQ29udGVudC1UeXBlJyBjb250ZW50PScqKioqKioqDQozMQ0KKioqKioqKioqKioqKioqY2hhcnNldD11dGYtOCc+KioqKioqVEFSR0VUKioqKioqKg0KMA0KDQo=",
+    "match": "TARGET"
+  },
+  {
+    "name": "noscript-literal/chunked=false/cbc=false",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PG5vc2NyaXB0PjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUyPjwvbm9zY3JpcHQ+PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbCoqKioqKioqKioqKioqKioqKioqDQoNCjxub3NjcmlwdD48bWV0YSBjaGFyc2V0PXdpbmRvd3MtMTI1Mj48L25vc2NyaXB0PjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUxPioqKioqKtHq4Ov88fzq4CoqKioqKio=",
+    "match": "Скальська"
+  },
+  {
+    "name": "noscript-literal/chunked=false/cbc=true",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PG5vc2NyaXB0PjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUyPjwvbm9zY3JpcHQ+PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbA0KQ29udGVudC1MZW5ndGg6IDk3DQoNCjxub3NjcmlwdD48bWV0YSBjaGFyc2V0PXdpbmRvd3MtMTI1Mj48L25vc2NyaXB0PjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUxPioqKioqKtHq4Ov88fzq4CoqKioqKio=",
+    "match": "Скальська"
+  },
+  {
+    "name": "noscript-literal/chunked=true/cbc=false",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PG5vc2NyaXB0PjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUyPjwvbm9zY3JpcHQ+PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbCoqVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KPG4NCjJlDQpvc2NyaXB0PjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUyPjwvbm9zY3JpcHQ+DQozMQ0KPG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+KioqKioq0erg6/zx/OrgKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
+    "name": "noscript-literal/chunked=true/cbc=true",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PG5vc2NyaXB0PjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUyPjwvbm9zY3JpcHQ+PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbA0KVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KPG4NCjJlDQpvc2NyaXB0PjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUyPjwvbm9zY3JpcHQ+DQozMQ0KPG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+KioqKioq0erg6/zx/OrgKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
+    "name": "selfclosing-script/chunked=false/cbc=false",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PHNjcmlwdC8+PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PC9zY3JpcHQ+PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbCoqKioqKioqKioqKioqKioqKioqDQoNCjxzY3JpcHQvPjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUyPjwvc2NyaXB0PjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUxPioqKioqKtHq4Ov88fzq4CoqKioqKio=",
+    "match": "Скальська"
+  },
+  {
+    "name": "selfclosing-script/chunked=false/cbc=true",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PHNjcmlwdC8+PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PC9zY3JpcHQ+PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbA0KQ29udGVudC1MZW5ndGg6IDk0DQoNCjxzY3JpcHQvPjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUyPjwvc2NyaXB0PjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUxPioqKioqKtHq4Ov88fzq4CoqKioqKio=",
+    "match": "Скальська"
+  },
+  {
+    "name": "selfclosing-script/chunked=true/cbc=false",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PHNjcmlwdC8+PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PC9zY3JpcHQ+PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbCoqVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KPHMNCjJkDQpjcmlwdC8+PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PC9zY3JpcHQ+PG0NCjJmDQpldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+KioqKioq0erg6/zx/OrgKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
+    "name": "selfclosing-script/chunked=true/cbc=true",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PHNjcmlwdC8+PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PC9zY3JpcHQ+PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbA0KVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KPHMNCjJkDQpjcmlwdC8+PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTI+PC9zY3JpcHQ+PG0NCjJmDQpldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+KioqKioq0erg6/zx/OrgKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
+    "name": "replacement-meta/chunked=false/cbc=false",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD1yZXBsYWNlbWVudD48bWV0YSBjaGFyc2V0PXdpbmRvd3MtMTI1MT48c3Bhbj7R6uDr/PH86uA8L3NwYW4+",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbCoqKioqKioqKioqKioqKioqKioqDQoNCioqKioqKioqKioqKioqKioqKioqKioqKioqPG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+KioqKioq0erg6/zx/OrgKioqKioqKg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "replacement-meta/chunked=false/cbc=true",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD1yZXBsYWNlbWVudD48bWV0YSBjaGFyc2V0PXdpbmRvd3MtMTI1MT48c3Bhbj7R6uDr/PH86uA8L3NwYW4+",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbA0KQ29udGVudC1MZW5ndGg6IDc1DQoNCioqKioqKioqKioqKioqKioqKioqKioqKioqPG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+KioqKioq0erg6/zx/OrgKioqKioqKg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "replacement-meta/chunked=true/cbc=false",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD1yZXBsYWNlbWVudD48bWV0YSBjaGFyc2V0PXdpbmRvd3MtMTI1MT48c3Bhbj7R6uDr/PH86uA8L3NwYW4+",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbCoqVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KKioNCjIzDQoqKioqKioqKioqKioqKioqKioqKioqKio8bWV0YSBjaGFycw0KMjYNCmV0PXdpbmRvd3MtMTI1MT4qKioqKirR6uDr/PH86uAqKioqKioqDQowDQoNCg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "replacement-meta/chunked=true/cbc=true",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD1yZXBsYWNlbWVudD48bWV0YSBjaGFyc2V0PXdpbmRvd3MtMTI1MT48c3Bhbj7R6uDr/PH86uA8L3NwYW4+",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbA0KVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KKioNCjIzDQoqKioqKioqKioqKioqKioqKioqKioqKio8bWV0YSBjaGFycw0KMjYNCmV0PXdpbmRvd3MtMTI1MT4qKioqKirR6uDr/PH86uAqKioqKioqDQowDQoNCg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "replacement-alias/chunked=false/cbc=false",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD1pc28tMjAyMi1rcj48bWV0YSBjaGFyc2V0PXdpbmRvd3MtMTI1MT48c3Bhbj7R6uDr/PH86uA8L3NwYW4+",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbCoqKioqKioqKioqKioqKioqKioqDQoNCioqKioqKioqKioqKioqKioqKioqKioqKioqPG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+KioqKioq0erg6/zx/OrgKioqKioqKg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "replacement-alias/chunked=false/cbc=true",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD1pc28tMjAyMi1rcj48bWV0YSBjaGFyc2V0PXdpbmRvd3MtMTI1MT48c3Bhbj7R6uDr/PH86uA8L3NwYW4+",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbA0KQ29udGVudC1MZW5ndGg6IDc1DQoNCioqKioqKioqKioqKioqKioqKioqKioqKioqPG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+KioqKioq0erg6/zx/OrgKioqKioqKg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "replacement-alias/chunked=true/cbc=false",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD1pc28tMjAyMi1rcj48bWV0YSBjaGFyc2V0PXdpbmRvd3MtMTI1MT48c3Bhbj7R6uDr/PH86uA8L3NwYW4+",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbCoqVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KKioNCjIzDQoqKioqKioqKioqKioqKioqKioqKioqKio8bWV0YSBjaGFycw0KMjYNCmV0PXdpbmRvd3MtMTI1MT4qKioqKirR6uDr/PH86uAqKioqKioqDQowDQoNCg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "replacement-alias/chunked=true/cbc=true",
+    "contentType": "text/html",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD1pc28tMjAyMi1rcj48bWV0YSBjaGFyc2V0PXdpbmRvd3MtMTI1MT48c3Bhbj7R6uDr/PH86uA8L3NwYW4+",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbA0KVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KKioNCjIzDQoqKioqKioqKioqKioqKioqKioqKioqKio8bWV0YSBjaGFycw0KMjYNCmV0PXdpbmRvd3MtMTI1MT4qKioqKirR6uDr/PH86uAqKioqKioqDQowDQoNCg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "duplicate-header/chunked=false/cbc=false",
+    "contentType": "text/html; charset=windows-1252; charset=utf-8",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD13aW5kb3dzLTEyNTI7IGNoYXJzZXQ9dXRmLTgqKioqKioqKioqKioqKioqKioqKg0KDQo8bWV0YSBjaGFyc2V0PXdpbmRvd3MtMTI1MT4qKioqKirR6uDr/PH86uAqKioqKioq",
+    "match": "Скальська"
+  },
+  {
+    "name": "duplicate-header/chunked=false/cbc=true",
+    "contentType": "text/html; charset=windows-1252; charset=utf-8",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD13aW5kb3dzLTEyNTI7IGNoYXJzZXQ9dXRmLTgNCkNvbnRlbnQtTGVuZ3RoOiA0OQ0KDQo8bWV0YSBjaGFyc2V0PXdpbmRvd3MtMTI1MT4qKioqKirR6uDr/PH86uAqKioqKioq",
+    "match": "Скальська"
+  },
+  {
+    "name": "duplicate-header/chunked=true/cbc=false",
+    "contentType": "text/html; charset=windows-1252; charset=utf-8",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD13aW5kb3dzLTEyNTI7IGNoYXJzZXQ9dXRmLTgqKlRyYW5zZmVyLUVuY29kaW5nOiBjaHVua2VkDQoNCjINCjxtDQoxNg0KZXRhIGNoYXJzZXQ9d2luZG93cy0xMg0KMTkNCjUxPioqKioqKtHq4Ov88fzq4CoqKioqKioNCjANCg0K",
+    "match": "Скальська"
+  },
+  {
+    "name": "duplicate-header/chunked=true/cbc=true",
+    "contentType": "text/html; charset=windows-1252; charset=utf-8",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD13aW5kb3dzLTEyNTI7IGNoYXJzZXQ9dXRmLTgNClRyYW5zZmVyLUVuY29kaW5nOiBjaHVua2VkDQoNCjINCjxtDQoxNg0KZXRhIGNoYXJzZXQ9d2luZG93cy0xMg0KMTkNCjUxPioqKioqKtHq4Ov88fzq4CoqKioqKioNCjANCg0K",
+    "match": "Скальська"
+  },
+  {
+    "name": "malformed-header/chunked=false/cbc=false",
+    "contentType": "text/html; broken; charset=windows-1252",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgYnJva2VuOyBjaGFyc2V0PXdpbmRvd3MtMTI1MioqKioqKioqKioqKioqKioqKioqDQoNCjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUxPioqKioqKtHq4Ov88fzq4CoqKioqKio=",
+    "match": "Скальська"
+  },
+  {
+    "name": "malformed-header/chunked=false/cbc=true",
+    "contentType": "text/html; broken; charset=windows-1252",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgYnJva2VuOyBjaGFyc2V0PXdpbmRvd3MtMTI1Mg0KQ29udGVudC1MZW5ndGg6IDQ5DQoNCjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUxPioqKioqKtHq4Ov88fzq4CoqKioqKio=",
+    "match": "Скальська"
+  },
+  {
+    "name": "malformed-header/chunked=true/cbc=false",
+    "contentType": "text/html; broken; charset=windows-1252",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgYnJva2VuOyBjaGFyc2V0PXdpbmRvd3MtMTI1MioqVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KPG0NCjE2DQpldGEgY2hhcnNldD13aW5kb3dzLTEyDQoxOQ0KNTE+KioqKioq0erg6/zx/OrgKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
+    "name": "malformed-header/chunked=true/cbc=true",
+    "contentType": "text/html; broken; charset=windows-1252",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgYnJva2VuOyBjaGFyc2V0PXdpbmRvd3MtMTI1Mg0KVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KPG0NCjE2DQpldGEgY2hhcnNldD13aW5kb3dzLTEyDQoxOQ0KNTE+KioqKioq0erg6/zx/OrgKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
+    "name": "replacement-header/chunked=false/cbc=false",
+    "contentType": "text/html; charset=replacement",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD1yZXBsYWNlbWVudCoqKioqKioqKioqKioqKioqKioqDQoNCjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUxPioqKioqKtHq4Ov88fzq4CoqKioqKio=",
+    "match": "Скальська"
+  },
+  {
+    "name": "replacement-header/chunked=false/cbc=true",
+    "contentType": "text/html; charset=replacement",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD1yZXBsYWNlbWVudA0KQ29udGVudC1MZW5ndGg6IDQ5DQoNCjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUxPioqKioqKtHq4Ov88fzq4CoqKioqKio=",
+    "match": "Скальська"
+  },
+  {
+    "name": "replacement-header/chunked=true/cbc=false",
+    "contentType": "text/html; charset=replacement",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD1yZXBsYWNlbWVudCoqVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KPG0NCjE2DQpldGEgY2hhcnNldD13aW5kb3dzLTEyDQoxOQ0KNTE+KioqKioq0erg6/zx/OrgKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
+    "name": "replacement-header/chunked=true/cbc=true",
+    "contentType": "text/html; charset=replacement",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD1yZXBsYWNlbWVudA0KVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KPG0NCjE2DQpldGEgY2hhcnNldD13aW5kb3dzLTEyDQoxOQ0KNTE+KioqKioq0erg6/zx/OrgKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
+    "name": "quoted-header/chunked=false/cbc=false",
+    "contentType": "text/html; other=\"; charset=windows-1252\"",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgb3RoZXI9IjsgY2hhcnNldD13aW5kb3dzLTEyNTIiKioqKioqKioqKioqKioqKioqKioNCg0KPG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+KioqKioq0erg6/zx/OrgKioqKioqKg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "quoted-header/chunked=false/cbc=true",
+    "contentType": "text/html; other=\"; charset=windows-1252\"",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgb3RoZXI9IjsgY2hhcnNldD13aW5kb3dzLTEyNTIiDQpDb250ZW50LUxlbmd0aDogNDkNCg0KPG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+KioqKioq0erg6/zx/OrgKioqKioqKg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "quoted-header/chunked=true/cbc=false",
+    "contentType": "text/html; other=\"; charset=windows-1252\"",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgb3RoZXI9IjsgY2hhcnNldD13aW5kb3dzLTEyNTIiKipUcmFuc2Zlci1FbmNvZGluZzogY2h1bmtlZA0KDQoyDQo8bQ0KMTYNCmV0YSBjaGFyc2V0PXdpbmRvd3MtMTINCjE5DQo1MT4qKioqKirR6uDr/PH86uAqKioqKioqDQowDQoNCg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "quoted-header/chunked=true/cbc=true",
+    "contentType": "text/html; other=\"; charset=windows-1252\"",
+    "charset": "windows-1251",
+    "originalBody": "PG1ldGEgY2hhcnNldD13aW5kb3dzLTEyNTE+PHNwYW4+0erg6/zx/OrgPC9zcGFuPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgb3RoZXI9IjsgY2hhcnNldD13aW5kb3dzLTEyNTIiDQpUcmFuc2Zlci1FbmNvZGluZzogY2h1bmtlZA0KDQoyDQo8bQ0KMTYNCmV0YSBjaGFyc2V0PXdpbmRvd3MtMTINCjE5DQo1MT4qKioqKirR6uDr/PH86uAqKioqKioqDQowDQoNCg==",
+    "match": "Скальська"
+  },
+  {
+    "name": "utf16-header-Little/chunked=false/cbc=false",
+    "contentType": "text/html; charset=utf-16le",
+    "charset": "utf-16le",
+    "originalBody": "PAAhAGQAbwBjAHQAeQBwAGUAIABoAHQAbQBsAD4APABoAHQAbQBsAD4APABzAHAAYQBuAD4AIQQ6BDAEOwRMBEEETAQ6BDAEPAAvAHMAcABhAG4APgA8AC8AaAB0AG0AbAA+AA==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD11dGYtMTZsZSoqKioqKioqKioqKioqKioqKioqKg0KDQoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKiohBDoEMAQ7BEwEQQRMBDoEMAQqKioqKioqKioqKioqKioqKioqKioqKioqKioq",
+    "match": "Скальська"
+  },
+  {
+    "name": "utf16-header-Little/chunked=false/cbc=true",
+    "contentType": "text/html; charset=utf-16le",
+    "charset": "utf-16le",
+    "originalBody": "PAAhAGQAbwBjAHQAeQBwAGUAIABoAHQAbQBsAD4APABoAHQAbQBsAD4APABzAHAAYQBuAD4AIQQ6BDAEOwRMBEEETAQ6BDAEPAAvAHMAcABhAG4APgA8AC8AaAB0AG0AbAA+AA==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD11dGYtMTZsZQ0KQ29udGVudC1MZW5ndGg6IDEwMA0KDQoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKiohBDoEMAQ7BEwEQQRMBDoEMAQqKioqKioqKioqKioqKioqKioqKioqKioqKioq",
+    "match": "Скальська"
+  },
+  {
+    "name": "utf16-header-Little/chunked=true/cbc=false",
+    "contentType": "text/html; charset=utf-16le",
+    "charset": "utf-16le",
+    "originalBody": "PAAhAGQAbwBjAHQAeQBwAGUAIABoAHQAbQBsAD4APABoAHQAbQBsAD4APABzAHAAYQBuAD4AIQQ6BDAEOwRMBEEETAQ6BDAEPAAvAHMAcABhAG4APgA8AC8AaAB0AG0AbAA+AA==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD11dGYtMTZsZSoqVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KKioNCjMwDQoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioNCjMyDQoqKioqIQQ6BDAEOwRMBEEETAQ6BDAEKioqKioqKioqKioqKioqKioqKioqKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
+    "name": "utf16-header-Little/chunked=true/cbc=true",
+    "contentType": "text/html; charset=utf-16le",
+    "charset": "utf-16le",
+    "originalBody": "PAAhAGQAbwBjAHQAeQBwAGUAIABoAHQAbQBsAD4APABoAHQAbQBsAD4APABzAHAAYQBuAD4AIQQ6BDAEOwRMBEEETAQ6BDAEPAAvAHMAcABhAG4APgA8AC8AaAB0AG0AbAA+AA==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD11dGYtMTZsZQ0KVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KKioNCjMwDQoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioNCjMyDQoqKioqIQQ6BDAEOwRMBEEETAQ6BDAEKioqKioqKioqKioqKioqKioqKioqKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
+    "name": "utf16-header-Big/chunked=false/cbc=false",
+    "contentType": "text/html; charset=utf-16be",
+    "charset": "utf-16be",
+    "originalBody": "ADwAIQBkAG8AYwB0AHkAcABlACAAaAB0AG0AbAA+ADwAaAB0AG0AbAA+ADwAcwBwAGEAbgA+BCEEOgQwBDsETARBBEwEOgQwADwALwBzAHAAYQBuAD4APAAvAGgAdABtAGwAPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD11dGYtMTZiZSoqKioqKioqKioqKioqKioqKioqKg0KDQoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioEIQQ6BDAEOwRMBEEETAQ6BDAqKioqKioqKioqKioqKioqKioqKioqKioqKioq",
+    "match": "Скальська"
+  },
+  {
+    "name": "utf16-header-Big/chunked=false/cbc=true",
+    "contentType": "text/html; charset=utf-16be",
+    "charset": "utf-16be",
+    "originalBody": "ADwAIQBkAG8AYwB0AHkAcABlACAAaAB0AG0AbAA+ADwAaAB0AG0AbAA+ADwAcwBwAGEAbgA+BCEEOgQwBDsETARBBEwEOgQwADwALwBzAHAAYQBuAD4APAAvAGgAdABtAGwAPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD11dGYtMTZiZQ0KQ29udGVudC1MZW5ndGg6IDEwMA0KDQoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioEIQQ6BDAEOwRMBEEETAQ6BDAqKioqKioqKioqKioqKioqKioqKioqKioqKioq",
+    "match": "Скальська"
+  },
+  {
+    "name": "utf16-header-Big/chunked=true/cbc=false",
+    "contentType": "text/html; charset=utf-16be",
+    "charset": "utf-16be",
+    "originalBody": "ADwAIQBkAG8AYwB0AHkAcABlACAAaAB0AG0AbAA+ADwAaAB0AG0AbAA+ADwAcwBwAGEAbgA+BCEEOgQwBDsETARBBEwEOgQwADwALwBzAHAAYQBuAD4APAAvAGgAdABtAGwAPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD11dGYtMTZiZSoqVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KKioNCjMwDQoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioNCjMyDQoqKioqBCEEOgQwBDsETARBBEwEOgQwKioqKioqKioqKioqKioqKioqKioqKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
+    "name": "utf16-header-Big/chunked=true/cbc=true",
+    "contentType": "text/html; charset=utf-16be",
+    "charset": "utf-16be",
+    "originalBody": "ADwAIQBkAG8AYwB0AHkAcABlACAAaAB0AG0AbAA+ADwAaAB0AG0AbAA+ADwAcwBwAGEAbgA+BCEEOgQwBDsETARBBEwEOgQwADwALwBzAHAAYQBuAD4APAAvAGgAdABtAGwAPg==",
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbDsgY2hhcnNldD11dGYtMTZiZQ0KVHJhbnNmZXItRW5jb2Rpbmc6IGNodW5rZWQNCg0KMg0KKioNCjMwDQoqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKioNCjMyDQoqKioqBCEEOgQwBDsETARBBEwEOgQwKioqKioqKioqKioqKioqKioqKioqKioqKioqKg0KMA0KDQo=",
+    "match": "Скальська"
+  },
+  {
     "name": "private-attributes/chunked=false/cbc=false",
     "contentType": "text/html",
     "charset": "utf-8",
