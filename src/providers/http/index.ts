@@ -4,6 +4,7 @@ import { encodeBase64 } from 'ethers'
 
 import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '#src/config/index.ts'
 import { AttestorVersion } from '#src/proto/api.ts'
+import { detectResponseCharset } from '#src/providers/http/response-charset.ts'
 import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
@@ -421,7 +422,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		const charset = shouldRevealCrlf(ctx)
-			? getResponseBodyCharset(headersText)
+			? detectResponseCharset(body, getResponseContentType(headersText))
 			: undefined
 		const bodyText = decodeResponseBody(body, charset)
 		let res = headersText + bodyText
@@ -569,21 +570,9 @@ function shouldRevealChunkFraming(version: AttestorVersion) {
 	return version >= AttestorVersion.ATTESTOR_VERSION_3_2_0
 }
 
-function getResponseBodyCharset(headers: string) {
-	const contentType = /(?:^|[\r\n*])content-type\s*:\s*([^*\r\n]*)/i
+function getResponseContentType(headers: string) {
+	return /(?:^|[\r\n*])content-type\s*:\s*([^*\r\n]*)/i
 		.exec(headers)?.[1]
-	if(typeof contentType === 'undefined') {
-		return undefined
-	}
-
-	const charsetMatch = /(?:^|;)\s*charset\s*=\s*(?:"((?:[^"\\]|\\.)*)"|([^;\s]*))/i
-		.exec(contentType)
-	if(!charsetMatch) {
-		return undefined
-	}
-
-	const charset = charsetMatch[1]?.replace(/\\(.)/g, '$1') ?? charsetMatch[2]
-	return charset.trim() || undefined
 }
 
 function decodeResponseBody(body: Uint8Array, charset: string | undefined) {
