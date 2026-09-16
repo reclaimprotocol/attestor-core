@@ -4,7 +4,6 @@ import { encodeBase64 } from 'ethers'
 
 import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '#src/config/index.ts'
 import { AttestorVersion } from '#src/proto/api.ts'
-import { detectResponseCharset } from '#src/providers/http/response-charset.ts'
 import {
 	buildHeaders,
 	convertResponsePosToAbsolutePos,
@@ -422,7 +421,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		const charset = shouldRevealCrlf(ctx)
-			? detectResponseCharset(body, getResponseContentType(headersText))
+			? getResponseBodyCharset(headersText)
 			: undefined
 		const bodyText = decodeResponseBody(body, charset)
 		let res = headersText + bodyText
@@ -570,18 +569,25 @@ function shouldRevealChunkFraming(version: AttestorVersion) {
 	return version >= AttestorVersion.ATTESTOR_VERSION_3_2_0
 }
 
-function getResponseContentType(headers: string) {
-	const value = /(?:^|[\r\n*])content-type\s*:\s*([^\r\n]*)/i.exec(headers)?.[1]
-	if(value === undefined) { return undefined }
-	// AEAD receipts can mask the line ending. A single '*' is also valid
-	// MIME parameter syntax (charset* and charset*0*), so retain those.
-	let quoted = false
-	for(let i = 0; i < value.length; i++) {
-		if(quoted && value[i] === '\\') { i++; continue }
-		if(value[i] === '"') { quoted = !quoted }
-		if(!quoted && value.startsWith('**', i)) { return value.slice(0, i) }
+// Receipt bodies contain claimant-selected redactions and OPRF replacements.
+// They cannot prove original BOM, declaration precedence, or HTML context.
+// Keep the established header/default policy until document charset selection
+// is independently authenticated against the original response.
+function getResponseBodyCharset(headers: string) {
+	const contentType = /(?:^|[\r\n*])content-type\s*:\s*([^*\r\n]*)/i
+		.exec(headers)?.[1]
+	if(typeof contentType === 'undefined') {
+		return undefined
 	}
-	return value
+
+	const charsetMatch = /(?:^|;)\s*charset\s*=\s*(?:"((?:[^"\\]|\\.)*)"|([^;\s]*))/i
+		.exec(contentType)
+	if(!charsetMatch) {
+		return undefined
+	}
+
+	const charset = charsetMatch[1]?.replace(/\\(.)/g, '$1') ?? charsetMatch[2]
+	return charset.trim() || undefined
 }
 
 function decodeResponseBody(body: Uint8Array, charset: string | undefined) {
