@@ -1,5 +1,7 @@
 // noinspection ExceptionCaughtLocallyJS
 
+import '#src/providers/http/patch-parse5-tree.ts'
+
 import { concatenateUint8Arrays } from '@reclaimprotocol/tls'
 import type { Element, Node } from 'domhandler'
 import type {
@@ -15,13 +17,12 @@ import {
 import { JSONPath } from 'jsonpath-plus'
 import { parse } from 'parse5'
 import { adapter as htmlAdapter, } from 'parse5-htmlparser2-tree-adapter'
-import RE2 from 're2'
 import xpath from 'xpath'
-import '#src/providers/http/patch-parse5-tree.ts'
 
 import type { ArraySlice, CompleteTLSPacket, ProviderParams, RedactedOrHashedArraySlice, Transcript } from '#src/types/index.ts'
 import type { HttpRequest, HttpResponse } from '#src/utils/index.ts'
-import { getHttpRequestDataFromTranscript, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from '#src/utils/index.ts'
+import { extractRequestBufferFromTranscript, getHttpRequestDataFromTranscript, isApplicationData, makeHttpResponseParser, REDACTION_CHAR_CODE } from '#src/utils/index.ts'
+import { logger } from '#src/utils/logger.ts'
 
 export type JSONIndex = {
 	start: number
@@ -321,8 +322,20 @@ export function parseHttpResponse(buff: Uint8Array) {
 	return parser.res
 }
 
+let RE2: typeof RegExp
+
+import('re2')
+	.then(m => { RE2 = m.default })
+	.catch(err => {
+		logger.warn({ err }, 'Failed to load RE2; falling back to native RegExp')
+	})
+
 export function makeRegex(str: string) {
-	return RE2(str, 'sgiu')
+	if(RE2) {
+		return RE2(str, 'sgiu')
+	}
+
+	return new RegExp(str, 'sgi')
 }
 
 const TEMPLATE_START_CHARCODE = '{'.charCodeAt(0)
@@ -430,7 +443,8 @@ export function generateRequstAndResponseFromTranscript(transcript: Transcript<C
 		})
 	}
 
-	const req = getHttpRequestDataFromTranscript(packets)
+	const reqTranscript = extractRequestBufferFromTranscript(packets)
+	const req = getHttpRequestDataFromTranscript(reqTranscript)
 
 	const responsePackets = concatenateUint8Arrays(packets.filter(p => p.sender === 'server').map(p => p.message).filter(b => !b.every(b => b === REDACTION_CHAR_CODE)))
 	const res = parseHttpResponse(responsePackets)

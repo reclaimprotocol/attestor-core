@@ -9,9 +9,10 @@
  * and the nesting helps save time by not repeating the same setup code.
  */
 
-import { utils, Wallet } from 'ethers'
 import assert from 'node:assert'
 import { after, before, describe, it, mock } from 'node:test'
+
+import { utils, Wallet } from 'ethers'
 
 import { createClaimOnAvs } from '#src/avs/client/create-claim-on-avs.ts'
 import type { NewTaskCreatedEventObject, TaskCompletedEventObject } from '#src/avs/contracts/ReclaimServiceManager.ts'

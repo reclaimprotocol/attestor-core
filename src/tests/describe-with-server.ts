@@ -1,4 +1,5 @@
 import { after, afterEach, before, beforeEach, describe } from 'node:test'
+
 import type { WebSocket, WebSocketServer } from 'ws'
 
 import { AttestorClient } from '#src/client/utils/client-socket.ts'

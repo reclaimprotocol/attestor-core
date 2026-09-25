@@ -4,7 +4,7 @@ import { asciiToUint8Array } from '@reclaimprotocol/tls'
 import { makeRpcTlsTunnel } from '#src/client/tunnels/make-rpc-tls-tunnel.ts'
 import { getAttestorClientFromPool } from '#src/client/utils/attestor-pool.ts'
 import { DEFAULT_HTTPS_PORT, PROVIDER_CTX, TOPRF_DOMAIN_SEPARATOR } from '#src/config/index.ts'
-import { ClaimTunnelRequest, ZKProofEngine } from '#src/proto/api.ts'
+import { ClaimTunnelRequest } from '#src/proto/api.ts'
 import { providers } from '#src/providers/index.ts'
 import type {
 	CreateClaimOnAttestorOpts,
@@ -29,6 +29,7 @@ import {
 	makeDefaultOPRFOperator,
 	makeHttpResponseParser,
 	preparePacketsForReveal,
+	REDACTION_CHAR_CODE,
 	redactSlices,
 	uint8ArrayToStr,
 	unixTimestampSeconds
@@ -280,12 +281,12 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 	let serverIV: Uint8Array
 	let clientIV: Uint8Array
 	const [serverBlock] = getLastBlocks('server', 1)
-	if(serverBlock && serverBlock.message.type === 'ciphertext') {
+	if(serverBlock?.message.type === 'ciphertext') {
 		serverIV = serverBlock.message.fixedIv
 	}
 
 	const [clientBlock] = getLastBlocks('client', 1)
-	if(clientBlock && clientBlock.message.type === 'ciphertext') {
+	if(clientBlock?.message.type === 'ciphertext') {
 		clientIV = clientBlock.message.fixedIv
 	}
 
@@ -304,9 +305,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 			owner: getAddress(),
 		},
 		transcript:transcript,
-		zkEngine: zkEngine === 'gnark'
-			? ZKProofEngine.ZK_ENGINE_GNARK
-			: ZKProofEngine.ZK_ENGINE_SNARKJS,
+		zkEngine: getEngineProto(zkEngine),
 		fixedServerIV: serverIV!,
 		fixedClientIV: clientIV!,
 	})
@@ -514,14 +513,33 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 
 			revealedPackets.push(...packets.filter(p => p.sender === 'server'))
 		} else {
-			for(const {
-				block, redactedPlaintext, overshotToprfFromPrevBlock, toprfs
-			} of serverPacketsToReveal) {
+			const revealByBlock = new Map(
+				serverPacketsToReveal.map(r => [r.block, r])
+			)
+			// walk every server block in order: revealed blocks are proven via
+			// zk, fully-redacted blocks get an asterisk placeholder so the local
+			// receipt stays byte-aligned for chunked dechunking
+			for(const sb of serverBlocks) {
+				const reveal = revealByBlock.get(sb)
+				if(!reveal) {
+					revealedPackets.push({
+						sender: 'server',
+						message: new Uint8Array(sb.plaintext.length).fill(REDACTION_CHAR_CODE)
+					})
+					continue
+				}
+
+				const {
+					block, redactedPlaintext, overshotToprfFromPrevBlock,
+					overshotOprfRawFromPrevBlock, toprfs, oprfRawMarkers
+				} = reveal
 				setRevealOfMessage(block.message, {
 					type: 'zk',
 					redactedPlaintext,
 					toprfs,
-					overshotToprfFromPrevBlock
+					oprfRawMarkers,
+					overshotToprfFromPrevBlock,
+					overshotOprfRawFromPrevBlock
 				})
 				revealedPackets.push(
 					{ sender: 'server', message: redactedPlaintext }
@@ -544,6 +562,7 @@ async function _createClaimOnAttestor<N extends ProviderName>(
 		}
 
 		await provider.assertValidProviderReceipt({
+			clientVersion: client.metadata.clientVersion,
 			receipt: revealedPackets,
 			params: {
 				...params,

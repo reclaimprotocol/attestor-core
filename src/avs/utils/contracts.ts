@@ -1,4 +1,4 @@
-import { ethers } from 'ethers'
+import { Contract, JsonRpcProvider, Wallet } from 'ethers'
 
 import { avsDirectoryABI } from '#src/avs/abis/avsDirectoryABI.ts'
 import { delegationABI } from '#src/avs/abis/delegationABI.ts'
@@ -34,15 +34,15 @@ export function initialiseContracts(
 	}: ChainConfig,
 	privateKey: string | undefined = PRIVATE_KEY
 ) {
-	const provider = new ethers.providers.JsonRpcProvider(rpcUrl)
+	const provider = new JsonRpcProvider(rpcUrl)
 	const wallet = privateKey
-		? new ethers.Wallet(privateKey, provider)
+		? new Wallet(privateKey, provider)
 		: undefined
 
 	return {
 		provider,
 		wallet,
-		delegationManager: new ethers.Contract(
+		delegationManager: new Contract(
 			delegationManagerAddress,
 			delegationABI,
 			wallet || provider
@@ -52,12 +52,12 @@ export function initialiseContracts(
 			contractAddress,
 			wallet || provider
 		),
-		registryContract: new ethers.Contract(
+		registryContract: new Contract(
 			stakeRegistryAddress,
 			registryABI,
 			wallet || provider
 		),
-		avsDirectory: new ethers.Contract(
+		avsDirectory: new Contract(
 			avsDirectoryAddress,
 			avsDirectoryABI,
 			wallet || provider

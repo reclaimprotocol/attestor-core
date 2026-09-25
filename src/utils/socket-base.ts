@@ -28,7 +28,8 @@ export class AttestorSocket implements IAttestorSocket {
 		this.metadata = metadata
 		this.logger = logger
 
-		socket.addEventListener('error', (event) => {
+		// @ts-expect-error - WebSocket type differs between browser and Node.js
+		socket.addEventListener('error', (event: ErrorEvent) => {
 			const witErr = AttestorError.fromError(
 				event.error || new Error(event.message),
 				'ERROR_NETWORK_ERROR'
@@ -47,9 +48,10 @@ export class AttestorSocket implements IAttestorSocket {
 			)
 		))
 
-		socket.addEventListener('message', async({ data }) => {
+		// @ts-expect-error - WebSocket type differs between browser and Node.js
+		socket.addEventListener('message', async(event: MessageEvent) => {
 			try {
-				await wsMessageHandler.call(this, data)
+				await wsMessageHandler.call(this, event.data)
 			} catch(err) {
 				this.logger.error({ err }, 'error processing message')
 			}

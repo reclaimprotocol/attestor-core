@@ -23,7 +23,7 @@ export const createClaimOnChain: RPCHandler<'createClaimOnChain'> = async(
 		= JSON.parse(jsonCreateClaimRequest)
 	const { task, tx } = await createNewClaimRequestOnChain({
 		request,
-		owner: request.owner,
+		owner: request.owner as string,
 		payer: wallet!,
 		chainId,
 		requestSignature: requestSignature
@@ -32,8 +32,8 @@ export const createClaimOnChain: RPCHandler<'createClaimOnChain'> = async(
 	const plainTask = ethersStructToPlainObject(task)
 
 	return {
-		txHash: tx.transactionHash,
-		taskIndex: task.taskIndex,
+		txHash: tx?.hash ?? '',
+		taskIndex: Number(task.taskIndex),
 		jsonTask: JSON.stringify(plainTask)
 	}
 }

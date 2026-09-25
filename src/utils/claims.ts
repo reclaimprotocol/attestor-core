@@ -1,10 +1,11 @@
 import canonicalize from 'canonicalize'
-import { utils } from 'ethers'
+import { keccak256 } from 'ethers'
 
 import { DEFAULT_METADATA } from '#src/config/index.ts'
 import { ClaimTunnelResponse } from '#src/proto/api.ts'
 import type { ClaimID, ClaimInfo, CompleteClaimData, ProviderParams } from '#src/types/index.ts'
-import { SIGNATURES, strToUint8Array } from '#src/utils/index.ts'
+import { strToUint8Array } from '#src/utils/generics.ts'
+import { SIGNATURES } from '#src/utils/signatures/index.ts'
 
 /**
  * Creates the standard string to sign for a claim.
@@ -99,7 +100,7 @@ export function getIdentifierFromClaimInfo(info: ClaimInfo): ClaimID {
 	
 	const str = `${info.provider}\n${info.parameters}\n${context || ''}`
 	//console.log('Identifier: ' + btoa(str))
-	return utils.keccak256(strToUint8Array(str)).toLowerCase()
+	return keccak256(strToUint8Array(str)).toLowerCase()
 }
 
 /**
@@ -117,15 +118,25 @@ export function canonicalStringify(params: { [key: string]: any } | undefined) {
 
 export function hashProviderParams(params: ProviderParams<'http'>): string {
 	const filteredParams = {
-		url:params.url,
-		method:params.method,
-		body: params.body,
-		responseMatches: params.responseMatches,
-		responseRedactions: params.responseRedactions
+		url: params.url,
+		method: params.method,
+		body: params.body ?? '',
+		responseMatches: params.responseMatches.map(it => ({
+			value: it.value,
+			type: it.type,
+			// default undefined, even if false
+			invert: it.invert || undefined,
+		})),
+		responseRedactions: params.responseRedactions?.map(it => ({
+			xPath: it.xPath ?? '',
+			jsonPath: it.jsonPath ?? '',
+			regex: it.regex ?? '',
+			hash: it.hash || undefined,
+		})) ?? [],
 	}
 
 	const serializedParams = canonicalStringify(filteredParams)
-	return utils.keccak256(
+	return keccak256(
 		strToUint8Array(serializedParams)
 	).toLowerCase()
 }

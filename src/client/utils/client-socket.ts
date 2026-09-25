@@ -1,4 +1,4 @@
-import { utils } from 'ethers'
+import { encodeBase64 } from 'ethers'
 
 import { DEFAULT_METADATA, DEFAULT_RPC_TIMEOUT_MS } from '#src/config/index.ts'
 import type { InitResponse } from '#src/proto/api.ts'
@@ -7,8 +7,6 @@ import type { IAttestorClient, IAttestorClientCreateOpts, RPCEvent, RPCRequestDa
 import { AttestorError, generateRpcMessageId, getRpcRequestType, logger as LOGGER, packRpcMessages } from '#src/utils/index.ts'
 import { AttestorSocket } from '#src/utils/socket-base.ts'
 import { makeWebSocket as defaultMakeWebSocket } from '#src/utils/ws.ts'
-
-const { base64 } = utils
 
 export class AttestorClient extends AttestorSocket implements IAttestorClient {
 
@@ -31,7 +29,7 @@ export class AttestorClient extends AttestorSocket implements IAttestorClient {
 		}
 		const msg = packRpcMessages({ initRequest }, ...initMessages)
 		const initRequestBytes = RPCMessages.encode(msg).finish()
-		const initRequestB64 = base64.encode(initRequestBytes)
+		const initRequestB64 = encodeBase64(initRequestBytes)
 
 		url = new URL(url.toString())
 		url.searchParams.set('messages', initRequestB64)

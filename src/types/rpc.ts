@@ -2,7 +2,7 @@ import type { RPCMessage, TunnelDisconnectEvent, TunnelMessage } from '#src/prot
 import type { AttestorError } from '#src/utils/error.ts'
 
 // simple typescript type to extract all fields that end with the givens suffix
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+
 type ExtractPrefix<T, S extends string> = T extends `${infer _}${S}` ? _ : never
 
 export type RPCType = ExtractPrefix<keyof RPCMessage, 'Request'>

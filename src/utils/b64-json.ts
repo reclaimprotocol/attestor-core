@@ -1,4 +1,4 @@
-import { utils } from 'ethers'
+import { decodeBase64, encodeBase64 } from 'ethers'
 
 export const B64_JSON_REPLACER = (key: string, value: any) => {
 	if(
@@ -10,7 +10,7 @@ export const B64_JSON_REPLACER = (key: string, value: any) => {
 			&& value.buffer instanceof ArrayBuffer
 		)
 	) {
-		return { type: 'uint8array', value: utils.base64.encode(value) }
+		return { type: 'uint8array', value: encodeBase64(value) }
 	}
 
 	return value
@@ -18,7 +18,7 @@ export const B64_JSON_REPLACER = (key: string, value: any) => {
 
 export const B64_JSON_REVIVER = (key: string, value: any) => {
 	if(value?.type === 'uint8array') {
-		return utils.base64.decode(value.value)
+		return decodeBase64(value.value)
 	}
 
 	return value

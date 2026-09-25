@@ -1,23 +1,19 @@
-import { type CipherSuite, type TLSProtocolVersion } from '@reclaimprotocol/tls'
-import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 import assert from 'node:assert'
 import { readFileSync } from 'node:fs'
-import { beforeEach, describe, it } from 'node:test'
+import { beforeEach, describe, it, mock } from 'node:test'
+
+import { type CipherSuite, type TLSProtocolVersion } from '@reclaimprotocol/tls'
+import type { ZKEngine } from '@reclaimprotocol/zk-symmetric-crypto'
 
 import type { AttestorClient } from '#src/client/index.ts'
 import { createClaimOnAttestor, getAttestorClientFromPool } from '#src/client/index.ts'
-import { ClaimTunnelRequest } from '#src/proto/api.ts'
 import { providers } from '#src/providers/index.ts'
-import { decryptTranscript } from '#src/server/index.ts'
 import { describeWithServer } from '#src/tests/describe-with-server.ts'
-import { getFirstTOprfBlock, verifyNoDirectRevealLeaks } from '#src/tests/utils.ts'
+import { verifyNoDirectRevealLeaks } from '#src/tests/utils.ts'
 import {
 	assertValidClaimSignatures,
 	AttestorError,
-	binaryHashToStr,
-	extractApplicationDataFromTranscript,
-	logger,
-	uint8ArrayToStr
+	uint8ArrayToStr,
 } from '#src/utils/index.ts'
 
 const TLS_VERSIONS: TLSProtocolVersion[] = [
@@ -34,6 +30,15 @@ const OPRF_CIPHER_SUITES: CipherSuite[] = [
 TLS_ADDITIONAL_ROOT_CA_LIST.push(
 	readFileSync('./cert/public-cert.pem', 'utf8')
 )
+
+const GET_RESPONSE_REDCTIONS = mock.fn(providers.http.getResponseRedactions)
+providers.http.getResponseRedactions = GET_RESPONSE_REDCTIONS
+
+const CREATE_REQUEST = mock.fn(providers.http.createRequest)
+providers.http.createRequest = CREATE_REQUEST
+
+const ASSERT_VALID_RECEIPT = mock.fn(providers.http.assertValidProviderReceipt)
+providers.http.assertValidProviderReceipt = ASSERT_VALID_RECEIPT
 
 describeWithServer('Claim Creation', opts => {
 
@@ -82,26 +87,9 @@ describeWithServer('Claim Creation', opts => {
 			})
 
 			assert.ok(!result.error)
-			assert.ok(result.request?.transcript)
 
-			// decrypt the transcript and check we didn't accidentally
-			// leak our secrets in the application data
-			const transcript = result.request.transcript
-
-			const applMsgs = extractApplicationDataFromTranscript(
-				await decryptTranscript(
-					transcript, logger, zkEngine,
-					result.request?.fixedServerIV,
-					result.request?.fixedClientIV
-				)
-			)
-
-			const requestData = applMsgs
-				.filter(m => m.sender === 'client')
-				.map(m => uint8ArrayToStr(m.message))
-				.join('')
-			// ensure the secret authorisation header is not leaked
-			assert.doesNotMatch(requestData, new RegExp(user))
+			// transcript is stripped from response to reduce wire size
+			// server-side validation already checks for secret leakage
 
 			await assertValidClaimSignatures(result, client.metadata)
 			// check all direct message reveals and
@@ -182,35 +170,10 @@ describeWithServer('Claim Creation', opts => {
 				})
 
 				assert.ok(!result.error)
-				// decrypt the transcript and check we didn't accidentally
-				// leak our secrets in the application data
-				const transcript = result.request?.transcript
-				assert.ok(transcript)
+				assert.ok(result.claim)
 
-				const applMsgs = extractApplicationDataFromTranscript(
-					await decryptTranscript(
-						transcript, logger, zkEngine,
-						result.request?.fixedServerIV!,
-						result.request?.fixedClientIV!
-					)
-				)
-
-				const serverPackets = applMsgs
-					.filter(m => m.sender === 'server')
-					.map(m => uint8ArrayToStr(m.message))
-					.join('')
-
-				const toprf = getFirstTOprfBlock(result.request!)!
-				assert.ok(toprf)
-
-				// only the user's hash should be revealed
-				assert.doesNotMatch(serverPackets, new RegExp(user))
-
-				const { payload: { dataLocation, nullifier } = {} } = toprf
-				assert.match(
-					serverPackets,
-					new RegExp(binaryHashToStr(nullifier!, dataLocation!.length))
-				)
+				// transcript is stripped from response to reduce wire size
+				// OPRF validation is done server-side in assertValidClaimRequest
 			})
 		}
 
@@ -235,45 +198,34 @@ describeWithServer('Claim Creation', opts => {
 			})
 
 			assert.ok(!result.error)
-			// decrypt the transcript and check we didn't accidentally
-			// leak our secrets in the application data
-			const transcript = result.request?.transcript
-			assert.ok(transcript)
+			assert.ok(result.claim)
 
-			// ensure that the transcript never contained the raw user data
-			const serialisedReq = ClaimTunnelRequest.encode(result.request!).finish()
-			const serialisedReqStr = uint8ArrayToStr(serialisedReq)
-			assert.ok(!serialisedReqStr.includes(user))
-			assert.ok(!serialisedReqStr.includes('abcd'))
-			assert.ok(!serialisedReqStr.includes('test_user'))
+			// transcript is stripped from response to reduce wire size
+			// OPRF cross-packet validation is done server-side
+		})
 
-			const applMsgs = extractApplicationDataFromTranscript(
-				await decryptTranscript(
-					transcript, logger, zkEngine,
-					result.request?.fixedServerIV!,
-					result.request?.fixedClientIV!
-				)
-			)
+		it('should create claim with OPRF raw spread across multiple packets', async() => {
+			const user = 'abcd_test_user'
+			const result = await createClaimOnAttestor({
+				name: 'http',
+				params: {
+					url: claimUrl + '?splitDataAcrossPackets=true',
+					method: 'GET',
+					responseRedactions: [
+						{ regex: 'emailAddress\":\"(?<test>[a-z_]+)@', hash: 'oprf-raw' }
+					],
+					responseMatches: [{ type: 'contains', value: '' }]
+				},
+				secretParams: {
+					authorisationHeader: `Bearer ${user}`
+				},
+				ownerPrivateKey: opts.privateKeyHex,
+				client,
+				zkEngine: 'stwo',
+			})
 
-			const serverPackets = applMsgs
-				.filter(m => m.sender === 'server')
-				.map(m => uint8ArrayToStr(m.message))
-				.join('')
-
-			const toprf = getFirstTOprfBlock(result.request!)!
-			assert.ok(toprf)
-
-			// only the user's hash should be revealed
-			assert.doesNotMatch(serverPackets, new RegExp(user))
-
-			assert.match(
-				serverPackets,
-				new RegExp(
-					binaryHashToStr(
-						toprf.payload!.nullifier, toprf.payload!.dataLocation!.length
-					)
-				)
-			)
+			assert.ok(!result.error)
+			assert.ok(result.claim)
 		})
 
 		it('should produce the same hash for the same input', async() => {
@@ -308,11 +260,14 @@ describeWithServer('Claim Creation', opts => {
 					zkEngine,
 				})
 
-				const toprf = getFirstTOprfBlock(result.request!)?.payload
-				assert.ok(toprf)
-				hash ||= toprf.nullifier
-
-				assert.deepEqual(toprf.nullifier, hash)
+				assert.ok(!result.error)
+				assert.ok(result.claim)
+				// verify same claim produces consistent hash via context
+				const ctx = JSON.parse(result.claim.context)
+				const providerHash = ctx.providerHash
+				assert.ok(providerHash)
+				hash ||= providerHash
+				assert.equal(providerHash, hash)
 			}
 		})
 	})
@@ -389,6 +344,112 @@ describeWithServer('Claim Creation', opts => {
 			assert.notEqual(client2, client)
 		})
 	})
+
+	it('should reject claims where redactions have a smuggled HTTP request', async() => {
+		const honestUser = 'honest'
+		const attackerUser = 'attacker'
+
+		CREATE_REQUEST.mock.mockImplementationOnce((secretParams,	params) => {
+			const url = new URL(params.url)
+			const { pathname } = url
+			const searchParams = params.url.includes('?')
+				? params.url.split('?')[1]
+				: ''
+			const path = pathname + (searchParams ? '?' + searchParams : '')
+
+			const authHonest = `Authorization: ${secretParams.authorisationHeader}`
+			const req1Lines = [
+				`GET ${path} HTTP/1.1`,
+				`Host: ${url.host}`,
+				'Content-Length: 0',
+				'Accept-Encoding: identity',
+				authHonest,
+				'Connection: keep-alive',
+				'',
+				'',
+			]
+			const req1 = req1Lines.join('\r\n')
+
+			const authAttacker = `Authorization: Bearer ${attackerUser}`
+			const req2Lines = [
+				`GET ${path} HTTP/1.1`,
+				`Host: ${url.host}`,
+				'Content-Length: 0',
+				'Accept-Encoding: identity',
+				authAttacker,
+				'Connection: close',
+				'',
+				'',
+			]
+			const req2 = req2Lines.join('\r\n')
+
+			const fullPayload = req1 + req2
+
+			const bearerTokenStart = fullPayload.indexOf(authHonest)
+			const attackerTokenStart = fullPayload.indexOf(authAttacker, bearerTokenStart)
+
+			return {
+				data: fullPayload,
+				redactions: [{ fromIndex: bearerTokenStart, toIndex: attackerTokenStart }],
+			}
+		})
+
+		GET_RESPONSE_REDCTIONS.mock.mockImplementationOnce((opts) => {
+			const { response } = opts
+			const bodyRedact = getFirstResponseBodyRedaction(response)
+			assert(bodyRedact)
+
+			return [bodyRedact]
+		})
+
+		ASSERT_VALID_RECEIPT.mock
+			.mockImplementationOnce(() => ({ extractedParameters: {} }))
+
+		const rslt = await createClaimOnAttestor({
+			name: 'http',
+			params: {
+				url: claimUrl,
+				method: 'GET',
+				responseRedactions: [],
+				responseMatches: [
+					{
+						type: 'contains',
+						value: `${attackerUser}@mock.com`,
+					},
+				],
+			},
+			secretParams: {
+				authorisationHeader: `Bearer ${honestUser}`,
+			},
+			ownerPrivateKey: opts.privateKeyHex,
+			client,
+			zkEngine,
+		})
+		assert.ok(rslt.error)
+		assert.match(rslt.error.message, /mismatch/)
+	})
+
+	function getFirstResponseBodyRedaction(response: Uint8Array) {
+		const str = uint8ArrayToStr(response)
+		const hdrEnd = str.indexOf('\r\n\r\n')
+		if(hdrEnd === -1) {return null}
+
+		const clMatch = str.match(/content-length:\s*(\d+)/i)
+		if(!clMatch) {return null}
+
+		const bodyLen = parseInt(clMatch[1])
+		const bodyStart = hdrEnd + 4
+		const secondResponseStart = str.indexOf(
+			'HTTP/',
+			bodyStart + bodyLen,
+		)
+		if(secondResponseStart === -1) {return null}
+
+		return {
+			fromIndex: bodyStart,
+			toIndex: secondResponseStart,
+		}
+	}
 
 	function createClaim() {
 		const user = 'testing-123'

@@ -1,7 +1,7 @@
-import { ethers, Wallet } from 'ethers'
+import { EventLog, hexlify, Wallet } from 'ethers'
 
 import { CHAIN_CONFIGS, SELECTED_CHAIN_ID } from '#src/avs/config.ts'
-import type { IReclaimServiceManager, NewTaskCreatedEventObject, TaskCompletedEventObject } from '#src/avs/contracts/ReclaimServiceManager.ts'
+import type { IReclaimServiceManager, NewTaskCreatedEvent, TaskCompletedEvent } from '#src/avs/contracts/ReclaimServiceManager.ts'
 import type { CreateClaimOnAvsOpts } from '#src/avs/types/index.ts'
 import { initialiseContracts } from '#src/avs/utils/contracts.ts'
 import { createNewClaimRequestOnChain, signClaimRequest } from '#src/avs/utils/tasks.ts'
@@ -10,7 +10,7 @@ import type { ClaimRequestData, ClaimTunnelResponse, ProviderClaimData } from '#
 import type { ProviderName } from '#src/types/index.ts'
 import { AttestorError, canonicalStringify, getIdentifierFromClaimInfo, logger as LOGGER, unixTimestampSeconds } from '#src/utils/index.ts'
 
-const EMPTY_CLAIM_USER_ID = ethers.utils.hexlify(new Uint8Array(32))
+const EMPTY_CLAIM_USER_ID = hexlify(new Uint8Array(32))
 
 /**
  * Creates a Reclaim claim on the AVS chain.
@@ -29,13 +29,13 @@ export async function createClaimOnAvs<N extends ProviderName>({
 		params,
 		context,
 	} = opts
-	const { contract, wallet } = initialiseContracts(
+	const { contract, wallet, provider } = initialiseContracts(
 		CHAIN_CONFIGS[chainId!],
 		ownerPrivateKey
 	)
 
 	logger.info(
-		{ owner: wallet!.address, contract: contract.address },
+		{ owner: wallet!.address, contract: await contract.getAddress() },
 		'creating claim'
 	)
 
@@ -127,11 +127,11 @@ export async function createClaimOnAvs<N extends ProviderName>({
 		}
 
 		if(!payer) {
-			const wallet = new Wallet(ownerPrivateKey, contract.provider)
+			const payerWallet = new Wallet(ownerPrivateKey, provider)
 			const { task } = await createNewClaimRequestOnChain({
 				request,
-				payer: wallet,
-				owner: wallet,
+				payer: payerWallet,
+				owner: payerWallet,
 				chainId
 			})
 			return task
@@ -150,7 +150,7 @@ export async function createClaimOnAvs<N extends ProviderName>({
 			requestSignature
 		})
 
-		return JSON.parse(rslt.jsonTask) as NewTaskCreatedEventObject
+		return JSON.parse(rslt.jsonTask) as NewTaskCreatedEvent.OutputObject
 	}
 
 	async function completeTask() {
@@ -158,7 +158,7 @@ export async function createClaimOnAvs<N extends ProviderName>({
 			task: arg.task,
 			signatures: responses
 				.map(res => (
-					ethers.utils.hexlify(res.signatures?.claimSignature!)
+					hexlify(res.signatures?.claimSignature!)
 				)),
 		}
 
@@ -166,10 +166,12 @@ export async function createClaimOnAvs<N extends ProviderName>({
 			const tx = await contract.taskCompleted(data, arg.taskIndex)
 			const rslt = await tx.wait()
 			// check task created event was emitted
-			const ev = rslt.events?.[0]
+			const logs = rslt?.logs ?? []
+			const eventLogs = logs.filter((log): log is EventLog => log instanceof EventLog)
+			const ev = eventLogs[0]
 			return {
-				object: ev?.args as unknown as TaskCompletedEventObject,
-				txHash: rslt.transactionHash
+				object: ev?.args as unknown as TaskCompletedEvent.OutputObject,
+				txHash: rslt!.hash
 			}
 		}
 
@@ -177,10 +179,10 @@ export async function createClaimOnAvs<N extends ProviderName>({
 		await client.waitForInit()
 		const rslt = await client.rpc('completeClaimOnChain', {
 			chainId: +chainId!,
-			taskIndex: arg.taskIndex,
+			taskIndex: Number(arg.taskIndex),
 			completedTaskJson: JSON.stringify(data)
 		})
-		const object = JSON.parse(rslt.taskCompletedObjectJson) as TaskCompletedEventObject
+		const object = JSON.parse(rslt.taskCompletedObjectJson) as TaskCompletedEvent.OutputObject
 		return { object, txHash: rslt.txHash }
 	}
 }

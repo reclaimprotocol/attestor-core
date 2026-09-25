@@ -3,6 +3,7 @@ import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
 import type { AttestorVersion, ProviderClaimData } from '#src/proto/api.ts'
 import type { ArraySlice, Logger, RedactedOrHashedArraySlice } from '#src/types/general.ts'
 import type { ProvidersConfig } from '#src/types/providers.gen.ts'
+import type { Awaitable } from '#src/types/signatures.ts'
 import type { Transcript } from '#src/types/tunnel.ts'
 
 export type AttestorData = {
@@ -34,6 +35,8 @@ export type ProviderField<Params, SecretParams, T> = T | ((params: Params, secre
 
 export type ProviderCtx = {
   version: AttestorVersion
+  /** Server-derived from original authenticated bytes, never claim parameters. */
+  authenticatedResponseCharset?: string
 }
 
 type GetResponseRedactionsOpts<P> = {
@@ -44,6 +47,7 @@ type GetResponseRedactionsOpts<P> = {
 }
 
 type AssertValidProviderReceipt<P> = {
+	clientVersion: AttestorVersion
   receipt: Transcript<Uint8Array>
   params: P
   logger: Logger
@@ -140,7 +144,7 @@ export interface Provider<
    * */
   assertValidProviderReceipt(
     opts: AssertValidProviderReceipt<Params>
-  ): void | Promise<void> | { extractedParameters: { [key: string]: string } }
+  ): Awaitable<{ extractedParameters: { [key: string]: string } } | undefined>
 }
 
 export type ProofGenerationStep =

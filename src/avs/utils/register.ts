@@ -1,4 +1,5 @@
-import { ethers } from 'ethers'
+import type { Wallet } from 'ethers'
+import { hexlify, randomBytes, SigningKey } from 'ethers'
 
 import { RECLAIM_PUBLIC_URL, SELECTED_CHAIN_ID } from '#src/avs/config.ts'
 import { getContracts } from '#src/avs/utils/contracts.ts'
@@ -16,7 +17,7 @@ type RegisterOpts = {
 	 * @default -- wallet specified in the contracts
 	 *  fetched by the chainId
 	 */
-	wallet?: ethers.Wallet
+	wallet?: Wallet
 	/**
 	 * URL of the Reclaim RPC server.
 	 * @default -- env variable RECLAIM_PUBLIC_URL
@@ -35,16 +36,17 @@ export async function registerOperator({
 	reclaimRpcUrl = RECLAIM_PUBLIC_URL
 }: RegisterOpts = {}) {
 	const contracts = getContracts(chainId)
+
 	const delegationManager = contracts.delegationManager
-		.connect(wallet)
+		.connect(wallet) as any
 	const avsDirectory = contracts.avsDirectory
-		.connect(wallet)
+		.connect(wallet) as any
 	const contract = contracts.contract
 		.connect(wallet)
 	const registryContract = contracts.registryContract
-		.connect(wallet)
+		.connect(wallet) as any
 
-	const addr = await wallet.address
+	const addr = wallet.address
 	try {
 		const tx1 = await delegationManager
 			.registerAsOperator({
@@ -63,7 +65,7 @@ export async function registerOperator({
 		logger.info('Operator already registered on EL')
 	}
 
-	const salt = ethers.utils.hexlify(ethers.utils.randomBytes(32))
+	const salt = hexlify(randomBytes(32))
 	// Example expiry, 1 hour from now
 	const expiry = Math.floor(Date.now() / 1000) + 3600
 	// Define the output structure
@@ -74,22 +76,23 @@ export async function registerOperator({
 	}
 
 	// Calculate the digest hash using the avsDirectory's method
+	const contractAddress = await contract.getAddress()
 	const digestHash = await avsDirectory
 		.calculateOperatorAVSRegistrationDigestHash(
 			addr,
-			contract.address,
+			contractAddress,
 			salt,
 			expiry
 		)
 
 	// Sign the digest hash with the operator's private key
-	const signingKey = new ethers.utils.SigningKey(
+	const signingKey = new SigningKey(
 		wallet.privateKey
 	)
-	const signature = signingKey.signDigest(digestHash)
+	const signature = signingKey.sign(digestHash)
 
 	// Encode the signature in the required format
-	operatorSignature.signature = ethers.utils.joinSignature(signature)
+	operatorSignature.signature = signature.serialized
 
 	logger.info('operator signature generated successfully')
 

@@ -1,4 +1,4 @@
-import { Contract, providers, utils, Wallet } from 'ethers'
+import { Contract, JsonRpcProvider, randomBytes, Wallet } from 'ethers'
 
 import { governanceABI } from '#src/mechain/abis/governanceABI.ts'
 import { taskABI } from '#src/mechain/abis/taskABI.ts'
@@ -13,10 +13,10 @@ export const createTaskOnMechain: RPCHandler<'createTaskOnMechain'> = async({
 
 	const { taskContract } = await getContracts()
 
-	const seed = utils.randomBytes(32)
+	const seed = randomBytes(32)
 
 	// Perform a static call to fetch taskId and attestors for the next task
-	const result = await taskContract.callStatic.createNewTaskRequest(
+	const result = await taskContract.createNewTaskRequest.staticCall(
 		seed,
 		timestamp
 	)
@@ -54,7 +54,7 @@ async function getContracts() {
 	}
 
 	try {
-		const provider = new providers.JsonRpcProvider(RPC_URL)
+		const provider = new JsonRpcProvider(RPC_URL)
 		// Validate connection to provider
 		await provider.getNetwork()
 

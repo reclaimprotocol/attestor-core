@@ -3,7 +3,7 @@
  * Handles ClaimTeeBundleRequest by verifying TEE attestations and reconstructing TLS transcript
  */
 
-import type { ProviderClaimInfo } from '#src/proto/api.ts'
+import type { InitRequest, ProviderClaimInfo } from '#src/proto/api.ts'
 import { ClaimTeeBundleResponse } from '#src/proto/api.ts'
 import type { CertificateInfo } from '#src/proto/tee-bundle.ts'
 import { VerificationBundle } from '#src/proto/tee-bundle.ts'
@@ -32,7 +32,7 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 
 
 	// Initialize response
-	const res = ClaimTeeBundleResponse.create({ request: teeBundleRequest })
+	const res = ClaimTeeBundleResponse.create({})
 
 	// 1. Verify TEE bundle (attestations + signatures) - this includes timestamp validation
 	logger.info('Starting TEE bundle verification')
@@ -80,9 +80,10 @@ export const claimTeeBundle: RPCHandler<'claimTeeBundle'> = async(
 
 	const validatedClaim = await validateTeeProviderReceipt(
 		plaintextTranscript,
+		client.metadata,
 		data,
 		logger,
-		{ version: client.metadata.clientVersion },
+		{ version: client.metadata.clientVersion, authenticatedResponseCharset: transcriptData.authenticatedResponseCharset },
 		transcriptData.certificateInfo
 	)
 
@@ -189,6 +190,7 @@ function createPlaintextTranscriptFromTeeData(
  */
 async function validateTeeProviderReceipt<T extends ProviderClaimInfo>(
 	plaintextTranscript: Transcript<Uint8Array>,
+	metadata: InitRequest,
 	claimInfo: T,
 	logger: Logger,
 	providerCtx: ProviderCtx,
@@ -208,6 +210,7 @@ async function validateTeeProviderReceipt<T extends ProviderClaimInfo>(
 	// Use the existing provider validation logic directly
 	const validatedClaim = await assertValidProviderTranscript(
 		plaintextTranscript,
+		metadata,
 		claimInfo,
 		logger,
 		providerCtx
@@ -338,7 +341,9 @@ function validateAndCombineOprfResults(
 
 	logger.info(`Combined ${zkOprfResults.length} ZK OPRF + ${oprfMpcResults.length} OPRF MPC results`)
 
-	// Check for overlapping ranges (position collision detection)
+	// Preserve the split-AEAD behavior: exact ZK/MPC duplicates are accepted,
+	// while partial overlaps are rejected. CBC forbids ZK OPRF data and checks
+	// overlap among its MPC ranges before this function is called.
 	const seen: Record<number, { length: number, source: string }> = {}
 	for(const result of zkOprfResults) {
 		seen[result.position] = { length: result.length, source: 'zk' }
@@ -347,7 +352,6 @@ function validateAndCombineOprfResults(
 	for(const result of oprfMpcResults) {
 		const existing = seen[result.position]
 		if(existing) {
-			// Exact duplicate at same position - verify they match
 			if(existing.length !== result.length) {
 				throw new AttestorError(
 					'ERROR_INVALID_CLAIM',
@@ -358,7 +362,6 @@ function validateAndCombineOprfResults(
 			logger.warn(`Duplicate OPRF range at position ${result.position} from both ZK and MPC - using MPC result`)
 		}
 
-		// Check for overlapping (but not identical) ranges
 		for(const [pos, data] of Object.entries(seen)) {
 			const position = Number(pos)
 			const existingEnd = position + data.length
@@ -377,4 +380,3 @@ function validateAndCombineOprfResults(
 
 	return allOprfResults
 }
-

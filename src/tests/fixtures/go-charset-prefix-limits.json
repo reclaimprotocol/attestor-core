@@ -1,0 +1,48 @@
+[
+  {
+    "cbc": false,
+    "match": "Привет",
+    "redactions": [
+      {
+        "length": 2,
+        "start": 15
+      },
+      {
+        "length": 20,
+        "start": 40
+      },
+      {
+        "length": 12,
+        "start": 64
+      },
+      {
+        "length": 19,
+        "start": 103
+      },
+      {
+        "length": 21,
+        "start": 128
+      }
+    ],
+    "response": "SFRUUC8xLjEgMjAwIE9LKipDb250ZW50LVR5cGU6IHRleHQvaHRtbCoqKioqKioqKioqKioqKioqKioqDQoNCioqKioqKioqKioqKjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUxPioqKioqKioqKioqKioqKioqKirP8Oji5fIqKioqKioqKioqKioqKioqKioqKio="
+  },
+  {
+    "cbc": true,
+    "match": "Привет",
+    "redactions": [
+      {
+        "length": 12,
+        "start": 64
+      },
+      {
+        "length": 19,
+        "start": 103
+      },
+      {
+        "length": 21,
+        "start": 128
+      }
+    ],
+    "response": "SFRUUC8xLjEgMjAwIE9LDQpDb250ZW50LVR5cGU6IHRleHQvaHRtbA0KQ29udGVudC1MZW5ndGg6IDg1DQoNCioqKioqKioqKioqKjxtZXRhIGNoYXJzZXQ9d2luZG93cy0xMjUxPioqKioqKioqKioqKioqKioqKirP8Oji5fIqKioqKioqKioqKioqKioqKioqKio="
+  }
+]

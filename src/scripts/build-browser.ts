@@ -4,6 +4,7 @@ const rslt = await esbuild.build({
 	entryPoints: ['src/external-rpc/setup-browser.ts'],
 	bundle: true,
 	minify: true,
+	sourcemap: true,
 	outfile: 'browser/resources/attestor-browser.min.mjs',
 	platform: 'browser',
 	format: 'esm',
@@ -17,6 +18,7 @@ const rslt = await esbuild.build({
 		'ip-cidr': '#src/scripts/fallbacks/empty.ts',
 		'snarkjs': '#src/scripts/fallbacks/snarkjs.ts',
 		're2': '#src/scripts/fallbacks/re2.ts',
+		'@reclaimprotocol/zk-symmetric-crypto/stwo': '#src/scripts/fallbacks/stwo.ts',
 	},
 	external: [
 		'dotenv',

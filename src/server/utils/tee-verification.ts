@@ -8,7 +8,10 @@ import type { SignedMessage } from '#src/proto/tee-bundle.ts'
 import { BodyType, KOutputPayload, TOutputPayload, VerificationBundle } from '#src/proto/tee-bundle.ts'
 import { validateGcpAttestationAndExtractKey } from '#src/server/utils/gcp-attestation.ts'
 import type { AddressExtractionResult } from '#src/server/utils/nitro-attestation.ts'
-import { validateNitroAttestationAndExtractKey } from '#src/server/utils/nitro-attestation.ts'
+import { assertSevSnpBaseAllowed } from '#src/server/utils/sev-snp/allowlist.ts'
+import { verifyCombinedSecureBoot, verifyCombinedSevSnp } from '#src/server/utils/sev-snp/verify.ts'
+import type { TeeProtocolMode } from '#src/server/utils/tee-cbc-contract.ts'
+import { validateTeeTranscriptContract } from '#src/server/utils/tee-cbc-contract.ts'
 import type { Logger } from '#src/types/general.ts'
 import { AttestorError } from '#src/utils/error.ts'
 import { SIGNATURES } from '#src/utils/signatures/index.ts'
@@ -22,6 +25,7 @@ export interface TeeBundleData {
 	teekPcr0: string
 	teetPcr0: string
 	teeSessionId: string
+	protocolMode: TeeProtocolMode
 }
 
 export interface TeeSignatureVerificationResult {
@@ -45,21 +49,32 @@ export async function verifyTeeBundle(
 
 	// Validate required components are present
 	validateBundleCompleteness(bundle)
-
-	// Extract public keys (from attestations or embedded keys)
-	const { teekKeyResult, teetKeyResult } = await extractPublicKeys(bundle, logger)
-
-	// Verify TEE signatures using extracted public keys
-	await verifyTeeSignatures(bundle, teekKeyResult!, teetKeyResult!, logger)
-
-	// Ensure signed messages are present
 	if(!bundle.teekSigned || !bundle.teetSigned) {
 		throw new AttestorError('ERROR_INVALID_CLAIM', 'Missing TEE signed messages')
 	}
 
-	// Parse TEE payloads
+	// Parse the signed payloads before selecting an attestation verifier. The
+	// generation marker is not trusted until the signatures are checked below,
+	// but selecting a stricter verifier from untrusted input is safe.
 	const kOutputPayload = parseKOutputPayload(bundle.teekSigned)
 	const tOutputPayload = parseTOutputPayload(bundle.teetSigned)
+
+	// Extract public keys (from attestations or embedded keys)
+	const { teekKeyResult, teetKeyResult } = await extractPublicKeys(
+		bundle,
+		kOutputPayload.attestationType,
+		tOutputPayload.attestationType,
+		logger
+	)
+
+	// Verify TEE signatures using extracted public keys
+	await verifyTeeSignatures(bundle, teekKeyResult!, teetKeyResult!, logger)
+
+	validateSignedAttestationTypes(bundle, kOutputPayload, tOutputPayload)
+
+	// Select and validate one complete signed transcript contract. This runs
+	// only after both TEE signatures have been verified.
+	const protocolMode = validateTeeTranscriptContract(bundle, kOutputPayload, tOutputPayload)
 
 	// Validate timestamps
 	validateTimestamps(kOutputPayload, tOutputPayload, logger)
@@ -77,6 +92,7 @@ export async function verifyTeeBundle(
 		teekPcr0: teekKeyResult!.pcr0,
 		teetPcr0: teetKeyResult!.pcr0,
 		teeSessionId,
+		protocolMode,
 	}
 }
 
@@ -144,10 +160,84 @@ function validateBundleCompleteness(bundle: VerificationBundle): void {
 }
 
 /**
- * Extracts public keys from either Nitro attestations or embedded keys (standalone mode)
+ * Verifies one side's combined SEV-SNP attestation and pins its base UKI against
+ * the allowlist. The app bundle digest is not pinned here — it is returned as
+ * pcr0 and published into the claim context for the consumer to verify.
+ */
+async function verifySevSnpSide(
+	attestationBytes: Uint8Array,
+	expectedTeeType: 'tee_k' | 'tee_t',
+	logger: Logger
+): Promise<AddressExtractionResult> {
+	const r = await verifyCombinedSevSnp(attestationBytes)
+	if(r.teeType !== expectedTeeType) {
+		throw new Error(`SEV-SNP attestation wrong TEE type, expected ${expectedTeeType}, got ${r.teeType}`)
+	}
+
+	assertSevSnpBaseAllowed(r.base)
+	logger.info(`${expectedTeeType} SEV-SNP attestation verified: app=${r.app} base=${r.base}`)
+	return { teeType: r.teeType, ethAddress: r.ethAddress, pcr0: r.app }
+}
+
+/** Secure Boot keeps the SEV2 checks but replaces the PCR 11 allowlist with R. */
+async function verifySecureBootSide(
+	attestationBytes: Uint8Array,
+	expectedTeeType: 'tee_k' | 'tee_t',
+	logger: Logger
+): Promise<AddressExtractionResult> {
+	const r = await verifyCombinedSecureBoot(attestationBytes)
+	if(r.teeType !== expectedTeeType) {
+		throw new Error(`Secure Boot attestation wrong TEE type, expected ${expectedTeeType}, got ${r.teeType}`)
+	}
+
+	logger.info(`${expectedTeeType} Secure Boot attestation verified: app=${r.app}`)
+	return { teeType: r.teeType, ethAddress: r.ethAddress, pcr0: r.app }
+}
+
+export function resolveSignedAttestationType(signedType: string, reportType: string): string {
+	const resolved = signedType || reportType
+	const compatible = resolved === 'gcp'
+		? reportType === 'gcp'
+		: resolved === 'sev-snp'
+			? reportType === 'sev-snp'
+			: resolved === 'secure-boot'
+				? reportType === 'sev-snp' || reportType === 'secure-boot'
+				: false
+	if(!compatible) {
+		throw new Error(`signed attestation generation ${resolved} is incompatible with report type ${reportType}`)
+	}
+	return resolved
+}
+
+function validateSignedAttestationTypes(
+	bundle: VerificationBundle,
+	kPayload: KOutputPayload,
+	tPayload: TOutputPayload
+): void {
+	const kReport = bundle.teekSigned?.attestationReport
+	const tReport = bundle.teetSigned?.attestationReport
+	if(!kReport && !tReport) {
+		return
+	}
+	if(!kReport || !tReport) {
+		throw new Error('TEE attestation reports must either both be present or both be absent')
+	}
+
+	const kType = resolveSignedAttestationType(kPayload.attestationType, kReport.type)
+	const tType = resolveSignedAttestationType(tPayload.attestationType, tReport.type)
+	if(kType !== tType) {
+		throw new Error(`TEE signed attestation generations differ: tee_k=${kType}, tee_t=${tType}`)
+	}
+}
+
+/**
+ * Extracts public keys from attestations (GCP Confidential Space or SEV-SNP) or
+ * embedded keys (standalone mode)
  */
 async function extractPublicKeys(
 	bundle: VerificationBundle,
+	teekSignedAttestationType: string,
+	teetSignedAttestationType: string,
 	logger: Logger
 ): Promise<{
 	teekKeyResult?: AddressExtractionResult
@@ -173,14 +263,21 @@ async function extractPublicKeys(
 			throw new Error('TEE_T embedded attestation report missing')
 		}
 
-		const teekAttestationType = bundle.teekSigned.attestationReport.type || 'nitro'
-		const teetAttestationType = bundle.teetSigned.attestationReport.type || 'nitro'
+		const teekReportType = bundle.teekSigned.attestationReport.type || 'nitro'
+		const teetReportType = bundle.teetSigned.attestationReport.type || 'nitro'
+		const teekAttestationType = resolveSignedAttestationType(teekSignedAttestationType, teekReportType)
+		const teetAttestationType = resolveSignedAttestationType(teetSignedAttestationType, teetReportType)
 
-		logger.info(`TEE_K attestation type: ${teekAttestationType}`)
-		logger.info(`TEE_T attestation type: ${teetAttestationType}`)
+		logger.info(`TEE_K attestation type: signed=${teekAttestationType} report=${teekReportType}`)
+		logger.info(`TEE_T attestation type: signed=${teetAttestationType} report=${teetReportType}`)
 
 		const teekAttestationBytes = bundle.teekSigned.attestationReport.report
 		const teetAttestationBytes = bundle.teetSigned.attestationReport.report
+
+		// Env vars from each side's GCP attestation; populated only when that
+		// side attested via GCP. Used for cross-binding checks below.
+		let teekEnvVars: Record<string, string> = {}
+		let teetEnvVars: Record<string, string> = {}
 
 		// Validate TEE_K attestation based on type
 		if(teekAttestationType === 'gcp') {
@@ -203,26 +300,13 @@ async function extractPublicKeys(
 				ethAddress: '0x' + Buffer.from(gcpResult.ethAddress).toString('hex'),
 				pcr0: gcpResult.pcr0 || 'gcp-no-digest'
 			}
+			teekEnvVars = gcpResult.envVars ?? {}
+		} else if(teekAttestationType === 'sev-snp') {
+			teekKeyResult = await verifySevSnpSide(teekAttestationBytes, 'tee_k', logger)
+		} else if(teekAttestationType === 'secure-boot') {
+			teekKeyResult = await verifySecureBootSide(teekAttestationBytes, 'tee_k', logger)
 		} else {
-			const nitroResult = await validateNitroAttestationAndExtractKey(teekAttestationBytes)
-
-			if(!nitroResult.isValid) {
-				throw new Error(`TEE_K Nitro attestation validation failed: ${nitroResult.errors.join(', ')}`)
-			}
-
-			if(!nitroResult.ethAddress) {
-				throw new Error('TEE_K Nitro attestation validation failed: no address')
-			}
-
-			if(nitroResult.userDataType !== 'tee_k') {
-				throw new Error(`TEE_K Nitro attestation validation failed: wrong TEE type, expected tee_k, got ${nitroResult.userDataType}`)
-			}
-
-			teekKeyResult = {
-				teeType: nitroResult.userDataType,
-				ethAddress: nitroResult.ethAddress,
-				pcr0: nitroResult.pcr0
-			}
+			throw new Error(`TEE_K unsupported attestation type: ${teekAttestationType}`)
 		}
 
 		// Validate TEE_T attestation based on type
@@ -246,42 +330,59 @@ async function extractPublicKeys(
 				ethAddress: '0x' + Buffer.from(gcpResult.ethAddress).toString('hex'),
 				pcr0: gcpResult.pcr0 || 'gcp-no-digest'
 			}
+			teetEnvVars = gcpResult.envVars ?? {}
 
-			// Cross-validate: TEE_T must have EXPECTED_TEEK_PCR0 env var matching TEE_K's PCR0
-			if(!gcpResult.envVars?.EXPECTED_TEEK_PCR0) {
-				throw new Error('TEE_T GCP attestation missing required EXPECTED_TEEK_PCR0 environment variable')
+			// Cross-bind TEE_K and TEE_T attestations.
+			//
+			// V2 (current TEE deployment): both TEEs carry
+			// EXPECTED_PEER_IMAGE_DIGEST in their attestation env vars,
+			// each pointing at the other's image_digest. Symmetric check —
+			// requires both sides to attest GCP.
+			//
+			// V1 (legacy, still in production until everyone migrates):
+			// only TEE_T carries EXPECTED_TEEK_PCR0. One-way check; TEE_K
+			// may be Nitro or GCP.
+			const teetExpectsKV2 = teetEnvVars.EXPECTED_PEER_IMAGE_DIGEST
+			const teetExpectsKV1 = teetEnvVars.EXPECTED_TEEK_PCR0
+
+			if(teetExpectsKV2 !== undefined) {
+				if(teekAttestationType !== 'gcp') {
+					throw new Error('V2 symmetric cross-binding requires TEE_K to attest GCP (EXPECTED_PEER_IMAGE_DIGEST is set on TEE_T but TEE_K attested ' + teekAttestationType + ')')
+				}
+
+				const teekExpectsT = teekEnvVars.EXPECTED_PEER_IMAGE_DIGEST
+				if(teekExpectsT === undefined) {
+					throw new Error('TEE_K GCP attestation missing required EXPECTED_PEER_IMAGE_DIGEST environment variable (V2 symmetric cross-binding)')
+				}
+
+				logger.info(`V2 cross-binding: T->K expected=${teetExpectsKV2} actual=${teekKeyResult.pcr0}; K->T expected=${teekExpectsT} actual=${teetKeyResult.pcr0}`)
+
+				if(teetExpectsKV2 !== teekKeyResult.pcr0) {
+					throw new Error(`TEE cross-validation failed: TEE_T expects TEE_K image_digest "${teetExpectsKV2}" but got "${teekKeyResult.pcr0}"`)
+				}
+
+				if(teekExpectsT !== teetKeyResult.pcr0) {
+					throw new Error(`TEE cross-validation failed: TEE_K expects TEE_T image_digest "${teekExpectsT}" but got "${teetKeyResult.pcr0}"`)
+				}
+
+				logger.info('TEE V2 symmetric cross-validation successful')
+			} else if(teetExpectsKV1 !== undefined) {
+				logger.info(`V1 cross-binding: T->K expected=${teetExpectsKV1} actual=${teekKeyResult.pcr0}`)
+
+				if(teetExpectsKV1 !== teekKeyResult.pcr0) {
+					throw new Error(`TEE cross-validation failed: TEE_T expects TEE_K PCR0 "${teetExpectsKV1}" but got "${teekKeyResult.pcr0}"`)
+				}
+
+				logger.info('TEE V1 cross-validation successful: TEE_K PCR0 matches TEE_T expectation')
+			} else {
+				throw new Error('TEE_T GCP attestation missing cross-binding env var (expected EXPECTED_PEER_IMAGE_DIGEST for V2 or EXPECTED_TEEK_PCR0 for V1)')
 			}
-
-			const expectedPcr0 = gcpResult.envVars.EXPECTED_TEEK_PCR0
-			const actualPcr0 = teekKeyResult.pcr0
-
-			logger.info(`Cross-validating TEE_K PCR0: expected=${expectedPcr0}, actual=${actualPcr0}`)
-
-			if(expectedPcr0 !== actualPcr0) {
-				throw new Error(`TEE cross-validation failed: TEE_T expects TEE_K PCR0 "${expectedPcr0}" but got "${actualPcr0}"`)
-			}
-
-			logger.info('TEE cross-validation successful: TEE_K PCR0 matches TEE_T expectation')
+		} else if(teetAttestationType === 'sev-snp') {
+			teetKeyResult = await verifySevSnpSide(teetAttestationBytes, 'tee_t', logger)
+		} else if(teetAttestationType === 'secure-boot') {
+			teetKeyResult = await verifySecureBootSide(teetAttestationBytes, 'tee_t', logger)
 		} else {
-			const nitroResult = await validateNitroAttestationAndExtractKey(teetAttestationBytes)
-
-			if(!nitroResult.isValid) {
-				throw new Error(`TEE_T Nitro attestation validation failed: ${nitroResult.errors.join(', ')}`)
-			}
-
-			if(!nitroResult.ethAddress) {
-				throw new Error('TEE_T Nitro attestation validation failed: no address')
-			}
-
-			if(nitroResult.userDataType !== 'tee_t') {
-				throw new Error(`TEE_T Nitro attestation validation failed: wrong TEE type, expected tee_t, got ${nitroResult.userDataType}`)
-			}
-
-			teetKeyResult = {
-				teeType: nitroResult.userDataType,
-				ethAddress: nitroResult.ethAddress,
-				pcr0: nitroResult.pcr0
-			}
+			throw new Error(`TEE_T unsupported attestation type: ${teetAttestationType}`)
 		}
 
 		logger.info('Attestations validated successfully')
@@ -443,15 +544,6 @@ function parseKOutputPayload(signedMessage: SignedMessage): KOutputPayload {
 	// Use actual protobuf decoding
 	const payload = KOutputPayload.decode(signedMessage.body)
 
-	// Validate required fields
-	if(!payload.redactedRequest) {
-		throw new Error('Missing redacted request in TEE_K payload')
-	}
-
-	if(!payload.consolidatedResponseKeystream || payload.consolidatedResponseKeystream.length === 0) {
-		throw new Error('Missing consolidated response keystream in TEE_K payload')
-	}
-
 	if(!payload.certificateInfo) {
 		throw new Error('Missing certificate info in TEE_K payload')
 	}
@@ -466,12 +558,6 @@ function parseKOutputPayload(signedMessage: SignedMessage): KOutputPayload {
 function parseTOutputPayload(signedMessage: SignedMessage): TOutputPayload {
 	// Use actual protobuf decoding
 	const payload = TOutputPayload.decode(signedMessage.body)
-
-	// Validate required fields
-	if(!payload.consolidatedResponseCiphertext || payload.consolidatedResponseCiphertext.length === 0) {
-		throw new Error('Missing consolidated response ciphertext in TEE_T payload')
-	}
-
 
 	return payload
 }

@@ -26,7 +26,7 @@ const origAttributes = Object.getOwnPropertyDescriptor(
 if(origAttributes) {
 	Object.defineProperty(Element.prototype, 'attributes', {
 		get: function(...args) {
-			// eslint-disable-next-line prefer-rest-params
+
 			const attrs = origAttributes.call(this, ...args)
 			attrs.item = (idx: number) => {
 				const el = attrs[idx]

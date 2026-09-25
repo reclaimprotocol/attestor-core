@@ -1,5 +1,6 @@
-import assert from 'assert'
 import { afterEach, beforeEach, describe, it } from 'node:test'
+
+import assert from 'assert'
 import type { TLSSocket } from 'tls'
 
 import { AttestorClient } from '#src/client/index.ts'

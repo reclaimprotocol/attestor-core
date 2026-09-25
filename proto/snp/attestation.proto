@@ -1,0 +1,255 @@
+syntax = "proto3";
+
+package confidential_space;
+
+import "state.proto";
+
+option go_package = "github.com/GoogleCloudPlatform/confidential-space/server/proto/gen/attestation";
+option java_multiple_files = true;
+option java_outer_classname = "Attestation";
+
+// Enumerates the supported GPU architecture types.
+enum GpuArchitectureType {
+  // Unspecified GPU architecture type.
+  GPU_ARCHITECTURE_TYPE_UNSPECIFIED = 0;
+  // Reserved for other GPU architecture types to support future use cases.
+  reserved 1, 2, 3, 4, 5, 6, 7;
+  // Hopper GPU architecture type.
+  GPU_ARCHITECTURE_TYPE_HOPPER = 8;
+  // Blackwell GPU architecture type.
+  GPU_ARCHITECTURE_TYPE_BLACKWELL = 10;
+}
+
+message GpuInfo {
+  // The unique identifier of the GPU.
+  string uuid = 1;
+
+  // Driver version obtained from the GPU's attestation report.
+  string driver_version = 2;
+
+  // VBIOS version obtained from the GPU's attestation report.
+  string vbios_version = 3;
+
+  // The architecture type of the GPU.
+  GpuArchitectureType gpu_architecture_type = 4;
+
+  // The verified attestation certificate chain for the GPU device.
+  bytes attestation_certificate_chain = 5;
+
+  // This field contains SPDM request/response defined in
+  // https://www.dmtf.org/sites/default/files/standards/documents/DSP0274_1.1.0.pdf
+  bytes attestation_report = 6;
+}
+
+// An Nvidia attestation report for GPU and NVSwitch devices.
+// Contains necessary attestation evidence that the client collects for
+// verification.
+message NvidiaAttestationReport {
+  // Single GPU Passthrough (SPT) attestation.
+  message SinglePassthroughAttestation {
+    // Single GPU quote.
+    GpuInfo gpu_quote = 1;
+  }
+
+  // MultiGpuSecurePassthroughAttestation contains the attestation evidence
+  // for a Multi-GPU Secure Passthrough (MPT) attestation.
+  message MultiGpuSecurePassthroughAttestation {
+    // A list of GPU quotes.
+    repeated GpuInfo gpu_quotes = 1;
+  }
+
+  // The Confidential Computing feature that the attestation is for.
+  oneof cc_feature {
+    // Single GPU Passthrough (SPT) attestation.
+    SinglePassthroughAttestation spt = 1;
+
+    // Multi-GPU Secure Passthrough (MPT) attestation.
+    MultiGpuSecurePassthroughAttestation mpt = 3;  // MPT attestation.
+  }
+
+  // The nonce used for GPU attestation.
+  bytes nonce = 4;
+
+  reserved 2;
+}
+
+message DeviceAttestationReport {
+  oneof report {
+    // An Nvidia attestation report for GPU and NVSwitch devices.
+    NvidiaAttestationReport nvidia_report = 1;
+  }
+}
+
+message TdxCcelQuote {
+  // The CCEL event log. Formatted as described in the UEFI 2.10.
+  // Contains events for guest OS boot.
+  bytes ccel_boot_event_log = 1;
+
+  // Formatted as a Canonical Event Log.
+  // The event log containing Attested COS launcher events.
+  bytes cel_launch_event_log = 2;
+
+  // The TDX attestation quote from the guest. A serialized Quote
+  // from https://github.com/google/go-tdx-guest/blob/main/proto/tdx.proto
+  bytes td_quote = 3;
+}
+
+message VmAttestationQuote {
+  oneof quote {
+    // A TDX with CCEL and RTMR Attestation Quote.
+    TdxCcelQuote tdx_ccel_quote = 1;
+
+    // A standalone vTPM Attestation Quote.
+    TpmQuote tpm_quote = 2;
+
+    // Future expansion for AMD SEV-SNP, ARM CCA, etc.
+  }
+}
+
+// Represents an attestation over a challenge provided by the workload.
+message VmAttestation {
+  // Chosen by WSD.
+  bytes label = 1;
+
+  // Provided by the workload.
+  bytes challenge = 2;
+
+  // Optional, provided by WSD.
+  bytes extra_data = 3;
+
+  // report_data is `SHA512(label || SHA512(challenge || SHA512(extra_data)))`
+  VmAttestationQuote quote = 4;
+
+  // Runtime attestations for attached devices.
+  repeated DeviceAttestationReport device_reports = 5;
+}
+
+message KeyAttestation {
+  // label is "KEY_ATTESTATION" (defined as KeyAttestationLabel constant).
+  // extra_data is a binary-serialized instance of KeyClaims.
+  VmAttestation attestation = 1;
+}
+
+// Container for keys whose protection mechanism is KEY_PROTECTION_VM.
+message VmProtectedKeyEndorsement {
+  // Contains a VmProtectionBindingClaims.
+  KeyAttestation binding_key_attestation = 1;
+
+  // Contains a VmProtectionKeyClaims.
+  KeyAttestation protected_key_attestation = 2;
+}
+
+// Container message for endorsing keys with various levels of protection.
+message KeyEndorsement {
+  oneof endorsement {
+    VmProtectedKeyEndorsement vm_protected_key_endorsement = 1;
+  }
+}
+
+// Host and vTPM attestation evidence
+message TpmAttestationEndorsement {
+  // An attestation key (AK) certificate and cert chain.
+  message AkCertEndorsement {
+    // An attestation key (AK) certificate.
+    bytes ak_cert = 1;
+
+    // List of DER-encoded X.509 certificates which, together with the ak_cert,
+    // chain back to a trusted Root Certificate.
+    repeated bytes ak_cert_chain = 2;
+  }
+
+  message TitanEndorsement {
+    // Certificate signed by Titan's DICE alias key over the EK used to generate
+    // the quotes. On Titan, the EK is a signing key that can be used directly.
+    bytes ek_cert = 1;
+
+    // Certificate chain rooted by Titan's DeviceID public key.
+    bytes dice_cert_chain = 2;
+
+    reserved 4, 5, 6;
+  }
+
+  oneof endorsement {
+    // An attestation key (AK) certificate and cert chain.
+    AkCertEndorsement ak_cert_endorsement = 1;
+
+    // Endorsement certificate chain for the Titan chip.
+    TitanEndorsement titan_endorsement = 2;
+  }
+}
+
+message TpmQuote {
+  message SignedQuote {
+    uint32 hash_algorithm = 1;  // Encoded as a TPM_ALG_ID.
+    map<uint32, bytes> pcr_values =
+        2;                     // Raw binary values of each PCR being quoted.
+    bytes tpms_attest = 3;     // Contains a TPMS_QUOTE_INFO.
+    bytes tpmt_signature = 4;  // Contains the signature.
+  }
+
+  // Generated by calling TPM2_Quote on each PCR bank.
+  repeated SignedQuote quotes = 1;
+
+  // The binary TCG Event Log containing events measured into the TPM by the
+  // platform firmware and operating system. Formatted as described in the
+  // "TCG PC Client Platform Firmware Profile Specification" as a series of
+  // TCG_PCR_EVENT2 entries.
+  bytes pcclient_boot_event_log = 2;
+
+  // Formatted as a Canonical Event Log.
+  // The event log containing Attested COS launcher events.
+  bytes cel_launch_event_log = 3;
+
+  // Endorsement for the TPM attestation.
+  TpmAttestationEndorsement endorsement = 4;
+}
+
+// Provides attestations for values not present in PCRs. For example, the Titan
+// TPM on certain platforms is electrically integrated such that it can report,
+// via reserved NV index, the number of warm resets the CPU has undergone since
+// the last power cycle.
+//
+// Each signature within this message can be verified using the TpmQuote's
+// `endorsement` field.
+message TpmAuxiliaryAttestation {
+  message SignedNvCertify {
+    reserved 1, 2;
+    bytes tpms_nv_public = 3;  // Used to compute the Name of the NV index.
+    bytes tpms_attest = 4;     // Contains a TPMS_NV_CERTIFY_INFO.
+    bytes tpmt_signature = 5;  // Contains the signature.
+  }
+
+  // The signed attestations over the NV indices.
+  repeated SignedNvCertify signed_nvs = 1;
+
+  reserved 2;
+}
+
+message HostAttestation {
+  // Shall be "HOST_ATTESTATION" (defined as HostAttestationLabel constant).
+  bytes label = 1;
+
+  // Provided by the workload.
+  bytes challenge = 2;
+
+  // Shall be empty (set by WSD, present for future expansion).
+  bytes extra_data = 3;
+
+  // Within each of the below fields, the TPMS_ATTEST's extraData contains
+  // `SHA256(label || SHA256(challenge || SHA256(extra_data)))`
+  TpmQuote tpm_quote = 4;
+
+  // Auxiliary information not stored in PCRs, such as warm reset data.
+  TpmAuxiliaryAttestation aux_attestation = 5;
+}
+
+message HostACOSState {
+  // The Google Measurement State of the host machine.
+  state.GMESState gmes = 1;
+
+  // The TDX CPU PIID.
+  bytes cpu_piid = 2;
+
+  // Number of warm resets since the last power cycle.
+  int64 warm_reset_count = 3;
+}

@@ -1,6 +1,6 @@
 import type { TLSConnectionOptions } from '@reclaimprotocol/tls'
 import { areUint8ArraysEqual, concatenateUint8Arrays, uint8ArrayToBinaryStr } from '@reclaimprotocol/tls'
-import { utils } from 'ethers'
+import { encodeBase64 } from 'ethers'
 
 import { DEFAULT_HTTPS_PORT, RECLAIM_USER_AGENT } from '#src/config/index.ts'
 import { AttestorVersion } from '#src/proto/api.ts'
@@ -23,18 +23,33 @@ import type {
 	ProviderSecretParams,
 	RedactedOrHashedArraySlice
 } from '#src/types/index.ts'
+import { getEnvVariable } from '#src/utils/env.ts'
 import {
+	extractRequestBufferFromTranscript,
 	findIndexInUint8Array,
 	getHttpRequestDataFromTranscript,
 	logger,
+	makeHttpResponseParser,
+	REDACTION_CHAR,
 	REDACTION_CHAR_CODE,
 	strToUint8Array,
 	uint8ArrayToStr,
 } from '#src/utils/index.ts'
 
-const { base64 } = utils
-
 const OK_HTTP_HEADER = 'HTTP/1.1 200'
+
+// we need to ensure the HTTP line (METHOD <path> HTTP/1.1) does not
+// contain another request smuggled in, so we set the maximum number of
+// redactions in the path to be less than the length of the minimum valid HTTP
+// request line that can create a smuggle-able tunnel
+// Should be about 59 chars
+const MIN_INJECTION_STR
+	= ' HTTP/1.1\r\n\r\n'
+
+const MAX_REDACTIONS_IN_PATH = +(
+	getEnvVariable('HTTP_MAX_REDACTIONS_IN_PATH')
+	?? (MIN_INJECTION_STR.length - 1)
+)
 const dateHeaderRegex = '[dD]ate: ((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun), (?:[0-3][0-9]) (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) (?:[0-9]{4}) (?:[01][0-9]|2[0-3])(?::[0-5][0-9]){2} GMT)'
 const dateDiff = 1000 * 60 * 10 // allow 10 min difference
 
@@ -117,8 +132,8 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const httpReqHeaderStr = [
 			reqLine,
 			`Host: ${getHostHeaderString(url)}`,
-			`Content-Length: ${contentLength}`,
 			'Connection: close',
+			`Content-Length: ${contentLength}`,
 			//no compression
 			'Accept-Encoding: identity',
 			...buildHeaders(pubHeaders),
@@ -169,7 +184,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 	},
 	getResponseRedactions({ response, params: rawParams, logger, ctx }) {
-		logger.debug({ response: base64.encode(response), params: rawParams })
+		logger.debug({ response: encodeBase64(response), params: rawParams })
 
 		const res = parseHttpResponse(response)
 		if(!rawParams.responseRedactions?.length) {
@@ -177,7 +192,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		}
 
 		if(((res.statusCode / 100) >> 0) !== 2) {
-			logger.error({ response: base64.encode(response), params: rawParams })
+			logger.error({ response: encodeBase64(response), params: rawParams })
 			throw new Error(
 				`Expected status 2xx, got ${res.statusCode} (${res.statusMessage})`
 			)
@@ -189,9 +204,11 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const headerEndIndex = res.statusLineEndIndex!
 		const bodyStartIdx = res.bodyStartIndex ?? 0
 		if(bodyStartIdx < 4) {
-			logger.error({ response: base64.encode(response) })
+			logger.error({ response: encodeBase64(response) })
 			throw new Error('Failed to find response body')
 		}
+
+		const revealFraming = shouldRevealChunkFraming(ctx.version)
 
 		const reveals: RedactedOrHashedArraySlice[] = [
 			{ fromIndex: 0, toIndex: headerEndIndex }
@@ -202,7 +219,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			const crlfs = response
 				.slice(res.headerEndIdx, res.headerEndIdx + 4)
 			if(!areUint8ArraysEqual(crlfs, strToUint8Array('\r\n\r\n'))) {
-				logger.error({ response: base64.encode(response) })
+				logger.error({ response: encodeBase64(response) })
 				throw new Error(
 					`Failed to find header/body separator at index ${res.headerEndIdx}`
 				)
@@ -216,12 +233,22 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			reveals.push(res.headerIndices['date'])
 		}
 
+		//reveal content-type so the verifier can decode the response body charset
+		if(res.headerIndices['content-type']) {
+			reveals.push(res.headerIndices['content-type'])
+		}
+
+		//reveal transfer-encoding header so the verifier can dechunk the body
+		if(revealFraming && res.headerIndices['transfer-encoding']) {
+			reveals.push(res.headerIndices['transfer-encoding'])
+		}
+
 		const body = uint8ArrayToBinaryStr(res.body)
 
 		const redactions: RedactedOrHashedArraySlice[] = []
 		for(const rs of params.responseRedactions || []) {
 			const processor = processRedactionRequest(
-				body, rs, bodyStartIdx, res.chunks
+				body, rs, bodyStartIdx, res.chunks, revealFraming
 			)
 			for(const { reveal, redactions: reds } of processor) {
 				reveals.push(reveal)
@@ -229,7 +256,21 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			}
 		}
 
-		reveals.sort((a, b) => a.toIndex - b.toIndex)
+		//reveal all chunk framing (size lines + terminator) so the verifier
+		//can dechunk; chunk data stays redacted unless a redaction reveals it
+		if(revealFraming && res.chunks?.length) {
+			let prev = res.headerEndIdx + 4
+			for(const chunk of res.chunks) {
+				reveals.push({ fromIndex: prev, toIndex: chunk.fromIndex })
+				prev = chunk.toIndex
+			}
+
+			reveals.push({ fromIndex: prev, toIndex: response.length })
+		}
+
+		//reveals can overlap (e.g. a redaction reveal spanning chunk framing),
+		//so redact the complement of their union
+		reveals.sort((a, b) => a.fromIndex - b.fromIndex)
 
 		if(reveals.length > 1) {
 			let currentIndex = 0
@@ -238,10 +279,12 @@ const HTTP_PROVIDER: Provider<'http'> = {
 					redactions.push({ fromIndex: currentIndex, toIndex: r.fromIndex })
 				}
 
-				currentIndex = r.toIndex
+				currentIndex = Math.max(currentIndex, r.toIndex)
 			}
 
-			redactions.push({ fromIndex: currentIndex, toIndex: response.length })
+			if(currentIndex < response.length) {
+				redactions.push({ fromIndex: currentIndex, toIndex: response.length })
+			}
 		}
 
 		for(const r of reveals) {
@@ -256,7 +299,7 @@ const HTTP_PROVIDER: Provider<'http'> = {
 
 		return redactions
 	},
-	assertValidProviderReceipt({ receipt, params: paramsAny, logger, ctx }) {
+	assertValidProviderReceipt({ clientVersion, receipt, params: paramsAny, logger, ctx }) {
 		logTranscript()
 		let extractedParams: { [_: string]: string } = {}
 		const secretParams = ('secretParams' in paramsAny)
@@ -266,17 +309,27 @@ const HTTP_PROVIDER: Provider<'http'> = {
 		const params = newParams.newParams
 		extractedParams = { ...extractedParams, ...newParams.extractedValues }
 
-		const req = getHttpRequestDataFromTranscript(receipt)
-		if(req.method !== params.method.toLowerCase()) {
-			throw new Error(`Invalid method: ${req.method}`)
-		}
-
 		const url = new URL(params.url)
 		const { protocol, pathname } = url
 
 		if(protocol !== 'https:') {
 			logger.error('params URL: %s', params.url)
 			throw new Error(`Expected protocol: https, found: ${protocol}`)
+		}
+
+		const reqBuffer = extractRequestBufferFromTranscript(receipt)
+		if(
+			// 3.1.0 introduced a breaking change for request creation
+			// to prevent smuggling attacks
+			clientVersion >= AttestorVersion.ATTESTOR_VERSION_3_1_0
+			|| getEnvVariable('ALLOW_OLDER_INSECURE_PROOFS') !== '1'
+		) {
+			assertNoSmuggle(reqBuffer, params)
+		}
+
+		const req = getHttpRequestDataFromTranscript(reqBuffer)
+		if(req.method !== params.method.toLowerCase()) {
+			throw new Error(`Invalid method: ${req.method}`)
 		}
 
 		const searchParams = params.url.includes('?') ? params.url.split('?')[1] : ''
@@ -297,28 +350,47 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			throw new Error(`Connection header must be "close", got "${connectionHeader}"`)
 		}
 
-		const serverBlocks = receipt
+		const allServerBlocks = receipt
 			.filter(s => s.sender === 'server')
 			.map((r) => r.message)
-			// filter out fully redacted blocks
-			.filter(b => !b.every(b => b === REDACTION_CHAR_CODE))
+		// drop leading fully-redacted (handshake) blocks so the response starts
+		// at the status line, but keep redacted body records so chunked byte
+		// alignment is preserved for dechunking
+		const firstRealIdx = allServerBlocks
+			.findIndex(b => !b.every(x => x === REDACTION_CHAR_CODE))
+		const serverBlocks = firstRealIdx === -1
+			? []
+			: allServerBlocks.slice(firstRealIdx)
 		const response = concatArrays(...serverBlocks)
 
-		let res: string
-		res = uint8ArrayToStr(response)
+		let bodyStart: number
+		if(shouldRevealCrlf(ctx)) {
+			const responseAfterStatus = response.slice(OK_HTTP_HEADER.length)
+			const separatorIdx = findIndexInUint8Array(
+				responseAfterStatus,
+				strToUint8Array('\r\n\r\n'),
+			)
+			if(separatorIdx === -1) {
+				throw new Error('Response body start not found')
+			}
 
+			bodyStart = OK_HTTP_HEADER.length + separatorIdx + 4
+		} else {
+			bodyStart = OK_HTTP_HEADER.length
+		}
+		const headersText = uint8ArrayToStr(response.slice(0, bodyStart))
 		const okRegex = makeRegex('^HTTP\\/1.1 2\\d{2}')
-		const matchRes = okRegex.exec(res)
+		const matchRes = okRegex.exec(headersText)
 		if(!matchRes) {
 			const statusRegex = makeRegex('^HTTP\\/1.1 (\\d{3})')
-			const matchRes = statusRegex.exec(res)
+			const matchRes = statusRegex.exec(headersText)
 			if(matchRes && matchRes.length > 1) {
 				throw new Error(`Provider returned error ${matchRes[1]}`)
 			}
 
-			let lineEnd = res.indexOf('*')
+			let lineEnd = headersText.indexOf('*')
 			if(lineEnd === -1) {
-				lineEnd = res.indexOf('\n')
+				lineEnd = headersText.indexOf('\n')
 			}
 
 			if(lineEnd === -1) {
@@ -326,19 +398,33 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			}
 
 			throw new Error(
-				`Response did not start with \"HTTP/1.1 2XX\" got "${res.slice(0, lineEnd)}"`
+				`Response did not start with \"HTTP/1.1 2XX\" got "${headersText.slice(0, lineEnd)}"`
 			)
 		}
 
-		let bodyStart: number
-		if(shouldRevealCrlf(ctx)) {
-			bodyStart = res.indexOf('\r\n\r\n', OK_HTTP_HEADER.length) + 4
-			if(bodyStart < 4) {
-				throw new Error('Response body start not found')
-			}
-		} else {
-			bodyStart = OK_HTTP_HEADER.length
+		const paramBody = params.body instanceof Uint8Array
+			? params.body
+			: strToUint8Array(params.body || '')
+
+		if(paramBody.length > 0 && !matchRedactedStrings(paramBody, req.body)) {
+			throw new Error('request body mismatch')
 		}
+
+
+		let body: Uint8Array = response.slice(bodyStart)
+		if(shouldRevealChunkFraming(clientVersion)) {
+			//dechunk the body so matches see contiguous content; redaction
+			//asterisks are preserved as boundaries between revealed slices
+			if(/transfer-encoding:\s*chunked/i.test(headersText)) {
+				body = dechunkResponseBody(body)
+			}
+		}
+
+		const charset = shouldRevealCrlf(ctx)
+			? (ctx.authenticatedResponseCharset ?? getResponseBodyCharset(headersText))
+			: undefined
+		const bodyText = decodeResponseBody(body, charset)
+		let res = headersText + bodyText
 
 		//validate server Date header if present
 		const dateHeader = makeRegex(dateHeaderRegex).exec(res)
@@ -355,21 +441,11 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			}
 		}
 
-
-		const paramBody = params.body instanceof Uint8Array
-			? params.body
-			: strToUint8Array(params.body || '')
-
-		if(paramBody.length > 0 && !matchRedactedStrings(paramBody, req.body)) {
-			throw new Error('request body mismatch')
+		if(!shouldRevealChunkFraming(clientVersion) && !secretParams) {
+			//legacy clients redact chunk framing; collapse asterisk runs so
+			//matches can span the redacted framing
+			res = res.slice(bodyStart).replace(/\*{3,}/g, '')
 		}
-
-
-		//remove asterisks to account for chunks in the middle of revealed strings
-		if(!secretParams) {
-			res = res.slice(bodyStart).replace(/(\*){3,}/g, '')
-		}
-
 
 		for(const { type, value, invert } of params.responseMatches || []) {
 			const inv = Boolean(invert) // explicitly cast to boolean
@@ -438,18 +514,104 @@ const HTTP_PROVIDER: Provider<'http'> = {
 			const clientMsgs = receipt.filter(s => s.sender === 'client').map(m => m.message)
 			const serverMsgs = receipt.filter(s => s.sender === 'server').map(m => m.message)
 
-			const clientTranscript = base64.encode(concatenateUint8Arrays(clientMsgs))
-			const serverTranscript = base64.encode(concatenateUint8Arrays(serverMsgs))
+			const clientTranscript = encodeBase64(concatenateUint8Arrays(clientMsgs))
+			const serverTranscript = encodeBase64(concatenateUint8Arrays(serverMsgs))
 
-			logger.debug({ request: clientTranscript, response: serverTranscript, params: paramsAny })
+			logger.debug({
+				requestBytes: clientTranscript.length,
+				responseBytes: serverTranscript.length,
+			}, 'http transcript captured')
 		}
 	},
+}
+
+// We need to validate that the request starts correctly, the first two
+// headers must be the host & connection: close header. This ensures that
+// even if another request was made before the one we're reading now, the
+// validation happens against the last one. Prevents a spoof where the claim
+// response was received for another request that we did not expect.
+function assertNoSmuggle(reqBuffer: Uint8Array, params: HTTPProviderParams) {
+	const reqStr = uint8ArrayToBinaryStr(reqBuffer)
+	const expRegex = makeRegex(
+		`^${params.method} (?<path>[^\\s]+) HTTP\\/1\\.1\\r\\n`
+		+ `Host: ${getHostHeaderString(new URL(params.url))}\\r\\n`
+		+ 'Connection: close\\r\\n'
+	)
+	const rslt = expRegex.exec(reqStr)
+	if(!rslt?.groups?.path) {
+		throw new Error(
+			'Method/Host mismatch, or first 2 headers were not Host and Connection'
+		)
+	}
+
+	let redInPathCount = 0
+	for(const char of rslt.groups.path) {
+		if(char === REDACTION_CHAR) {
+			redInPathCount++
+		}
+	}
+
+	if(redInPathCount > MAX_REDACTIONS_IN_PATH) {
+		throw new Error(`Too many redactions in URL path: ${redInPathCount}`)
+	}
 }
 
 // revealing CRLF is a breaking change -- and should only be done
 // if the client's version supports it
 function shouldRevealCrlf({ version }: ProviderCtx) {
 	return version >= AttestorVersion.ATTESTOR_VERSION_2_0_1
+}
+
+// revealing chunk framing (instead of redacting it) + dechunking on the
+// verifier is a breaking change; older clients still redact framing and rely
+// on the asterisk-collapse matching path
+function shouldRevealChunkFraming(version: AttestorVersion) {
+	return version >= AttestorVersion.ATTESTOR_VERSION_3_2_0
+}
+
+// Receipt bodies contain claimant-selected redactions and OPRF replacements.
+// They cannot prove original BOM, declaration precedence, or HTML context.
+// Keep the established header/default policy until document charset selection
+// is independently authenticated against the original response.
+function getResponseBodyCharset(headers: string) {
+	const contentType = /(?:^|[\r\n*])content-type\s*:\s*([^*\r\n]*)/i
+		.exec(headers)?.[1]
+	if(typeof contentType === 'undefined') {
+		return undefined
+	}
+
+	const charsetMatch = /(?:^|;)\s*charset\s*=\s*(?:"((?:[^"\\]|\\.)*)"|([^;\s]*))/i
+		.exec(contentType)
+	if(!charsetMatch) {
+		return undefined
+	}
+
+	const charset = charsetMatch[1]?.replace(/\\(.)/g, '$1') ?? charsetMatch[2]
+	return charset.trim() || undefined
+}
+
+function decodeResponseBody(body: Uint8Array, charset: string | undefined) {
+	try {
+		return new TextDecoder(charset ?? 'utf-8').decode(body)
+	} catch(error) {
+		if(charset) {
+			throw new Error(`Unsupported response charset "${charset}"`, { cause: error })
+		}
+
+		throw error
+	}
+}
+
+// dechunk a revealed body by reusing the byte-oriented parser: wrap it in a
+// minimal (already-validated) header block. streamEnded() is skipped to
+// tolerate trailing bytes.
+function dechunkResponseBody(body: Uint8Array) {
+	const parser = makeHttpResponseParser()
+	parser.onChunk(concatenateUint8Arrays([
+		strToUint8Array('HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n'),
+		body,
+	]))
+	return parser.res.body ?? new Uint8Array()
 }
 
 function getHostPort(params: ProviderParams<'http'>, secretParams: ProviderSecretParams<'http'>) {
@@ -492,6 +654,7 @@ function* processRedactionRequest(
 	rs: HTTPResponseRedaction,
 	bodyStartIdx: number,
 	resChunks: ArraySlice[] | undefined,
+	revealFraming: boolean,
 ): Generator<RedactionItem> {
 	let element = body
 	let elementIdx = 0
@@ -523,7 +686,7 @@ function* processRedactionRequest(
 
 	function* processJsonPath() {
 		const jsonPathIndexes = extractJSONValueIndexes(element, rs.jsonPath!)
-		// eslint-disable-next-line max-depth
+
 		const eIndex = elementIdx
 		for(const ji of jsonPathIndexes) {
 			const jStart = ji.start
@@ -531,7 +694,7 @@ function* processRedactionRequest(
 			element = body.slice(eIndex + jStart, eIndex + jEnd)
 			elementIdx = eIndex + jStart
 			elementLength = jEnd - jStart
-			// eslint-disable-next-line max-depth
+
 			if(rs.regex) {
 				yield* processRegexp()
 			} else {
@@ -542,16 +705,16 @@ function* processRedactionRequest(
 
 	function* processRegexp() {
 		logger.debug({
-			element: base64.encode(strToUint8Array(element)),
-			body: base64.encode(strToUint8Array(body))
+			element: encodeBase64(strToUint8Array(element)),
+			body: encodeBase64(strToUint8Array(body))
 		})
 		const regexp = makeRegex(rs.regex!)
 		const elem = element || body
 		const match = regexp.exec(elem)
-		// eslint-disable-next-line max-depth
+
 		if(!match?.[0]) {
 			throw new Error(
-				`regexp ${rs.regex} does not match found element '${base64.encode(strToUint8Array(elem))}'`
+				`regexp ${rs.regex} does not match found element '${encodeBase64(strToUint8Array(elem))}'`
 			)
 		}
 
@@ -605,10 +768,8 @@ function* processRedactionRequest(
 		yield* addRedaction(null)
 	}
 
-	// eslint-disable-next-line unicorn/consistent-function-scoping
 	function* addRedaction(
 		hash: RedactedOrHashedArraySlice['hash'] | null = rs.hash,
-		_resChunks = resChunks
 	): Generator<RedactionItem> {
 		if(elementIdx < 0 || !elementLength) {
 			return
@@ -616,14 +777,12 @@ function* processRedactionRequest(
 
 		const reveal = getReveal(elementIdx, elementLength, hash || undefined)
 
-		yield {
-			reveal,
-			redactions: getRedactionsForChunkHeaders(
-				reveal.fromIndex,
-				reveal.toIndex,
-				_resChunks
-			)
-		}
+		// new clients leave chunk framing revealed (verifier dechunks); older
+		// clients redact the framing inside a reveal that spans chunks
+		const redactions = revealFraming
+			? []
+			: getRedactionsForChunkHeaders(reveal.fromIndex, reveal.toIndex, resChunks)
+		yield { reveal, redactions }
 	}
 
 	function getReveal(

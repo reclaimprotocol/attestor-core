@@ -1,5 +1,5 @@
 
-import type { NewTaskCreatedEventObject } from '#src/avs/contracts/ReclaimServiceManager.ts'
+import type { NewTaskCreatedEvent } from '#src/avs/contracts/ReclaimServiceManager.ts'
 import type { createClaimOnAttestor } from '#src/client/index.ts'
 import type { ClaimTunnelResponse } from '#src/proto/api.ts'
 import type { CreateClaimOnAttestorOpts, ProofGenerationStep, ProviderName } from '#src/types/index.ts'
@@ -17,7 +17,7 @@ export type ChainConfig = {
 
 export type CreateClaimOnAvsStep = {
 	type: 'taskCreated'
-	data: NewTaskCreatedEventObject
+	data: NewTaskCreatedEvent.OutputObject
 } | {
 	type: 'attestorStep'
 	data: {
@@ -27,7 +27,7 @@ export type CreateClaimOnAvsStep = {
 } | {
 	type: 'attestorDone'
 	data: {
-		task: NewTaskCreatedEventObject
+		task: NewTaskCreatedEvent.OutputObject
 		/**
 		 * Index of the operator in the task
 		 * that has finished the proof generation

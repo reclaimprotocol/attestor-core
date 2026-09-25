@@ -1,7 +1,8 @@
-import type { OPRFOperator, ZKEngine, ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
 import '#src/external-rpc/global.d.ts'
 
-import type { TaskCompletedEventObject } from '#src/avs/contracts/ReclaimServiceManager.ts'
+import type { OPRFOperator, ZKEngine, ZKOperator } from '@reclaimprotocol/zk-symmetric-crypto'
+
+import type { TaskCompletedEvent } from '#src/avs/contracts/ReclaimServiceManager.ts'
 import type { CreateClaimOnAvsOpts, CreateClaimOnAvsStep } from '#src/avs/types/index.ts'
 import type { CreateClaimOnMechainStep } from '#src/mechain/types/index.ts'
 import type { AuthenticationRequest } from '#src/proto/api.ts'
@@ -80,7 +81,7 @@ type LogLevelOptions = {
 }
 
 type AVSCreateResult = {
-	object: TaskCompletedEventObject
+	object: TaskCompletedEvent.OutputObject
 	txHash: string
 }
 
