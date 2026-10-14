@@ -556,10 +556,7 @@ function parseKOutputPayload(signedMessage: SignedMessage): KOutputPayload {
  * Parses TEE_T output payload
  */
 function parseTOutputPayload(signedMessage: SignedMessage): TOutputPayload {
-	// Use actual protobuf decoding
-	const payload = TOutputPayload.decode(signedMessage.body)
-
-	return payload
+	return TOutputPayload.decode(signedMessage.body)
 }
 
 /**
@@ -582,13 +579,13 @@ function validateTimestamps(
 	const tTimestampS = Math.floor(tTimestamp / 1000)
 	const nowS = Math.floor(now / 1000)
 
-	logger.info('Validating TEE timestamps', {
+	logger.info({
 		kTimestampMs: kTimestamp,
 		tTimestampMs: tTimestamp,
 		kTimestampS,
 		tTimestampS,
 		nowS
-	})
+	}, 'Validating TEE timestamps')
 
 	// 1. Check that both timestamps are not earlier than 10 minutes in the past
 	const maxAgeMs = 10 * 60 * 1000 // 10 minutes in milliseconds
@@ -616,7 +613,7 @@ function validateTimestamps(
 
 	// 2. Check that both timestamps are within 1 minute of each other
 	const timestampDiffMs = Math.abs(kTimestamp - tTimestamp)
-	const maxDiffMs = 60 * 1000 // 1 minute
+	const maxDiffMs = 5 * 60 * 1000 // 5 minutes, thanks AWS
 
 	if(timestampDiffMs > maxDiffMs) {
 		throw new Error(`TEE timestamps differ by ${timestampDiffMs}ms, which exceeds maximum allowed difference of ${maxDiffMs}ms (1 minute)`)
