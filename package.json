@@ -92,7 +92,7 @@
     "@peculiar/asn1-x509": "^2.6.1",
     "@peculiar/webcrypto": "^1.5.0",
     "@peculiar/x509": "^1.14.3",
-    "@reclaimprotocol/tls": "^0.1.4",
+    "@reclaimprotocol/tls": "^0.1.5",
     "@reclaimprotocol/zk-symmetric-crypto": "^5.1.7",
     "ajv": "^8.18.0",
     "bs58": "^6.0.0",
