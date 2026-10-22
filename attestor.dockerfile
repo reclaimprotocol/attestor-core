@@ -1,4 +1,4 @@
-FROM node:24.13.0
+FROM node:24.22.1
 
 # install git
 RUN apt update -y && apt upgrade -y && apt install git -y
