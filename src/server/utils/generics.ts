@@ -1,5 +1,8 @@
+import { isIP } from 'node:net'
+
 import type { IncomingMessage } from 'http'
 import { Address4, Address6 } from 'ip-address'
+import { Agent, buildConnector, fetch as undiciFetch } from 'undici'
 
 import type { ServiceSignatureType } from '#src/proto/api.ts'
 import { RPCMessages } from '#src/proto/api.ts'
@@ -82,15 +85,136 @@ export async function getPublicAddresses(host: string) {
 	return publicAddresses
 }
 
-function isPublicIpAddress(ip: string) {
-	const ipv4Address = new Address4(ip)
-	if(Address4.isValid(ip)) {
-		return isPublicIpv4(ipv4Address)
+class UnsafeHostError extends Error {}
+
+/**
+ * Fetch a URL while preventing requests to private/reserved addresses.
+ * Every connection (including redirects) is pinned to a validated public
+ * address, so DNS rebinding can't bypass the check either.
+ */
+export async function safeFetch(
+	url: string,
+	init?: Parameters<typeof undiciFetch>[1]
+) {
+	assertHttpUrl(url)
+	try {
+		return await undiciFetch(url, { ...init, dispatcher: SAFE_AGENT })
+	} catch(err) {
+		// undici wraps connection errors as `TypeError('fetch failed')`
+		if(err.cause instanceof UnsafeHostError) {
+			throw AttestorError.badRequest(err.cause.message)
+		}
+
+		throw err
+	}
+}
+
+function assertHttpUrl(url: string) {
+	let parsed: URL
+	try {
+		parsed = new URL(url)
+	} catch {
+		throw AttestorError.badRequest(`Invalid URL: ${url}`)
 	}
 
-	const ipv6Address = new Address6(ip)
+	if(parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+		throw AttestorError.badRequest(
+			`Unsupported URL protocol: ${parsed.protocol}`
+		)
+	}
+}
+
+/**
+ * The public addresses a host maps to. Non-public ones are dropped;
+ * throws if none remain.
+ */
+async function getSafeAddresses(host: string) {
+	let addresses: string[]
+	try {
+		addresses = isIP(host) ? [host] : await resolveHostnames(host)
+	} catch(err) {
+		throw new UnsafeHostError(err.message)
+	}
+
+	const publicAddresses = addresses.filter(isPublicIpAddress)
+	if(!publicAddresses.length) {
+		throw new UnsafeHostError(
+			`Host "${host}" does not resolve to a public IP address`
+		)
+	}
+
+	return publicAddresses
+}
+
+/**
+ * DNS lookup that only ever returns public addresses. The returned
+ * addresses are the ones actually dialed, so there's no TOCTOU window.
+ */
+function safeLookup(
+	hostname: string,
+	options: { family?: number, all?: boolean },
+	callback: (...args: any[]) => void
+) {
+	const host = stripIpv6Brackets(hostname)
+	getSafeAddresses(host)
+		.then(addresses => {
+			const results = addresses
+				.map(address => ({ address, family: isIP(address) }))
+				.filter(r => !options?.family || r.family === options.family)
+			if(!results.length) {
+				throw new UnsafeHostError(
+					`Host "${host}" has no public IPv${options.family} address`
+				)
+			}
+
+			return results
+		})
+		.then(
+			results => {
+				if(options?.all) {
+					callback(null, results)
+				} else {
+					callback(null, results[0].address, results[0].family)
+				}
+			},
+			callback
+		)
+}
+
+const SAFE_CONNECTOR = buildConnector({
+	lookup: safeLookup as any,
+	timeout: 10_000,
+})
+
+const SAFE_AGENT = new Agent({
+	connect(options, callback) {
+		const host = stripIpv6Brackets(options.hostname)
+		// net skips the lookup hook for IP literals, so check those here
+		if(isIP(host) && !isPublicIpAddress(host)) {
+			callback(
+				new UnsafeHostError(`Host "${host}" is not a public IP address`),
+				null
+			)
+			return
+		}
+
+		SAFE_CONNECTOR(options, callback)
+	},
+})
+
+function stripIpv6Brackets(host: string) {
+	return host.startsWith('[') && host.endsWith(']')
+		? host.slice(1, -1)
+		: host
+}
+
+function isPublicIpAddress(ip: string) {
+	if(Address4.isValid(ip)) {
+		return new Address4(ip).isGlobal()
+	}
+
 	if(Address6.isValid(ip)) {
-		return isPublicIpv6(ipv6Address)
+		return new Address6(ip).isGlobal()
 	}
 
 	return false
@@ -110,31 +234,4 @@ export function matchesHostPattern(pattern: string, host: string): boolean {
 	}
 
 	return p === h
-}
-
-function isPublicIpv4(address: Address4) {
-	return !(
-		address.isPrivate()
-		|| address.isLoopback()
-		|| address.isLinkLocal()
-		|| address.isUnspecified()
-		|| address.isBroadcast()
-		|| address.isMulticast()
-		|| address.isCGNAT()
-	)
-}
-
-function isPublicIpv6(address: Address6) {
-	if(address.isMapped4()) {
-		return isPublicIpv4(address.to4())
-	}
-
-	return !(
-		address.isULA()
-		|| address.isLoopback()
-		|| address.isLinkLocal()
-		|| address.isUnspecified()
-		|| address.isMulticast()
-		|| address.isDocumentation()
-	)
 }
