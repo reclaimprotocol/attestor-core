@@ -1,16 +1,14 @@
 import { concatenateUint8Arrays, loadX509FromPem } from '@reclaimprotocol/tls'
 
 import { CERT_ALLOWED_MIMETYPES, MAX_CERT_SIZE_BYTES } from '#src/config/index.ts'
+import { safeFetch } from '#src/server/utils/generics.ts'
 import type { RPCHandler } from '#src/types/handlers.ts'
 import { AttestorError } from '#src/utils/error.ts'
 
 export const fetchCertificateBytes: RPCHandler<'fetchCertificateBytes'> = async(
 	{ url },
 ) => {
-	const res = await fetch(url, {
-		redirect: 'follow',
-		signal: AbortSignal.timeout(10_000)
-	})
+	const res = await safeFetch(url, { signal: AbortSignal.timeout(10_000) })
 	if(!res.ok) {
 		res.body?.cancel('Not ok')
 		throw new AttestorError(

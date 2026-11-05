@@ -2,7 +2,12 @@ import assert from 'node:assert'
 import { describe, it } from 'node:test'
 
 import { makeRegex } from '#src/providers/http/utils.ts'
-import { getPublicAddresses, matchesHostPattern } from '#src/server/utils/generics.ts'
+import {
+	getPublicAddresses,
+	matchesHostPattern,
+	safeFetch
+} from '#src/server/utils/generics.ts'
+import { AttestorError } from '#src/utils/error.ts'
 
 describe('Misc Tests', () => {
 
@@ -27,6 +32,42 @@ describe('Misc Tests', () => {
 		for(const ip of REJECTIONS) {
 			await assert.rejects(() => getPublicAddresses(ip))
 		}
+	})
+
+	it('should prevent SSRF via safeFetch', async() => {
+		const REJECTIONS = [
+			'http://169.254.169.254/latest/meta-data/',
+			'http://127.0.0.1/',
+			'http://localhost:8001/',
+			'http://localtest.me/',
+			'http://10.0.0.1/',
+			'http://192.168.1.1/',
+			'http://[::1]/',
+			'http://[fd00:ec2::254]/',
+			'http://0.0.0.0/',
+			'http://0.1.2.3/',
+			'http://192.0.0.1/',
+			'http://[2002:7f00:1::]/',
+			'http://[::ffff:127.0.0.1]/',
+			'http://[64:ff9b::7f00:1]/',
+			'file:///etc/passwd',
+			'ftp://example.com/',
+		]
+		for(const url of REJECTIONS) {
+			await assert.rejects(
+				() => safeFetch(url, { signal: AbortSignal.timeout(1000) }),
+				AttestorError
+			)
+		}
+	})
+
+	it('should allow public URLs via safeFetch', async() => {
+		const res = await safeFetch(
+			'https://www.google.com/robots.txt',
+			{ signal: AbortSignal.timeout(10_000) }
+		)
+		assert.equal(res.status, 200)
+		await res.body?.cancel()
 	})
 
 	describe('matchesHostPattern', () => {
