@@ -1,4 +1,4 @@
-import CIDR from 'ip-cidr'
+import { Address4, Address6 } from 'ip-address'
 import type { Logger } from 'pino'
 
 import { BGP_WS_URL } from '#src/config/index.ts'
@@ -147,13 +147,27 @@ export function createBgpListener(logger: Logger): BGPListener {
 			return false
 		}
 
-		const cidr = new CIDR(prefix)
+		const subnet = parseAddress(prefix)
 		for(const ip of targetIps) {
-			if(cidr.contains(ip)) {
+			const address = parseAddress(ip)
+			// an IPv4 address is never inside an IPv6 prefix, and vice versa
+			if(isV4(address) !== isV4(subnet)) {
+				continue
+			}
+
+			if(address.isInSubnet(subnet)) {
 				return true
 			}
 		}
 
 		return false
 	}
+}
+
+function parseAddress(value: string): Address4 | Address6 {
+	return Address4.isValid(value) ? new Address4(value) : new Address6(value)
+}
+
+function isV4(address: Address4 | Address6): address is Address4 {
+	return address instanceof Address4
 }

@@ -49,6 +49,35 @@ describe('BGP Listener', () => {
 		assert.equal(MOCK_CALLBACK.mock.callCount(), 1)
 	})
 
+	it('should callback on IPv6 BGP announcement overlap', async() => {
+		const MOCK_CALLBACK = mock.fn()
+		listener.onOverlap(['2001:db8:1::5'], MOCK_CALLBACK)
+
+		mockWs.onmessage(makeMsgEvent(['2001:db8::/32']))
+
+		assert.equal(MOCK_CALLBACK.mock.callCount(), 1)
+	})
+
+	it('should not match an IPv4 address against an IPv6 prefix', async() => {
+		const MOCK_CALLBACK = mock.fn()
+		listener.onOverlap(['43.240.13.21'], MOCK_CALLBACK)
+
+		// numerically, 43.240.13.21 would fall inside ::/1
+		mockWs.onmessage(makeMsgEvent(['::/1']))
+
+		assert.equal(MOCK_CALLBACK.mock.callCount(), 0)
+	})
+
+	it('should not match an IPv6 address against an IPv4 prefix', async() => {
+		const MOCK_CALLBACK = mock.fn()
+		listener.onOverlap(['::1'], MOCK_CALLBACK)
+
+		// numerically, ::1 would fall inside 0.0.0.0/1
+		mockWs.onmessage(makeMsgEvent(['0.0.0.0/1']))
+
+		assert.equal(MOCK_CALLBACK.mock.callCount(), 0)
+	})
+
 	it('should not callback on BGP announcement if no overlap', async() => {
 		const MOCK_CALLBACK = mock.fn()
 		listener.onOverlap(['44.240.13.21'], MOCK_CALLBACK)
@@ -191,3 +220,9 @@ const MOCK_MSG_EVENT = new MessageEvent(
 	'message',
 	{ data: JSON.stringify(MOCK_ANNOUNCEMENT_MSG) }
 )
+
+function makeMsgEvent(prefixes: string[]) {
+	const msg = structuredClone(MOCK_ANNOUNCEMENT_MSG)
+	msg.data.announcements[0].prefixes = prefixes
+	return new MessageEvent('message', { data: JSON.stringify(msg) })
+}
