@@ -29,7 +29,6 @@ const rslt = await esbuild.build({
 	alias: {
 		'crypto': '#src/scripts/fallbacks/crypto.ts',
 		'koffi': '#src/scripts/fallbacks/empty.ts',
-		'ip-cidr': '#src/scripts/fallbacks/empty.ts',
 		'snarkjs': '#src/scripts/fallbacks/empty.ts',
 		're2': '#src/scripts/fallbacks/re2.ts',
 		'@reclaimprotocol/zk-symmetric-crypto/stwo': '#src/scripts/fallbacks/stwo.ts',
@@ -38,7 +37,6 @@ const rslt = await esbuild.build({
 		'dotenv',
 		'elastic-apm-node',
 		'https-proxy-agent',
-		'ip-cidr',
 		'serve-static',
 		're2',
 		'snarkjs',

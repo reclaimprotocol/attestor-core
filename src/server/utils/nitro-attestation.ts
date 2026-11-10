@@ -6,7 +6,8 @@ import { AsnParser } from '@peculiar/asn1-schema'
 import { SubjectPublicKeyInfo } from '@peculiar/asn1-x509'
 import { Crypto } from '@peculiar/webcrypto'
 import { X509Certificate, X509ChainBuilder } from '@peculiar/x509'
-import { sign } from 'cose-js'
+
+import { verifyNitroSignature } from '#src/server/utils/nitro-signature.ts'
 
 // Nitro-specific types
 export interface AttestationDocument {
@@ -350,19 +351,9 @@ export async function validateNitroAttestationAndExtractKey(
 			return { isValid: false, errors, warnings, pcr0: '' }
 		}
 
-		const x = ecPoint.subarray(1, 49) // 48-byte x coordinate
-		const y = ecPoint.subarray(49, 97) // 48-byte y coordinate
-
-		// Validate ECDSA signature using cose-js
+		// Validate the COSE_Sign1 signature with Node's native crypto.
 		try {
-			const verifier = {
-				key: {
-					x: x,
-					y: y,
-				},
-			}
-			const options = { defaultType: 18 } // cose.sign.Sign1Tag
-			await sign.verify(Buffer.from(attestationBytes), verifier, options)
+			verifyNitroSignature(decoded, publicKeyRaw)
 		} catch(error) {
 			errors.push(`COSE signature verification failed: ${(error as Error).message}`)
 			return { isValid: false, errors, warnings, pcr0: '' }

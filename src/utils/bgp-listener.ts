@@ -1,4 +1,4 @@
-import CIDR from 'ip-cidr'
+import { Address4, Address6 } from 'ip-address'
 import type { Logger } from 'pino'
 
 import { BGP_WS_URL } from '#src/config/index.ts'
@@ -142,18 +142,35 @@ export function createBgpListener(logger: Logger): BGPListener {
 	}
 
 	function overlapsTargetIps(prefix: string): boolean {
+		if(!prefix.includes('/')) {
+			throw new Error('Invalid CIDR address')
+		}
+
 		// ignore all prefixes that end with /0
 		if(prefix.endsWith('/0')) {
 			return false
 		}
 
-		const cidr = new CIDR(prefix)
+		const cidr = parseAddress(prefix)
 		for(const ip of targetIps) {
-			if(cidr.contains(ip)) {
-				return true
+			try {
+				if(parseAddress(ip).isInSubnet(cidr)) {
+					return true
+				}
+			} catch {
+				// Invalid target IPs cannot overlap an announcement.
 			}
 		}
 
 		return false
 	}
+}
+
+function parseAddress(value: string): Address4 | Address6 {
+	const address = value.includes(':')
+		? new Address6(value)
+		: new Address4(value)
+	return address instanceof Address6 && address.v4 && address.address4
+		? address.address4
+		: address
 }
