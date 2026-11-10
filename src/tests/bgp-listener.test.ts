@@ -57,6 +57,32 @@ describe('BGP Listener', () => {
 
 		assert.ok(!MOCK_CALLBACK.mock.callCount())
 	})
+
+	for(const { prefix, ip, expected } of [
+		{ prefix: '43.240.13.0/24', ip: '43.240.13.0', expected: true },
+		{ prefix: '43.240.13.0/24', ip: '43.240.13.255', expected: true },
+		{ prefix: '43.240.13.0/24', ip: '43.240.14.0', expected: false },
+		{ prefix: '2001:db8::/32', ip: '2001:db8:abcd::1', expected: true },
+		{ prefix: '2001:db8::/32', ip: '2001:db9::1', expected: false },
+		{ prefix: '::/64', ip: '0.0.0.1', expected: false },
+		{ prefix: '0.0.0.0/24', ip: '::1', expected: false },
+		{ prefix: '43.240.13.0/24', ip: '::ffff:43.240.13.21', expected: true },
+		{ prefix: '0.0.0.0/0', ip: '43.240.13.21', expected: false },
+		{ prefix: '::/0', ip: '2001:db8::1', expected: false },
+		{ prefix: '43.240.13.0/24', ip: '043.240.13.21', expected: false },
+		{ prefix: '43.240.13.0/24', ip: 'invalid', expected: false },
+		{ prefix: 'invalid/24', ip: '43.240.13.21', expected: false },
+		{ prefix: '43.240.13.21', ip: '43.240.13.21', expected: false },
+	]) {
+		it(`matches ${ip} against ${prefix}: ${expected}`, () => {
+			const callback = mock.fn()
+			listener.onOverlap([ip], callback)
+			mockWs.onmessage(new MessageEvent('message', {
+				data: JSON.stringify({ data: { announcements: [{ prefixes: [prefix], 'next_hop': '192.0.2.1' }] } })
+			}))
+			assert.equal(callback.mock.callCount(), expected ? 1 : 0)
+		})
+	}
 })
 
 let mockWs: MockWS
